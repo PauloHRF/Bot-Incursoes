@@ -1,0 +1,35 @@
+"""Roda todos os testes do projeto.
+
+    .venv/Scripts/python.exe tests/todos.py
+"""
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+AQUI = Path(__file__).resolve().parent
+SUITES = ("smoke.py", "test_run.py", "test_votacao.py")
+
+
+def main() -> int:
+    falhas = []
+    for suite in SUITES:
+        print(f"\n=== {suite} ===")
+        processo = subprocess.run(
+            [sys.executable, str(AQUI / suite)],
+            env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"},
+        )
+        if processo.returncode != 0:
+            falhas.append(suite)
+
+    print()
+    if falhas:
+        print(f"FALHARAM: {', '.join(falhas)}")
+        return 1
+    print(f"tudo verde ({len(SUITES)} suítes)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

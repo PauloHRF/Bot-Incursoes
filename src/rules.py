@@ -1,43 +1,74 @@
-"""Regras de ficha: modificadores, proficiencia, tier e pericias (5e)."""
+"""Regras de ficha: modificadores, proficiência, tier e perícias (5e)."""
 from __future__ import annotations
 
+import unicodedata
+
 ATRIBUTOS = {
-    "FOR": "Forca",
+    "FOR": "Força",
     "DES": "Destreza",
-    "CON": "Constituicao",
-    "INT": "Inteligencia",
+    "CON": "Constituição",
+    "INT": "Inteligência",
     "SAB": "Sabedoria",
     "CAR": "Carisma",
 }
 
-# pericia -> atributo-chave
+# perícia -> atributo-chave
 PERICIAS = {
     "Acrobacia": "DES",
     "Adestrar Animais": "SAB",
     "Arcanismo": "INT",
     "Atletismo": "FOR",
-    "Atuacao": "CAR",
-    "Enganacao": "CAR",
+    "Atuação": "CAR",
+    "Enganação": "CAR",
     "Furtividade": "DES",
-    "Historia": "INT",
-    "Intimidacao": "CAR",
-    "Intuicao": "SAB",
-    "Investigacao": "INT",
+    "História": "INT",
+    "Intimidação": "CAR",
+    "Intuição": "SAB",
+    "Investigação": "INT",
     "Medicina": "SAB",
     "Natureza": "INT",
-    "Percepcao": "SAB",
-    "Persuasao": "CAR",
-    "Prestidigitacao": "DES",
-    "Religiao": "INT",
-    "Sobrevivencia": "SAB",
+    "Percepção": "SAB",
+    "Persuasão": "CAR",
+    "Prestidigitação": "DES",
+    "Religião": "INT",
+    "Sobrevivência": "SAB",
 }
 
-# Faixas de nivel por tier. Ajuste aqui se as Incursoes originais usarem outro corte.
+# Faixas de nível por tier. Ajuste aqui se as Incursões originais usarem outro corte.
 TIERS = ((4, 1), (10, 2), (16, 3), (20, 4))
 
 # Peso de cada tier no alvo do objetivo principal (doc: soma dos pesos + C).
 PESO_TIER = {1: 1, 2: 2, 3: 3, 4: 4}
 CONSTANTE_OBJETIVO = 9
+
+
+def chave_comparacao(texto: str) -> str:
+    """Forma canônica para comparação: sem acento, sem caixa, sem espaço sobrando."""
+    sem_acento = unicodedata.normalize("NFKD", texto)
+    sem_acento = "".join(c for c in sem_acento if not unicodedata.combining(c))
+    return " ".join(sem_acento.lower().split())
+
+
+_INDICE_PERICIAS = {chave_comparacao(p): p for p in PERICIAS}
+
+
+def normalizar_pericia(texto: str) -> str | None:
+    """Nome canônico da perícia, aceitando grafia sem acento ou em outra caixa.
+
+    Aceita 'investigacao', 'INVESTIGAÇÃO' e 'Investigação' -> 'Investigação'.
+    Devolve None se não for uma perícia conhecida.
+    """
+    return _INDICE_PERICIAS.get(chave_comparacao(texto))
+
+
+def normalizar_lista_pericias(nomes: list[str]) -> list[str]:
+    """Normaliza uma lista, descartando silenciosamente nomes desconhecidos."""
+    saida = []
+    for nome in nomes:
+        canonico = normalizar_pericia(nome)
+        if canonico and canonico not in saida:
+            saida.append(canonico)
+    return saida
 
 
 def modificador(valor: int) -> int:
@@ -46,7 +77,7 @@ def modificador(valor: int) -> int:
 
 
 def bonus_proficiencia(nivel: int) -> int:
-    """2 + floor((nivel - 1) / 4)."""
+    """2 + floor((nível - 1) / 4)."""
     return 2 + (nivel - 1) // 4
 
 
@@ -58,7 +89,7 @@ def tier(nivel: int) -> int:
 
 
 def mod_pericia(pericia: str, atributos: dict[str, int], nivel: int, treinadas: list[str]) -> int:
-    """Modificador final de uma pericia: mod do atributo + proficiencia se treinada."""
+    """Modificador final de uma perícia: mod do atributo + proficiência se treinada."""
     chave = PERICIAS[pericia]
     total = modificador(atributos[chave])
     if pericia in treinadas:
@@ -66,8 +97,10 @@ def mod_pericia(pericia: str, atributos: dict[str, int], nivel: int, treinadas: 
     return total
 
 
-def melhor_pericia(opcoes: list[str], atributos: dict[str, int], nivel: int, treinadas: list[str]) -> tuple[str, int]:
-    """Dentre as pericias listadas pela sala, a melhor para este personagem."""
+def melhor_pericia(
+    opcoes: list[str], atributos: dict[str, int], nivel: int, treinadas: list[str]
+) -> tuple[str, int]:
+    """Dentre as perícias listadas pela sala, a melhor para este personagem."""
     ranked = [(p, mod_pericia(p, atributos, nivel, treinadas)) for p in opcoes]
     ranked.sort(key=lambda x: x[1], reverse=True)
     return ranked[0]
