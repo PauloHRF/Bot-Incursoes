@@ -11,6 +11,7 @@ import copy  # noqa: E402
 
 import discord  # noqa: E402
 
+from src import database as db  # noqa: E402
 from src.incursoes import de_dict  # noqa: E402
 
 GUILD = 1
@@ -85,9 +86,15 @@ class FakeResposta:
     async def send_message(self, content=None, *, embed=None, view=None, ephemeral=False,
                            file=discord.utils.MISSING):
         self.interacao.resposta = content or (embed.title if embed else None)
-        self.interacao._mensagem_resposta = await self.interacao.canal.send(
-            content, embed=embed, view=view
-        ) if not ephemeral else FakeMensagem(self.interacao.canal, -1, content=content, embed=embed)
+        self.interacao.view_enviada = view
+        if ephemeral:
+            self.interacao._mensagem_resposta = FakeMensagem(
+                self.interacao.canal, -1, content=content, embed=embed, view=view
+            )
+        else:
+            self.interacao._mensagem_resposta = await self.interacao.canal.send(
+                content, embed=embed, view=view
+            )
 
     async def defer(self, **kw):
         self.interacao.adiado = True
@@ -102,6 +109,7 @@ class FakeInteraction:
         self.message = mensagem
         self.response = FakeResposta(self)
         self.resposta = None
+        self.view_enviada = None
         self.adiado = False
         self._mensagem_resposta = None
 
@@ -198,3 +206,22 @@ def incursao_teste(
             s["pontos_organizacao"] = (pontos_por_sala or {}).get(s["id"], 0)
     dados["objetivo"]["pontos_organizacao"] = (pontos_por_sala or {}).get("OBJ", 0)
     return de_dict(dados)
+
+
+async def criar_grupo(
+    conn, nivel=8, hp_max=40, ca=18, bonus_ataque=8, dano="1d6+3", nomes=None
+):
+    """Cria um personagem para cada jogador de teste. Devolve {user_id: personagem_id}."""
+    ids = {}
+    for user_id in JOGADORES:
+        nome = (nomes or {}).get(user_id, f"Heroi{user_id}")
+        ids[user_id] = await db.criar_personagem(
+            conn, GUILD, user_id, nome, nivel, ATRIBUTOS, TREINADAS,
+            combate={
+                "ca": ca,
+                "bonus_ataque": bonus_ataque,
+                "dano_arma": dano,
+                "hp_max": hp_max,
+            },
+        )
+    return ids

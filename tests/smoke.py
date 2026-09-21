@@ -42,27 +42,52 @@ async def main():
     conn = await db.conectar()
     await db.criar_schema(conn)
 
-    await db.salvar_ficha(conn, 1, 42, "Vhalor", 5, atributos, ["Furtividade", "Percepção"])
-    f = await db.buscar_ficha(conn, 1, 42)
+    # um personagem, com atributos, pericias e combate de uma vez so
+    vhalor_id = await db.criar_personagem(
+        conn, 1, 42, "Vhalor", 5, atributos, ["Furtividade", "Percepção"],
+        combate={"ca": 17, "bonus_ataque": 7, "dano_arma": "1d8+4", "hp_max": 54},
+    )
+    assert vhalor_id
+    f = await db.buscar_personagem(conn, vhalor_id)
     assert f["nome"] == "Vhalor" and f["nivel"] == 5
     assert f["pericias"] == ["Furtividade", "Percepção"]
     assert f["atributos"] == atributos
-    assert f["ca"] == 10 and f["hp_max"] == 10  # defaults de combate
+    assert (f["ca"], f["bonus_ataque"], f["dano_arma"], f["hp_max"]) == (17, 7, "1d8+4", 54)
+
+    # sem campos de combate, valem os defaults
+    magro_id = await db.criar_personagem(conn, 1, 42, "Sem Arma", 1, atributos, [])
+    magro = await db.buscar_personagem(conn, magro_id)
+    assert magro["ca"] == 10 and magro["hp_max"] == 10 and magro["dano_arma"] == "1d6"
 
     # subir de nivel nao apaga nada e muda a proficiencia
-    assert await db.atualizar_campo(conn, 1, 42, "nivel", 9)
-    assert await db.atualizar_campo(conn, 1, 42, "ca", 17)
-    f = await db.buscar_ficha(conn, 1, 42)
+    assert await db.atualizar_personagem(conn, vhalor_id, "nivel", 9)
+    f = await db.buscar_personagem(conn, vhalor_id)
     assert f["nivel"] == 9 and f["ca"] == 17 and f["pericias"] == ["Furtividade", "Percepção"]
     assert mod_pericia("Furtividade", f["atributos"], f["nivel"], f["pericias"]) == 7
 
-    # re-registrar preserva os campos de combate
-    await db.salvar_ficha(conn, 1, 42, "Vhalor, o Torto", 9, atributos, ["Furtividade"])
-    f = await db.buscar_ficha(conn, 1, 42)
-    assert f["ca"] == 17 and f["nome"] == "Vhalor, o Torto"
+    # o mesmo jogador tem varios personagens, buscaveis por nome
+    assert len(await db.listar_personagens(conn, 1, 42)) == 2
+    assert (await db.personagem_por_nome(conn, 1, 42, "vhalor"))["id"] == vhalor_id
+    assert await db.personagem_por_nome(conn, 1, 42, "Ninguem") is None
 
-    assert await db.buscar_ficha(conn, 1, 99) is None
-    assert not await db.atualizar_campo(conn, 1, 99, "nivel", 3)
+    # dois personagens do mesmo jogador nao podem ter o mesmo nome
+    assert await db.criar_personagem(conn, 1, 42, "Vhalor", 3, atributos, []) is None
+    # mas jogadores diferentes podem repetir nome
+    assert await db.criar_personagem(conn, 1, 43, "Vhalor", 3, atributos, []) is not None
+
+    # apagar um nao mexe nos outros
+    assert await db.remover_personagem(conn, magro_id)
+    assert [p["nome"] for p in await db.listar_personagens(conn, 1, 42)] == ["Vhalor"]
+
+    assert await db.buscar_personagem(conn, 99999) is None
+    assert not await db.atualizar_personagem(conn, 99999, "nivel", 3)
+    # coluna fora da lista branca nao passa
+    try:
+        await db.atualizar_personagem(conn, vhalor_id, "guild_id", 7)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("deveria recusar coluna desconhecida")
 
     # --- incursoes: JSON de exemplo e validacao ---
     from copy import deepcopy
@@ -127,8 +152,12 @@ async def main():
     for cog in COGS:
         await bot.load_extension(cog)
     nomes = sorted(c.qualified_name for c in bot.tree.walk_commands())
-    for grupo in ("ficha registrar", "incursao entrar", "incursao teste", "config intervalo"):
+    for grupo in (
+        "ficha registrar", "ficha listar", "incursao entrar", "incursao teste",
+        "incursao atacar", "config intervalo", "organizacao placar",
+    ):
         assert grupo in nomes, f"comando {grupo} não foi registrado"
+    assert "ficha listar" in nomes and "ficha remover" in nomes
     for cog in COGS:
         await bot.unload_extension(cog)
     await bot.close()

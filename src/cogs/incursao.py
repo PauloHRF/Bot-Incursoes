@@ -108,6 +108,33 @@ class ViewCombate(discord.ui.View):
         await self.cog.atacar(interaction, self.run_id, self.sala_id)
 
 
+class SeletorPersonagemEntrada(discord.ui.View):
+    """Escolha de qual personagem levar para a run, mostrada só a quem clicou."""
+
+    def __init__(self, cog: "Incursoes", run_id: int, personagens: list[dict[str, Any]]):
+        super().__init__(timeout=180)
+        self.cog = cog
+        self.run_id = run_id
+        menu = discord.ui.Select(
+            placeholder="Com qual personagem voce entra?",
+            options=[
+                discord.SelectOption(
+                    label=p["nome"],
+                    value=str(p["id"]),
+                    description=f"Nivel {p['nivel']} · CA {p['ca']} · HP {p['hp_max']}",
+                )
+                for p in personagens[:25]
+            ],
+        )
+        menu.callback = self._escolher
+        self.menu = menu
+        self.add_item(menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await self.cog.efetivar_entrada(interaction, self.run_id, int(self.menu.values[0]))
+
+
 class ViewRecrutamento(discord.ui.View):
     def __init__(self, cog: "Incursoes", run_id: int):
         super().__init__(timeout=None)
@@ -211,6 +238,15 @@ class Incursoes(commands.Cog):
         except discord.HTTPException:
             pass
 
+    async def _encerrar_run(self, run: dict[str, Any], status: str) -> None:
+        """Fecha a run e tira os botões da etapa que ficou pendente.
+
+        Sem isso, uma votação ou um combate abertos no momento do encerramento
+        continuariam clicáveis depois que a run acabou.
+        """
+        await self._limpar_botoes(await db.buscar_run(self.bot.db, run["id"]))
+        await db.atualizar_run(self.bot.db, run["id"], status=status, votacao_expira_em=None)
+
     async def _membros(self, run: dict[str, Any]) -> list[discord.abc.User]:
         ids = await db.participantes(self.bot.db, run["id"])
         guilda = self.bot.get_guild(run["guild_id"])
@@ -279,9 +315,31 @@ class Incursoes(commands.Cog):
             )
         await interaction.response.send_message(embed=e, ephemeral=True)
 
+    async def _sugerir_personagens(
+        self, interaction: discord.Interaction, atual: str
+    ) -> list[app_commands.Choice[str]]:
+        personagens = await db.listar_personagens(
+            self.bot.db, interaction.guild_id, interaction.user.id
+        )
+        termo = atual.lower()
+        return [
+            app_commands.Choice(name=f"{p['nome']} (nivel {p['nivel']})", value=p["nome"])
+            for p in personagens
+            if termo in p["nome"].lower()
+        ][:25]
+
     @grupo.command(name="entrar", description="Abre o recrutamento de uma incursão neste canal")
-    @app_commands.autocomplete(incursao_id=_sugerir_incursoes)
-    async def entrar(self, interaction: discord.Interaction, incursao_id: str) -> None:
+    @app_commands.describe(
+        incursao_id="Qual incursão",
+        personagem="Com qual personagem voce entra (opcional se voce so tem um)",
+    )
+    @app_commands.autocomplete(incursao_id=_sugerir_incursoes, personagem=_sugerir_personagens)
+    async def entrar(
+        self,
+        interaction: discord.Interaction,
+        incursao_id: str,
+        personagem: Optional[str] = None,
+    ) -> None:
         incursao = self.incursoes.get(incursao_id)
         if not incursao:
             await interaction.response.send_message(
@@ -300,10 +358,37 @@ class Incursoes(commands.Cog):
             await interaction.response.send_message(bloqueio, ephemeral=True)
             return
 
+        meus = await db.listar_personagens(
+            self.bot.db, interaction.guild_id, interaction.user.id
+        )
+        if personagem:
+            escolhido = await db.personagem_por_nome(
+                self.bot.db, interaction.guild_id, interaction.user.id, personagem
+            )
+            if not escolhido:
+                await interaction.response.send_message(
+                    f"Voce nao tem nenhum personagem chamado **{personagem}**. "
+                    f"Os seus sao: {', '.join(p['nome'] for p in meus)}.",
+                    ephemeral=True,
+                )
+                return
+        elif len(meus) == 1:
+            escolhido = meus[0]
+        else:
+            await interaction.response.send_message(
+                "Voce tem mais de um personagem: "
+                f"{', '.join(p['nome'] for p in meus)}. "
+                "Diga qual no campo `personagem`.",
+                ephemeral=True,
+            )
+            return
+
         run_id = await db.criar_run(
             self.bot.db, interaction.guild_id, interaction.channel_id, incursao.id, interaction.user.id
         )
-        await db.adicionar_participante(self.bot.db, run_id, interaction.user.id)
+        await db.adicionar_participante(
+            self.bot.db, run_id, interaction.user.id, escolhido["id"]
+        )
 
         run = await db.buscar_run(self.bot.db, run_id)
         view = ViewRecrutamento(self, run_id)
@@ -315,9 +400,11 @@ class Incursoes(commands.Cog):
 
     async def _motivo_de_bloqueio(self, guild_id: int, user_id: int) -> Optional[str]:
         """Texto do impedimento para entrar numa run, ou None se estiver liberado."""
-        ficha = await db.buscar_ficha(self.bot.db, guild_id, user_id)
-        if not ficha:
-            return "Você ainda não tem ficha. Cadastre com `/ficha registrar` antes de entrar."
+        personagens = await db.listar_personagens(self.bot.db, guild_id, user_id)
+        if not personagens:
+            return (
+                "Você ainda não tem personagem. Cadastre um com `/ficha registrar` antes de entrar."
+            )
         outra = await db.run_viva_do_jogador(self.bot.db, guild_id, user_id)
         if outra:
             return f"Você já está na run #{outra['id']}. Termine ou desista dela antes."
@@ -330,6 +417,55 @@ class Incursoes(commands.Cog):
                 f"O intervalo é de {intervalo} dias — faltam {faltam:.1f}."
             )
         return None
+
+    async def _atualizar_recrutamento(self, run: dict[str, Any]) -> None:
+        """Redesenha a mensagem de recrutamento com o grupo atual."""
+        incursao = self._incursao_da_run(run)
+        canal = await self._canal(run)
+        if not (incursao and canal and run["mensagem_id"]):
+            return
+        criador = self.bot.get_user(run["criador_id"])
+        membros = await self._membros(run)
+        try:
+            mensagem = await canal.fetch_message(run["mensagem_id"])
+            await mensagem.edit(
+                embed=E.recrutamento(incursao, membros, criador or membros[0]),
+                view=ViewRecrutamento(self, run["id"]),
+            )
+        except discord.HTTPException:
+            pass
+
+    async def efetivar_entrada(
+        self, interaction: discord.Interaction, run_id: int, personagem_id: int
+    ) -> None:
+        """Coloca o jogador na run com o personagem escolhido."""
+        run = await db.buscar_run(self.bot.db, run_id)
+        if not run or run["status"] != "recrutando":
+            await interaction.response.send_message(
+                "Este recrutamento já foi encerrado.", ephemeral=True
+            )
+            return
+
+        personagem = await db.buscar_personagem(self.bot.db, personagem_id)
+        if not personagem or personagem["user_id"] != interaction.user.id:
+            await interaction.response.send_message(
+                "Esse personagem não é seu.", ephemeral=True
+            )
+            return
+        if len(await db.participantes(self.bot.db, run_id)) >= config.TAMANHO_GRUPO:
+            await interaction.response.send_message("O grupo já está cheio.", ephemeral=True)
+            return
+
+        await db.adicionar_participante(self.bot.db, run_id, interaction.user.id, personagem_id)
+        await interaction.response.send_message(
+            f"Voce entrou com **{personagem['nome']}** (nivel {personagem['nivel']}).",
+            ephemeral=True,
+        )
+
+        run = await db.buscar_run(self.bot.db, run_id)
+        await self._atualizar_recrutamento(run)
+        if len(await db.participantes(self.bot.db, run_id)) >= config.TAMANHO_GRUPO:
+            await self._iniciar(run)
 
     async def recrutar(self, interaction: discord.Interaction, run_id: int, acao: str) -> None:
         run = await db.buscar_run(self.bot.db, run_id)
@@ -357,7 +493,19 @@ class Incursoes(commands.Cog):
             if bloqueio:
                 await interaction.response.send_message(bloqueio, ephemeral=True)
                 return
-            await db.adicionar_participante(self.bot.db, run_id, interaction.user.id)
+
+            personagens = await db.listar_personagens(
+                self.bot.db, run["guild_id"], interaction.user.id
+            )
+            if len(personagens) == 1:
+                await self.efetivar_entrada(interaction, run_id, personagens[0]["id"])
+            else:
+                await interaction.response.send_message(
+                    "Escolha com qual personagem entrar:",
+                    view=SeletorPersonagemEntrada(self, run_id, personagens),
+                    ephemeral=True,
+                )
+            return
 
         elif acao == "sair":
             if interaction.user.id == run["criador_id"]:
@@ -386,15 +534,13 @@ class Incursoes(commands.Cog):
         await interaction.edit_original_response(
             embed=E.recrutamento(incursao, membros, criador), view=ViewRecrutamento(self, run_id)
         )
-        if len(membros) >= config.TAMANHO_GRUPO:
-            await self._iniciar(await db.buscar_run(self.bot.db, run_id))
 
     async def _iniciar(self, run: dict[str, Any]) -> None:
         participantes = await db.participantes(self.bot.db, run["id"])
         if not participantes:
             return
         await db.marcar_ultima_incursao(self.bot.db, run["guild_id"], participantes)
-        await db.inicializar_hp(self.bot.db, run["id"], run["guild_id"])
+        await db.inicializar_hp(self.bot.db, run["id"])
         await db.atualizar_run(self.bot.db, run["id"], status="escolhendo", linha_atual=1)
 
         canal = await self._canal(run)
@@ -576,21 +722,17 @@ class Incursoes(commands.Cog):
 
     async def _combatentes(self, run: dict[str, Any]) -> list[Combatente]:
         """Monta os combatentes juntando a ficha de cada um com o HP atual da run."""
-        hps = await db.hp_dos_participantes(self.bot.db, run["id"])
         combatentes = []
-        for user_id, hp in hps.items():
-            ficha = await db.buscar_ficha(self.bot.db, run["guild_id"], user_id)
-            if not ficha:
-                continue
+        for p in await db.personagens_da_run(self.bot.db, run["id"]):
             combatentes.append(
                 Combatente(
-                    user_id=user_id,
-                    nome=ficha["nome"],
-                    ca=ficha["ca"],
-                    bonus_ataque=ficha["bonus_ataque"],
-                    dano_arma=ficha["dano_arma"],
-                    hp_max=ficha["hp_max"],
-                    hp_atual=ficha["hp_max"] if hp is None else hp,
+                    user_id=p["user_id"],
+                    nome=p["nome"],
+                    ca=p["ca"],
+                    bonus_ataque=p["bonus_ataque"],
+                    dano_arma=p["dano_arma"],
+                    hp_max=p["hp_max"],
+                    hp_atual=p["hp_max"] if p["hp_atual"] is None else p["hp_atual"],
                 )
             )
         return combatentes
@@ -629,12 +771,7 @@ class Incursoes(commands.Cog):
         await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
 
     async def _niveis(self, run: dict[str, Any]) -> list[int]:
-        niveis = []
-        for user_id in await db.participantes(self.bot.db, run["id"]):
-            ficha = await db.buscar_ficha(self.bot.db, run["guild_id"], user_id)
-            if ficha:
-                niveis.append(ficha["nivel"])
-        return niveis
+        return [p["nivel"] for p in await db.personagens_da_run(self.bot.db, run["id"])]
 
     async def atacar(self, interaction: discord.Interaction, run_id: int, sala_id: str) -> None:
         run = await db.buscar_run(self.bot.db, run_id)
@@ -754,9 +891,7 @@ class Incursoes(commands.Cog):
             return
 
         if estado.grupo_caido:
-            await db.atualizar_run(
-                self.bot.db, run["id"], status="fracasso", votacao_expira_em=None
-            )
+            await self._encerrar_run(run, "fracasso")
             incursao = self._incursao_da_run(run)
             await canal.send(embed=E.run_fracassada(incursao, estado))
             # Mesmo derrotado, o grupo levou a run ate o fim: a participacao conta.
@@ -783,9 +918,7 @@ class Incursoes(commands.Cog):
             )
 
         if sala.id == incursao.objetivo.id:
-            await db.atualizar_run(
-                self.bot.db, run["id"], status="sucesso", votacao_expira_em=None
-            )
+            await self._encerrar_run(run, "sucesso")
             await self._creditar(
                 run, config.PONTOS_PARTICIPACAO, "Participação na incursão", "participacao"
             )
@@ -815,15 +948,15 @@ class Incursoes(commands.Cog):
 
         incursao = self._incursao_da_run(run)
         sala = incursao.sala(sala_id)
-        ficha = await db.buscar_ficha(self.bot.db, run["guild_id"], interaction.user.id)
-        if not ficha:
+        personagem = await db.personagem_da_run(self.bot.db, run_id, interaction.user.id)
+        if not personagem:
             await interaction.response.send_message(
-                "Você não tem ficha cadastrada. Use `/ficha registrar`.", ephemeral=True
+                "Não achei o personagem com que você entrou nesta run.", ephemeral=True
             )
             return
 
-        ficha["user_id"] = interaction.user.id
-        resultado = motor.testar(ficha, sala)
+        personagem["user_id"] = interaction.user.id
+        resultado = motor.testar(personagem, sala)
         novo = await db.registrar_teste(
             self.bot.db,
             run_id,
@@ -1034,7 +1167,7 @@ class Incursoes(commands.Cog):
         necessarios = total // 2 + 1
 
         if len(votos) >= necessarios:
-            await db.atualizar_run(self.bot.db, run["id"], status="desistiu", votacao_expira_em=None)
+            await self._encerrar_run(run, "desistiu")
             await interaction.response.send_message(
                 f"A run #{run['id']} foi abandonada por decisão do grupo "
                 f"({len(votos)}/{total}). Ninguém recebe MEs."

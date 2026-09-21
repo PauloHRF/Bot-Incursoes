@@ -25,6 +25,7 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    criar_grupo,
     incursao_teste,
 )
 
@@ -38,12 +39,7 @@ async def preparar(hp_max=40, ca=18, bonus_ataque=8, dano="1d6+3"):
     conn = await db.conectar()
     _ABERTAS.append(conn)
     await db.criar_schema(conn)
-    for user_id in JOGADORES:
-        await db.salvar_ficha(conn, GUILD, user_id, f"Heroi{user_id}", 8, ATRIBUTOS, TREINADAS)
-        for coluna, valor in (
-            ("hp_max", hp_max), ("ca", ca), ("bonus_ataque", bonus_ataque), ("dano_arma", dano)
-        ):
-            await db.atualizar_campo(conn, GUILD, user_id, coluna, valor)
+    await criar_grupo(conn, hp_max=hp_max, ca=ca, bonus_ataque=bonus_ataque, dano=dano)
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
     cog.incursoes = {}

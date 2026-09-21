@@ -23,10 +23,14 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    criar_grupo,
 )
 
 
 # ------------------------------------------------------------------ teste
+
+
+_ABERTAS = []
 
 
 async def main() -> None:
@@ -35,9 +39,9 @@ async def main() -> None:
     config.TAMANHO_GRUPO = 5
 
     conn = await db.conectar()
+    _ABERTAS.append(conn)
     await db.criar_schema(conn)
-    for user_id in JOGADORES:
-        await db.salvar_ficha(conn, GUILD, user_id, f"Heroi{user_id}", 8, ATRIBUTOS, TREINADAS)
+    await criar_grupo(conn)
 
     canal = FakeCanal(CANAL)
     bot = FakeBot(conn, canal)
@@ -59,10 +63,10 @@ async def main() -> None:
     await cog.recrutar(dupe, run["id"], "entrar")
     assert "já está no grupo" in dupe.resposta
 
-    # quem nao tem ficha e barrado
+    # quem nao tem personagem e barrado
     sem_ficha = FakeInteraction(canal, 999, msg_recrut)
     await cog.recrutar(sem_ficha, run["id"], "entrar")
-    assert "não tem ficha" in sem_ficha.resposta
+    assert "não tem personagem" in sem_ficha.resposta
 
     # os outros quatro entram; o quinto dispara o inicio automatico
     for user_id in JOGADORES[1:]:
@@ -148,5 +152,20 @@ async def main() -> None:
     print(f"run simulada com {len(canal.mensagens)} mensagens postadas")
 
 
-asyncio.run(main())
+async def _com_limpeza():
+    try:
+        await main()
+    finally:
+        for conn in _ABERTAS:
+            try:
+                await conn.close()
+            except Exception:
+                pass
+
+
+def _fechar_tudo():
+    asyncio.run(_com_limpeza())
+
+
+_fechar_tudo()
 print("TESTE DE RUN PASSOU")

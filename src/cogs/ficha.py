@@ -1,7 +1,11 @@
-"""Comandos de ficha digital: cadastro, consulta e manutencao (nivel / ASI)."""
+"""Fichas digitais: cadastro, consulta e manutencao (nivel / ASI / pericias).
+
+Um jogador pode ter varios personagens. Os comandos aceitam o nome de qual
+mexer; quem so tem um nao precisa dizer nada.
+"""
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 import discord
 from discord import app_commands
@@ -17,6 +21,8 @@ from ..rules import (
     modificador,
     tier,
 )
+
+LIMITE_PERSONAGENS = 25  # o seletor do Discord nao mostra mais que isso
 
 
 class SeletorPericias(discord.ui.View):
@@ -51,14 +57,17 @@ class SeletorPericias(discord.ui.View):
         await interaction.response.defer()
 
 
-def embed_ficha(ficha: dict, autor: discord.abc.User) -> discord.Embed:
-    nivel = ficha["nivel"]
-    treinadas = ficha["pericias"]
-    atributos = ficha["atributos"]
+def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.Embed:
+    nivel = personagem["nivel"]
+    treinadas = personagem["pericias"]
+    atributos = personagem["atributos"]
 
     e = discord.Embed(
-        title=ficha["nome"],
-        description=f"Nivel {nivel} | Tier {tier(nivel)} | Proficiencia {fmt(bonus_proficiencia(nivel))}",
+        title=personagem["nome"],
+        description=(
+            f"Nivel {nivel} | Tier {tier(nivel)} | "
+            f"Proficiencia {fmt(bonus_proficiencia(nivel))}"
+        ),
         color=discord.Color.dark_gold(),
     )
     e.set_author(name=autor.display_name, icon_url=autor.display_avatar.url)
@@ -81,8 +90,8 @@ def embed_ficha(ficha: dict, autor: discord.abc.User) -> discord.Embed:
     e.add_field(
         name="Combate",
         value=(
-            f"CA **{ficha['ca']}** | Ataque **{fmt(ficha['bonus_ataque'])}** | "
-            f"Dano **{ficha['dano_arma']}** | HP **{ficha['hp_max']}**"
+            f"CA **{personagem['ca']}** | Ataque **{fmt(personagem['bonus_ataque'])}** | "
+            f"Dano **{personagem['dano_arma']}** | HP **{personagem['hp_max']}**"
         ),
         inline=False,
     )
@@ -94,9 +103,62 @@ class Ficha(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    grupo = app_commands.Group(name="ficha", description="Ficha digital do seu personagem")
+    grupo = app_commands.Group(name="ficha", description="Fichas dos seus personagens")
 
-    @grupo.command(name="registrar", description="Cadastra nivel, atributos e pericias treinadas")
+    async def _sugerir_personagens(
+        self, interaction: discord.Interaction, atual: str
+    ) -> list[app_commands.Choice[str]]:
+        personagens = await db.listar_personagens(
+            self.bot.db, interaction.guild_id, interaction.user.id
+        )
+        termo = atual.lower()
+        return [
+            app_commands.Choice(name=f"{p['nome']} (nivel {p['nivel']})", value=p["nome"])
+            for p in personagens
+            if termo in p["nome"].lower()
+        ][:25]
+
+    async def _resolver(
+        self, interaction: discord.Interaction, nome: Optional[str]
+    ) -> Optional[dict[str, Any]]:
+        """Descobre em qual personagem mexer, respondendo à interação se não der."""
+        personagens = await db.listar_personagens(
+            self.bot.db, interaction.guild_id, interaction.user.id
+        )
+        if not personagens:
+            await interaction.response.send_message(
+                "Voce ainda nao tem personagem. Use `/ficha registrar`.", ephemeral=True
+            )
+            return None
+
+        if nome:
+            escolhido = await db.personagem_por_nome(
+                self.bot.db, interaction.guild_id, interaction.user.id, nome
+            )
+            if not escolhido:
+                disponiveis = ", ".join(p["nome"] for p in personagens)
+                await interaction.response.send_message(
+                    f"Voce nao tem nenhum personagem chamado **{nome}**. "
+                    f"Os seus sao: {disponiveis}.",
+                    ephemeral=True,
+                )
+                return None
+            return escolhido
+
+        if len(personagens) == 1:
+            return personagens[0]
+
+        disponiveis = ", ".join(p["nome"] for p in personagens)
+        await interaction.response.send_message(
+            f"Voce tem mais de um personagem: {disponiveis}. Diga qual no campo `personagem`.",
+            ephemeral=True,
+        )
+        return None
+
+    @grupo.command(
+        name="registrar",
+        description="Cadastra um personagem: nivel, atributos, combate e pericias",
+    )
     @app_commands.describe(
         nome="Nome do personagem",
         nivel="Nivel atual (1-20)",
@@ -106,6 +168,10 @@ class Ficha(commands.Cog):
         inteligencia="Valor de Inteligencia",
         sabedoria="Valor de Sabedoria",
         carisma="Valor de Carisma",
+        ca="Classe de Armadura",
+        bonus_ataque="Bonus de ataque da arma principal",
+        dano_arma="Dado de dano da arma, ex.: 1d8+3",
+        hp_maximo="Pontos de vida maximos",
     )
     async def registrar(
         self,
@@ -118,7 +184,28 @@ class Ficha(commands.Cog):
         inteligencia: app_commands.Range[int, 1, 30],
         sabedoria: app_commands.Range[int, 1, 30],
         carisma: app_commands.Range[int, 1, 30],
+        ca: app_commands.Range[int, 1, 40],
+        bonus_ataque: app_commands.Range[int, -5, 30],
+        dano_arma: app_commands.Range[str, 1, 20],
+        hp_maximo: app_commands.Range[int, 1, 999],
     ) -> None:
+        existentes = await db.listar_personagens(
+            self.bot.db, interaction.guild_id, interaction.user.id
+        )
+        if len(existentes) >= LIMITE_PERSONAGENS:
+            await interaction.response.send_message(
+                f"Voce ja tem {LIMITE_PERSONAGENS} personagens. "
+                "Apague um com `/ficha remover` antes de criar outro.",
+                ephemeral=True,
+            )
+            return
+        if any(p["nome"].lower() == nome.strip().lower() for p in existentes):
+            await interaction.response.send_message(
+                f"Voce ja tem um personagem chamado **{nome}**. Escolha outro nome.",
+                ephemeral=True,
+            )
+            return
+
         atributos = {
             "FOR": forca,
             "DES": destreza,
@@ -127,8 +214,13 @@ class Ficha(commands.Cog):
             "SAB": sabedoria,
             "CAR": carisma,
         }
-        existente = await db.buscar_ficha(self.bot.db, interaction.guild_id, interaction.user.id)
-        view = SeletorPericias(interaction.user.id, existente["pericias"] if existente else [])
+        combate = {
+            "ca": ca,
+            "bonus_ataque": bonus_ataque,
+            "dano_arma": dano_arma,
+            "hp_max": hp_maximo,
+        }
+        view = SeletorPericias(interaction.user.id, [])
         await interaction.response.send_message(
             f"**{nome}**, nivel {nivel}. Agora marque as pericias treinadas:",
             view=view,
@@ -141,7 +233,7 @@ class Ficha(commands.Cog):
             )
             return
 
-        await db.salvar_ficha(
+        personagem_id = await db.criar_personagem(
             self.bot.db,
             interaction.guild_id,
             interaction.user.id,
@@ -149,92 +241,149 @@ class Ficha(commands.Cog):
             nivel,
             atributos,
             view.escolhidas,
+            combate=combate,
         )
-        ficha = await db.buscar_ficha(self.bot.db, interaction.guild_id, interaction.user.id)
+        if personagem_id is None:
+            await interaction.edit_original_response(
+                content=f"Voce ja tem um personagem chamado **{nome}**.", view=None
+            )
+            return
+
+        personagem = await db.buscar_personagem(self.bot.db, personagem_id)
+        total = len(existentes) + 1
         await interaction.edit_original_response(
-            content="Ficha salva. Use /ficha combate para CA, ataque, dano e HP.",
-            embed=embed_ficha(ficha, interaction.user),
+            content=f"Personagem salvo. Voce tem {total} agora.",
+            embed=embed_ficha(personagem, interaction.user),
             view=None,
         )
 
-    @grupo.command(name="ver", description="Mostra a ficha com os modificadores ja calculados")
-    @app_commands.describe(membro="Ver a ficha de outro jogador (opcional)")
-    async def ver(
+    @grupo.command(name="listar", description="Mostra todos os seus personagens")
+    @app_commands.describe(membro="Ver os personagens de outro jogador (opcional)")
+    async def listar(
         self, interaction: discord.Interaction, membro: Optional[discord.Member] = None
     ) -> None:
         alvo = membro or interaction.user
-        ficha = await db.buscar_ficha(self.bot.db, interaction.guild_id, alvo.id)
-        if not ficha:
-            quem = (
-                "Voce ainda nao tem"
-                if alvo == interaction.user
-                else f"{alvo.display_name} ainda nao tem"
+        personagens = await db.listar_personagens(self.bot.db, interaction.guild_id, alvo.id)
+        if not personagens:
+            quem = "Voce ainda nao tem" if alvo == interaction.user else f"{alvo.display_name} nao tem"
+            await interaction.response.send_message(f"{quem} personagem.", ephemeral=True)
+            return
+
+        e = discord.Embed(
+            title=f"Personagens de {alvo.display_name}", color=discord.Color.dark_gold()
+        )
+        for p in personagens:
+            e.add_field(
+                name=p["nome"],
+                value=(
+                    f"Nivel {p['nivel']} | Tier {tier(p['nivel'])} | "
+                    f"CA {p['ca']} | HP {p['hp_max']}"
+                ),
+                inline=False,
             )
-            await interaction.response.send_message(
-                f"{quem} ficha. Use /ficha registrar.", ephemeral=True
-            )
+        e.set_footer(text=f"{len(personagens)} personagem(ns)")
+        await interaction.response.send_message(embed=e, ephemeral=membro is None)
+
+    @grupo.command(name="ver", description="Mostra a ficha com os modificadores ja calculados")
+    @app_commands.describe(
+        personagem="Qual personagem (opcional se voce so tem um)",
+        membro="Ver a ficha de outro jogador (opcional)",
+    )
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
+    async def ver(
+        self,
+        interaction: discord.Interaction,
+        personagem: Optional[str] = None,
+        membro: Optional[discord.Member] = None,
+    ) -> None:
+        if membro is not None:
+            personagens = await db.listar_personagens(self.bot.db, interaction.guild_id, membro.id)
+            if not personagens:
+                await interaction.response.send_message(
+                    f"{membro.display_name} nao tem personagem.", ephemeral=True
+                )
+                return
+            escolhido = personagens[0]
+            if personagem:
+                por_nome = await db.personagem_por_nome(
+                    self.bot.db, interaction.guild_id, membro.id, personagem
+                )
+                if not por_nome:
+                    await interaction.response.send_message(
+                        f"{membro.display_name} nao tem **{personagem}**.", ephemeral=True
+                    )
+                    return
+                escolhido = por_nome
+            await interaction.response.send_message(embed=embed_ficha(escolhido, membro))
+            return
+
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
             return
         await interaction.response.send_message(
-            embed=embed_ficha(ficha, alvo), ephemeral=membro is None
+            embed=embed_ficha(escolhido, interaction.user), ephemeral=True
         )
 
     @grupo.command(
         name="nivel", description="Atualiza o nivel (o bonus de proficiencia se recalcula sozinho)"
     )
+    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
     async def nivel(
-        self, interaction: discord.Interaction, novo_nivel: app_commands.Range[int, 1, 20]
+        self,
+        interaction: discord.Interaction,
+        novo_nivel: app_commands.Range[int, 1, 20],
+        personagem: Optional[str] = None,
     ) -> None:
-        ok = await db.atualizar_campo(
-            self.bot.db, interaction.guild_id, interaction.user.id, "nivel", novo_nivel
-        )
-        if not ok:
-            await interaction.response.send_message(
-                "Voce ainda nao tem ficha. Use /ficha registrar.", ephemeral=True
-            )
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
             return
+        await db.atualizar_personagem(self.bot.db, escolhido["id"], "nivel", novo_nivel)
         await interaction.response.send_message(
-            f"Nivel {novo_nivel} | Tier {tier(novo_nivel)} | "
+            f"**{escolhido['nome']}**: nivel {novo_nivel} | Tier {tier(novo_nivel)} | "
             f"Proficiencia {fmt(bonus_proficiencia(novo_nivel))}.",
             ephemeral=True,
         )
 
     @grupo.command(name="atributo", description="Atualiza um atributo apos um ASI")
+    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
     @app_commands.choices(
         atributo=[
             app_commands.Choice(name=f"{nome} ({sigla})", value=sigla)
             for sigla, nome in ATRIBUTOS.items()
         ]
     )
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
     async def atributo(
         self,
         interaction: discord.Interaction,
         atributo: app_commands.Choice[str],
         valor: app_commands.Range[int, 1, 30],
+        personagem: Optional[str] = None,
     ) -> None:
-        coluna = db.COLUNA_ATRIBUTO[atributo.value]
-        ok = await db.atualizar_campo(
-            self.bot.db, interaction.guild_id, interaction.user.id, coluna, valor
-        )
-        if not ok:
-            await interaction.response.send_message(
-                "Voce ainda nao tem ficha. Use /ficha registrar.", ephemeral=True
-            )
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
             return
+        coluna = db.COLUNA_ATRIBUTO[atributo.value]
+        await db.atualizar_personagem(self.bot.db, escolhido["id"], coluna, valor)
         await interaction.response.send_message(
-            f"{atributo.name} agora e {valor} ({fmt(modificador(valor))}).", ephemeral=True
+            f"**{escolhido['nome']}**: {atributo.name} agora e {valor} "
+            f"({fmt(modificador(valor))}).",
+            ephemeral=True,
         )
 
     @grupo.command(name="pericias", description="Ajusta quais pericias sao treinadas")
-    async def pericias(self, interaction: discord.Interaction) -> None:
-        ficha = await db.buscar_ficha(self.bot.db, interaction.guild_id, interaction.user.id)
-        if not ficha:
-            await interaction.response.send_message(
-                "Voce ainda nao tem ficha. Use /ficha registrar.", ephemeral=True
-            )
+    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
+    async def pericias(
+        self, interaction: discord.Interaction, personagem: Optional[str] = None
+    ) -> None:
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
             return
-        view = SeletorPericias(interaction.user.id, ficha["pericias"])
+        view = SeletorPericias(interaction.user.id, escolhido["pericias"])
         await interaction.response.send_message(
-            "Marque as pericias treinadas:", view=view, ephemeral=True
+            f"Pericias treinadas de **{escolhido['nome']}**:", view=view, ephemeral=True
         )
         await view.wait()
         if view.escolhidas is None:
@@ -242,44 +391,61 @@ class Ficha(commands.Cog):
                 content="Tempo esgotado - nada foi alterado.", view=None
             )
             return
-        await db.atualizar_pericias(
-            self.bot.db, interaction.guild_id, interaction.user.id, view.escolhidas
-        )
-        ficha = await db.buscar_ficha(self.bot.db, interaction.guild_id, interaction.user.id)
+        await db.atualizar_pericias(self.bot.db, escolhido["id"], view.escolhidas)
+        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
         await interaction.edit_original_response(
             content="Pericias atualizadas.",
-            embed=embed_ficha(ficha, interaction.user),
+            embed=embed_ficha(atualizado, interaction.user),
             view=None,
         )
 
-    @grupo.command(name="combate", description="Define CA, bonus de ataque, dano da arma e HP maximo")
+    @grupo.command(name="combate", description="Atualiza CA, ataque, dano e HP de um personagem")
+    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
     async def combate(
         self,
         interaction: discord.Interaction,
         ca: app_commands.Range[int, 1, 40],
         bonus_ataque: app_commands.Range[int, -5, 30],
         dano_arma: app_commands.Range[str, 1, 20],
-        hp_max: app_commands.Range[int, 1, 999],
+        hp_maximo: app_commands.Range[int, 1, 999],
+        personagem: Optional[str] = None,
     ) -> None:
-        ficha = await db.buscar_ficha(self.bot.db, interaction.guild_id, interaction.user.id)
-        if not ficha:
-            await interaction.response.send_message(
-                "Voce ainda nao tem ficha. Use /ficha registrar.", ephemeral=True
-            )
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
             return
-        campos = (
+        for coluna, valor in (
             ("ca", ca),
             ("bonus_ataque", bonus_ataque),
             ("dano_arma", dano_arma),
-            ("hp_max", hp_max),
-        )
-        for coluna, valor in campos:
-            await db.atualizar_campo(
-                self.bot.db, interaction.guild_id, interaction.user.id, coluna, valor
-            )
-        ficha = await db.buscar_ficha(self.bot.db, interaction.guild_id, interaction.user.id)
+            ("hp_max", hp_maximo),
+        ):
+            await db.atualizar_personagem(self.bot.db, escolhido["id"], coluna, valor)
+        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
         await interaction.response.send_message(
-            embed=embed_ficha(ficha, interaction.user), ephemeral=True
+            embed=embed_ficha(atualizado, interaction.user), ephemeral=True
+        )
+
+    @grupo.command(name="remover", description="Apaga um personagem seu")
+    @app_commands.describe(personagem="Qual personagem apagar")
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
+    async def remover(self, interaction: discord.Interaction, personagem: str) -> None:
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
+            return
+        em_run = await db.run_viva_do_jogador(
+            self.bot.db, interaction.guild_id, interaction.user.id
+        )
+        if em_run:
+            await interaction.response.send_message(
+                f"Voce esta na run #{em_run['id']}. Termine ou desista dela antes de apagar "
+                "um personagem.",
+                ephemeral=True,
+            )
+            return
+        await db.remover_personagem(self.bot.db, escolhido["id"])
+        await interaction.response.send_message(
+            f"**{escolhido['nome']}** foi apagado.", ephemeral=True
         )
 
 

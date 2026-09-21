@@ -7,7 +7,7 @@ Design completo: `Incursões 2.0 — Bot de Discord (design).md`.
 
 ## Estado atual
 
-- [x] **Fase 1** — ficha digital (cadastro, consulta, nível, ASI, perícias, combate)
+- [x] **Fase 1** — fichas digitais (vários personagens por jogador, nível, ASI, perícias)
 - [x] **Fase 2a** — formato do conteúdo: planilha da incursão, importador e validação
 - [x] **Fase 2b** — runs, salas, votação por botões, testes de perícia
 - [x] **Fase 3** — combate por rodadas (CA / ataque / HP)
@@ -34,12 +34,12 @@ uma run inteira simulada com dublês do Discord):
 
 1. https://discord.com/developers/applications → **New Application**
 2. Aba **Bot** → **Reset Token** → copie para `DISCORD_TOKEN` no `.env` (o token some da tela; se perder, é só resetar de novo)
-3. Opcional, para que só você possa adicionar o bot — **nesta ordem**, senão o portal recusa:
+4. Opcional, para que só você possa adicionar o bot — **nesta ordem**, senão o portal recusa:
    aba **Installation** → *Install Context*: apenas **Guild Install**, *Install Link*: **None** → salvar;
    só então aba **Bot** → desligue **Public Bot** → salvar
-4. Aba **OAuth2** → **URL Generator** → scopes `bot` + `applications.commands` → permissões:
+5. Aba **OAuth2** → **URL Generator** → scopes `bot` + `applications.commands` → permissões:
    *Send Messages*, *Embed Links*, *Attach Files*, *Read Message History*, *Use Slash Commands*
-5. Abra a URL gerada e adicione o bot ao seu servidor de testes
+6. Abra a URL gerada e adicione o bot ao seu servidor de testes
 6. No Discord, com o Modo Desenvolvedor ligado, clique com o botão direito no servidor → **Copiar ID do servidor** → `GUILD_ID` no `.env`
 
 Não são necessários *privileged intents* (o bot não lê o conteúdo das mensagens).
@@ -48,14 +48,16 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 
 | Comando | Função |
 | --- | --- |
-| `/ficha registrar` | Cadastra nome, nível, os 6 atributos e as perícias treinadas |
-| `/ficha ver [membro]` | Mostra a ficha com todos os modificadores calculados |
-| `/ficha nivel <n>` | Atualiza o nível (proficiência e tier se recalculam sozinhos) |
-| `/ficha atributo <attr> <valor>` | Atualiza um atributo após um ASI |
-| `/ficha pericias` | Reabre o seletor de perícias treinadas |
-| `/ficha combate <ca> <ataque> <dano> <hp>` | Define os campos usados nas salas de Combate |
+| `/ficha registrar` | Cria um personagem: nome, nível, os 6 atributos, CA/ataque/dano/HP e as perícias |
+| `/ficha listar [membro]` | Lista todos os personagens de um jogador |
+| `/ficha ver [personagem] [membro]` | Mostra a ficha com todos os modificadores calculados |
+| `/ficha nivel <n> [personagem]` | Atualiza o nível (proficiência e tier se recalculam sozinhos) |
+| `/ficha atributo <attr> <valor> [personagem]` | Atualiza um atributo após um ASI |
+| `/ficha pericias [personagem]` | Reabre o seletor de perícias treinadas |
+| `/ficha combate <ca> <ataque> <dano> <hp> [personagem]` | Corrige os números de combate |
+| `/ficha remover <personagem>` | Apaga um personagem seu |
 | `/incursao listar` | Mostra as incursões carregadas |
-| `/incursao entrar <id>` | Abre o recrutamento de uma incursão no canal |
+| `/incursao entrar <id> [personagem]` | Abre o recrutamento de uma incursão no canal |
 | `/incursao sala` | Reenvia a mensagem da sala atual |
 | `/incursao teste` | Rola o teste da sala (mesmo efeito do botão) |
 | `/incursao atacar` | Ataca o monstro da sala (mesmo efeito do botão) |
@@ -71,17 +73,21 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 ## Como uma run acontece
 
 1. `/incursao entrar <id>` abre o recrutamento no canal. Quem clica em **Entrar** precisa
-   ter ficha, não estar em outra run e ter cumprido o intervalo desde a última incursão.
-2. Ao chegar a 5 jogadores a run começa sozinha; quem abriu pode começar antes com **Começar**.
-3. Cada linha mostra as 3 salas daquela linha. Todos votam pelos botões; a votação fecha
+   ter ao menos um personagem, não estar em outra run e ter cumprido o intervalo desde a
+   última incursão.
+2. Quem tem mais de um personagem escolhe num menu com qual entra; quem só tem um entra
+   direto. O personagem fica preso àquela run: é a ficha dele que rola os testes, ataca e
+   leva dano.
+3. Ao chegar a 5 jogadores a run começa sozinha; quem abriu pode começar antes com **Começar**.
+4. Cada linha mostra as 3 salas daquela linha. Todos votam pelos botões; a votação fecha
    assim que todos votam, ou no prazo (30 min por padrão), pela maioria simples.
    Empate antes do prazo não avança — o grupo destrava trocando um voto. Empate no prazo
    vai a sorteio, e prazo sem nenhum voto mantém a posição e renova.
-4. Na sala, cada jogador rola uma vez pelo botão **Rolar teste**, com a melhor perícia que
+5. Na sala, cada jogador rola uma vez pelo botão **Rolar teste**, com a melhor perícia que
    tiver entre as listadas. Quem passa contribui a margem (rolagem + mod − CD) como
    progresso; quem falha contribui 0 e sofre a consequência do tipo da sala.
    A sala encerra quando o alvo é atingido ou quando todos rolaram.
-5. Depois de três linhas, o grupo enfrenta o Objetivo, que é sempre um combate.
+6. Depois de três linhas, o grupo enfrenta o Objetivo, que é sempre um combate.
 
 Em sala de **Combate**, cada personagem de pé clica em **Atacar** uma vez por rodada
 (d20 + bônus de ataque contra a CA do monstro; acertou, rola o dano da arma). Quando
@@ -96,6 +102,20 @@ reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinh
 **Para testar à vontade**, rode `/config intervalo 0` uma vez: sem isso, quem entra numa run
 fica bloqueado pelos 7 dias de intervalo assim que ela começa. Para recomeçar, encerre a run
 atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/incursao entrar`.
+
+## Personagens
+
+Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
+Os comandos de ficha aceitam o nome no campo `personagem`, com autocompletar; quem só tem
+um personagem pode omitir. Dois personagens do mesmo jogador não podem ter o mesmo nome.
+
+**Os limites continuam sendo do jogador, não do personagem**: o intervalo entre incursões
+vale para a pessoa (ter três personagens não dá direito a três incursões por semana), e
+ninguém participa de duas runs ao mesmo tempo, nem com personagens diferentes.
+
+Bancos criados antes desta mudança são migrados sozinhos na primeira vez que o bot sobe:
+cada ficha vira o primeiro personagem daquele jogador, com atributos, perícias, números de
+combate e a data da última incursão preservados.
 
 ## Pontos de Organização
 
@@ -177,6 +197,7 @@ tests/
   test_votacao.py  empate, prazo, silêncio e restart
   test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
+  test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   fakes.py      dublês do Discord usados pelos testes
 ```
 
