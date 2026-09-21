@@ -2,178 +2,12 @@
   "id": "vortice_cripta",
   "nome": "A Cripta do Vórtice",
   "organizacao": "Vórtice Oculto",
-  "descricao": "Um selo antigo cedeu sob a cidade e algo do outro lado começou a vazar. A Organização quer o Olho recuperado antes que a fenda se alargue.",
-  "imagem_capa": "assets/vortice_cripta/capa.png",
+  "tamanho": "Média",
+  "lore_inicial": "Um selo antigo cedeu sob a cidade e algo do outro lado começou a vazar. Três dias depois, os cães pararam de latir no bairro inteiro e uma rua acordou com as portas trancadas por dentro e ninguém atrás delas.\n\nO Vórtice Oculto já sabia do selo — foi um dos seus que o fez, há muito tempo. Agora quer o Olho de volta antes que a fenda se alargue o bastante para alguém de fora perceber de quem foi a culpa. Vocês descem hoje.",
+  "lore_final": "O Olho para de piscar assim que sai do pedestal, e o silêncio que vem depois é pior que o zumbido. Lá em cima, os cães voltam a latir.\n\nA Organização recebe o Olho sem cerimônia, como quem recolhe uma ferramenta emprestada. Ninguém menciona o que ele guardava, nem por que o selo tinha a marca de um deles. Vocês recebem o pagamento, e a instrução de não voltar àquela rua.",
+  "imagem_capa": null,
   "recompensa_mes": 10,
   "pontos_conclusao": 10,
-  "linhas": [
-    [
-      {
-        "id": "L1A",
-        "nome": "Portal Instável",
-        "tipo": "Armadilha",
-        "descricao": "A escada termina num arco de pedra que ainda pulsa. A cada batida, o ar se dobra e cospe estilhaços de realidade pelo corredor. Passar exige ler o ritmo — ou ser muito rápido.",
-        "dificuldade": "Média",
-        "cd": 15,
-        "alvo_progresso": 10,
-        "pericias": [
-          "Acrobacia",
-          "Arcanismo"
-        ],
-        "imagem": "assets/vortice_cripta/portal.png",
-        "recompensa": "Quem passa ileso encontra um fragmento do selo.",
-        "pontos_organizacao": 0,
-        "monstro": null
-      },
-      {
-        "id": "L1B",
-        "nome": "Biblioteca Submersa",
-        "tipo": "Evento",
-        "descricao": "Água escura cobre as prateleiras até a altura do peito. Os livros que boiam ainda estão secos, e isso é o mais perturbador da sala. Algum deles diz onde o Olho foi guardado.",
-        "dificuldade": "Média",
-        "cd": 15,
-        "alvo_progresso": 10,
-        "pericias": [
-          "Investigação",
-          "Arcanismo",
-          "História"
-        ],
-        "imagem": "assets/vortice_cripta/biblioteca.png",
-        "recompensa": "Revela a CA do chefe antes do confronto final.",
-        "pontos_organizacao": 2,
-        "monstro": null
-      },
-      {
-        "id": "L1C",
-        "nome": "Sentinelas de Pedra",
-        "tipo": "Combate",
-        "descricao": "Duas estátuas ladeiam a porta interna. Elas não se mexem enquanto ninguém olha para o que carregam — e o que carregam é o que o grupo veio buscar.",
-        "dificuldade": null,
-        "cd": null,
-        "alvo_progresso": null,
-        "pericias": [],
-        "imagem": "assets/vortice_cripta/sentinelas.png",
-        "recompensa": null,
-        "pontos_organizacao": 0,
-        "monstro": {
-          "nome": "Sentinela de Basalto",
-          "ca": 14,
-          "ataque": 5,
-          "dano": "1d10+3",
-          "hp": 26
-        }
-      }
-    ],
-    [
-      {
-        "id": "L2A",
-        "nome": "Corredor dos Ecos",
-        "tipo": "Armadilha",
-        "descricao": "Cada passo volta multiplicado, e junto com o eco vem alguma coisa que anda no contratempo. O chão está coberto de placas que afundam sob peso.",
-        "dificuldade": "Difícil",
-        "cd": 20,
-        "alvo_progresso": 15,
-        "pericias": [
-          "Percepção",
-          "Acrobacia",
-          "Furtividade"
-        ],
-        "imagem": "assets/vortice_cripta/corredor.png",
-        "recompensa": null,
-        "pontos_organizacao": 0,
-        "monstro": null
-      },
-      {
-        "id": "L2B",
-        "nome": "Acampamento Abandonado",
-        "tipo": "Descanso",
-        "descricao": "Uma expedição anterior montou barraca aqui e não voltou. As brasas ainda estão mornas, a comida intacta. O grupo descansa — desconfiado, mas descansa.",
-        "dificuldade": null,
-        "cd": null,
-        "alvo_progresso": null,
-        "pericias": [],
-        "imagem": "assets/vortice_cripta/acampamento.png",
-        "recompensa": "Cada personagem caído volta com metade do HP máximo.",
-        "pontos_organizacao": 0,
-        "monstro": null
-      },
-      {
-        "id": "L2C",
-        "nome": "Cofre Selado",
-        "tipo": "Tesouro",
-        "descricao": "Um cofre de ferro fundido, sem fechadura visível, só um sulco em espiral onde deveria estar. Quem entender a espiral leva o que tem dentro.",
-        "dificuldade": "Média",
-        "cd": 15,
-        "alvo_progresso": 10,
-        "pericias": [
-          "Prestidigitação",
-          "Arcanismo"
-        ],
-        "imagem": "assets/vortice_cripta/cofre.png",
-        "recompensa": "Materiais raros para quem passar no teste.",
-        "pontos_organizacao": 3,
-        "monstro": null
-      }
-    ],
-    [
-      {
-        "id": "L3A",
-        "nome": "Ninho de Aberrações",
-        "tipo": "Combate",
-        "descricao": "O vazamento chegou aqui primeiro. O que nasceu do outro lado do selo aprendeu a usar os corredores — e aprendeu que comida desce por eles.",
-        "dificuldade": null,
-        "cd": null,
-        "alvo_progresso": null,
-        "pericias": [],
-        "imagem": "assets/vortice_cripta/ninho.png",
-        "recompensa": null,
-        "pontos_organizacao": 0,
-        "monstro": {
-          "nome": "Cria do Vazio",
-          "ca": 15,
-          "ataque": 6,
-          "dano": "2d6+2",
-          "hp": 34
-        }
-      },
-      {
-        "id": "L3B",
-        "nome": "Ritual Interrompido",
-        "tipo": "Evento",
-        "descricao": "Alguém tentou fechar a fenda daqui e parou no meio. As velas ainda queimam. Terminar o ritual enfraquece o que espera adiante; errar acorda o resto.",
-        "dificuldade": "Difícil",
-        "cd": 20,
-        "alvo_progresso": 15,
-        "pericias": [
-          "Religião",
-          "Arcanismo",
-          "Intuição"
-        ],
-        "imagem": "assets/vortice_cripta/ritual.png",
-        "recompensa": "O chefe começa o combate final com 10 de HP a menos.",
-        "pontos_organizacao": 2,
-        "monstro": null
-      },
-      {
-        "id": "L3C",
-        "nome": "Passagem Estreita",
-        "tipo": "Armadilha",
-        "descricao": "A fenda na parede é a única entrada para a câmara final. É apertada, cortante, e alguma coisa já ficou presa aqui antes do grupo chegar.",
-        "dificuldade": "Fácil",
-        "cd": 10,
-        "alvo_progresso": 5,
-        "pericias": [
-          "Acrobacia",
-          "Atletismo",
-          "Furtividade"
-        ],
-        "imagem": "assets/vortice_cripta/passagem.png",
-        "recompensa": null,
-        "pontos_organizacao": 0,
-        "monstro": null
-      }
-    ]
-  ],
   "objetivo": {
     "id": "OBJ",
     "nome": "O Olho do Vórtice",
@@ -183,7 +17,7 @@
     "cd": null,
     "alvo_progresso": null,
     "pericias": [],
-    "imagem": "assets/vortice_cripta/olho.png",
+    "imagem": null,
     "recompensa": "10 MEs por participante + pontos com o Vórtice Oculto",
     "pontos_organizacao": 0,
     "monstro": {

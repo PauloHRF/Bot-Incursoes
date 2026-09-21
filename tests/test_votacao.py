@@ -20,13 +20,15 @@ from fakes import (  # noqa: E402
     FakeCanal,
     FakeInteraction,
     criar_grupo,
+    montar_conteudo,
+    salas_sem_combate,
 )
 
 
 async def montar_run_em_votacao(conn, canal, cog):
     """Cria uma run com os 5 jogadores, já na votação da linha 1."""
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.entrar.callback(cog, inter, "vortice_cripta")
+    await cog.entrar.callback(cog, inter, "t")
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:
@@ -47,7 +49,7 @@ async def preparar():
     await criar_grupo(conn)
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
-    cog._carregar_tolerante()
+    montar_conteudo(cog, tamanho="Média", salas=salas_sem_combate(8))
     return conn, canal, cog
 
 
@@ -55,7 +57,7 @@ async def caso_maioria_fecha_sem_esperar():
     """Assim que 3 dos 5 votam na mesma sala, o grupo avança."""
     conn, canal, cog = await preparar()
     run = await montar_run_em_votacao(conn, canal, cog)
-    opcoes = cog.incursoes["vortice_cripta"].opcoes(1)
+    opcoes = await cog._opcoes(run, 1)
     msg = await canal.fetch_message(run["mensagem_id"])
 
     # dois votos ainda nao decidem nada
@@ -80,7 +82,7 @@ async def caso_votos_divididos_esperam():
     """Enquanto ninguém tem maioria, a votação continua aberta."""
     conn, canal, cog = await preparar()
     run = await montar_run_em_votacao(conn, canal, cog)
-    opcoes = cog.incursoes["vortice_cripta"].opcoes(1)
+    opcoes = await cog._opcoes(run, 1)
     msg = await canal.fetch_message(run["mensagem_id"])
 
     # 2 x 1: ninguem chegou a 3
@@ -104,7 +106,7 @@ async def caso_empate_com_todos_votando():
     """2x2x1: todos votaram, ninguém tem maioria, ninguém avança."""
     conn, canal, cog = await preparar()
     run = await montar_run_em_votacao(conn, canal, cog)
-    opcoes = cog.incursoes["vortice_cripta"].opcoes(1)
+    opcoes = await cog._opcoes(run, 1)
     msg = await canal.fetch_message(run["mensagem_id"])
 
     for user_id, sala in zip(JOGADORES, [opcoes[0], opcoes[0], opcoes[1], opcoes[1], opcoes[2]]):
@@ -151,7 +153,7 @@ async def caso_restart():
     # novo cog, como se o processo tivesse reiniciado
     bot2 = FakeBot(conn, canal)
     cog2 = Incursoes(bot2)
-    cog2._carregar_tolerante()
+    montar_conteudo(cog2, tamanho="Média", salas=salas_sem_combate(8))
     await cog2.restaurar_views()
 
     assert bot2.views_registradas, "nenhuma view foi restaurada"
@@ -162,7 +164,7 @@ async def caso_restart():
 
     # e o voto pelo cog novo continua avançando a run
     msg = await canal.fetch_message(run["mensagem_id"])
-    opcoes = cog2.incursoes["vortice_cripta"].opcoes(1)
+    opcoes = await cog2._opcoes(run, 1)
     for user_id in JOGADORES:
         await cog2.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, opcoes[0].id)
     assert (await db.buscar_run(conn, run["id"]))["status"] == "em_sala"
@@ -193,14 +195,13 @@ async def caso_botoes_somem_ao_encerrar():
     """Encerrar a run tira os botões da etapa que estava aberta."""
     conn, canal, cog = await preparar()
     run = await montar_run_em_votacao(conn, canal, cog)
-    incursao = cog.incursoes["vortice_cripta"]
-
+    
     # o recrutamento ja perdeu os botoes ao comecar a run
     id_votacao = run["mensagem_id"]
     assert (await canal.fetch_message(id_votacao)).view is not None, "a votação deve abrir com botões"
 
     # resolver a votacao normalmente tira os botoes dela
-    alvo = next(s for s in incursao.opcoes(1) if s.tem_teste)
+    alvo = next(s for s in await cog._opcoes(run, 1) if s.tem_teste)
     msg = await canal.fetch_message(id_votacao)
     for user_id in JOGADORES:
         await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)

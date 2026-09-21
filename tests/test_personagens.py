@@ -25,7 +25,8 @@ from fakes import (  # noqa: E402
     FakeCanal,
     FakeInteraction,
     criar_grupo,
-    incursao_teste,
+    montar_conteudo,
+    salas_sem_combate,
 )
 
 _ABERTAS = []
@@ -71,7 +72,7 @@ async def preparar(nome_db="teste_personagens.db"):
     await db.criar_schema(conn)
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
-    cog.incursoes = {"t": incursao_teste("t", INDEFESO)}
+    montar_conteudo(cog, salas=salas_sem_combate())
     return conn, canal, cog
 
 

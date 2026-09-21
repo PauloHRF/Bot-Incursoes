@@ -48,6 +48,18 @@ def anexo_da_imagem(caminho: Optional[str]) -> tuple[Optional[discord.File], Opt
     return discord.File(local, filename=nome), f"attachment://{nome}"
 
 
+def chamada(texto: str, limite: int = 400) -> str:
+    """O gancho da lore: o primeiro parágrafo, cortado se for longo demais.
+
+    O recrutamento mostra só isto; a lore inteira sai quando a run começa, para
+    o mesmo texto não aparecer duas vezes seguidas no canal.
+    """
+    primeiro = texto.strip().split("\n\n")[0].strip()
+    if len(primeiro) <= limite:
+        return primeiro
+    return primeiro[:limite].rsplit(" ", 1)[0] + "…"
+
+
 def _rodape(embed: discord.Embed, texto: str) -> discord.Embed:
     embed.set_footer(text=texto)
     return embed
@@ -58,11 +70,16 @@ def recrutamento(
 ) -> discord.Embed:
     e = discord.Embed(
         title=f"🗺️ {incursao.nome}",
-        description=incursao.descricao,
+        description=chamada(incursao.lore_inicial),
         color=COR_INCURSAO,
     )
     e.add_field(name="Organização", value=incursao.organizacao, inline=True)
-    e.add_field(name="Recompensa", value=f"{incursao.recompensa_mes} MEs por participante", inline=True)
+    e.add_field(
+        name="Caminho",
+        value=f"{incursao.tamanho} — {incursao.passos} salas + objetivo",
+        inline=True,
+    )
+    e.add_field(name="Recompensa", value=f"{incursao.recompensa_mes} MEs", inline=True)
     lista = "\n".join(f"{i}. {m.mention}" for i, m in enumerate(membros, start=1)) or "*ninguém ainda*"
     e.add_field(
         name=f"Grupo ({len(membros)}/{config.TAMANHO_GRUPO})",
@@ -78,12 +95,45 @@ def recrutamento(
     )
 
 
+def lore_abertura(incursao: Incursao, quantos: int) -> discord.Embed:
+    """A mensagem que abre a run, com a lore da incursão."""
+    e = discord.Embed(
+        title=f"🗺️ {incursao.nome}",
+        description=incursao.lore_inicial,
+        color=COR_INCURSAO,
+    )
+    e.add_field(name="Organização", value=incursao.organizacao, inline=True)
+    e.add_field(
+        name="Caminho",
+        value=f"{incursao.tamanho} — {incursao.passos} salas até o objetivo",
+        inline=True,
+    )
+    e.add_field(name="Grupo", value=f"{quantos} aventureiro(s)", inline=True)
+    if incursao.imagem_capa and incursao.imagem_capa.startswith(("http://", "https://")):
+        e.set_image(url=incursao.imagem_capa)
+    return _rodape(e, "O caminho é sorteado a cada run: nem o GM sabe o que vem pela frente.")
+
+
+def lore_fecho(incursao: Incursao) -> discord.Embed:
+    """O epílogo, quando o grupo cumpre o objetivo."""
+    return discord.Embed(
+        title=f"📖 {incursao.nome} — epílogo",
+        description=incursao.lore_final,
+        color=COR_SUCESSO,
+    )
+
+
 def votacao(
-    incursao: Incursao, linha: int, opcoes: list[Sala], votos: dict[int, str], total: int
+    incursao: Incursao,
+    linha: int,
+    opcoes: list[Sala],
+    votos: dict[int, str],
+    total: int,
+    passos: int = 3,
 ) -> discord.Embed:
     maioria = total // 2 + 1
     e = discord.Embed(
-        title=f"Linha {linha} de 3 — para onde o grupo vai?",
+        title=f"Sala {linha} de {passos} — para onde o grupo vai?",
         description=(
             f"Cada jogador escolhe uma saída. A votação fecha assim que uma sala "
             f"chegar a **{maioria}** voto(s) — o grupo não espera quem faltar."
@@ -102,7 +152,7 @@ def votacao(
             value=f"{EMOJI_TIPO.get(sala.tipo, '•')} {sala.tipo}{marcador}",
             inline=True,
         )
-    e.add_field(name="Progresso", value=progresso_da_run(linha - 1), inline=False)
+    e.add_field(name="Progresso", value=progresso_da_run(linha - 1, passos), inline=False)
     lider = max(contagem.values()) if contagem else 0
     if lider >= maioria:
         rodape = "Maioria formada."
@@ -115,7 +165,7 @@ def votacao(
 
 
 def sala_aberta(
-    sala: Sala, linha: int, ja_rolaram: int, total: int
+    sala: Sala, linha: int, ja_rolaram: int, total: int, passos: Optional[int] = None
 ) -> tuple[discord.Embed, Optional[discord.File]]:
     e = discord.Embed(
         title=f"{EMOJI_TIPO.get(sala.tipo, '•')} {sala.nome}",
@@ -144,7 +194,7 @@ def sala_aberta(
     else:
         rodape = "Sem teste: o grupo recupera o fôlego."
 
-    e.add_field(name="Linha", value=f"{linha} de 3", inline=True)
+    e.add_field(name="Sala", value=f"{linha} de {passos}" if passos else str(linha), inline=True)
     arquivo, url = anexo_da_imagem(sala.imagem)
     if url:
         e.set_image(url=url)
@@ -249,8 +299,11 @@ def status(
     )
     e.add_field(name="Organização", value=incursao.organizacao, inline=True)
     e.add_field(
-        name="Linha",
-        value=f"{max(1, run['linha_atual'])} de 3  {progresso_da_run(max(0, run['linha_atual'] - 1))}",
+        name="Sala",
+        value=(
+            f"{max(1, run['linha_atual'])} de {incursao.passos}  "
+            f"{progresso_da_run(max(0, run['linha_atual'] - 1), incursao.passos)}"
+        ),
         inline=True,
     )
     if sala:

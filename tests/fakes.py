@@ -12,7 +12,7 @@ import copy  # noqa: E402
 import discord  # noqa: E402
 
 from src import database as db  # noqa: E402
-from src.incursoes import de_dict  # noqa: E402
+from src.incursoes import banco_de_dict, de_dict  # noqa: E402
 
 GUILD = 1
 CANAL = 99
@@ -153,8 +153,16 @@ class FakeBot:
 
 # Monstro que todo mundo acerta e que morre num golpe.
 INDEFESO = {"nome": "Saco de Pancada", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 1}
-# Monstro que ninguém acerta e que mata um personagem por rodada.
+# Monstro que ninguem acerta e que mata um personagem por rodada.
 IMBATIVEL = {"nome": "Ceifador", "ca": 40, "ataque": 40, "dano": "1d1+998", "hp": 999}
+
+ORG_PADRAO = "Vórtice Oculto"
+
+# Dois paragrafos: o recrutamento mostra so o primeiro, a abertura mostra tudo.
+LORE_TESTE = (
+    "Gancho da lore, que o recrutamento mostra.\n\n"
+    "Segundo parágrafo, que só aparece quando a run começa."
+)
 
 
 def sala(sala_id, tipo, **extra):
@@ -179,39 +187,61 @@ def sala(sala_id, tipo, **extra):
     return base
 
 
-def incursao_teste(
-    incursao_id: str,
-    monstro_objetivo: dict,
-    monstro_meio: dict | None = None,
-    pontos_conclusao: int = 10,
-    pontos_por_sala: dict[str, int] | None = None,
-):
-    linha1 = [
-        sala("A1", "Combate", monstro=copy.deepcopy(monstro_meio)) if monstro_meio
-        else sala("A1", "Evento"),
-        sala("A2", "Evento"),
-        sala("A3", "Descanso"),
+def salas_sem_combate(quantas=6, tipo="Evento", pontos=0):
+    """Banco previsível: só salas resolvidas por teste de perícia."""
+    return [sala(f"E{i}", tipo, pontos_organizacao=pontos) for i in range(1, quantas + 1)]
+
+
+def salas_de_combate(monstro=INDEFESO, quantas=4, pontos=0):
+    return [
+        sala(f"C{i}", "Combate", monstro=copy.deepcopy(monstro), pontos_organizacao=pontos)
+        for i in range(1, quantas + 1)
     ]
-    dados = {
-        "id": incursao_id,
-        "nome": f"Incursão {incursao_id}",
-        "organizacao": "Vórtice Oculto",
-        "descricao": "Incursão sintética de teste.",
-        "imagem_capa": None,
-        "recompensa_mes": 10,
-        "pontos_conclusao": pontos_conclusao,
-        "linhas": [
-            linha1,
-            [sala("B1", "Evento"), sala("B2", "Descanso"), sala("B3", "Tesouro")],
-            [sala("C1", "Evento"), sala("C2", "Armadilha"), sala("C3", "Descanso")],
-        ],
-        "objetivo": sala("OBJ", "Combate", monstro=copy.deepcopy(monstro_objetivo)),
-    }
-    for linha in dados["linhas"]:
-        for s in linha:
-            s["pontos_organizacao"] = (pontos_por_sala or {}).get(s["id"], 0)
-    dados["objetivo"]["pontos_organizacao"] = (pontos_por_sala or {}).get("OBJ", 0)
-    return de_dict(dados)
+
+
+def montar_conteudo(
+    cog,
+    *,
+    incursao_id="t",
+    organizacao=ORG_PADRAO,
+    tamanho="Curta",
+    monstro_objetivo=INDEFESO,
+    salas=None,
+    pontos_conclusao=10,
+    pontos_objetivo=0,
+    lore_final="Epílogo de teste.",
+):
+    """Registra no cog uma incursão e o banco de salas da Organização dela."""
+    incursao = de_dict(
+        {
+            "id": incursao_id,
+            "nome": f"Incursão {incursao_id}",
+            "organizacao": organizacao,
+            "tamanho": tamanho,
+            "lore_inicial": LORE_TESTE,
+            "lore_final": lore_final,
+            "imagem_capa": None,
+            "recompensa_mes": 10,
+            "pontos_conclusao": pontos_conclusao,
+            "objetivo": sala(
+                "OBJ",
+                "Combate",
+                monstro=copy.deepcopy(monstro_objetivo),
+                pontos_organizacao=pontos_objetivo,
+            ),
+        }
+    )
+    banco = banco_de_dict(
+        {"organizacao": organizacao, "salas": salas if salas is not None else salas_sem_combate()}
+    )
+    cog.incursoes[incursao.id] = incursao
+    cog.bancos[banco.organizacao] = banco
+    return incursao, banco
+
+
+async def opcoes_ids(cog, conn, run_id, passo):
+    """Os ids das salas sorteadas para aquele passo."""
+    return await db.opcoes_do_passo(conn, run_id, passo)
 
 
 async def criar_grupo(

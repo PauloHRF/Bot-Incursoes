@@ -89,31 +89,44 @@ async def main():
     else:
         raise AssertionError("deveria recusar coluna desconhecida")
 
-    # --- incursoes: JSON de exemplo e validacao ---
+    # --- incursoes e bancos: JSON de exemplo e validacao ---
     from copy import deepcopy
     import json
-    from src.incursoes import ErroDeValidacao, carregar, de_dict
+    from src.incursoes import (
+        ErroDeValidacao,
+        TAMANHOS,
+        banco_de_dict,
+        carregar,
+        carregar_banco,
+        de_dict,
+    )
 
-    caminho = Path(__file__).resolve().parents[1] / "data" / "incursoes" / "vortice_cripta.json"
-    inc = carregar(caminho)
-    assert len(inc.linhas) == 3 and all(len(l) == 3 for l in inc.linhas)
-    assert inc.objetivo.tipo == "Combate" and inc.objetivo.monstro.hp > 0
+    raiz = Path(__file__).resolve().parents[1]
+    inc = carregar(raiz / "data" / "incursoes" / "vortice_cripta.json")
     assert inc.organizacao == "Vórtice Oculto"
-    assert inc.sala("L2C").tipo == "Tesouro" and inc.sala("L2C").cd == 15
-    assert inc.sala("L2C").tem_teste and not inc.sala("L1C").tem_teste
-    assert inc.sala("L1C").e_combate and inc.sala("L1C").monstro.ca == 14
-    assert [s.id for s in inc.opcoes(2)] == ["L2A", "L2B", "L2C"]
-    assert inc.sala("nao_existe") is None
+    assert inc.tamanho in TAMANHOS and inc.passos == TAMANHOS[inc.tamanho]
+    assert inc.lore_inicial and inc.lore_final, "a incursão de exemplo precisa das duas lores"
+    assert inc.objetivo.tipo == "Combate" and inc.objetivo.monstro.hp > 0
     # o JSON sobrevive a uma ida e volta pelo validador
     assert de_dict(inc.para_dict()).para_dict() == inc.para_dict()
 
-    bom = json.loads(caminho.read_text(encoding="utf-8"))
+    banco = carregar_banco(raiz / "data" / "bancos" / "vortice_oculto.json")
+    assert banco.organizacao == "Vórtice Oculto"
+    assert len(banco.salas) >= 3
+    assert banco.sala(banco.salas[0].id) is banco.salas[0]
+    assert banco.sala("nao_existe") is None
+    assert any(s.e_combate for s in banco.salas), "o banco de exemplo tem salas de combate"
+    assert any(s.tem_teste for s in banco.salas)
+    assert banco_de_dict(banco.para_dict()).para_dict() == banco.para_dict()
 
-    def recusa(mutacao, trecho):
-        dados = deepcopy(bom)
-        mutacao(dados)
+    bom = json.loads((raiz / "data" / "incursoes" / "vortice_cripta.json").read_text(encoding="utf-8"))
+    bom_banco = json.loads((raiz / "data" / "bancos" / "vortice_oculto.json").read_text(encoding="utf-8"))
+
+    def recusa(dados, mutacao, trecho, monta=de_dict):
+        copia = deepcopy(dados)
+        mutacao(copia)
         try:
-            de_dict(dados)
+            monta(copia)
         except ErroDeValidacao as exc:
             assert any(trecho in p for p in exc.problemas), (trecho, exc.problemas)
         else:
@@ -123,22 +136,25 @@ async def main():
         d["objetivo"]["tipo"] = "Evento"
         d["objetivo"]["monstro"] = None
 
-    recusa(vira_evento, "desafio final é sempre Combate")
-    recusa(lambda d: d["linhas"][0].pop(), "exatamente 3 salas")
-    recusa(lambda d: d["linhas"].pop(), "exatamente 3 linhas")
-    recusa(lambda d: d["linhas"][0][0]["pericias"].append("Alquimia"), "não existe")
-    recusa(lambda d: d["objetivo"].update(monstro=None), "precisa dos dados do monstro")
-    recusa(lambda d: d["objetivo"]["monstro"].update(dano="muito"), "fora do formato")
-    recusa(lambda d: d["linhas"][0][0].update(alvo_progresso=0), "alvo_progresso maior que zero")
-    recusa(lambda d: d.update(organizacao="Clube do Livro"), "organizacao")
-    recusa(lambda d: d.update(id="Vórtice Cripta"), "letras minúsculas")
-    recusa(lambda d: d["linhas"][1][0].update(id="L1A"), "aparece 2 vezes")
-    recusa(lambda d: d["linhas"][0][0].update(tipo="Puzzle"), "tipo 'Puzzle' inválido")
-    recusa(lambda d: d["linhas"][1][1].update(monstro={"nome": "x"}), "só salas de Combate têm monstro")
+    recusa(bom, vira_evento, "desafio final é sempre Combate")
+    recusa(bom, lambda d: d.update(tamanho="Gigante"), "tamanho")
+    recusa(bom, lambda d: d.update(lore_inicial="", descricao=""), "lore de abertura")
+    recusa(bom, lambda d: d["objetivo"].update(monstro=None), "precisa dos dados do monstro")
+    recusa(bom, lambda d: d["objetivo"]["monstro"].update(dano="muito"), "fora do formato")
+    recusa(bom, lambda d: d.update(organizacao="Clube do Livro"), "organizacao")
+    recusa(bom, lambda d: d.update(id="Vórtice Cripta"), "letras minúsculas")
+    recusa(bom, lambda d: d.update(pontos_conclusao=-5), "não pode ser negativo")
+
+    recusa(bom_banco, lambda d: d.update(salas=d["salas"][:2]), "pelo menos", banco_de_dict)
+    recusa(bom_banco, lambda d: d["salas"][0]["pericias"].append("Alquimia"), "não existe", banco_de_dict)
+    recusa(bom_banco, lambda d: d["salas"].append(deepcopy(d["salas"][0])), "aparece 2 vezes", banco_de_dict)
+    recusa(bom_banco, lambda d: d["salas"][0].update(tipo="Puzzle"), "inválido", banco_de_dict)
+    recusa(bom_banco, lambda d: d.update(organizacao="Clube do Livro"), "organizacao", banco_de_dict)
+
     # um erro nao esconde os outros: todos saem de uma vez
     quebrado = deepcopy(bom)
     quebrado["organizacao"] = "Clube do Livro"
-    quebrado["linhas"][0][0]["pericias"] = ["Alquimia"]
+    quebrado["tamanho"] = "Gigante"
     try:
         de_dict(quebrado)
     except ErroDeValidacao as exc:

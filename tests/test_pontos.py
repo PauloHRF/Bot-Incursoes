@@ -27,7 +27,8 @@ from fakes import (  # noqa: E402
     FakeCanal,
     FakeInteraction,
     criar_grupo,
-    incursao_teste,
+    montar_conteudo,
+    salas_sem_combate,
 )
 
 _ABERTAS = []
@@ -50,7 +51,6 @@ async def preparar(hp_max=40):
     await criar_grupo(conn, hp_max=hp_max)
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
-    cog.incursoes = {}
     return conn, canal, cog
 
 
@@ -63,16 +63,11 @@ async def montar_run(conn, canal, cog, incursao_id):
     return await db.buscar_run(conn, run["id"])
 
 
-async def atravessar(conn, canal, cog, run, incursao, preferir: dict[int, str] | None = None):
+async def atravessar(conn, canal, cog, run, incursao):
     """Leva o grupo até o objetivo, escolhendo salas sem combate."""
-    for linha in (1, 2, 3):
+    for linha in range(1, incursao.passos + 1):
         run = await db.buscar_run(conn, run["id"])
-        escolhido = (preferir or {}).get(linha)
-        alvo = (
-            incursao.sala(escolhido)
-            if escolhido
-            else next(s for s in incursao.opcoes(linha) if not s.e_combate)
-        )
+        alvo = next(s for s in await cog._opcoes(run, linha) if not s.e_combate)
         msg = await canal.fetch_message(run["mensagem_id"])
         for user_id in JOGADORES:
             await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], linha, alvo.id)
@@ -103,8 +98,9 @@ async def caso_placar_comeca_zerado():
 async def caso_conclusao_credita():
     """Concluir o objetivo rende participação + conclusão, na Organização certa."""
     conn, canal, cog = await preparar()
-    incursao = incursao_teste("vit", INDEFESO, pontos_conclusao=10)
-    cog.incursoes["vit"] = incursao
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="vit", pontos_conclusao=10, salas=salas_sem_combate()
+    )
     run = await montar_run(conn, canal, cog, "vit")
     run = await atravessar(conn, canal, cog, run, incursao)
     assert run["status"] == "objetivo"
@@ -130,20 +126,19 @@ async def caso_conclusao_credita():
 async def caso_salas_secundarias_pontuam():
     """Cada sala superada com valor na planilha soma seu bônus."""
     conn, canal, cog = await preparar()
-    incursao = incursao_teste(
-        "salas", INDEFESO, pontos_conclusao=10, pontos_por_sala={"A2": 3, "B1": 2, "C1": 4}
+    # todas as salas do banco valem 3 pontos quando superadas
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="salas", pontos_conclusao=10, salas=salas_sem_combate(pontos=3)
     )
-    cog.incursoes["salas"] = incursao
     run = await montar_run(conn, canal, cog, "salas")
-    # A2, B1 e C1 são de Evento, com CD 10 e alvo 5: o grupo supera
-    run = await atravessar(conn, canal, cog, run, incursao, {1: "A2", 2: "B1", 3: "C1"})
+    run = await atravessar(conn, canal, cog, run, incursao)
 
     lancamentos = await db.pontos_da_run(conn, run["id"])
     por_chave = {l["chave"]: l["pontos"] for l in lancamentos}
     superadas = [c for c in por_chave if c.startswith("sala:")]
     assert superadas, f"nenhuma sala pontuou: {por_chave}"
     for chave in superadas:
-        assert por_chave[chave] in (2, 3, 4), por_chave
+        assert por_chave[chave] == 3, por_chave
 
     msg = await canal.fetch_message((await db.buscar_run(conn, run["id"]))["mensagem_id"])
     await cog.atacar(FakeInteraction(canal, JOGADORES[0], msg), run["id"], "OBJ")
@@ -156,8 +151,10 @@ async def caso_salas_secundarias_pontuam():
 
 async def caso_fracasso_credita_so_participacao():
     conn, canal, cog = await preparar(hp_max=10)
-    incursao = incursao_teste("derrota", IMBATIVEL, pontos_conclusao=10)
-    cog.incursoes["derrota"] = incursao
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="derrota", monstro_objetivo=IMBATIVEL, pontos_conclusao=10,
+        salas=salas_sem_combate(),
+    )
     run = await montar_run(conn, canal, cog, "derrota")
     run = await atravessar(conn, canal, cog, run, incursao)
 
@@ -183,8 +180,7 @@ async def caso_fracasso_credita_so_participacao():
 async def caso_nao_credita_duas_vezes():
     """A mesma chave na mesma run nunca entra duas vezes no placar."""
     conn, canal, cog = await preparar()
-    incursao = incursao_teste("idem", INDEFESO)
-    cog.incursoes["idem"] = incursao
+    montar_conteudo(cog, incursao_id="idem", salas=salas_sem_combate())
     run = await montar_run(conn, canal, cog, "idem")
 
     assert await db.lancar_pontos(

@@ -1,7 +1,9 @@
-"""Definição de incursões: schema, validação e carregamento dos JSON.
+"""Definição de incursões e do banco de salas de cada Organização.
 
-Uma incursão tem 3 linhas de 3 salas mais a sala de Objetivo, que é sempre Combate.
-O grupo escolhe 1 sala por linha, três vezes, e então enfrenta o Objetivo.
+Uma incursão guarda a lore de abertura, a lore de fecho (quando o grupo vence),
+o tamanho (curta, média ou longa) e a sala final. As salas do meio não são
+escritas na incursão: são sorteadas do banco da Organização quando a run começa,
+então duas runs da mesma incursão percorrem caminhos diferentes.
 """
 from __future__ import annotations
 
@@ -22,6 +24,12 @@ ORGANIZACOES = (
 )
 DIFICULDADES = ("Fácil", "Média", "Difícil")
 
+# Quantas salas o grupo atravessa antes do objetivo, por tamanho.
+TAMANHOS = {"Curta": 3, "Média": 5, "Longa": 7}
+
+# Quantas opções o grupo recebe em cada passo.
+OPCOES_POR_PASSO = 3
+
 # Tipos que resolvem a sala por teste de perícia (margem vs CD).
 TIPOS_COM_TESTE = ("Armadilha", "Evento", "Tesouro")
 
@@ -30,6 +38,12 @@ EXPR_DANO = re.compile(r"^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$", re.IGNORECASE)
 _INDICE_TIPOS = {chave_comparacao(t): t for t in TIPOS_SALA}
 _INDICE_ORGS = {chave_comparacao(o): o for o in ORGANIZACOES}
 _INDICE_DIFS = {chave_comparacao(d): d for d in DIFICULDADES}
+_INDICE_TAMANHOS = {chave_comparacao(t): t for t in TAMANHOS}
+
+
+def arquivo_da_organizacao(organizacao: str) -> str:
+    """Nome de arquivo do banco daquela Organização: 'Vórtice Oculto' -> vortice_oculto."""
+    return chave_comparacao(organizacao).replace(" ", "_")
 
 
 class ErroDeValidacao(Exception):
@@ -52,7 +66,13 @@ class Monstro:
     hp: int
 
     def para_dict(self) -> dict[str, Any]:
-        return {"nome": self.nome, "ca": self.ca, "ataque": self.ataque, "dano": self.dano, "hp": self.hp}
+        return {
+            "nome": self.nome,
+            "ca": self.ca,
+            "ataque": self.ataque,
+            "dano": self.dano,
+            "hp": self.hp,
+        }
 
 
 @dataclass
@@ -79,7 +99,7 @@ class Sala:
         return self.tipo == "Combate"
 
     def para_dict(self) -> dict[str, Any]:
-        d = {
+        return {
             "id": self.id,
             "nome": self.nome,
             "tipo": self.tipo,
@@ -91,9 +111,28 @@ class Sala:
             "imagem": self.imagem,
             "recompensa": self.recompensa,
             "pontos_organizacao": self.pontos_organizacao,
+            "monstro": self.monstro.para_dict() if self.monstro else None,
         }
-        d["monstro"] = self.monstro.para_dict() if self.monstro else None
-        return d
+
+
+@dataclass
+class BancoDeSalas:
+    """As salas que o sorteio de uma Organização pode oferecer."""
+
+    organizacao: str
+    salas: list[Sala]
+
+    def sala(self, sala_id: str) -> Optional[Sala]:
+        for s in self.salas:
+            if s.id == sala_id:
+                return s
+        return None
+
+    def para_dict(self) -> dict[str, Any]:
+        return {
+            "organizacao": self.organizacao,
+            "salas": [s.para_dict() for s in self.salas],
+        }
 
 
 @dataclass
@@ -101,33 +140,30 @@ class Incursao:
     id: str
     nome: str
     organizacao: str
-    descricao: str
-    linhas: list[list[Sala]]
+    lore_inicial: str
     objetivo: Sala
+    tamanho: str = "Média"
+    lore_final: Optional[str] = None
     imagem_capa: Optional[str] = None
     recompensa_mes: int = 10
     pontos_conclusao: int = 10
 
-    def opcoes(self, linha: int) -> list[Sala]:
-        """As 3 salas oferecidas na linha (1, 2 ou 3)."""
-        return self.linhas[linha - 1]
-
-    def sala(self, sala_id: str) -> Optional[Sala]:
-        for s in [*[x for linha in self.linhas for x in linha], self.objetivo]:
-            if s.id == sala_id:
-                return s
-        return None
+    @property
+    def passos(self) -> int:
+        """Quantas salas o grupo atravessa antes do objetivo."""
+        return TAMANHOS[self.tamanho]
 
     def para_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "nome": self.nome,
             "organizacao": self.organizacao,
-            "descricao": self.descricao,
+            "tamanho": self.tamanho,
+            "lore_inicial": self.lore_inicial,
+            "lore_final": self.lore_final,
             "imagem_capa": self.imagem_capa,
             "recompensa_mes": self.recompensa_mes,
             "pontos_conclusao": self.pontos_conclusao,
-            "linhas": [[s.para_dict() for s in linha] for linha in self.linhas],
             "objetivo": self.objetivo.para_dict(),
         }
 
@@ -220,9 +256,7 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
             if m_hp is not None and m_hp <= 0:
                 problemas.append(f"{onde}: o HP do monstro precisa ser maior que zero.")
             if not EXPR_DANO.match(m_dano):
-                problemas.append(
-                    f"{onde}: dano '{m_dano}' fora do formato esperado (ex.: 2d6+3)."
-                )
+                problemas.append(f"{onde}: dano '{m_dano}' fora do formato esperado (ex.: 2d6+3).")
             if m_nome and None not in (m_ca, m_atk, m_hp):
                 monstro = Monstro(m_nome, m_ca, m_atk, m_dano, m_hp)
     elif bruto_monstro:
@@ -244,6 +278,38 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
     )
 
 
+def banco_de_dict(dados: dict[str, Any]) -> BancoDeSalas:
+    """Valida e converte o banco de salas de uma Organização."""
+    problemas: list[str] = []
+
+    organizacao = _INDICE_ORGS.get(chave_comparacao(str(dados.get("organizacao") or "")))
+    if not organizacao:
+        problemas.append(
+            f"organizacao '{dados.get('organizacao')}' inválida. "
+            f"Use uma de: {', '.join(ORGANIZACOES)}."
+        )
+
+    brutas = dados.get("salas") or []
+    salas = [s for s in (_sala_de_dict(b, "banco", problemas) for b in brutas) if s]
+
+    if len(salas) < OPCOES_POR_PASSO:
+        problemas.append(
+            f"O banco precisa de pelo menos {OPCOES_POR_PASSO} salas para o sorteio "
+            f"montar um passo (tem {len(salas)})."
+        )
+
+    vistos: dict[str, int] = {}
+    for sala in salas:
+        vistos[sala.id] = vistos.get(sala.id, 0) + 1
+    for sala_id, quantas in vistos.items():
+        if quantas > 1:
+            problemas.append(f"sala_id '{sala_id}' aparece {quantas} vezes no banco.")
+
+    if problemas:
+        raise ErroDeValidacao(problemas)
+    return BancoDeSalas(organizacao=organizacao, salas=salas)
+
+
 def de_dict(dados: dict[str, Any]) -> Incursao:
     """Valida e converte o dicionário cru numa Incursao. Levanta ErroDeValidacao."""
     problemas: list[str] = []
@@ -263,12 +329,25 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
     organizacao = _INDICE_ORGS.get(chave_comparacao(str(dados.get("organizacao") or "")))
     if not organizacao:
         problemas.append(
-            f"organizacao '{dados.get('organizacao')}' inválida. Use uma de: {', '.join(ORGANIZACOES)}."
+            f"organizacao '{dados.get('organizacao')}' inválida. "
+            f"Use uma de: {', '.join(ORGANIZACOES)}."
         )
 
-    descricao = str(dados.get("descricao") or "").strip()
-    if not descricao:
-        problemas.append("A incursão precisa de uma descrição de abertura.")
+    # 'descricao' era o nome antigo da lore de abertura.
+    lore_inicial = str(dados.get("lore_inicial") or dados.get("descricao") or "").strip()
+    if not lore_inicial:
+        problemas.append("Falta a lore de abertura (lore_inicial).")
+
+    lore_final = str(dados.get("lore_final") or "").strip() or None
+
+    tamanho = _INDICE_TAMANHOS.get(chave_comparacao(str(dados.get("tamanho") or "Média")))
+    if not tamanho:
+        problemas.append(
+            f"tamanho '{dados.get('tamanho')}' inválido. Use "
+            + ", ".join(f"{t} ({n} salas)" for t, n in TAMANHOS.items())
+            + "."
+        )
+        tamanho = "Média"
 
     recompensa = _inteiro(dados.get("recompensa_mes"))
     if recompensa is None or recompensa < 0:
@@ -282,17 +361,6 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
         problemas.append("pontos_conclusao não pode ser negativo.")
         pontos_conclusao = 10
 
-    linhas_brutas = dados.get("linhas") or []
-    if len(linhas_brutas) != 3:
-        problemas.append(f"A incursão precisa de exatamente 3 linhas (encontrei {len(linhas_brutas)}).")
-
-    linhas: list[list[Sala]] = []
-    for i, linha_bruta in enumerate(linhas_brutas, start=1):
-        if len(linha_bruta) != 3:
-            problemas.append(f"Linha {i}: precisa de exatamente 3 salas (encontrei {len(linha_bruta)}).")
-        salas = [_sala_de_dict(s, f"linha {i}", problemas) for s in linha_bruta]
-        linhas.append([s for s in salas if s])
-
     objetivo = None
     if not dados.get("objetivo"):
         problemas.append("Falta a sala de Objetivo.")
@@ -303,13 +371,6 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
                 f"objetivo: o desafio final é sempre Combate (veio como '{objetivo.tipo}')."
             )
 
-    vistos: dict[str, int] = {}
-    for sala in [s for linha in linhas for s in linha] + ([objetivo] if objetivo else []):
-        vistos[sala.id] = vistos.get(sala.id, 0) + 1
-    for sala_id, quantas in vistos.items():
-        if quantas > 1:
-            problemas.append(f"sala_id '{sala_id}' aparece {quantas} vezes; cada sala precisa de um id único.")
-
     if problemas:
         raise ErroDeValidacao(problemas)
 
@@ -317,10 +378,13 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
         id=incursao_id,
         nome=nome,
         organizacao=organizacao,
-        descricao=descricao,
-        linhas=linhas,
+        lore_inicial=lore_inicial,
+        lore_final=lore_final,
+        tamanho=tamanho,
         objetivo=objetivo,
-        imagem_capa=(str(dados.get("imagem_capa")).strip() or None) if dados.get("imagem_capa") else None,
+        imagem_capa=(str(dados.get("imagem_capa")).strip() or None)
+        if dados.get("imagem_capa")
+        else None,
         recompensa_mes=recompensa,
         pontos_conclusao=pontos_conclusao,
     )
@@ -330,10 +394,23 @@ def carregar(caminho: Path) -> Incursao:
     return de_dict(json.loads(Path(caminho).read_text(encoding="utf-8")))
 
 
+def carregar_banco(caminho: Path) -> BancoDeSalas:
+    return banco_de_dict(json.loads(Path(caminho).read_text(encoding="utf-8")))
+
+
 def carregar_todas(pasta: Path) -> dict[str, Incursao]:
-    """Carrega toda incursão válida da pasta. Uma inválida derruba o carregamento inteiro."""
+    """Carrega toda incursão válida da pasta. Uma inválida derruba o carregamento."""
     incursoes = {}
     for arquivo in sorted(Path(pasta).glob("*.json")):
         incursao = carregar(arquivo)
         incursoes[incursao.id] = incursao
     return incursoes
+
+
+def carregar_bancos(pasta: Path) -> dict[str, BancoDeSalas]:
+    """Carrega os bancos de salas, indexados pelo nome da Organização."""
+    bancos = {}
+    for arquivo in sorted(Path(pasta).glob("*.json")):
+        banco = carregar_banco(arquivo)
+        bancos[banco.organizacao] = banco
+    return bancos

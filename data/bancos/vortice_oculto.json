@@ -1,0 +1,220 @@
+{
+  "organizacao": "Vórtice Oculto",
+  "salas": [
+    {
+      "id": "VO01",
+      "nome": "Portal Instável",
+      "tipo": "Armadilha",
+      "descricao": "Um arco de pedra pulsa e, a cada batida, cospe estilhaços de realidade pelo corredor. Passar exige ler o ritmo — ou ser muito rápido.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Acrobacia",
+        "Arcanismo"
+      ],
+      "imagem": null,
+      "recompensa": "Um fragmento de selo para quem passa ileso.",
+      "pontos_organizacao": 1,
+      "monstro": null
+    },
+    {
+      "id": "VO02",
+      "nome": "Biblioteca Submersa",
+      "tipo": "Evento",
+      "descricao": "Água escura cobre as prateleiras até a altura do peito. Os livros que boiam ainda estão secos, e isso é o mais perturbador da sala.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Investigação",
+        "Arcanismo",
+        "História"
+      ],
+      "imagem": null,
+      "recompensa": "Revela a CA do próximo inimigo.",
+      "pontos_organizacao": 2,
+      "monstro": null
+    },
+    {
+      "id": "VO03",
+      "nome": "Sentinelas de Pedra",
+      "tipo": "Combate",
+      "descricao": "Duas estátuas ladeiam a porta interna. Elas não se mexem enquanto ninguém olha para o que carregam — e o que carregam é o que o grupo veio buscar.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstro": {
+        "nome": "Sentinela de Basalto",
+        "ca": 14,
+        "ataque": 5,
+        "dano": "1d10+3",
+        "hp": 26
+      }
+    },
+    {
+      "id": "VO04",
+      "nome": "Corredor dos Ecos",
+      "tipo": "Armadilha",
+      "descricao": "Cada passo volta multiplicado, e junto com o eco vem alguma coisa que anda no contratempo. O chão é feito de placas que afundam sob peso.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Percepção",
+        "Acrobacia",
+        "Furtividade"
+      ],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstro": null
+    },
+    {
+      "id": "VO05",
+      "nome": "Acampamento Abandonado",
+      "tipo": "Descanso",
+      "descricao": "Uma expedição anterior montou barraca aqui e não voltou. As brasas ainda estão mornas, a comida intacta. O grupo descansa — desconfiado, mas descansa.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": "O grupo recupera o fôlego.",
+      "pontos_organizacao": 0,
+      "monstro": null
+    },
+    {
+      "id": "VO06",
+      "nome": "Cofre Selado",
+      "tipo": "Tesouro",
+      "descricao": "Um cofre de ferro fundido, sem fechadura visível, só um sulco em espiral onde deveria estar. Quem entender a espiral leva o que tem dentro.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Prestidigitação",
+        "Arcanismo"
+      ],
+      "imagem": null,
+      "recompensa": "Materiais raros para quem passar no teste.",
+      "pontos_organizacao": 3,
+      "monstro": null
+    },
+    {
+      "id": "VO07",
+      "nome": "Ninho de Aberrações",
+      "tipo": "Combate",
+      "descricao": "O vazamento chegou aqui primeiro. O que nasceu do outro lado do selo aprendeu a usar os corredores — e aprendeu que comida desce por eles.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstro": {
+        "nome": "Cria do Vazio",
+        "ca": 15,
+        "ataque": 6,
+        "dano": "2d6+2",
+        "hp": 34
+      }
+    },
+    {
+      "id": "VO08",
+      "nome": "Ritual Interrompido",
+      "tipo": "Evento",
+      "descricao": "Alguém tentou fechar a fenda daqui e parou no meio. As velas ainda queimam. Terminar o ritual enfraquece o que espera adiante; errar acorda o resto.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Religião",
+        "Arcanismo",
+        "Intuição"
+      ],
+      "imagem": null,
+      "recompensa": "O chefe começa o confronto final com 10 de HP a menos.",
+      "pontos_organizacao": 2,
+      "monstro": null
+    },
+    {
+      "id": "VO09",
+      "nome": "Passagem Estreita",
+      "tipo": "Armadilha",
+      "descricao": "A fenda na parede é apertada e cortante, e alguma coisa já ficou presa aqui antes de o grupo chegar.",
+      "dificuldade": "Fácil",
+      "cd": 10,
+      "alvo_progresso": 5,
+      "pericias": [
+        "Acrobacia",
+        "Atletismo",
+        "Furtividade"
+      ],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstro": null
+    },
+    {
+      "id": "VO10",
+      "nome": "Sala dos Espelhos Tortos",
+      "tipo": "Evento",
+      "descricao": "Os reflexos atrasam meio segundo e sorriem quando ninguém sorriu. Um deles aponta para a saída certa. Um deles mente.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Intuição",
+        "Percepção",
+        "Enganação"
+      ],
+      "imagem": null,
+      "recompensa": "Atalho: a próxima sala começa com metade do progresso feito.",
+      "pontos_organizacao": 2,
+      "monstro": null
+    },
+    {
+      "id": "VO11",
+      "nome": "Guardião Adormecido",
+      "tipo": "Combate",
+      "descricao": "A coisa ocupa o corredor inteiro e respira devagar, como quem dorme há séculos. Dá para tentar passar em silêncio. Nunca dá certo.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstro": {
+        "nome": "Coisa do Umbral",
+        "ca": 16,
+        "ataque": 6,
+        "dano": "2d8+3",
+        "hp": 40
+      }
+    },
+    {
+      "id": "VO12",
+      "nome": "Poço de Oferendas",
+      "tipo": "Tesouro",
+      "descricao": "Moedas, dentes e anéis cobrem o fundo raso. Cada objeto foi deixado por alguém pedindo passagem — e a maioria não conseguiu.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Religião",
+        "Investigação"
+      ],
+      "imagem": null,
+      "recompensa": "Um item mágico menor, a critério do GM.",
+      "pontos_organizacao": 3,
+      "monstro": null
+    }
+  ]
+}

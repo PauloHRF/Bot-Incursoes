@@ -15,12 +15,18 @@ from discord import app_commands
 from discord.ext import commands
 
 from .. import config, database as db, embeds as E, motor
-from ..incursoes import Incursao, Monstro, Sala, carregar_todas
+from ..incursoes import (
+    BancoDeSalas,
+    Incursao,
+    Monstro,
+    Sala,
+    arquivo_da_organizacao,
+    carregar_bancos,
+    carregar_todas,
+)
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
 
 log = logging.getLogger("incursoes.run")
-
-LINHAS = 3
 
 
 def _agora() -> datetime:
@@ -163,6 +169,7 @@ class Incursoes(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.incursoes: dict[str, Incursao] = {}
+        self.bancos: dict[str, BancoDeSalas] = {}
 
     async def cog_load(self) -> None:
         self._carregar_tolerante()
@@ -170,8 +177,24 @@ class Incursoes(commands.Cog):
 
     def recarregar_incursoes(self) -> None:
         pasta = config.RAIZ / "data" / "incursoes"
+        bancos = config.RAIZ / "data" / "bancos"
         self.incursoes = carregar_todas(pasta) if pasta.is_dir() else {}
-        log.info("%d incursão(ões) carregada(s): %s", len(self.incursoes), ", ".join(self.incursoes))
+        self.bancos = carregar_bancos(bancos) if bancos.is_dir() else {}
+        log.info(
+            "%d incursão(ões) e %d banco(s) carregados: %s",
+            len(self.incursoes),
+            len(self.bancos),
+            ", ".join(self.incursoes),
+        )
+        for inc in self.incursoes.values():
+            if inc.organizacao not in self.bancos:
+                log.warning(
+                    "a incursão '%s' é de %s, mas não há banco de salas dessa Organização"
+                    " (esperado em data/bancos/%s.json)",
+                    inc.id,
+                    inc.organizacao,
+                    arquivo_da_organizacao(inc.organizacao),
+                )
 
     def _carregar_tolerante(self) -> None:
         """No boot, uma incursão inválida não pode impedir o bot de subir."""
@@ -184,20 +207,21 @@ class Incursoes(commands.Cog):
     async def restaurar_views(self) -> None:
         """Reativa os botões das runs que ficaram abertas antes de um restart."""
         for run in await db.runs_vivas(self.bot.db):
-            view = self._view_do_estado(run)
+            view = await self._view_do_estado(run)
             if view and run["mensagem_id"]:
                 self.bot.add_view(view, message_id=run["mensagem_id"])
 
-    def _view_do_estado(self, run: dict[str, Any]) -> Optional[discord.ui.View]:
+    async def _view_do_estado(self, run: dict[str, Any]) -> Optional[discord.ui.View]:
         incursao = self.incursoes.get(run["incursao_id"])
         if not incursao:
             return None
         if run["status"] == "recrutando":
             return ViewRecrutamento(self, run["id"])
         if run["status"] == "escolhendo":
-            return ViewVotacao(self, run["id"], run["linha_atual"], incursao.opcoes(run["linha_atual"]))
+            opcoes = await self._opcoes(run, run["linha_atual"])
+            return ViewVotacao(self, run["id"], run["linha_atual"], opcoes) if opcoes else None
         if run["status"] in ("em_sala", "objetivo") and run["sala_atual"]:
-            sala = incursao.sala(run["sala_atual"])
+            sala = self._sala(incursao, run["sala_atual"])
             if sala and sala.tem_teste:
                 return ViewSala(self, run["id"], sala.id)
             if sala and sala.e_combate:
@@ -259,6 +283,23 @@ class Incursoes(commands.Cog):
     def _incursao_da_run(self, run: dict[str, Any]) -> Optional[Incursao]:
         return self.incursoes.get(run["incursao_id"])
 
+    def _sala(self, incursao: Incursao, sala_id: Optional[str]) -> Optional[Sala]:
+        """A sala pelo id: a final da incursão ou uma do banco da Organização."""
+        if not sala_id:
+            return None
+        if sala_id == incursao.objetivo.id:
+            return incursao.objetivo
+        banco = self.bancos.get(incursao.organizacao)
+        return banco.sala(sala_id) if banco else None
+
+    async def _opcoes(self, run: dict[str, Any], passo: int) -> list[Sala]:
+        """As salas sorteadas para aquele passo desta run."""
+        incursao = self._incursao_da_run(run)
+        if not incursao:
+            return []
+        ids = await db.opcoes_do_passo(self.bot.db, run["id"], passo)
+        return [s for s in (self._sala(incursao, i) for i in ids) if s]
+
     async def _run_do_contexto(
         self, interaction: discord.Interaction, exigir_participante: bool = True
     ) -> Optional[dict[str, Any]]:
@@ -299,9 +340,14 @@ class Incursoes(commands.Cog):
             return
         e = discord.Embed(title="Incursões disponíveis", color=E.COR_INCURSAO)
         for inc in self.incursoes.values():
+            salas_no_banco = len(self.bancos[inc.organizacao].salas) if inc.organizacao in self.bancos else 0
             e.add_field(
                 name=f"{inc.nome}  ·  `{inc.id}`",
-                value=f"{inc.organizacao} — {inc.recompensa_mes} MEs",
+                value=(
+                    f"{inc.organizacao} — {inc.tamanho.lower()} ({inc.passos} salas + objetivo)"
+                    f" — {inc.recompensa_mes} MEs"
+                    + ("" if salas_no_banco else "\n⚠️ sem banco de salas carregado")
+                ),
                 inline=False,
             )
         await interaction.response.send_message(embed=e, ephemeral=True)
@@ -530,23 +576,39 @@ class Incursoes(commands.Cog):
         participantes = await db.participantes(self.bot.db, run["id"])
         if not participantes:
             return
+        incursao = self._incursao_da_run(run)
+        canal = await self._canal(run)
+        if not incursao:
+            return
+
+        banco = self.bancos.get(incursao.organizacao)
+        if not banco:
+            if canal:
+                await canal.send(
+                    f"Não há banco de salas de **{incursao.organizacao}** carregado, "
+                    "então não dá para sortear o caminho. Avise quem administra o bot."
+                )
+            return
+        try:
+            mapa = motor.sortear_mapa(banco.salas, incursao.passos)
+        except ValueError as exc:
+            if canal:
+                await canal.send(f"Não consegui montar o caminho: {exc}.")
+            return
+
         await db.marcar_ultima_incursao(self.bot.db, run["guild_id"], participantes)
         await db.inicializar_hp(self.bot.db, run["id"])
+        await db.gravar_mapa(self.bot.db, run["id"], mapa)
         await db.atualizar_run(self.bot.db, run["id"], status="escolhendo", linha_atual=1)
 
-        canal = await self._canal(run)
         if canal:
-            incursao = self._incursao_da_run(run)
             if run["mensagem_id"]:
                 try:
                     mensagem = await canal.fetch_message(run["mensagem_id"])
                     await mensagem.edit(view=None)
                 except discord.HTTPException:
                     pass
-            await canal.send(
-                f"**{incursao.nome}** começa agora com {len(participantes)} "
-                f"aventureiro(s). Que a Organização registre o que for trazido de volta."
-            )
+            await canal.send(embed=E.lore_abertura(incursao, len(participantes)))
         await self._abrir_votacao(await db.buscar_run(self.bot.db, run["id"]), 1)
 
     # ------------------------------------------------------------ votação
@@ -556,12 +618,17 @@ class Incursoes(commands.Cog):
         canal = await self._canal(run)
         if not (incursao and canal):
             return
-        opcoes = incursao.opcoes(linha)
+        opcoes = await self._opcoes(run, linha)
+        if not opcoes:
+            await canal.send(
+                "Não achei as salas sorteadas para este passo. O banco da Organização mudou?"
+            )
+            return
         total = len(await db.participantes(self.bot.db, run["id"]))
         votos = await db.votos_da_linha(self.bot.db, run["id"], linha)
         view = ViewVotacao(self, run["id"], linha, opcoes)
         mensagem = await canal.send(
-            embed=E.votacao(incursao, linha, opcoes, votos, total), view=view
+            embed=E.votacao(incursao, linha, opcoes, votos, total, incursao.passos), view=view
         )
         await db.atualizar_run(
             self.bot.db,
@@ -586,17 +653,19 @@ class Incursoes(commands.Cog):
 
         await db.registrar_voto(self.bot.db, run_id, linha, interaction.user.id, sala_id)
         incursao = self._incursao_da_run(run)
-        sala = incursao.sala(sala_id)
-        await interaction.response.send_message(f"Voto registrado: **{sala.nome}**.", ephemeral=True)
+        sala = self._sala(incursao, sala_id)
+        await interaction.response.send_message(
+            f"Voto registrado: **{sala.nome if sala else sala_id}**.", ephemeral=True
+        )
 
         votos = await db.votos_da_linha(self.bot.db, run_id, linha)
         total = len(await db.participantes(self.bot.db, run_id))
-        opcoes = incursao.opcoes(linha)
+        opcoes = await self._opcoes(run, linha)
 
         if interaction.message is not None:
             try:
                 await interaction.message.edit(
-                    embed=E.votacao(incursao, linha, opcoes, votos, total),
+                    embed=E.votacao(incursao, linha, opcoes, votos, total, incursao.passos),
                     view=ViewVotacao(self, run_id, linha, opcoes),
                 )
             except discord.HTTPException:
@@ -649,14 +718,14 @@ class Incursoes(commands.Cog):
 
         faltaram = total - len(votos)
         if faltaram > 0:
-            nome = incursao.sala(escolhida_id).nome
+            nome = self._sala(incursao, escolhida_id).nome
             await canal.send(
                 f"**{nome}** fechou com {maximo} de {total} votos — maioria formada, "
                 f"o grupo não espera os {faltaram} que faltam."
             )
 
         await self._limpar_botoes(run)
-        await self._entrar_na_sala(run, incursao.sala(escolhida_id))
+        await self._entrar_na_sala(run, self._sala(incursao, escolhida_id))
 
     # -------------------------------------------------------------- salas
 
@@ -677,7 +746,10 @@ class Incursoes(commands.Cog):
             await self._concluir_sala(await db.buscar_run(self.bot.db, run["id"]), sala, None)
             return
 
-        embed, arquivo = E.sala_aberta(sala, run["linha_atual"], 0, total)
+        incursao = self._incursao_da_run(run)
+        embed, arquivo = E.sala_aberta(
+            sala, run["linha_atual"], 0, total, incursao.passos if incursao else None
+        )
         view = ViewSala(self, run["id"], sala.id) if sala.tem_teste else None
         mensagem = await canal.send(embed=embed, view=view, file=arquivo or discord.utils.MISSING)
         await db.atualizar_run(
@@ -721,6 +793,13 @@ class Incursoes(commands.Cog):
         total_org = (await db.placar(self.bot.db, run["guild_id"])).get(incursao.organizacao, 0)
         await canal.send(embed=E.pontos_da_run(incursao, lancamentos, total_org))
 
+    def _passo(self, run: dict[str, Any]) -> int:
+        """O passo atual do caminho. O objetivo fica um depois do último."""
+        incursao = self._incursao_da_run(run)
+        if run["status"] == "objetivo" and incursao:
+            return incursao.passos + 1
+        return run["linha_atual"]
+
     async def _combatentes(self, run: dict[str, Any]) -> list[Combatente]:
         """Monta os combatentes juntando a ficha de cada um com o HP atual da run."""
         combatentes = []
@@ -741,7 +820,7 @@ class Incursoes(commands.Cog):
     async def _estado_combate(
         self, run: dict[str, Any], sala: Sala
     ) -> Optional[EstadoCombate]:
-        linha = await db.estado_combate(self.bot.db, run["id"], sala.id)
+        linha = await db.estado_combate(self.bot.db, run["id"], self._passo(run))
         if not linha:
             return None
         # O HP maximo vem do banco: se o monstro for escalado, e esse que vale.
@@ -760,7 +839,7 @@ class Incursoes(commands.Cog):
             return
         niveis = await self._niveis(run)
         monstro = motor.escalar_monstro(sala.monstro, niveis)
-        await db.iniciar_combate(self.bot.db, run["id"], sala.id, monstro.hp)
+        await db.iniciar_combate(self.bot.db, run["id"], self._passo(run), sala.id, monstro.hp)
 
         estado = await self._estado_combate(run, sala)
         embed, arquivo = E.combate(sala, estado, 0)
@@ -784,7 +863,7 @@ class Incursoes(commands.Cog):
             return
 
         incursao = self._incursao_da_run(run)
-        sala = incursao.sala(sala_id)
+        sala = self._sala(incursao, sala_id)
         estado = await self._estado_combate(run, sala)
         if estado is None:
             await interaction.response.send_message("Este combate já terminou.", ephemeral=True)
@@ -806,7 +885,7 @@ class Incursoes(commands.Cog):
         novo = await db.registrar_ataque(
             self.bot.db,
             run_id,
-            sala_id,
+            self._passo(run),
             estado.rodada,
             interaction.user.id,
             golpe.d20,
@@ -821,7 +900,7 @@ class Incursoes(commands.Cog):
             return
 
         await db.atualizar_combate(
-            self.bot.db, run_id, sala_id, estado.monstro_hp, estado.rodada
+            self.bot.db, run_id, self._passo(run), estado.monstro_hp, estado.rodada
         )
 
         if golpe.critico:
@@ -846,7 +925,9 @@ class Incursoes(commands.Cog):
             )
         await interaction.response.send_message(texto, ephemeral=True)
 
-        ataques = await db.ataques_da_rodada(self.bot.db, run_id, sala_id, estado.rodada)
+        ataques = await db.ataques_da_rodada(
+            self.bot.db, run_id, self._passo(run), estado.rodada
+        )
         if estado.monstro_derrotado or len(ataques) >= len(estado.vivos):
             await self._fechar_rodada(run, sala, estado, ataques)
         elif interaction.message is not None:
@@ -915,7 +996,7 @@ class Incursoes(commands.Cog):
         # Proxima rodada: novo painel, novos ataques.
         estado.rodada += 1
         await db.atualizar_combate(
-            self.bot.db, run["id"], sala.id, estado.monstro_hp, estado.rodada
+            self.bot.db, run["id"], self._passo(run), estado.monstro_hp, estado.rodada
         )
         embed, _ = E.combate(sala, estado, 0)
         mensagem = await canal.send(embed=embed, view=ViewCombate(self, run["id"], sala.id))
@@ -925,7 +1006,7 @@ class Incursoes(commands.Cog):
         incursao = self._incursao_da_run(run)
         if sala.pontos_organizacao:
             await self._creditar(
-                run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{sala.id}"
+                run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{self._passo(run)}:{sala.id}"
             )
 
         if sala.id == incursao.objetivo.id:
@@ -939,12 +1020,14 @@ class Incursoes(commands.Cog):
             canal = await self._canal(run)
             if canal:
                 await canal.send(embed=E.run_concluida(incursao, await self._membros(run)))
+                if incursao.lore_final:
+                    await canal.send(embed=E.lore_fecho(incursao))
             await self._anunciar_pontos(await db.buscar_run(self.bot.db, run["id"]))
             return
 
-        linha = run["linha_atual"]
-        if linha < LINHAS:
-            await self._abrir_votacao(await db.buscar_run(self.bot.db, run["id"]), linha + 1)
+        passo = run["linha_atual"]
+        if passo < incursao.passos:
+            await self._abrir_votacao(await db.buscar_run(self.bot.db, run["id"]), passo + 1)
         else:
             await self._chegar_ao_objetivo(await db.buscar_run(self.bot.db, run["id"]))
 
@@ -958,7 +1041,7 @@ class Incursoes(commands.Cog):
             return
 
         incursao = self._incursao_da_run(run)
-        sala = incursao.sala(sala_id)
+        sala = self._sala(incursao, sala_id)
         personagem = await db.personagem_da_run(self.bot.db, run_id, interaction.user.id)
         if not personagem:
             await interaction.response.send_message(
@@ -971,6 +1054,7 @@ class Incursoes(commands.Cog):
         novo = await db.registrar_teste(
             self.bot.db,
             run_id,
+            self._passo(run),
             sala_id,
             interaction.user.id,
             resultado.personagem,
@@ -996,14 +1080,16 @@ class Incursoes(commands.Cog):
             ephemeral=True,
         )
 
-        registros = await db.testes_da_sala(self.bot.db, run_id, sala_id)
+        registros = await db.testes_da_sala(self.bot.db, run_id, self._passo(run))
         total = len(await db.participantes(self.bot.db, run_id))
         resolucao = _resolucao(sala, registros, total)
 
         if resolucao.encerrada:
             await self._concluir_sala(run, sala, resolucao)
         else:
-            embed, _ = E.sala_aberta(sala, run["linha_atual"], len(registros), total)
+            embed, _ = E.sala_aberta(
+                sala, run["linha_atual"], len(registros), total, incursao.passos
+            )
             if interaction.message is not None:
                 try:
                     await interaction.message.edit(embed=embed, view=ViewSala(self, run_id, sala_id))
@@ -1024,12 +1110,13 @@ class Incursoes(commands.Cog):
             await canal.send(embed=E.resultado_sala(resolucao, apelidos))
             if resolucao.superada and sala.pontos_organizacao:
                 await self._creditar(
-                    run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{sala.id}"
+                    run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{self._passo(run)}:{sala.id}"
                 )
 
-        linha = run["linha_atual"]
-        if linha < LINHAS:
-            await self._abrir_votacao(run, linha + 1)
+        incursao = self._incursao_da_run(run)
+        passo = run["linha_atual"]
+        if incursao and passo < incursao.passos:
+            await self._abrir_votacao(run, passo + 1)
         else:
             await self._chegar_ao_objetivo(run)
 
@@ -1068,7 +1155,7 @@ class Incursoes(commands.Cog):
                 "O grupo está votando a próxima sala.", ephemeral=True
             )
             return
-        sala = incursao.sala(run["sala_atual"]) if run["sala_atual"] else None
+        sala = self._sala(incursao, run["sala_atual"])
         if not sala:
             await interaction.response.send_message("A run ainda não entrou numa sala.", ephemeral=True)
             return
@@ -1080,7 +1167,7 @@ class Incursoes(commands.Cog):
                 )
                 return
             ataques = await db.ataques_da_rodada(
-                self.bot.db, run["id"], sala.id, estado.rodada
+                self.bot.db, run["id"], self._passo(run), estado.rodada
             )
             embed, arquivo = E.combate(sala, estado, len(ataques))
             await interaction.response.send_message(
@@ -1092,9 +1179,11 @@ class Incursoes(commands.Cog):
             await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
             return
 
-        registros = await db.testes_da_sala(self.bot.db, run["id"], sala.id)
+        registros = await db.testes_da_sala(self.bot.db, run["id"], self._passo(run))
         total = len(await db.participantes(self.bot.db, run["id"]))
-        embed, arquivo = E.sala_aberta(sala, run["linha_atual"], len(registros), total)
+        embed, arquivo = E.sala_aberta(
+            sala, run["linha_atual"], len(registros), total, incursao.passos
+        )
         view = ViewSala(self, run["id"], sala.id) if sala.tem_teste else None
         await interaction.response.send_message(
             embed=embed, view=view, file=arquivo or discord.utils.MISSING
@@ -1111,7 +1200,7 @@ class Incursoes(commands.Cog):
             await interaction.response.send_message("Não há teste aberto agora.", ephemeral=True)
             return
         incursao = self._incursao_da_run(run)
-        sala = incursao.sala(run["sala_atual"])
+        sala = self._sala(incursao, run["sala_atual"])
         if sala and sala.e_combate:
             await interaction.response.send_message(
                 "Sala de combate não usa teste de perícia — use `/incursao atacar`.",
@@ -1131,9 +1220,13 @@ class Incursoes(commands.Cog):
         if run["status"] != "escolhendo":
             await interaction.response.send_message("Não há votação aberta agora.", ephemeral=True)
             return
-        incursao = self._incursao_da_run(run)
-        sala = incursao.opcoes(run["linha_atual"])[opcao - 1]
-        await self.votar(interaction, run["id"], run["linha_atual"], sala.id)
+        opcoes = await self._opcoes(run, run["linha_atual"])
+        if opcao > len(opcoes):
+            await interaction.response.send_message(
+                f"Esta votação tem {len(opcoes)} opção(ões).", ephemeral=True
+            )
+            return
+        await self.votar(interaction, run["id"], run["linha_atual"], opcoes[opcao - 1].id)
 
     @grupo.command(name="atacar", description="Ataca o monstro da sala (mesmo efeito do botão)")
     async def atacar_comando(self, interaction: discord.Interaction) -> None:
@@ -1144,7 +1237,7 @@ class Incursoes(commands.Cog):
             await interaction.response.send_message("Não há combate aberto agora.", ephemeral=True)
             return
         incursao = self._incursao_da_run(run)
-        sala = incursao.sala(run["sala_atual"])
+        sala = self._sala(incursao, run["sala_atual"])
         if not (sala and sala.e_combate):
             await interaction.response.send_message(
                 "Esta sala não é de combate.", ephemeral=True
@@ -1158,9 +1251,9 @@ class Incursoes(commands.Cog):
         if not run:
             return
         incursao = self._incursao_da_run(run)
-        sala = incursao.sala(run["sala_atual"]) if run["sala_atual"] else None
+        sala = self._sala(incursao, run["sala_atual"])
         registros = (
-            await db.testes_da_sala(self.bot.db, run["id"], sala.id) if sala else []
+            await db.testes_da_sala(self.bot.db, run["id"], self._passo(run)) if sala else []
         )
         await interaction.response.send_message(
             embed=E.status(run, incursao, await self._membros(run), sala, len(registros))
@@ -1199,7 +1292,7 @@ class Incursoes(commands.Cog):
             await interaction.response.send_message(f"Falhou: {exc}", ephemeral=True)
             return
         await interaction.response.send_message(
-            f"{len(self.incursoes)} incursão(ões) carregada(s): "
+            f"{len(self.incursoes)} incursão(ões) e {len(self.bancos)} banco(s) de salas: "
             f"{', '.join(self.incursoes) or 'nenhuma'}.",
             ephemeral=True,
         )

@@ -15,15 +15,15 @@ sys.path.insert(0, str(RAIZ))
 from src import config, database as db  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
-    ATRIBUTOS,
     CANAL,
     GUILD,
     JOGADORES,
-    TREINADAS,
     FakeBot,
     FakeCanal,
     FakeInteraction,
     criar_grupo,
+    montar_conteudo,
+    salas_sem_combate,
 )
 
 
@@ -46,13 +46,12 @@ async def main() -> None:
     canal = FakeCanal(CANAL)
     bot = FakeBot(conn, canal)
     cog = Incursoes(bot)
-    cog._carregar_tolerante()
-    assert "vortice_cripta" in cog.incursoes, "a incursão de exemplo precisa estar importada"
-    incursao = cog.incursoes["vortice_cripta"]
+    # Banco só com salas de teste de perícia: o combate tem suíte própria.
+    incursao, _ = montar_conteudo(cog, tamanho="Média", salas=salas_sem_combate(8))
 
     # --- recrutamento ---
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.entrar.callback(cog, inter, "vortice_cripta")
+    await cog.entrar.callback(cog, inter, "t")
     run = await db.run_do_canal(conn, CANAL)
     assert run and run["status"] == "recrutando"
     assert await db.participantes(conn, run["id"]) == [JOGADORES[0]]
@@ -79,13 +78,17 @@ async def main() -> None:
     # entrar na run marca o intervalo de todo mundo
     assert await db.dias_desde_ultima_incursao(conn, GUILD, JOGADORES[3]) is not None
 
-    # --- as tres linhas ---
-    for linha in (1, 2, 3):
+    # o caminho foi sorteado ao comecar
+    mapa = await db.mapa_da_run(conn, run["id"])
+    assert len(mapa) == incursao.passos, mapa
+    assert all(len(set(p)) == 3 for p in mapa), "3 opcoes distintas por passo"
+
+    # --- as salas do caminho ---
+    for linha in range(1, incursao.passos + 1):
         run = await db.buscar_run(conn, run["id"])
         assert run["status"] == "escolhendo" and run["linha_atual"] == linha
 
-        # escolhe uma sala que se resolve por teste (combate e da proxima fase)
-        alvo = next(s for s in incursao.opcoes(linha) if s.tem_teste)
+        alvo = next(s for s in await cog._opcoes(run, linha) if s.tem_teste)
         msg_voto = await canal.fetch_message(run["mensagem_id"])
 
         # quem nao esta na run nao vota
@@ -117,7 +120,7 @@ async def main() -> None:
             await cog.rolar(de_novo, run["id"], alvo.id)
             assert "já rolou" in de_novo.resposta or "já foi resolvida" in de_novo.resposta
 
-        registros = await db.testes_da_sala(conn, run["id"], alvo.id)
+        registros = await db.testes_da_sala(conn, run["id"], linha)
         assert 1 <= len(registros) <= 5 and len(registros) == rolaram
         for r in registros:
             assert 1 <= r["d20"] <= 20 and r["pericia"] in alvo.pericias and r["cd"] == alvo.cd
@@ -127,10 +130,14 @@ async def main() -> None:
     assert run["status"] == "objetivo", f"esperava objetivo, veio {run['status']}"
     assert run["sala_atual"] == incursao.objetivo.id
     assert incursao.objetivo.tipo == "Combate"
+    # a lore de abertura foi postada
+    assert any(
+        m.embeds and "Incursão t" in (m.embeds[0].title or "") for m in canal.mensagens
+    ), "faltou a lore de abertura"
 
     # depois do fim, a run do canal continua sendo essa e ninguem entra em outra
     outra = FakeInteraction(canal, JOGADORES[0])
-    await cog.entrar.callback(cog, outra, "vortice_cripta")
+    await cog.entrar.callback(cog, outra, "t")
     assert "Já existe uma incursão" in outra.resposta
 
     # --- status e desistencia ---

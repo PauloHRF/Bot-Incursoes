@@ -26,7 +26,9 @@ from fakes import (  # noqa: E402
     FakeCanal,
     FakeInteraction,
     criar_grupo,
-    incursao_teste,
+    montar_conteudo,
+    salas_de_combate,
+    salas_sem_combate,
 )
 
 _ABERTAS = []
@@ -42,7 +44,6 @@ async def preparar(hp_max=40, ca=18, bonus_ataque=8, dano="1d6+3"):
     await criar_grupo(conn, hp_max=hp_max, ca=ca, bonus_ataque=bonus_ataque, dano=dano)
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
-    cog.incursoes = {}
     return conn, canal, cog
 
 
@@ -58,10 +59,10 @@ async def montar_run(conn, canal, cog, incursao_id):
 
 async def atravessar_ate_objetivo(conn, canal, cog, run, incursao):
     """Vota e resolve as três linhas escolhendo sempre uma sala sem combate."""
-    for linha in (1, 2, 3):
+    for linha in range(1, incursao.passos + 1):
         run = await db.buscar_run(conn, run["id"])
         assert run["status"] == "escolhendo", run["status"]
-        alvo = next(s for s in incursao.opcoes(linha) if not s.e_combate)
+        alvo = next(s for s in await cog._opcoes(run, linha) if not s.e_combate)
         msg = await canal.fetch_message(run["mensagem_id"])
         for user_id in JOGADORES:
             await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], linha, alvo.id)
@@ -87,7 +88,8 @@ async def atacar_ate_cair(conn, canal, cog, run_id, sala_id, limite=30):
         atual = await db.buscar_run(conn, run_id)
         if atual["status"] not in ("em_sala", "objetivo") or atual["sala_atual"] != sala_id:
             return ultima
-        estado = await cog._estado_combate(atual, cog.incursoes[atual["incursao_id"]].sala(sala_id))
+        incursao_atual = cog.incursoes[atual["incursao_id"]]
+        estado = await cog._estado_combate(atual, cog._sala(incursao_atual, sala_id))
         if estado is None:
             return ultima
         msg = await canal.fetch_message(atual["mensagem_id"])
@@ -103,7 +105,7 @@ async def atacar_ate_cair(conn, canal, cog, run_id, sala_id, limite=30):
 async def caso_hp_inicial():
     """Ao começar a run, todo mundo entra com o HP máximo da ficha."""
     conn, canal, cog = await preparar(hp_max=37)
-    cog.incursoes["t"] = incursao_teste("t", INDEFESO)
+    montar_conteudo(cog, salas=salas_sem_combate())
     run = await montar_run(conn, canal, cog, "t")
     hps = await db.hp_dos_participantes(conn, run["id"])
     assert set(hps.values()) == {37}, hps
@@ -115,8 +117,7 @@ async def caso_hp_inicial():
 async def caso_vitoria_no_objetivo():
     """Chegando ao objetivo, o combate abre e a vitória conclui a run."""
     conn, canal, cog = await preparar()
-    incursao = incursao_teste("facil", INDEFESO)
-    cog.incursoes["facil"] = incursao
+    incursao, _ = montar_conteudo(cog, incursao_id="facil", salas=salas_sem_combate())
     run = await montar_run(conn, canal, cog, "facil")
     run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
 
@@ -145,18 +146,22 @@ async def caso_vitoria_no_objetivo():
 async def caso_combate_no_meio_do_mapa():
     """Vencer uma sala de combate da linha 1 leva o grupo para a linha 2."""
     conn, canal, cog = await preparar()
-    incursao = incursao_teste("meio", INDEFESO, monstro_meio=INDEFESO)
-    cog.incursoes["meio"] = incursao
+    # banco so de combate: o primeiro passo cai numa sala de Combate na certa
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="meio", salas=salas_de_combate(INDEFESO)
+    )
     run = await montar_run(conn, canal, cog, "meio")
 
     msg = await canal.fetch_message(run["mensagem_id"])
+    alvo = (await cog._opcoes(run, 1))[0]
+    assert alvo.e_combate
     for user_id in JOGADORES:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, "A1")
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
 
     run = await db.buscar_run(conn, run["id"])
-    assert run["status"] == "em_sala" and run["sala_atual"] == "A1"
+    assert run["status"] == "em_sala" and run["sala_atual"] == alvo.id
 
-    await atacar_ate_cair(conn, canal, cog, run["id"], "A1")
+    await atacar_ate_cair(conn, canal, cog, run["id"], alvo.id)
 
     run = await db.buscar_run(conn, run["id"])
     assert run["status"] == "escolhendo" and run["linha_atual"] == 2, run
@@ -168,8 +173,9 @@ async def caso_combate_no_meio_do_mapa():
 async def caso_rodadas_e_contra_ataque():
     """Todos atacam uma vez; aí o monstro revida e a rodada vira."""
     conn, canal, cog = await preparar(hp_max=200)
-    incursao = incursao_teste("rodadas", IMBATIVEL)
-    cog.incursoes["rodadas"] = incursao
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="rodadas", monstro_objetivo=IMBATIVEL, salas=salas_sem_combate()
+    )
     run = await montar_run(conn, canal, cog, "rodadas")
     run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
     assert run["status"] == "objetivo"
@@ -211,8 +217,9 @@ async def caso_rodadas_e_contra_ataque():
 async def caso_derrota_total():
     """Com o grupo inteiro caído, a run termina em fracasso."""
     conn, canal, cog = await preparar(hp_max=10)
-    incursao = incursao_teste("letal", IMBATIVEL)
-    cog.incursoes["letal"] = incursao
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="letal", monstro_objetivo=IMBATIVEL, salas=salas_sem_combate()
+    )
     run = await montar_run(conn, canal, cog, "letal")
     run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
 
@@ -240,16 +247,19 @@ async def caso_derrota_total():
 async def caso_descanso_cura():
     """A sala de Descanso levanta os caídos e completa quem está machucado."""
     conn, canal, cog = await preparar(hp_max=40)
-    incursao = incursao_teste("cura", INDEFESO)
-    cog.incursoes["cura"] = incursao
+    # banco so de Descanso: o primeiro passo cura o grupo na certa
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="cura", salas=salas_sem_combate(tipo="Descanso")
+    )
     run = await montar_run(conn, canal, cog, "cura")
 
     # machuca o grupo antes do descanso
     await db.definir_hp_varios(conn, run["id"], {JOGADORES[0]: 0, JOGADORES[1]: 5})
 
     msg = await canal.fetch_message(run["mensagem_id"])
+    alvo = (await cog._opcoes(run, 1))[0]
     for user_id in JOGADORES:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, "A3")  # Descanso
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
 
     hps = await db.hp_dos_participantes(conn, run["id"])
     assert hps[JOGADORES[0]] == 20, f"caído deveria voltar com metade, veio {hps[JOGADORES[0]]}"
@@ -264,15 +274,18 @@ async def caso_descanso_cura():
 async def caso_restart_no_combate():
     """Os botões de ataque voltam a funcionar depois de um restart."""
     conn, canal, cog = await preparar()
-    incursao = incursao_teste("restart", IMBATIVEL)
-    cog.incursoes["restart"] = incursao
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="restart", monstro_objetivo=IMBATIVEL, salas=salas_sem_combate()
+    )
     run = await montar_run(conn, canal, cog, "restart")
     run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
     assert run["status"] == "objetivo"
 
     bot2 = FakeBot(conn, canal)
     cog2 = Incursoes(bot2)
-    cog2.incursoes = {"restart": incursao}
+    montar_conteudo(
+        cog2, incursao_id="restart", monstro_objetivo=IMBATIVEL, salas=salas_sem_combate()
+    )
     await cog2.restaurar_views()
 
     assert bot2.views_registradas, "nenhuma view restaurada"

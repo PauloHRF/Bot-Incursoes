@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from .incursoes import Monstro, Sala
+from .incursoes import OPCOES_POR_PASSO, Monstro, Sala
 from .rules import PESO_TIER, melhor_pericia, tier
 
 EXPR_DANO = re.compile(r"^\s*(\d+)d(\d+)\s*(?:([+-])\s*(\d+))?\s*$", re.IGNORECASE)
@@ -88,6 +88,37 @@ def testar(ficha: dict[str, Any], sala: Sala, rng: Optional[random.Random] = Non
         modificador=modificador,
         cd=sala.cd,
     )
+
+
+def sortear_mapa(
+    salas: list[Sala],
+    passos: int,
+    opcoes: int = OPCOES_POR_PASSO,
+    rng: Optional[random.Random] = None,
+) -> list[list[str]]:
+    """Monta o caminho da run: `passos` grupos de `opcoes` salas sorteadas do banco.
+
+    Duas salas nunca se repetem dentro do mesmo passo. Entre passos diferentes,
+    a repetição só acontece quando o banco é pequeno demais para o caminho todo
+    — aí o baralho é reembaralhado em vez de faltar opção.
+    """
+    if len(salas) < opcoes:
+        raise ValueError(
+            f"o banco tem {len(salas)} sala(s); são precisas ao menos {opcoes} por passo"
+        )
+    gerador = _rng(rng)
+    baralho: list[Sala] = []
+    mapa = []
+    for _ in range(passos):
+        if len(baralho) < opcoes:
+            # Repoe o baralho, deixando de fora o que ja esta separado para este passo.
+            resto = list(baralho)
+            novas = [s for s in salas if s not in resto]
+            gerador.shuffle(novas)
+            baralho = resto + novas
+        passo, baralho = baralho[:opcoes], baralho[opcoes:]
+        mapa.append([s.id for s in passo])
+    return mapa
 
 
 # Consequência individual de falhar, por tipo de sala (tabela do documento de design).

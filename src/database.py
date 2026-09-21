@@ -83,8 +83,11 @@ CREATE TABLE IF NOT EXISTS run_participantes (
     PRIMARY KEY (run_id, user_id)
 );
 
+-- Chaveado por passo, nao por sala: a mesma sala pode ser sorteada duas vezes
+-- na mesma run, e cada visita e um desafio novo.
 CREATE TABLE IF NOT EXISTS run_testes (
     run_id      INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo       INTEGER NOT NULL,
     sala_id     TEXT    NOT NULL,
     user_id     INTEGER NOT NULL,
     personagem  TEXT    NOT NULL,
@@ -93,7 +96,7 @@ CREATE TABLE IF NOT EXISTS run_testes (
     modificador INTEGER NOT NULL,
     cd          INTEGER NOT NULL,
     criado_em   TEXT NOT NULL DEFAULT (datetime('now')),
-    PRIMARY KEY (run_id, sala_id, user_id)
+    PRIMARY KEY (run_id, passo, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS run_votos (
@@ -105,25 +108,35 @@ CREATE TABLE IF NOT EXISTS run_votos (
     PRIMARY KEY (run_id, linha, user_id)
 );
 
+-- O caminho sorteado para a run: por passo, as salas oferecidas na votacao.
+CREATE TABLE IF NOT EXISTS run_mapa (
+    run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo   INTEGER NOT NULL,
+    posicao INTEGER NOT NULL,
+    sala_id TEXT    NOT NULL,
+    PRIMARY KEY (run_id, passo, posicao)
+);
+
 CREATE TABLE IF NOT EXISTS run_combate (
     run_id         INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo          INTEGER NOT NULL,
     sala_id        TEXT    NOT NULL,
     monstro_hp_max INTEGER NOT NULL,
     monstro_hp     INTEGER NOT NULL,
     rodada         INTEGER NOT NULL DEFAULT 1,
-    PRIMARY KEY (run_id, sala_id)
+    PRIMARY KEY (run_id, passo)
 );
 
 CREATE TABLE IF NOT EXISTS run_ataques (
     run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
-    sala_id TEXT    NOT NULL,
+    passo   INTEGER NOT NULL,
     rodada  INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     d20     INTEGER NOT NULL,
     bonus   INTEGER NOT NULL,
     ca_alvo INTEGER NOT NULL,
     dano    INTEGER NOT NULL,
-    PRIMARY KEY (run_id, sala_id, rodada, user_id)
+    PRIMARY KEY (run_id, passo, rodada, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS placar_organizacoes (
@@ -211,6 +224,19 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
     # Bancos anteriores nao tinham com qual personagem a pessoa entrou na run.
     if "personagem_id" not in await _colunas(conn, "run_participantes"):
         await conn.execute("ALTER TABLE run_participantes ADD COLUMN personagem_id INTEGER")
+
+    # O caminho sorteado mudou o modelo: o estado de sala passou a ser por passo.
+    # Runs da versao anterior nao tem mapa gravado, entao sao encerradas.
+    if await _tabela_existe(conn, "run_testes") and "passo" not in await _colunas(
+        conn, "run_testes"
+    ):
+        await conn.execute(
+            "UPDATE runs SET status = 'desistiu'"
+            " WHERE status IN ('recrutando', 'escolhendo', 'em_sala', 'objetivo')"
+        )
+        for tabela in ("run_testes", "run_combate", "run_ataques"):
+            await conn.execute(f"DROP TABLE IF EXISTS {tabela}")
+        await conn.executescript(SCHEMA)
 
     # Nem os bonus avulsos por pericia (expertise).
     if "bonus_pericias" not in await _colunas(conn, "personagens"):
@@ -500,12 +526,51 @@ async def run_viva_do_jogador(
     return dict(row) if row else None
 
 
+# ---------------------------------------------------------------- mapa
+
+
+async def gravar_mapa(
+    conn: aiosqlite.Connection, run_id: int, mapa: list[list[str]]
+) -> None:
+    """Fixa o caminho sorteado, para que ele nao mude a cada leitura."""
+    await conn.executemany(
+        "INSERT OR REPLACE INTO run_mapa (run_id, passo, posicao, sala_id) VALUES (?, ?, ?, ?)",
+        [
+            (run_id, passo, posicao, sala_id)
+            for passo, opcoes in enumerate(mapa, start=1)
+            for posicao, sala_id in enumerate(opcoes)
+        ],
+    )
+    await conn.commit()
+
+
+async def opcoes_do_passo(conn: aiosqlite.Connection, run_id: int, passo: int) -> list[str]:
+    async with conn.execute(
+        "SELECT sala_id FROM run_mapa WHERE run_id = ? AND passo = ? ORDER BY posicao",
+        (run_id, passo),
+    ) as cur:
+        return [r["sala_id"] for r in await cur.fetchall()]
+
+
+async def mapa_da_run(conn: aiosqlite.Connection, run_id: int) -> list[list[str]]:
+    async with conn.execute(
+        "SELECT passo, sala_id FROM run_mapa WHERE run_id = ? ORDER BY passo, posicao",
+        (run_id,),
+    ) as cur:
+        linhas = await cur.fetchall()
+    mapa: dict[int, list[str]] = {}
+    for r in linhas:
+        mapa.setdefault(r["passo"], []).append(r["sala_id"])
+    return [mapa[p] for p in sorted(mapa)]
+
+
 # -------------------------------------------------------------- testes
 
 
 async def registrar_teste(
     conn: aiosqlite.Connection,
     run_id: int,
+    passo: int,
     sala_id: str,
     user_id: int,
     personagem: str,
@@ -514,23 +579,23 @@ async def registrar_teste(
     modificador: int,
     cd: int,
 ) -> bool:
-    """False se o jogador já rolou nesta sala (uma rolagem por sala)."""
+    """False se o jogador já rolou neste passo (uma rolagem por sala visitada)."""
     cur = await conn.execute(
         "INSERT OR IGNORE INTO run_testes"
-        " (run_id, sala_id, user_id, personagem, pericia, d20, modificador, cd)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (run_id, sala_id, user_id, personagem, pericia, d20, modificador, cd),
+        " (run_id, passo, sala_id, user_id, personagem, pericia, d20, modificador, cd)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (run_id, passo, sala_id, user_id, personagem, pericia, d20, modificador, cd),
     )
     await conn.commit()
     return cur.rowcount > 0
 
 
 async def testes_da_sala(
-    conn: aiosqlite.Connection, run_id: int, sala_id: str
+    conn: aiosqlite.Connection, run_id: int, passo: int
 ) -> list[dict[str, Any]]:
     async with conn.execute(
-        "SELECT * FROM run_testes WHERE run_id = ? AND sala_id = ? ORDER BY criado_em, rowid",
-        (run_id, sala_id),
+        "SELECT * FROM run_testes WHERE run_id = ? AND passo = ? ORDER BY criado_em, rowid",
+        (run_id, passo),
     ) as cur:
         return [dict(r) for r in await cur.fetchall()]
 
@@ -608,33 +673,33 @@ async def dias_desde_ultima_incursao(
 
 
 async def iniciar_combate(
-    conn: aiosqlite.Connection, run_id: int, sala_id: str, monstro_hp: int
+    conn: aiosqlite.Connection, run_id: int, passo: int, sala_id: str, monstro_hp: int
 ) -> None:
-    """Cria o estado do combate daquela sala. Reentrar na mesma sala não reinicia."""
+    """Cria o estado do combate daquele passo. Reabrir a mensagem não reinicia."""
     await conn.execute(
-        "INSERT OR IGNORE INTO run_combate (run_id, sala_id, monstro_hp_max, monstro_hp)"
-        " VALUES (?, ?, ?, ?)",
-        (run_id, sala_id, monstro_hp, monstro_hp),
+        "INSERT OR IGNORE INTO run_combate (run_id, passo, sala_id, monstro_hp_max, monstro_hp)"
+        " VALUES (?, ?, ?, ?, ?)",
+        (run_id, passo, sala_id, monstro_hp, monstro_hp),
     )
     await conn.commit()
 
 
 async def estado_combate(
-    conn: aiosqlite.Connection, run_id: int, sala_id: str
+    conn: aiosqlite.Connection, run_id: int, passo: int
 ) -> Optional[dict[str, Any]]:
     async with conn.execute(
-        "SELECT * FROM run_combate WHERE run_id = ? AND sala_id = ?", (run_id, sala_id)
+        "SELECT * FROM run_combate WHERE run_id = ? AND passo = ?", (run_id, passo)
     ) as cur:
         row = await cur.fetchone()
     return dict(row) if row else None
 
 
 async def atualizar_combate(
-    conn: aiosqlite.Connection, run_id: int, sala_id: str, monstro_hp: int, rodada: int
+    conn: aiosqlite.Connection, run_id: int, passo: int, monstro_hp: int, rodada: int
 ) -> None:
     await conn.execute(
-        "UPDATE run_combate SET monstro_hp = ?, rodada = ? WHERE run_id = ? AND sala_id = ?",
-        (monstro_hp, rodada, run_id, sala_id),
+        "UPDATE run_combate SET monstro_hp = ?, rodada = ? WHERE run_id = ? AND passo = ?",
+        (monstro_hp, rodada, run_id, passo),
     )
     await conn.commit()
 
@@ -642,7 +707,7 @@ async def atualizar_combate(
 async def registrar_ataque(
     conn: aiosqlite.Connection,
     run_id: int,
-    sala_id: str,
+    passo: int,
     rodada: int,
     user_id: int,
     d20: int,
@@ -653,21 +718,21 @@ async def registrar_ataque(
     """False se o personagem já atacou nesta rodada."""
     cur = await conn.execute(
         "INSERT OR IGNORE INTO run_ataques"
-        " (run_id, sala_id, rodada, user_id, d20, bonus, ca_alvo, dano)"
+        " (run_id, passo, rodada, user_id, d20, bonus, ca_alvo, dano)"
         " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (run_id, sala_id, rodada, user_id, d20, bonus, ca_alvo, dano),
+        (run_id, passo, rodada, user_id, d20, bonus, ca_alvo, dano),
     )
     await conn.commit()
     return cur.rowcount > 0
 
 
 async def ataques_da_rodada(
-    conn: aiosqlite.Connection, run_id: int, sala_id: str, rodada: int
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
 ) -> list[dict[str, Any]]:
     async with conn.execute(
-        "SELECT * FROM run_ataques WHERE run_id = ? AND sala_id = ? AND rodada = ?"
+        "SELECT * FROM run_ataques WHERE run_id = ? AND passo = ? AND rodada = ?"
         " ORDER BY rowid",
-        (run_id, sala_id, rodada),
+        (run_id, passo, rodada),
     ) as cur:
         return [dict(r) for r in await cur.fetchall()]
 

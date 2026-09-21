@@ -2,13 +2,14 @@
 
 Bot de dungeon crawl assíncrono para as Incursões de Sheidrost. Grupos fixos de 5 jogadores
 avançam sala a sala votando por botões, resolvendo testes com o modificador real da ficha.
+O caminho é sorteado a cada run, de um banco de salas por Organização.
 
 Design completo: `Incursões 2.0 — Bot de Discord (design).md`.
 
 ## Estado atual
 
 - [x] **Fase 1** — fichas digitais (vários personagens por jogador, nível, ASI, perícias)
-- [x] **Fase 2a** — formato do conteúdo: planilha da incursão, importador e validação
+- [x] **Fase 2a** — conteúdo: banco de salas por Organização, incursões com lore, importadores
 - [x] **Fase 2b** — runs, salas, votação por botões, testes de perícia
 - [x] **Fase 3** — combate por rodadas (CA / ataque / HP)
 - [x] **Fase 4** — pontuação de Organização
@@ -74,14 +75,16 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 
 ## Como uma run acontece
 
-1. `/incursao entrar <id>` abre o recrutamento no canal. Quem clica em **Entrar** precisa
+1. `/incursao entrar <id>` abre o recrutamento no canal, com o gancho da lore. Quem clica em **Entrar** precisa
    ter ao menos um personagem, não estar em outra run e ter cumprido o intervalo desde a
    última incursão.
 2. Quem tem mais de um personagem escolhe num menu com qual entra; quem só tem um entra
    direto. O personagem fica preso àquela run: é a ficha dele que rola os testes, ataca e
    leva dano.
 3. Ao chegar a 5 jogadores a run começa sozinha; quem abriu pode começar antes com **Começar**.
-4. Cada linha mostra as 3 salas daquela linha. Todos votam pelos botões, e a votação fecha
+   Aí o bot posta a **lore de abertura** e sorteia o caminho: um grupo de 3 salas por passo,
+   tiradas do banco da Organização.
+4. Cada passo mostra as 3 salas sorteadas para ele. Todos votam pelos botões, e a votação fecha
    assim que uma sala junta a **maioria do grupo** (3 de 5) — quem ainda não votou não
    segura o grupo. Enquanto ninguém tem maioria, a votação continua aberta, **sem prazo**:
    a run espera o tempo que precisar. Se todos votarem e der empate (2×2×1), ninguém avança
@@ -90,7 +93,9 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    tiver entre as listadas. Quem passa contribui a margem (rolagem + mod − CD) como
    progresso; quem falha contribui 0 e sofre a consequência do tipo da sala.
    A sala encerra quando o alvo é atingido ou quando todos rolaram.
-6. Depois de três linhas, o grupo enfrenta o Objetivo, que é sempre um combate.
+6. Depois de 3, 5 ou 7 salas (conforme o tamanho da incursão), o grupo enfrenta o Objetivo,
+   que é sempre um combate. Vencendo, o bot posta a **lore de fecho** — o epílogo só existe
+   se o grupo voltar vivo.
 
 Em sala de **Combate**, cada personagem de pé clica em **Atacar** uma vez por rodada
 (d20 + bônus de ataque contra a CA do monstro; acertou, rola o dano da arma). Quando
@@ -168,30 +173,45 @@ lançar na mão o que aconteceu na mesa, fora do bot.
 (`recompensa_mes` da planilha, 10 por padrão), mas quem registra isso é você, na sua
 planilha do Google Sheets — o bot não guarda saldo por jogador.
 
-## Conteúdo das incursões
+## Conteúdo: bancos de sala e incursões
 
-Cada incursão é escrita numa planilha e convertida para JSON, que é o que o bot lê.
+O conteúdo vive em dois lugares, e cada um tem sua planilha.
+
+**O banco de salas**, um por Organização, alimenta o sorteio. As salas do meio da
+dungeon saem daqui:
+
+```bash
+.venv/Scripts/python.exe tools/gerar_modelo_banco.py "Vórtice Oculto"
+.venv/Scripts/python.exe tools/importar_banco.py data/planilhas/banco_vortice_oculto.xlsx
+```
+
+**A incursão** guarda a lore de abertura, a lore de fecho, o tamanho e a sala final —
+nenhuma sala do meio:
 
 ```bash
 .venv/Scripts/python.exe tools/gerar_modelo_planilha.py minha_incursao.xlsx
 .venv/Scripts/python.exe tools/importar_planilha.py minha_incursao.xlsx
 ```
 
-O modelo já vem preenchido com uma incursão de exemplo jogável
-(`data/planilhas/incursao_exemplo.xlsx` → `data/incursoes/vortice_cripta.json`).
-Abas: **Leia-me** (instruções), **Incursao** (metadados), **Salas** (as 10 salas),
-**Dificuldades** (CD e alvo por dificuldade — calibre aqui, as salas recalculam)
-e **Pericias** (os nomes aceitos).
+Os dois modelos já vêm preenchidos com um exemplo jogável: o banco do Vórtice Oculto
+(12 salas) e *A Cripta do Vórtice*. Depois de importar, `/incursao recarregar` faz o bot
+reler tudo sem reiniciar.
 
-O importador valida antes de gravar e, se algo estiver errado, lista **todos** os
-problemas e não escreve nada. Ele exige:
+**Quantas salas escrever no banco**: o mínimo é 3 (um passo). Uma dungeon longa tem 7
+passos, então 21 salas cobrem uma run inteira sem repetir nenhuma. Com menos que isso o
+sorteio reembaralha e pode repetir uma sala em passos diferentes — nunca dentro do mesmo
+passo. Uma sala repetida é um desafio novo: as rolagens e o HP do monstro começam do zero
+na segunda visita.
 
-- exatamente 3 linhas de 3 salas, mais 1 sala de Objetivo
-- `pontos_organizacao` e `pontos_conclusao` não negativos (vazio vale 0)
+Os importadores validam antes de gravar e, se algo estiver errado, listam **todos** os
+problemas sem escrever nada. Eles exigem:
+
+- incursão com lore de abertura, tamanho válido (Curta/Média/Longa) e Organização conhecida
 - Objetivo sempre do tipo **Combate**, com nome, CA, ataque, dano e HP do monstro
+- banco com ao menos 3 salas e `sala_id` único
 - salas de Armadilha / Evento / Tesouro com dificuldade, CD, alvo e ao menos uma perícia
 - salas de Combate com monstro, e sem CD nem perícia (mecânica própria)
-- perícias existentes (com ou sem acento) e `sala_id` único
+- perícias existentes (com ou sem acento) e pontos não negativos
 
 Serve tanto Excel quanto Google Sheets — neste, baixe em *Arquivo → Fazer download →
 Microsoft Excel (.xlsx)* antes de importar.
@@ -211,12 +231,15 @@ src/
   cogs/incursao.py  runs: recrutamento, votação, salas, testes, combate
   cogs/organizacao.py  placar, extrato e ajuste de pontos
 tools/
-  gerar_modelo_planilha.py   cria a planilha modelo já preenchida
-  importar_planilha.py       planilha -> JSON, com validação
+  gerar_modelo_banco.py      cria a planilha do banco de salas de uma Organização
+  importar_banco.py          banco -> JSON, com validação
+  gerar_modelo_planilha.py   cria a planilha modelo da incursão
+  importar_planilha.py       incursão -> JSON, com validação
   simular_combate.py         calibra os números de um combate fora do Discord
 data/
   planilhas/    planilhas de autoria das incursões (.xlsx)
-  incursoes/    incursões convertidas em JSON — é o que o bot lê
+  incursoes/    incursões convertidas em JSON — lore, tamanho e sala final
+  bancos/       bancos de salas por Organização — o que alimenta o sorteio
 assets/         imagens das salas
 tests/
   todos.py      roda todas as suítes
@@ -227,6 +250,7 @@ tests/
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   test_critico_expertise.py  críticos, erro crítico e bônus por perícia
+  test_geracao.py  tamanhos, sorteio do caminho e as duas lores
   fakes.py      dublês do Discord usados pelos testes
 ```
 
