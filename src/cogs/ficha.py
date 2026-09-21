@@ -12,6 +12,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .. import database as db
+from ..embeds import url_de_imagem
 from ..rules import (
     ATRIBUTOS,
     PERICIAS,
@@ -105,6 +106,9 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         ),
         inline=False,
     )
+    retrato = url_de_imagem(personagem.get("imagem"))
+    if retrato:
+        e.set_thumbnail(url=retrato)
     e.set_footer(text="Modificadores calculados a partir do nivel e dos atributos")
     return e
 
@@ -200,6 +204,7 @@ class Ficha(commands.Cog):
         bonus_ataque="Bonus de ataque da arma principal",
         dano_arma="Dado de dano da arma, ex.: 1d8+3",
         hp_maximo="Pontos de vida maximos",
+        imagem="Link do retrato do personagem (opcional, http ou https)",
     )
     async def registrar(
         self,
@@ -216,7 +221,14 @@ class Ficha(commands.Cog):
         bonus_ataque: app_commands.Range[int, -5, 30],
         dano_arma: app_commands.Range[str, 1, 20],
         hp_maximo: app_commands.Range[int, 1, 999],
+        imagem: Optional[app_commands.Range[str, 1, 500]] = None,
     ) -> None:
+        retrato = url_de_imagem(imagem)
+        if imagem and not retrato:
+            await interaction.response.send_message(
+                "O link do retrato precisa comecar com http:// ou https://.", ephemeral=True
+            )
+            return
         existentes = await db.listar_personagens(
             self.bot.db, interaction.guild_id, interaction.user.id
         )
@@ -270,6 +282,7 @@ class Ficha(commands.Cog):
             atributos,
             view.escolhidas,
             combate=combate,
+            imagem=retrato,
         )
         if personagem_id is None:
             await interaction.edit_original_response(
@@ -509,6 +522,39 @@ class Ficha(commands.Cog):
         await interaction.response.send_message(
             f"✨ {interaction.user.mention} — {aviso}",
             embed=embed_ficha(atualizado, interaction.user),
+        )
+
+    @grupo.command(name="imagem", description="Associa um retrato ao personagem")
+    @app_commands.describe(
+        link="URL da imagem (http ou https). Deixe vazio para tirar o retrato.",
+        personagem="Qual personagem (opcional se voce so tem um)",
+    )
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
+    async def imagem(
+        self,
+        interaction: discord.Interaction,
+        link: Optional[app_commands.Range[str, 1, 500]] = None,
+        personagem: Optional[str] = None,
+    ) -> None:
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
+            return
+        retrato = url_de_imagem(link)
+        if link and not retrato:
+            await interaction.response.send_message(
+                "O link precisa comecar com http:// ou https:// e nao pode ter espacos.",
+                ephemeral=True,
+            )
+            return
+
+        await db.atualizar_personagem(self.bot.db, escolhido["id"], "imagem", retrato)
+        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
+        if retrato:
+            aviso = f"🖼️ {interaction.user.mention} deu um rosto a **{escolhido['nome']}**."
+        else:
+            aviso = f"🖼️ {interaction.user.mention} tirou o retrato de **{escolhido['nome']}**."
+        await interaction.response.send_message(
+            aviso, embed=embed_ficha(atualizado, interaction.user)
         )
 
     @grupo.command(name="remover", description="Apaga um personagem seu")

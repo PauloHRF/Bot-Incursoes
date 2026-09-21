@@ -60,9 +60,12 @@ class FakeCanal:
         self.mensagens: list[FakeMensagem] = []
         self._proximo_id = 1000
 
-    async def send(self, content=None, *, embed=None, view=None, file=discord.utils.MISSING):
+    async def send(self, content=None, *, embed=None, embeds=None, view=None,
+                   file=discord.utils.MISSING):
         self._proximo_id += 1
         msg = FakeMensagem(self, self._proximo_id, content=content, embed=embed, view=view)
+        if embeds:
+            msg.embeds = list(embeds)
         self.mensagens.append(msg)
         return msg
 

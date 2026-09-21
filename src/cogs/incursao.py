@@ -277,6 +277,17 @@ class Incursoes(commands.Cog):
             membros.append(membro or await self.bot.fetch_user(user_id))
         return membros
 
+    async def _membro(self, run: dict[str, Any], user_id: int):
+        """O membro do servidor, ou o usuário, para menção e apelido."""
+        guilda = self.bot.get_guild(run["guild_id"])
+        membro = guilda.get_member(user_id) if guilda else None
+        if membro is None and guilda is not None:
+            try:
+                membro = await guilda.fetch_member(user_id)
+            except discord.HTTPException:
+                membro = None
+        return membro or await self.bot.fetch_user(user_id)
+
     async def _apelidos(self, run: dict[str, Any]) -> dict[int, str]:
         return {m.id: m.display_name for m in await self._membros(run)}
 
@@ -608,7 +619,14 @@ class Incursoes(commands.Cog):
                     await mensagem.edit(view=None)
                 except discord.HTTPException:
                     pass
-            await canal.send(embed=E.lore_abertura(incursao, len(participantes)))
+            # Lore e o grupo na mesma mensagem: um embed por personagem, com o retrato.
+            cartoes = []
+            for p in await db.personagens_da_run(self.bot.db, run["id"]):
+                membro = await self._membro(run, p["user_id"])
+                cartoes.append(E.cartao_personagem(p, membro))
+            await canal.send(
+                embeds=[E.lore_abertura(incursao, len(participantes)), *cartoes[:9]]
+            )
         await self._abrir_votacao(await db.buscar_run(self.bot.db, run["id"]), 1)
 
     # ------------------------------------------------------------ votação

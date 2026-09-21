@@ -20,7 +20,7 @@ COLUNA_ATRIBUTO = {
 }
 
 COLUNAS_EDITAVEIS = {
-    "nome", "nivel", "pericias", "ca", "bonus_ataque", "dano_arma", "hp_max",
+    "nome", "nivel", "pericias", "ca", "bonus_ataque", "dano_arma", "hp_max", "imagem",
     *COLUNA_ATRIBUTO.values(),
 }
 
@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS personagens (
     bonus_ataque   INTEGER NOT NULL DEFAULT 0,
     dano_arma      TEXT    NOT NULL DEFAULT '1d6',
     hp_max         INTEGER NOT NULL DEFAULT 10,
+    imagem         TEXT,
     criado_em      TEXT    NOT NULL DEFAULT (datetime('now')),
     atualizado_em  TEXT    NOT NULL DEFAULT (datetime('now'))
 );
@@ -244,6 +245,10 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
             "ALTER TABLE personagens ADD COLUMN bonus_pericias TEXT NOT NULL DEFAULT '{}'"
         )
 
+    # Nem o retrato do personagem.
+    if "imagem" not in await _colunas(conn, "personagens"):
+        await conn.execute("ALTER TABLE personagens ADD COLUMN imagem TEXT")
+
     await conn.commit()
 
 
@@ -280,6 +285,7 @@ async def criar_personagem(
     pericias: list[str],
     combate: Optional[dict[str, Any]] = None,
     bonus_pericias: Optional[dict[str, int]] = None,
+    imagem: Optional[str] = None,
 ) -> Optional[int]:
     """Cria um personagem. Devolve None se o jogador ja tem outro com esse nome."""
     combate = combate or {}
@@ -287,8 +293,8 @@ async def criar_personagem(
         cur = await conn.execute(
             "INSERT INTO personagens (guild_id, user_id, nome, nivel, forca, destreza,"
             " constituicao, inteligencia, sabedoria, carisma, pericias,"
-            " bonus_pericias, ca, bonus_ataque, dano_arma, hp_max)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " bonus_pericias, ca, bonus_ataque, dano_arma, hp_max, imagem)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 guild_id, user_id, nome.strip(), nivel,
                 atributos["FOR"], atributos["DES"], atributos["CON"],
@@ -299,6 +305,7 @@ async def criar_personagem(
                 combate.get("bonus_ataque", 0),
                 combate.get("dano_arma", "1d6"),
                 combate.get("hp_max", 10),
+                imagem or None,
             ),
         )
     except aiosqlite.IntegrityError:

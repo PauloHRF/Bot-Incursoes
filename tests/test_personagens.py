@@ -298,6 +298,77 @@ async def caso_comandos_de_ficha():
     print("  comandos de ficha resolvem o personagem: ok")
 
 
+async def caso_retrato_do_personagem():
+    """O link do retrato é guardado, aparece na ficha e na abertura da run."""
+    from src.cogs.ficha import Ficha, embed_ficha
+    from src.embeds import url_de_imagem
+
+    conn, canal, cog = await preparar()
+    ficha_cog = Ficha(FakeBot(conn, canal))
+    await criar_grupo(conn)
+    dono = JOGADORES[0]
+    personagem = await db.personagem_por_nome(conn, GUILD, dono, f"Heroi{dono}")
+
+    # so http(s) entra
+    assert url_de_imagem("https://exemplo.invalid/vhalor.png")
+    assert url_de_imagem("http://exemplo.invalid/a.jpg")
+    assert url_de_imagem("  https://exemplo.invalid/b.png  ")
+    assert url_de_imagem("ftp://exemplo.invalid/x.png") is None
+    assert url_de_imagem("C:/Users/eu/retrato.png") is None
+    assert url_de_imagem("attachment://retrato.png") is None
+    assert url_de_imagem("https://exemplo.invalid/com espaco.png") is None
+    assert url_de_imagem("https://" + "x" * 600) is None
+    assert url_de_imagem(None) is None and url_de_imagem("") is None
+
+    # ficha sem retrato nao tem thumbnail
+    assert embed_ficha(personagem, FakeInteraction(canal, dono).user).thumbnail.url is None
+
+    link = "https://exemplo.invalid/vhalor.png"
+    inter = FakeInteraction(canal, dono)
+    await ficha_cog.imagem.callback(ficha_cog, inter, link)
+    assert "rosto" in inter.resposta
+
+    salvo = await db.buscar_personagem(conn, personagem["id"])
+    assert salvo["imagem"] == link
+    assert embed_ficha(salvo, inter.user).thumbnail.url == link
+
+    # link invalido nao apaga o que ja estava
+    ruim = FakeInteraction(canal, dono)
+    await ficha_cog.imagem.callback(ficha_cog, ruim, "javascript:alert(1)")
+    assert "http" in ruim.resposta
+    assert (await db.buscar_personagem(conn, personagem["id"]))["imagem"] == link
+
+    # a abertura da run traz um cartao por personagem, na mesma mensagem
+    antes = len(canal.mensagens)
+    await cog.entrar.callback(cog, FakeInteraction(canal, dono), "t")
+    run = await db.run_do_canal(conn, CANAL)
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for user_id in JOGADORES[1:]:
+        await cog.recrutar(FakeInteraction(canal, user_id, msg), run["id"], "entrar")
+    run = await db.buscar_run(conn, run["id"])
+    assert run["status"] == "escolhendo"
+    aberturas = [
+        m for m in canal.mensagens[antes:]
+        if len(m.embeds) > 1 and any(e.title == f"Heroi{dono}" for e in m.embeds)
+    ]
+    assert len(aberturas) == 1, "lore e grupo deveriam vir numa mensagem só"
+    cartoes = [e for e in aberturas[0].embeds if e.title and e.title.startswith("Heroi")]
+    assert len(cartoes) == len(JOGADORES), cartoes
+    com_retrato = [e for e in cartoes if e.thumbnail.url == link]
+    assert len(com_retrato) == 1, "só um personagem tem retrato neste teste"
+
+    # sem retrato o cartao continua valendo, so sem imagem
+    sem = [e for e in cartoes if e.thumbnail.url is None]
+    assert len(sem) == len(JOGADORES) - 1
+
+    # tirar o retrato deixa o campo vazio
+    limpa = FakeInteraction(canal, dono)
+    await ficha_cog.imagem.callback(ficha_cog, limpa, None)
+    assert "tirou" in limpa.resposta
+    assert (await db.buscar_personagem(conn, personagem["id"]))["imagem"] is None
+    print("  retrato: guardado, na ficha e na abertura da run: ok")
+
+
 async def main():
     try:
         await caso_migracao_do_banco_antigo()
@@ -306,6 +377,7 @@ async def main():
         await caso_personagem_escolhido_e_o_que_joga()
         await caso_intervalo_e_por_jogador()
         await caso_comandos_de_ficha()
+        await caso_retrato_do_personagem()
     finally:
         for conn in _ABERTAS:
             try:

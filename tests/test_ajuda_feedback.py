@@ -71,7 +71,8 @@ async def caso_help_lista_tudo():
 
     achatado = " ".join(c[0] for c in todos)
     for esperado in (
-        "/ficha registrar", "/ficha expertise", "/incursao entrar", "/incursao atacar",
+        "/ficha registrar", "/ficha expertise", "/ficha imagem",
+        "/incursao entrar", "/incursao atacar",
         "/organizacao placar", "/config intervalo", "/help",
     ):
         assert esperado in achatado, esperado
@@ -87,8 +88,8 @@ async def caso_help_lista_tudo():
 
     # comando com muitos campos vira linha curta
     registrar = next(c for c in todos if c[0].startswith("/ficha registrar"))
-    assert "12 campos" in registrar[0], registrar[0]
-    assert len(registrar[0]) < 60
+    assert "campos)" in registrar[0], registrar[0]
+    assert len(registrar[0]) < 60, "a assinatura longa precisa sair encurtada"
 
     for cog in list(bot.extensions):
         await bot.unload_extension(cog)

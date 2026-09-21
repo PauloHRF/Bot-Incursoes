@@ -58,6 +58,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/ficha pericias [personagem]` | Reabre o seletor de perícias treinadas |
 | `/ficha combate <ca> <ataque> <dano> <hp> [personagem]` | Corrige os números de combate |
 | `/ficha expertise <perícia> <bônus> [personagem]` | Soma um bônus avulso a uma perícia (0 remove) |
+| `/ficha imagem [link] [personagem]` | Associa um retrato ao personagem (sem link, remove) |
 | `/ficha remover <personagem>` | Apaga um personagem seu |
 | `/incursao listar` | Mostra as incursões carregadas |
 | `/incursao entrar <id> [personagem]` | Abre o recrutamento de uma incursão no canal |
@@ -82,7 +83,8 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    direto. O personagem fica preso àquela run: é a ficha dele que rola os testes, ataca e
    leva dano.
 3. Ao chegar a 5 jogadores a run começa sozinha; quem abriu pode começar antes com **Começar**.
-   Aí o bot posta a **lore de abertura** e sorteia o caminho: um grupo de 3 salas por passo,
+   Aí o bot posta a **lore de abertura** junto com o grupo — um card por personagem, com
+   nível, CA, HP e o retrato de quem tiver — e sorteia o caminho: 3 salas por passo,
    tiradas do banco da Organização.
 4. Cada passo mostra as 3 salas sorteadas para ele. Todos votam pelos botões, e a votação fecha
    assim que uma sala junta a **maioria do grupo** (3 de 5) — quem ainda não votou não
@@ -136,6 +138,10 @@ desatualizada. `/help ficha` filtra por grupo ou por comando.
 ## Personagens
 
 Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
+Cada um pode ter um **retrato**: `/ficha imagem <link>` guarda a URL, que aparece como
+miniatura em `/ficha ver` e no card do personagem na abertura da run. Só `http://` e
+`https://` são aceitos — o bot guarda o link, não a imagem, então hospede onde quiser
+(inclusive num anexo do próprio Discord, copiando o link da imagem).
 Os comandos de ficha aceitam o nome no campo `personagem`, com autocompletar; quem só tem
 um personagem pode omitir. Dois personagens do mesmo jogador não podem ter o mesmo nome.
 

@@ -9,7 +9,7 @@ import discord
 from . import config
 from .incursoes import Incursao, Sala
 from .motor import CONSEQUENCIA_FALHA, ResolucaoSala, barra, progresso_da_run
-from .rules import fmt
+from .rules import fmt, tier
 
 COR_INCURSAO = discord.Color.dark_teal()
 COR_SALA = discord.Color.dark_gold()
@@ -46,6 +46,44 @@ def anexo_da_imagem(caminho: Optional[str]) -> tuple[Optional[discord.File], Opt
         return None, None
     nome = local.name
     return discord.File(local, filename=nome), f"attachment://{nome}"
+
+
+def url_de_imagem(valor: Optional[str]) -> Optional[str]:
+    """Aceita a URL do retrato de um personagem, ou None.
+
+    Só http(s): o Discord não carrega outra coisa, e caminhos locais de um
+    jogador não devem virar anexo do bot.
+    """
+    if not valor:
+        return None
+    url = str(valor).strip()
+    if len(url) > 500 or " " in url:
+        return None
+    return url if url.startswith(("http://", "https://")) else None
+
+
+def cartao_personagem(personagem: dict, membro) -> discord.Embed:
+    """Retrato compacto de um personagem, para a abertura da run."""
+    e = discord.Embed(
+        title=personagem["nome"],
+        description=(
+            f"{membro.mention} · nível {personagem['nivel']} · tier "
+            f"{tier(personagem['nivel'])}"
+        ),
+        color=COR_INCURSAO,
+    )
+    e.add_field(
+        name="Combate",
+        value=(
+            f"CA **{personagem['ca']}** · Ataque **{fmt(personagem['bonus_ataque'])}** · "
+            f"HP **{personagem['hp_max']}**"
+        ),
+        inline=False,
+    )
+    retrato = url_de_imagem(personagem.get("imagem"))
+    if retrato:
+        e.set_thumbnail(url=retrato)
+    return e
 
 
 def chamada(texto: str, limite: int = 400) -> str:
