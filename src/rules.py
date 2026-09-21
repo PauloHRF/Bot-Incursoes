@@ -88,20 +88,35 @@ def tier(nivel: int) -> int:
     return TIERS[-1][1]
 
 
-def mod_pericia(pericia: str, atributos: dict[str, int], nivel: int, treinadas: list[str]) -> int:
-    """Modificador final de uma perícia: mod do atributo + proficiência se treinada."""
+def mod_pericia(
+    pericia: str,
+    atributos: dict[str, int],
+    nivel: int,
+    treinadas: list[str],
+    bonus: dict[str, int] | None = None,
+) -> int:
+    """Modificador final: atributo + proficiência se treinada + bônus da perícia.
+
+    `bonus` sao as expertises: valores avulsos por pericia (item, talento, etc).
+    """
     chave = PERICIAS[pericia]
     total = modificador(atributos[chave])
     if pericia in treinadas:
         total += bonus_proficiencia(nivel)
+    if bonus:
+        total += bonus.get(pericia, 0)
     return total
 
 
 def melhor_pericia(
-    opcoes: list[str], atributos: dict[str, int], nivel: int, treinadas: list[str]
+    opcoes: list[str],
+    atributos: dict[str, int],
+    nivel: int,
+    treinadas: list[str],
+    bonus: dict[str, int] | None = None,
 ) -> tuple[str, int]:
     """Dentre as perícias listadas pela sala, a melhor para este personagem."""
-    ranked = [(p, mod_pericia(p, atributos, nivel, treinadas)) for p in opcoes]
+    ranked = [(p, mod_pericia(p, atributos, nivel, treinadas, bonus)) for p in opcoes]
     ranked.sort(key=lambda x: x[1], reverse=True)
     return ranked[0]
 

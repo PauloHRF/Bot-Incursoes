@@ -257,6 +257,25 @@ def status(
 # ------------------------------------------------------------ combate
 
 
+EMOJI_CRITICO = "💥"
+EMOJI_FALHA_CRITICA = "💢"
+
+
+def linha_golpe(g) -> str:
+    """Uma linha de ataque, marcando 20 e 1 naturais."""
+    rolagem = f"🎲 {g.d20} {fmt(g.bonus)} = **{g.total}** vs CA {g.ca_alvo}"
+    if g.critico:
+        return (
+            f"{EMOJI_CRITICO} **CRITICO!** {g.atacante} · 🎲 **20** → "
+            f"**{g.dano}** de dano (dados dobrados)"
+        )
+    if g.falha_critica:
+        return f"{EMOJI_FALHA_CRITICA} {g.atacante} · 🎲 **1** → erro critico, passa longe"
+    if g.acertou:
+        return f"⚔️ {g.atacante} · {rolagem} → **{g.dano}** de dano"
+    return f"💨 {g.atacante} · {rolagem} → errou"
+
+
 def _linha_hp(c) -> str:
     if c.hp_atual <= 0:
         return f"💀 ~~{c.nome}~~ — caído"
@@ -296,16 +315,18 @@ def combate(
 
 def rodada_resolvida(rodada: int, golpes: list, contra, alvo_nome: Optional[str], estado) -> discord.Embed:
     e = discord.Embed(title=f"Rodada {rodada}", color=COR_SALA)
-    linhas = []
-    for g in golpes:
-        if g.acertou:
-            linhas.append(f"⚔️ {g.atacante} · 🎲 {g.d20} {fmt(g.bonus)} = **{g.total}** vs CA {g.ca_alvo} → **{g.dano}** de dano")
-        else:
-            linhas.append(f"💨 {g.atacante} · 🎲 {g.d20} {fmt(g.bonus)} = **{g.total}** vs CA {g.ca_alvo} → errou")
+    linhas = [linha_golpe(g) for g in golpes]
     e.add_field(name="Ataques do grupo", value="\n".join(linhas) or "*ninguém atacou*", inline=False)
 
     if contra is not None and alvo_nome:
-        if contra.acertou:
+        if contra.critico:
+            texto = (
+                f"{EMOJI_CRITICO} **CRITICO!** 🎲 **20** → **{contra.dano}** de dano "
+                f"em {alvo_nome} (dados dobrados)"
+            )
+        elif contra.falha_critica:
+            texto = f"{EMOJI_FALHA_CRITICA} 🎲 **1** → erro critico, {alvo_nome} escapa"
+        elif contra.acertou:
             texto = (
                 f"🎲 {contra.d20} {fmt(contra.bonus)} = **{contra.total}** vs CA {contra.ca_alvo} "
                 f"→ **{contra.dano}** de dano em {alvo_nome}"

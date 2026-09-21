@@ -55,6 +55,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/ficha atributo <attr> <valor> [personagem]` | Atualiza um atributo após um ASI |
 | `/ficha pericias [personagem]` | Reabre o seletor de perícias treinadas |
 | `/ficha combate <ca> <ataque> <dano> <hp> [personagem]` | Corrige os números de combate |
+| `/ficha expertise <perícia> <bônus> [personagem]` | Soma um bônus avulso a uma perícia (0 remove) |
 | `/ficha remover <personagem>` | Apaga um personagem seu |
 | `/incursao listar` | Mostra as incursões carregadas |
 | `/incursao entrar <id> [personagem]` | Abre o recrutamento de uma incursão no canal |
@@ -92,7 +93,12 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 Em sala de **Combate**, cada personagem de pé clica em **Atacar** uma vez por rodada
 (d20 + bônus de ataque contra a CA do monstro; acertou, rola o dano da arma). Quando
 todos atacam, o monstro revida contra um alvo sorteado entre os que estão de pé. Quem
-chega a 0 HP fica fora do resto daquele combate. O monstro cair supera a sala; o grupo
+chega a 0 HP fica fora do resto daquele combate.
+
+O **20 natural** acerta por mais alta que seja a CA e é crítico: os dados de dano são
+rolados em dobro, com o modificador entrando uma vez só (2d6+3 vira 4d6+3). O **1 natural**
+erra por maior que seja o bônus. Os dois aparecem marcados no log da rodada — 💥 no crítico
+e 💢 no erro crítico — e valem tanto para o grupo quanto para o monstro. O monstro cair supera a sala; o grupo
 inteiro cair encerra a run em fracasso. A sala de **Descanso** completa o HP de quem
 está machucado e devolve os caídos com metade do HP máximo.
 
@@ -116,6 +122,16 @@ ninguém participa de duas runs ao mesmo tempo, nem com personagens diferentes.
 Bancos criados antes desta mudança são migrados sozinhos na primeira vez que o bot sobe:
 cada ficha vira o primeiro personagem daquele jogador, com atributos, perícias, números de
 combate e a data da última incursão preservados.
+
+## Perícias e expertise
+
+O modificador de uma perícia sai de **atributo + proficiência (se treinada) + bônus avulso**.
+O bônus avulso é o que `/ficha expertise` define, para cobrir item mágico, talento ou
+qualquer outra fonte: `/ficha expertise Furtividade 2` soma +2, e `0` remove. Aceita
+negativo, serve para perícia não treinada e vale por personagem, não por jogador.
+
+Esse bônus entra em tudo que usa a perícia, inclusive na escolha automática de qual perícia
+o personagem usa no teste da sala — um bônus alto pode fazer outra perícia virar a melhor.
 
 ## Pontos de Organização
 
@@ -198,6 +214,7 @@ tests/
   test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
+  test_critico_expertise.py  críticos, erro crítico e bônus por perícia
   fakes.py      dublês do Discord usados pelos testes
 ```
 

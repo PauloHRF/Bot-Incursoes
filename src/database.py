@@ -7,7 +7,7 @@ from typing import Any, Optional
 import aiosqlite
 
 from . import config
-from .rules import normalizar_lista_pericias
+from .rules import normalizar_lista_pericias, normalizar_pericia
 
 # sigla do atributo -> coluna no banco
 COLUNA_ATRIBUTO = {
@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS personagens (
     sabedoria      INTEGER NOT NULL,
     carisma        INTEGER NOT NULL,
     pericias       TEXT    NOT NULL DEFAULT '[]',
+    bonus_pericias TEXT    NOT NULL DEFAULT '{}',
     ca             INTEGER NOT NULL DEFAULT 10,
     bonus_ataque   INTEGER NOT NULL DEFAULT 0,
     dano_arma      TEXT    NOT NULL DEFAULT '1d6',
@@ -211,13 +212,34 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
     if "personagem_id" not in await _colunas(conn, "run_participantes"):
         await conn.execute("ALTER TABLE run_participantes ADD COLUMN personagem_id INTEGER")
 
+    # Nem os bonus avulsos por pericia (expertise).
+    if "bonus_pericias" not in await _colunas(conn, "personagens"):
+        await conn.execute(
+            "ALTER TABLE personagens ADD COLUMN bonus_pericias TEXT NOT NULL DEFAULT '{}'"
+        )
+
     await conn.commit()
+
+
+def _normalizar_bonus(bruto: dict[str, Any]) -> dict[str, int]:
+    """Aceita a grafia sem acento e descarta pericia desconhecida ou bonus zero."""
+    saida: dict[str, int] = {}
+    for nome, valor in (bruto or {}).items():
+        canonico = normalizar_pericia(str(nome))
+        try:
+            numero = int(valor)
+        except (TypeError, ValueError):
+            continue
+        if canonico and numero:
+            saida[canonico] = numero
+    return saida
 
 
 def _desserializar(row: aiosqlite.Row) -> dict[str, Any]:
     p = dict(row)
     # Normaliza fichas gravadas antes dos nomes de pericia ganharem acento.
     p["pericias"] = normalizar_lista_pericias(json.loads(p["pericias"]))
+    p["bonus_pericias"] = _normalizar_bonus(json.loads(p.get("bonus_pericias") or "{}"))
     p["atributos"] = {sigla: p[col] for sigla, col in COLUNA_ATRIBUTO.items()}
     return p
 
@@ -231,6 +253,7 @@ async def criar_personagem(
     atributos: dict[str, int],
     pericias: list[str],
     combate: Optional[dict[str, Any]] = None,
+    bonus_pericias: Optional[dict[str, int]] = None,
 ) -> Optional[int]:
     """Cria um personagem. Devolve None se o jogador ja tem outro com esse nome."""
     combate = combate or {}
@@ -238,13 +261,14 @@ async def criar_personagem(
         cur = await conn.execute(
             "INSERT INTO personagens (guild_id, user_id, nome, nivel, forca, destreza,"
             " constituicao, inteligencia, sabedoria, carisma, pericias,"
-            " ca, bonus_ataque, dano_arma, hp_max)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " bonus_pericias, ca, bonus_ataque, dano_arma, hp_max)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 guild_id, user_id, nome.strip(), nivel,
                 atributos["FOR"], atributos["DES"], atributos["CON"],
                 atributos["INT"], atributos["SAB"], atributos["CAR"],
                 json.dumps(normalizar_lista_pericias(pericias), ensure_ascii=False),
+                json.dumps(_normalizar_bonus(bonus_pericias or {}), ensure_ascii=False),
                 combate.get("ca", 10),
                 combate.get("bonus_ataque", 0),
                 combate.get("dano_arma", "1d6"),
@@ -311,6 +335,30 @@ async def atualizar_pericias(
         "pericias",
         json.dumps(normalizar_lista_pericias(pericias), ensure_ascii=False),
     )
+
+
+async def definir_bonus_pericia(
+    conn: aiosqlite.Connection, personagem_id: int, pericia: str, valor: int
+) -> Optional[dict[str, int]]:
+    """Define (ou remove, com 0) o bonus de uma pericia. Devolve o mapa final."""
+    personagem = await buscar_personagem(conn, personagem_id)
+    if not personagem:
+        return None
+    canonico = normalizar_pericia(pericia)
+    if not canonico:
+        return None
+    bonus = dict(personagem["bonus_pericias"])
+    if valor:
+        bonus[canonico] = valor
+    else:
+        bonus.pop(canonico, None)
+    await conn.execute(
+        "UPDATE personagens SET bonus_pericias = ?, atualizado_em = datetime('now')"
+        " WHERE id = ?",
+        (json.dumps(bonus, ensure_ascii=False), personagem_id),
+    )
+    await conn.commit()
+    return bonus
 
 
 async def remover_personagem(conn: aiosqlite.Connection, personagem_id: int) -> bool:

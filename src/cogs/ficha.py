@@ -61,6 +61,7 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
     nivel = personagem["nivel"]
     treinadas = personagem["pericias"]
     atributos = personagem["atributos"]
+    bonus = personagem.get("bonus_pericias") or {}
 
     e = discord.Embed(
         title=personagem["nome"],
@@ -80,13 +81,22 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
     )
     if treinadas:
         linhas = [
-            f"{p} {fmt(mod_pericia(p, atributos, nivel, treinadas))}" for p in sorted(treinadas)
+            f"{p} {fmt(mod_pericia(p, atributos, nivel, treinadas, bonus))}"
+            for p in sorted(treinadas)
         ]
         e.add_field(
             name=f"Pericias treinadas ({len(treinadas)})", value=" | ".join(linhas), inline=False
         )
     else:
         e.add_field(name="Pericias treinadas", value="nenhuma - use /ficha pericias", inline=False)
+
+    if bonus:
+        # Uma pericia nao treinada tambem pode ter bonus: mostramos o total dela.
+        avulsas = [
+            f"{p} {fmt(bonus[p])} (total {fmt(mod_pericia(p, atributos, nivel, treinadas, bonus))})"
+            for p in sorted(bonus)
+        ]
+        e.add_field(name="Expertises", value=" | ".join(avulsas), inline=False)
     e.add_field(
         name="Combate",
         value=(
@@ -424,6 +434,48 @@ class Ficha(commands.Cog):
         atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
         await interaction.response.send_message(
             embed=embed_ficha(atualizado, interaction.user), ephemeral=True
+        )
+
+    @grupo.command(
+        name="expertise", description="Soma um bonus avulso a uma pericia (item, talento, etc)"
+    )
+    @app_commands.describe(
+        pericia="Qual pericia recebe o bonus",
+        bonus="Quanto somar. Use 0 para tirar o bonus.",
+        personagem="Qual personagem (opcional se voce so tem um)",
+    )
+    @app_commands.choices(
+        pericia=[app_commands.Choice(name=p, value=p) for p in sorted(PERICIAS)][:25]
+    )
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
+    async def expertise(
+        self,
+        interaction: discord.Interaction,
+        pericia: app_commands.Choice[str],
+        bonus: app_commands.Range[int, -10, 20],
+        personagem: Optional[str] = None,
+    ) -> None:
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
+            return
+        await db.definir_bonus_pericia(self.bot.db, escolhido["id"], pericia.value, bonus)
+        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
+        if bonus:
+            total = mod_pericia(
+                pericia.value,
+                atualizado["atributos"],
+                atualizado["nivel"],
+                atualizado["pericias"],
+                atualizado["bonus_pericias"],
+            )
+            aviso = (
+                f"**{escolhido['nome']}**: {pericia.value} com {fmt(bonus)} de bonus "
+                f"— modificador total {fmt(total)}."
+            )
+        else:
+            aviso = f"**{escolhido['nome']}**: bonus de {pericia.value} removido."
+        await interaction.response.send_message(
+            aviso, embed=embed_ficha(atualizado, interaction.user), ephemeral=True
         )
 
     @grupo.command(name="remover", description="Apaga um personagem seu")

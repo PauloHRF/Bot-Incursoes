@@ -77,6 +77,29 @@ async def atravessar_ate_objetivo(conn, canal, cog, run, incursao):
     return await db.buscar_run(conn, run["id"])
 
 
+async def atacar_ate_cair(conn, canal, cog, run_id, sala_id, limite=30):
+    """Ataca ate o combate terminar.
+
+    Um golpe so nao basta nem contra CA 1: o 1 natural erra sempre.
+    """
+    ultima = None
+    for _ in range(limite):
+        atual = await db.buscar_run(conn, run_id)
+        if atual["status"] not in ("em_sala", "objetivo") or atual["sala_atual"] != sala_id:
+            return ultima
+        estado = await cog._estado_combate(atual, cog.incursoes[atual["incursao_id"]].sala(sala_id))
+        if estado is None:
+            return ultima
+        msg = await canal.fetch_message(atual["mensagem_id"])
+        for c in list(estado.vivos):
+            depois = await db.buscar_run(conn, run_id)
+            if depois["status"] not in ("em_sala", "objetivo") or depois["sala_atual"] != sala_id:
+                return ultima
+            ultima = FakeInteraction(canal, c.user_id, msg)
+            await cog.atacar(ultima, run_id, sala_id)
+    return ultima
+
+
 async def caso_hp_inicial():
     """Ao começar a run, todo mundo entra com o HP máximo da ficha."""
     conn, canal, cog = await preparar(hp_max=37)
@@ -101,11 +124,9 @@ async def caso_vitoria_no_objetivo():
     estado = await cog._estado_combate(run, incursao.objetivo)
     assert estado is not None and estado.monstro_hp == 1 and estado.rodada == 1
 
-    # um golpe basta contra CA 1 / 1 HP
+    # CA 1 e 1 HP caem rapido, mas o 1 natural ainda erra: ataca ate derrubar
     msg = await canal.fetch_message(run["mensagem_id"])
-    inter = FakeInteraction(canal, JOGADORES[0], msg)
-    await cog.atacar(inter, run["id"], "OBJ")
-    assert "acertou" in inter.resposta
+    await atacar_ate_cair(conn, canal, cog, run["id"], "OBJ")
 
     run = await db.buscar_run(conn, run["id"])
     assert run["status"] == "sucesso", f"esperava sucesso, veio {run['status']}"
@@ -135,8 +156,7 @@ async def caso_combate_no_meio_do_mapa():
     run = await db.buscar_run(conn, run["id"])
     assert run["status"] == "em_sala" and run["sala_atual"] == "A1"
 
-    msg_combate = await canal.fetch_message(run["mensagem_id"])
-    await cog.atacar(FakeInteraction(canal, JOGADORES[0], msg_combate), run["id"], "A1")
+    await atacar_ate_cair(conn, canal, cog, run["id"], "A1")
 
     run = await db.buscar_run(conn, run["id"])
     assert run["status"] == "escolhendo" and run["linha_atual"] == 2, run
@@ -158,7 +178,10 @@ async def caso_rodadas_e_contra_ataque():
     for i, user_id in enumerate(JOGADORES):
         inter = FakeInteraction(canal, user_id, msg)
         await cog.atacar(inter, run["id"], "OBJ")
-        assert "errou" in inter.resposta  # CA 40 é inalcançável
+        # CA 40 so cai com 20 natural; o 1 natural sai como erro critico
+        assert any(
+            marca in inter.resposta for marca in ("errou", "CRITICO", "erro critico")
+        ), inter.resposta
 
         # o mesmo personagem não ataca duas vezes na mesma rodada
         if i < len(JOGADORES) - 1:
@@ -168,14 +191,17 @@ async def caso_rodadas_e_contra_ataque():
 
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     assert estado.rodada == 2, f"a rodada deveria ter virado, veio {estado.rodada}"
-    assert len(estado.caidos) == 1, "o contra-ataque deveria ter derrubado exatamente um"
-    assert estado.monstro_hp == 999, "ninguém acertou, o monstro não perde HP"
+    # o monstro tem +40 de ataque, mas um 1 natural ainda erra: 0 ou 1 caido
+    assert len(estado.caidos) <= 1, estado.caidos
+    # so um 20 natural tira HP desse monstro
+    assert estado.monstro_hp <= 999
 
     # quem caiu não ataca mais
-    caido = estado.caidos[0]
-    inter = FakeInteraction(canal, caido.user_id, msg)
-    await cog.atacar(inter, run["id"], "OBJ")
-    assert "caído" in inter.resposta
+    if estado.caidos:
+        caido = estado.caidos[0]
+        inter = FakeInteraction(canal, caido.user_id, msg)
+        await cog.atacar(inter, run["id"], "OBJ")
+        assert "caído" in inter.resposta
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
@@ -190,7 +216,8 @@ async def caso_derrota_total():
     run = await montar_run(conn, canal, cog, "letal")
     run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
 
-    for _ in range(len(JOGADORES) + 2):
+    # Com o 1 natural, o monstro erra de vez em quando: sobra rodada para todos cairem.
+    for _ in range(len(JOGADORES) * 5):
         atual = await db.buscar_run(conn, run["id"])
         if atual["status"] != "objetivo":
             break

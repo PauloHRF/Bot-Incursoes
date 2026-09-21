@@ -24,14 +24,21 @@ def rolar_d20(rng: Optional[random.Random] = None) -> int:
     return _rng(rng).randint(1, 20)
 
 
-def rolar_dano(expressao: str, rng: Optional[random.Random] = None) -> int:
-    """Rola uma expressão como '2d6+3'. Nunca devolve menos que 1."""
+def rolar_dano(
+    expressao: str, rng: Optional[random.Random] = None, critico: bool = False
+) -> int:
+    """Rola uma expressão como '2d6+3'. Nunca devolve menos que 1.
+
+    Num crítico, os dados são rolados em dobro e o modificador entra uma vez só,
+    como manda a regra de 5e: 2d6+3 vira 4d6+3.
+    """
     m = EXPR_DANO.match(expressao)
     if not m:
         raise ValueError(f"expressão de dano inválida: {expressao!r}")
     quantidade, faces, sinal, bonus = m.group(1), m.group(2), m.group(3), m.group(4)
     gerador = _rng(rng)
-    total = sum(gerador.randint(1, int(faces)) for _ in range(int(quantidade)))
+    dados = int(quantidade) * (2 if critico else 1)
+    total = sum(gerador.randint(1, int(faces)) for _ in range(dados))
     if bonus:
         total += int(bonus) if sinal == "+" else -int(bonus)
     return max(1, total)
@@ -67,7 +74,11 @@ def testar(ficha: dict[str, Any], sala: Sala, rng: Optional[random.Random] = Non
     if not sala.tem_teste or sala.cd is None:
         raise ValueError(f"a sala {sala.id} ({sala.tipo}) não é resolvida por teste de perícia")
     pericia, modificador = melhor_pericia(
-        sala.pericias, ficha["atributos"], ficha["nivel"], ficha["pericias"]
+        sala.pericias,
+        ficha["atributos"],
+        ficha["nivel"],
+        ficha["pericias"],
+        ficha.get("bonus_pericias"),
     )
     return ResultadoTeste(
         user_id=ficha["user_id"],
@@ -171,7 +182,20 @@ class GolpeAtaque:
 
     @property
     def acertou(self) -> bool:
+        # 20 natural sempre acerta; 1 natural sempre erra, por maior que seja o bonus.
+        if self.d20 == 20:
+            return True
+        if self.d20 == 1:
+            return False
         return self.total >= self.ca_alvo
+
+    @property
+    def critico(self) -> bool:
+        return self.d20 == 20
+
+    @property
+    def falha_critica(self) -> bool:
+        return self.d20 == 1
 
 
 def atacar(
@@ -185,7 +209,7 @@ def atacar(
     """Uma rolagem de ataque: d20 + bônus contra a CA. Acertou, rola o dano."""
     golpe = GolpeAtaque(atacante_nome, alvo_nome, rolar_d20(rng), bonus, ca_alvo)
     if golpe.acertou:
-        golpe.dano = rolar_dano(dano, rng)
+        golpe.dano = rolar_dano(dano, rng, critico=golpe.critico)
     return golpe
 
 

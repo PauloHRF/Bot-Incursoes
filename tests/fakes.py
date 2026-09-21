@@ -26,11 +26,16 @@ TREINADAS = ["Acrobacia", "Arcanismo", "Investigação", "Percepção", "Prestid
 # ----------------------------------------------------------------- dublês
 
 
+class _FakeAvatar:
+    url = "https://exemplo.invalid/avatar.png"
+
+
 class FakeUsuario:
     def __init__(self, user_id: int):
         self.id = user_id
         self.display_name = f"Jogador{user_id}"
         self.mention = f"<@{user_id}>"
+        self.display_avatar = _FakeAvatar()
 
 
 class FakeMensagem:

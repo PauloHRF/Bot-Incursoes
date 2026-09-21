@@ -823,7 +823,17 @@ class Incursoes(commands.Cog):
             self.bot.db, run_id, sala_id, estado.monstro_hp, estado.rodada
         )
 
-        if golpe.acertou:
+        if golpe.critico:
+            texto = (
+                f"{E.EMOJI_CRITICO} 🎲 **20 natural** — **CRITICO!** "
+                f"**{golpe.dano}** de dano, com os dados dobrados."
+            )
+        elif golpe.falha_critica:
+            texto = (
+                f"{E.EMOJI_FALHA_CRITICA} 🎲 **1 natural** — erro critico, "
+                "o golpe passa longe."
+            )
+        elif golpe.acertou:
             texto = (
                 f"⚔️ 🎲 **{golpe.d20}** {golpe.bonus:+d} = **{golpe.total}** vs CA "
                 f"{golpe.ca_alvo} — acertou, **{golpe.dano}** de dano."
