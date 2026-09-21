@@ -7,7 +7,11 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
+import copy  # noqa: E402
+
 import discord  # noqa: E402
+
+from src.incursoes import de_dict  # noqa: E402
 
 GUILD = 1
 CANAL = 99
@@ -131,3 +135,66 @@ class FakeBot:
 
     def add_view(self, view, *, message_id=None):
         self.views_registradas.append((view, message_id))
+
+
+# Monstro que todo mundo acerta e que morre num golpe.
+INDEFESO = {"nome": "Saco de Pancada", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 1}
+# Monstro que ninguém acerta e que mata um personagem por rodada.
+IMBATIVEL = {"nome": "Ceifador", "ca": 40, "ataque": 40, "dano": "1d1+998", "hp": 999}
+
+
+def sala(sala_id, tipo, **extra):
+    """Monta o dicionário de uma sala, com defaults coerentes por tipo."""
+    base = {
+        "id": sala_id,
+        "nome": f"Sala {sala_id}",
+        "tipo": tipo,
+        "descricao": f"Descrição da sala {sala_id}.",
+        "pericias": [],
+        "dificuldade": None,
+        "cd": None,
+        "alvo_progresso": None,
+        "imagem": None,
+        "monstro": None,
+        "recompensa": None,
+        "pontos_organizacao": 0,
+    }
+    if tipo in ("Armadilha", "Evento", "Tesouro"):
+        base.update(dificuldade="Fácil", cd=10, alvo_progresso=5, pericias=["Percepção"])
+    base.update(extra)
+    return base
+
+
+def incursao_teste(
+    incursao_id: str,
+    monstro_objetivo: dict,
+    monstro_meio: dict | None = None,
+    pontos_conclusao: int = 10,
+    pontos_por_sala: dict[str, int] | None = None,
+):
+    linha1 = [
+        sala("A1", "Combate", monstro=copy.deepcopy(monstro_meio)) if monstro_meio
+        else sala("A1", "Evento"),
+        sala("A2", "Evento"),
+        sala("A3", "Descanso"),
+    ]
+    dados = {
+        "id": incursao_id,
+        "nome": f"Incursão {incursao_id}",
+        "organizacao": "Vórtice Oculto",
+        "descricao": "Incursão sintética de teste.",
+        "imagem_capa": None,
+        "recompensa_mes": 10,
+        "pontos_conclusao": pontos_conclusao,
+        "linhas": [
+            linha1,
+            [sala("B1", "Evento"), sala("B2", "Descanso"), sala("B3", "Tesouro")],
+            [sala("C1", "Evento"), sala("C2", "Armadilha"), sala("C3", "Descanso")],
+        ],
+        "objetivo": sala("OBJ", "Combate", monstro=copy.deepcopy(monstro_objetivo)),
+    }
+    for linha in dados["linhas"]:
+        for s in linha:
+            s["pontos_organizacao"] = (pontos_por_sala or {}).get(s["id"], 0)
+    dados["objetivo"]["pontos_organizacao"] = (pontos_por_sala or {}).get("OBJ", 0)
+    return de_dict(dados)

@@ -25,7 +25,10 @@ ABA_META = "Incursao"
 ABA_SALAS = "Salas"
 ABA_DIFICULDADES = "Dificuldades"
 
-CAMPOS_META = ("id", "nome", "organizacao", "descricao", "imagem_capa", "recompensa_mes")
+CAMPOS_META = (
+    "id", "nome", "organizacao", "descricao", "imagem_capa", "recompensa_mes",
+    "pontos_conclusao",
+)
 
 
 class ErroDePlanilha(Exception):
@@ -88,6 +91,7 @@ def ler_salas(wb, dificuldades) -> tuple[list[list[dict]], dict | None]:
             "sala_id", "linha", "nome", "tipo", "dificuldade", "cd", "alvo_progresso",
             "pericias", "descricao", "imagem", "monstro_nome", "monstro_ca",
             "monstro_ataque", "monstro_dano", "monstro_hp", "recompensa",
+            "pontos_organizacao",
         )}
     except ValueError as exc:
         raise ErroDePlanilha(
@@ -134,6 +138,7 @@ def ler_salas(wb, dificuldades) -> tuple[list[list[dict]], dict | None]:
             "pericias": pericias,
             "imagem": _texto(valor("imagem")) or None,
             "recompensa": _texto(valor("recompensa")) or None,
+            "pontos_organizacao": valor("pontos_organizacao"),
         }
         if _texto(valor("monstro_nome")):
             sala["monstro"] = {
@@ -185,6 +190,7 @@ def importar(planilha: Path, saida: Path) -> Path:
         "descricao": _texto(meta.get("descricao")),
         "imagem_capa": _texto(meta.get("imagem_capa")) or None,
         "recompensa_mes": meta.get("recompensa_mes"),
+        "pontos_conclusao": meta.get("pontos_conclusao"),
         "linhas": linhas,
         "objetivo": objetivo,
     }

@@ -6,7 +6,6 @@ que o resultado não dependa do dado.
 from __future__ import annotations
 
 import asyncio
-import copy
 import sys
 from pathlib import Path
 
@@ -15,67 +14,19 @@ sys.path.insert(0, str(RAIZ))
 
 from src import config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes, ViewCombate  # noqa: E402
-from src.incursoes import de_dict  # noqa: E402
 from fakes import (  # noqa: E402
     ATRIBUTOS,
     CANAL,
     GUILD,
+    IMBATIVEL,
+    INDEFESO,
     JOGADORES,
     TREINADAS,
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    incursao_teste,
 )
-
-# Monstro que todo mundo acerta e que morre num golpe.
-INDEFESO = {"nome": "Saco de Pancada", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 1}
-# Monstro que ninguém acerta e que mata um personagem por rodada.
-IMBATIVEL = {"nome": "Ceifador", "ca": 40, "ataque": 40, "dano": "1d1+998", "hp": 999}
-
-
-def sala(sala_id, tipo, **extra):
-    base = {
-        "id": sala_id,
-        "nome": f"Sala {sala_id}",
-        "tipo": tipo,
-        "descricao": f"Descrição da sala {sala_id}.",
-        "pericias": [],
-        "dificuldade": None,
-        "cd": None,
-        "alvo_progresso": None,
-        "imagem": None,
-        "monstro": None,
-        "recompensa": None,
-    }
-    if tipo in ("Armadilha", "Evento", "Tesouro"):
-        base.update(dificuldade="Fácil", cd=10, alvo_progresso=5, pericias=["Percepção"])
-    base.update(extra)
-    return base
-
-
-def incursao_teste(incursao_id: str, monstro_objetivo: dict, monstro_meio: dict | None = None):
-    linha1 = [
-        sala("A1", "Combate", monstro=copy.deepcopy(monstro_meio)) if monstro_meio
-        else sala("A1", "Evento"),
-        sala("A2", "Evento"),
-        sala("A3", "Descanso"),
-    ]
-    dados = {
-        "id": incursao_id,
-        "nome": f"Incursão {incursao_id}",
-        "organizacao": "Vórtice Oculto",
-        "descricao": "Incursão sintética de teste.",
-        "imagem_capa": None,
-        "recompensa_mes": 10,
-        "linhas": [
-            linha1,
-            [sala("B1", "Evento"), sala("B2", "Descanso"), sala("B3", "Tesouro")],
-            [sala("C1", "Evento"), sala("C2", "Armadilha"), sala("C3", "Descanso")],
-        ],
-        "objetivo": sala("OBJ", "Combate", monstro=copy.deepcopy(monstro_objetivo)),
-    }
-    return de_dict(dados)
-
 
 _ABERTAS = []
 

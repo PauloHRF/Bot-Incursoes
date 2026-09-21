@@ -68,6 +68,7 @@ class Sala:
     imagem: Optional[str] = None
     monstro: Optional[Monstro] = None
     recompensa: Optional[str] = None
+    pontos_organizacao: int = 0
 
     @property
     def tem_teste(self) -> bool:
@@ -89,6 +90,7 @@ class Sala:
             "pericias": self.pericias,
             "imagem": self.imagem,
             "recompensa": self.recompensa,
+            "pontos_organizacao": self.pontos_organizacao,
         }
         d["monstro"] = self.monstro.para_dict() if self.monstro else None
         return d
@@ -104,6 +106,7 @@ class Incursao:
     objetivo: Sala
     imagem_capa: Optional[str] = None
     recompensa_mes: int = 10
+    pontos_conclusao: int = 10
 
     def opcoes(self, linha: int) -> list[Sala]:
         """As 3 salas oferecidas na linha (1, 2 ou 3)."""
@@ -123,6 +126,7 @@ class Incursao:
             "descricao": self.descricao,
             "imagem_capa": self.imagem_capa,
             "recompensa_mes": self.recompensa_mes,
+            "pontos_conclusao": self.pontos_conclusao,
             "linhas": [[s.para_dict() for s in linha] for linha in self.linhas],
             "objetivo": self.objetivo.para_dict(),
         }
@@ -190,6 +194,11 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
         if not pericias:
             problemas.append(f"{onde}: sala de {tipo} precisa de pelo menos uma perícia.")
 
+    pontos_sala = _inteiro(dados.get("pontos_organizacao")) or 0
+    if pontos_sala < 0:
+        problemas.append(f"{onde}: pontos_organizacao não pode ser negativo.")
+        pontos_sala = 0
+
     monstro = None
     bruto_monstro = dados.get("monstro")
     if tipo == "Combate":
@@ -231,6 +240,7 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
         imagem=(str(dados.get("imagem")).strip() or None) if dados.get("imagem") else None,
         monstro=monstro,
         recompensa=(str(dados.get("recompensa")).strip() or None) if dados.get("recompensa") else None,
+        pontos_organizacao=pontos_sala,
     )
 
 
@@ -264,6 +274,13 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
     if recompensa is None or recompensa < 0:
         problemas.append("recompensa_mes precisa ser um número de MEs (ex.: 10).")
         recompensa = 10
+
+    pontos_conclusao = _inteiro(dados.get("pontos_conclusao"))
+    if pontos_conclusao is None:
+        pontos_conclusao = 10
+    elif pontos_conclusao < 0:
+        problemas.append("pontos_conclusao não pode ser negativo.")
+        pontos_conclusao = 10
 
     linhas_brutas = dados.get("linhas") or []
     if len(linhas_brutas) != 3:
@@ -305,6 +322,7 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
         objetivo=objetivo,
         imagem_capa=(str(dados.get("imagem_capa")).strip() or None) if dados.get("imagem_capa") else None,
         recompensa_mes=recompensa,
+        pontos_conclusao=pontos_conclusao,
     )
 
 

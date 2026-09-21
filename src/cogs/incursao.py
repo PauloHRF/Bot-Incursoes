@@ -545,6 +545,35 @@ class Incursoes(commands.Cog):
         if sala.e_combate:
             await self._abrir_combate(await db.buscar_run(self.bot.db, run["id"]), sala)
 
+    async def _creditar(
+        self, run: dict[str, Any], pontos: int, motivo: str, chave: str
+    ) -> bool:
+        """Credita pontos à Organização da incursão. Ignora repetição e valor zero."""
+        incursao = self._incursao_da_run(run)
+        if not incursao or pontos <= 0:
+            return False
+        return await db.lancar_pontos(
+            self.bot.db,
+            run["guild_id"],
+            incursao.organizacao,
+            pontos,
+            motivo,
+            run_id=run["id"],
+            chave=chave,
+        )
+
+    async def _anunciar_pontos(self, run: dict[str, Any]) -> None:
+        """Fecha o balanço da run e posta o que cada motivo rendeu."""
+        incursao = self._incursao_da_run(run)
+        canal = await self._canal(run)
+        if not (incursao and canal):
+            return
+        lancamentos = await db.pontos_da_run(self.bot.db, run["id"])
+        if not lancamentos:
+            return
+        total_org = (await db.placar(self.bot.db, run["guild_id"])).get(incursao.organizacao, 0)
+        await canal.send(embed=E.pontos_da_run(incursao, lancamentos, total_org))
+
     async def _combatentes(self, run: dict[str, Any]) -> list[Combatente]:
         """Monta os combatentes juntando a ficha de cada um com o HP atual da run."""
         hps = await db.hp_dos_participantes(self.bot.db, run["id"])
@@ -730,6 +759,11 @@ class Incursoes(commands.Cog):
             )
             incursao = self._incursao_da_run(run)
             await canal.send(embed=E.run_fracassada(incursao, estado))
+            # Mesmo derrotado, o grupo levou a run ate o fim: a participacao conta.
+            await self._creditar(
+                run, config.PONTOS_PARTICIPACAO, "Participação na incursão", "participacao"
+            )
+            await self._anunciar_pontos(await db.buscar_run(self.bot.db, run["id"]))
             return
 
         # Proxima rodada: novo painel, novos ataques.
@@ -743,13 +777,25 @@ class Incursoes(commands.Cog):
 
     async def _apos_combate_vencido(self, run: dict[str, Any], sala: Sala) -> None:
         incursao = self._incursao_da_run(run)
+        if sala.pontos_organizacao:
+            await self._creditar(
+                run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{sala.id}"
+            )
+
         if sala.id == incursao.objetivo.id:
             await db.atualizar_run(
                 self.bot.db, run["id"], status="sucesso", votacao_expira_em=None
             )
+            await self._creditar(
+                run, config.PONTOS_PARTICIPACAO, "Participação na incursão", "participacao"
+            )
+            await self._creditar(
+                run, incursao.pontos_conclusao, "Objetivo cumprido", "conclusao"
+            )
             canal = await self._canal(run)
             if canal:
                 await canal.send(embed=E.run_concluida(incursao, await self._membros(run)))
+            await self._anunciar_pontos(await db.buscar_run(self.bot.db, run["id"]))
             return
 
         linha = run["linha_atual"]
@@ -832,6 +878,10 @@ class Incursoes(commands.Cog):
         if resolucao is not None:
             apelidos = await self._apelidos(run)
             await canal.send(embed=E.resultado_sala(resolucao, apelidos))
+            if resolucao.superada and sala.pontos_organizacao:
+                await self._creditar(
+                    run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{sala.id}"
+                )
 
         linha = run["linha_atual"]
         if linha < LINHAS:

@@ -106,6 +106,29 @@ CREATE TABLE IF NOT EXISTS run_ataques (
     PRIMARY KEY (run_id, sala_id, rodada, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS placar_organizacoes (
+    guild_id    INTEGER NOT NULL,
+    organizacao TEXT    NOT NULL,
+    pontos      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (guild_id, organizacao)
+);
+
+CREATE TABLE IF NOT EXISTS pontos_lancamentos (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id    INTEGER NOT NULL,
+    organizacao TEXT    NOT NULL,
+    run_id      INTEGER REFERENCES runs(id) ON DELETE SET NULL,
+    chave       TEXT,
+    motivo      TEXT    NOT NULL,
+    pontos      INTEGER NOT NULL,
+    criado_em   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- O mesmo motivo nunca e lancado duas vezes na mesma run.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_lancamento_unico
+    ON pontos_lancamentos (run_id, chave)
+    WHERE run_id IS NOT NULL AND chave IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS config_guilda (
     guild_id       INTEGER PRIMARY KEY,
     intervalo_dias INTEGER NOT NULL
@@ -519,3 +542,77 @@ async def definir_hp_varios(
         [(hp, run_id, user_id) for user_id, hp in hps.items()],
     )
     await conn.commit()
+
+
+# ------------------------------------------- pontos de Organizacao
+
+# O placar e do servidor inteiro, nao de cada jogador: cada uma das quatro
+# Organizacoes acumula os pontos que as runs renderam a ela.
+
+
+async def lancar_pontos(
+    conn: aiosqlite.Connection,
+    guild_id: int,
+    organizacao: str,
+    pontos: int,
+    motivo: str,
+    run_id: Optional[int] = None,
+    chave: Optional[str] = None,
+) -> bool:
+    """Credita pontos e registra o lançamento.
+
+    `chave` identifica o motivo dentro da run (ex.: 'sala:L2C', 'conclusao').
+    Um mesmo par (run_id, chave) nunca é lançado duas vezes, então reprocessar
+    uma sala não infla o placar. Devolve False quando o lançamento já existia.
+    """
+    cur = await conn.execute(
+        "INSERT OR IGNORE INTO pontos_lancamentos"
+        " (guild_id, organizacao, run_id, chave, motivo, pontos)"
+        " VALUES (?, ?, ?, ?, ?, ?)",
+        (guild_id, organizacao, run_id, chave, motivo, pontos),
+    )
+    if cur.rowcount == 0:
+        await conn.commit()
+        return False
+
+    await conn.execute(
+        "INSERT INTO placar_organizacoes (guild_id, organizacao, pontos) VALUES (?, ?, ?)"
+        " ON CONFLICT (guild_id, organizacao) DO UPDATE SET"
+        " pontos = pontos + excluded.pontos",
+        (guild_id, organizacao, pontos),
+    )
+    await conn.commit()
+    return True
+
+
+async def placar(conn: aiosqlite.Connection, guild_id: int) -> dict[str, int]:
+    async with conn.execute(
+        "SELECT organizacao, pontos FROM placar_organizacoes WHERE guild_id = ?", (guild_id,)
+    ) as cur:
+        return {r["organizacao"]: r["pontos"] for r in await cur.fetchall()}
+
+
+async def lancamentos(
+    conn: aiosqlite.Connection,
+    guild_id: int,
+    organizacao: Optional[str] = None,
+    limite: int = 10,
+) -> list[dict[str, Any]]:
+    if organizacao:
+        consulta = (
+            "SELECT * FROM pontos_lancamentos WHERE guild_id = ? AND organizacao = ?"
+            " ORDER BY id DESC LIMIT ?"
+        )
+        parametros = (guild_id, organizacao, limite)
+    else:
+        consulta = "SELECT * FROM pontos_lancamentos WHERE guild_id = ? ORDER BY id DESC LIMIT ?"
+        parametros = (guild_id, limite)
+    async with conn.execute(consulta, parametros) as cur:
+        return [dict(r) for r in await cur.fetchall()]
+
+
+async def pontos_da_run(conn: aiosqlite.Connection, run_id: int) -> list[dict[str, Any]]:
+    async with conn.execute(
+        "SELECT * FROM pontos_lancamentos WHERE run_id = ? ORDER BY id", (run_id,)
+    ) as cur:
+        return [dict(r) for r in await cur.fetchall()]

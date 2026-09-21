@@ -378,3 +378,66 @@ def run_concluida(incursao: Incursao, membros: list[discord.abc.User]) -> discor
     )
     e.add_field(name="Organização", value=incursao.organizacao, inline=True)
     return _rodape(e, "Os pontos de Organização entram na próxima fase do bot.")
+
+
+# ------------------------------------------- pontos de Organizacao
+
+EMOJI_ORG = {
+    "Vórtice Oculto": "🌀",
+    "Aliança das Sombras": "🌑",
+    "Guilda dos Mortos": "💀",
+    "Sentinelas do Alvorecer": "🌅",
+}
+
+
+def pontos_da_run(incursao: Incursao, lancamentos: list[dict], total: int) -> discord.Embed:
+    """Balanço do que a run rendeu à Organização."""
+    ganho = sum(l["pontos"] for l in lancamentos)
+    e = discord.Embed(
+        title=f"{EMOJI_ORG.get(incursao.organizacao, '•')} {incursao.organizacao}",
+        description=f"Esta incursão rendeu **{ganho}** ponto(s) à Organização.",
+        color=COR_INCURSAO,
+    )
+    e.add_field(
+        name="De onde vieram",
+        value="\n".join(f"**+{l['pontos']}** · {l['motivo']}" for l in lancamentos),
+        inline=False,
+    )
+    e.add_field(name="Total da Organização no servidor", value=f"**{total}** ponto(s)", inline=False)
+    return e
+
+
+def placar_organizacoes(pontos: dict[str, int], organizacoes: tuple[str, ...]) -> discord.Embed:
+    e = discord.Embed(
+        title="Pontos das Organizações",
+        description="Placar do servidor. Cada incursão credita a Organização a que pertence.",
+        color=COR_INCURSAO,
+    )
+    ranking = sorted(organizacoes, key=lambda o: pontos.get(o, 0), reverse=True)
+    medalhas = ("🥇", "🥈", "🥉", "4º")
+    for posicao, org in enumerate(ranking):
+        valor = pontos.get(org, 0)
+        e.add_field(
+            name=f"{medalhas[posicao]}  {EMOJI_ORG.get(org, '•')} {org}",
+            value=f"**{valor}** ponto(s)",
+            inline=False,
+        )
+    if not any(pontos.values()):
+        e.set_footer(text="Nenhuma incursão pontuou ainda.")
+    return e
+
+
+def extrato_pontos(lancamentos: list[dict], organizacao: Optional[str]) -> discord.Embed:
+    titulo = f"Extrato — {organizacao}" if organizacao else "Extrato de todas as Organizações"
+    e = discord.Embed(title=titulo, color=COR_INCURSAO)
+    if not lancamentos:
+        e.description = "Nenhum lançamento ainda."
+        return e
+    linhas = []
+    for l in lancamentos:
+        quando = str(l["criado_em"])[:10]
+        prefixo = "" if organizacao else f"{EMOJI_ORG.get(l['organizacao'], '•')} "
+        run = f" (run #{l['run_id']})" if l["run_id"] else ""
+        linhas.append(f"`{quando}` {prefixo}**{l['pontos']:+d}** · {l['motivo']}{run}")
+    e.description = "\n".join(linhas)
+    return e

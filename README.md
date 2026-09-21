@@ -11,7 +11,7 @@ Design completo: `Incursões 2.0 — Bot de Discord (design).md`.
 - [x] **Fase 2a** — formato do conteúdo: planilha da incursão, importador e validação
 - [x] **Fase 2b** — runs, salas, votação por botões, testes de perícia
 - [x] **Fase 3** — combate por rodadas (CA / ataque / HP)
-- [ ] **Fase 4** — objetivo final e pontuação de Organização
+- [x] **Fase 4** — pontuação de Organização
 - [ ] **Fase 5** — hospedagem 24/7
 
 ## Rodando localmente
@@ -63,6 +63,9 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
 | `/incursao recarregar` | (admin) Relê os JSON de incursão do disco |
+| `/organizacao placar` | Pontos das quatro Organizações no servidor |
+| `/organizacao extrato [org]` | Últimos lançamentos, com o motivo de cada um |
+| `/organizacao ajustar <org> <pontos> <motivo>` | (admin) Lança pontos na mão, para correções |
 | `/config intervalo <dias>` | (admin) Intervalo mínimo entre incursões do mesmo jogador |
 
 ## Como uma run acontece
@@ -94,6 +97,29 @@ reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinh
 fica bloqueado pelos 7 dias de intervalo assim que ela começa. Para recomeçar, encerre a run
 atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/incursao entrar`.
 
+## Pontos de Organização
+
+O placar é **do servidor como um todo**, não de cada jogador: cada incursão credita a
+Organização a que pertence. Uma run rende pontos em três momentos:
+
+| Quando | Quanto | Onde se configura |
+| --- | --- | --- |
+| Sala secundária superada | o valor da sala | coluna `pontos_organizacao`, aba Salas |
+| Objetivo cumprido | o maior bônus | campo `pontos_conclusao`, aba Incursao |
+| Run levada até o fim | `PONTOS_PARTICIPACAO` (padrão 2) | `.env` |
+
+A participação conta mesmo em derrota — o grupo tentou. Desistir não rende participação,
+mas os pontos das salas já superadas ficam. Cada motivo entra no placar uma vez só: a run
+guarda o lançamento, então reprocessar uma sala não infla o total.
+
+Ao fim da run o bot posta o balanço: de onde vieram os pontos e quanto a Organização tem
+agora. `/organizacao extrato` mostra o histórico, e `/organizacao ajustar` serve para
+lançar na mão o que aconteceu na mesa, fora do bot.
+
+**MEs ficam fora do bot.** O embed final mostra quanto cada participante ganhou
+(`recompensa_mes` da planilha, 10 por padrão), mas quem registra isso é você, na sua
+planilha do Google Sheets — o bot não guarda saldo por jogador.
+
 ## Conteúdo das incursões
 
 Cada incursão é escrita numa planilha e convertida para JSON, que é o que o bot lê.
@@ -113,6 +139,7 @@ O importador valida antes de gravar e, se algo estiver errado, lista **todos** o
 problemas e não escreve nada. Ele exige:
 
 - exatamente 3 linhas de 3 salas, mais 1 sala de Objetivo
+- `pontos_organizacao` e `pontos_conclusao` não negativos (vazio vale 0)
 - Objetivo sempre do tipo **Combate**, com nome, CA, ataque, dano e HP do monstro
 - salas de Armadilha / Evento / Tesouro com dificuldade, CD, alvo e ao menos uma perícia
 - salas de Combate com monstro, e sem CD nem perícia (mecânica própria)
@@ -133,7 +160,8 @@ src/
   incursoes.py  schema das incursões: salas, monstros, validação, carregamento
   motor.py      regras da run (rolagens, margem, progresso) sem nada de Discord
   embeds.py     montagem das mensagens da run
-  cogs/incursao.py  runs: recrutamento, votação, salas, testes
+  cogs/incursao.py  runs: recrutamento, votação, salas, testes, combate
+  cogs/organizacao.py  placar, extrato e ajuste de pontos
 tools/
   gerar_modelo_planilha.py   cria a planilha modelo já preenchida
   importar_planilha.py       planilha -> JSON, com validação
@@ -148,6 +176,7 @@ tests/
   test_run.py   uma run inteira simulada, do recrutamento ao objetivo
   test_votacao.py  empate, prazo, silêncio e restart
   test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
+  test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   fakes.py      dublês do Discord usados pelos testes
 ```
 

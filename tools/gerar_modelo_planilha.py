@@ -41,6 +41,7 @@ META = [
     ("descricao", "Um selo antigo cedeu sob a cidade e algo do outro lado começou a vazar. A Organização quer o Olho recuperado antes que a fenda se alargue.", "Texto de abertura da run."),
     ("imagem_capa", "assets/vortice_cripta/capa.png", "Caminho local (dentro de assets/) ou URL. Opcional."),
     ("recompensa_mes", 10, "MEs por participante ao completar o objetivo."),
+    ("pontos_conclusao", 10, "Pontos que o servidor ganha com a Organizacao ao completar o objetivo."),
 ]
 
 CABECALHOS = [
@@ -60,49 +61,50 @@ CABECALHOS = [
     ("monstro_dano", 14, "Dado de dano do monstro (ex.: 2d6+3)."),
     ("monstro_hp", 11, "Pontos de vida do monstro."),
     ("recompensa", 34, "Bônus da sala (texto livre). Opcional."),
+    ("pontos_organizacao", 18, "Pontos de Organizacao se a sala for superada. 0 ou vazio = nenhum."),
 ]
 
 SALAS = [
     ("L1A", 1, "Portal Instável", "Armadilha", "Média",
      "Acrobacia; Arcanismo",
      "A escada termina num arco de pedra que ainda pulsa. A cada batida, o ar se dobra e cospe estilhaços de realidade pelo corredor. Passar exige ler o ritmo — ou ser muito rápido.",
-     "assets/vortice_cripta/portal.png", "", "", "", "", "", "Quem passa ileso encontra um fragmento do selo."),
+     "assets/vortice_cripta/portal.png", "", "", "", "", "", "Quem passa ileso encontra um fragmento do selo.", 0),
     ("L1B", 1, "Biblioteca Submersa", "Evento", "Média",
      "Investigação; Arcanismo; História",
      "Água escura cobre as prateleiras até a altura do peito. Os livros que boiam ainda estão secos, e isso é o mais perturbador da sala. Algum deles diz onde o Olho foi guardado.",
-     "assets/vortice_cripta/biblioteca.png", "", "", "", "", "", "Revela a CA do chefe antes do confronto final."),
+     "assets/vortice_cripta/biblioteca.png", "", "", "", "", "", "Revela a CA do chefe antes do confronto final.", 2),
     ("L1C", 1, "Sentinelas de Pedra", "Combate", "",
      "",
      "Duas estátuas ladeiam a porta interna. Elas não se mexem enquanto ninguém olha para o que carregam — e o que carregam é o que o grupo veio buscar.",
-     "assets/vortice_cripta/sentinelas.png", "Sentinela de Basalto", 14, 5, "1d10+3", 26, ""),
+     "assets/vortice_cripta/sentinelas.png", "Sentinela de Basalto", 14, 5, "1d10+3", 26, "", 0),
     ("L2A", 2, "Corredor dos Ecos", "Armadilha", "Difícil",
      "Percepção; Acrobacia; Furtividade",
      "Cada passo volta multiplicado, e junto com o eco vem alguma coisa que anda no contratempo. O chão está coberto de placas que afundam sob peso.",
-     "assets/vortice_cripta/corredor.png", "", "", "", "", "", ""),
+     "assets/vortice_cripta/corredor.png", "", "", "", "", "", "", 0),
     ("L2B", 2, "Acampamento Abandonado", "Descanso", "",
      "",
      "Uma expedição anterior montou barraca aqui e não voltou. As brasas ainda estão mornas, a comida intacta. O grupo descansa — desconfiado, mas descansa.",
-     "assets/vortice_cripta/acampamento.png", "", "", "", "", "", "Cada personagem caído volta com metade do HP máximo."),
+     "assets/vortice_cripta/acampamento.png", "", "", "", "", "", "Cada personagem caído volta com metade do HP máximo.", 0),
     ("L2C", 2, "Cofre Selado", "Tesouro", "Média",
      "Prestidigitação; Arcanismo",
      "Um cofre de ferro fundido, sem fechadura visível, só um sulco em espiral onde deveria estar. Quem entender a espiral leva o que tem dentro.",
-     "assets/vortice_cripta/cofre.png", "", "", "", "", "", "Materiais raros para quem passar no teste."),
+     "assets/vortice_cripta/cofre.png", "", "", "", "", "", "Materiais raros para quem passar no teste.", 3),
     ("L3A", 3, "Ninho de Aberrações", "Combate", "",
      "",
      "O vazamento chegou aqui primeiro. O que nasceu do outro lado do selo aprendeu a usar os corredores — e aprendeu que comida desce por eles.",
-     "assets/vortice_cripta/ninho.png", "Cria do Vazio", 15, 6, "2d6+2", 34, ""),
+     "assets/vortice_cripta/ninho.png", "Cria do Vazio", 15, 6, "2d6+2", 34, "", 0),
     ("L3B", 3, "Ritual Interrompido", "Evento", "Difícil",
      "Religião; Arcanismo; Intuição",
      "Alguém tentou fechar a fenda daqui e parou no meio. As velas ainda queimam. Terminar o ritual enfraquece o que espera adiante; errar acorda o resto.",
-     "assets/vortice_cripta/ritual.png", "", "", "", "", "", "O chefe começa o combate final com 10 de HP a menos."),
+     "assets/vortice_cripta/ritual.png", "", "", "", "", "", "O chefe começa o combate final com 10 de HP a menos.", 2),
     ("L3C", 3, "Passagem Estreita", "Armadilha", "Fácil",
      "Acrobacia; Atletismo; Furtividade",
      "A fenda na parede é a única entrada para a câmara final. É apertada, cortante, e alguma coisa já ficou presa aqui antes do grupo chegar.",
-     "assets/vortice_cripta/passagem.png", "", "", "", "", "", ""),
+     "assets/vortice_cripta/passagem.png", "", "", "", "", "", "", 0),
     ("OBJ", "Objetivo", "O Olho do Vórtice", "Combate", "",
      "",
      "A câmara é uma esfera perfeita e o Olho flutua no centro dela, aberto. O que o guarda não tem nome porque nada que o viu voltou para dar um.",
-     "assets/vortice_cripta/olho.png", "Guardião do Selo", 16, 7, "2d8+4", 58, "10 MEs por participante + pontos com o Vórtice Oculto"),
+     "assets/vortice_cripta/olho.png", "Guardião do Selo", 16, 7, "2d8+4", 58, "10 MEs por participante + pontos com o Vórtice Oculto", 0),
 ]
 
 DIFICULDADES = [("Fácil", 10, 5), ("Média", 15, 10), ("Difícil", 20, 15)]
@@ -137,6 +139,10 @@ LEIA_ME = [
     ("subtraído do HP dele, e contra-ataque do monstro contra a CA de um personagem.", False),
     ("", False),
     ("Perícias válidas: veja a aba 'Pericias'. Pode escrever com ou sem acento.", False),
+    ("", False),
+    ("Pontos de Organização", True),
+    ("Sao do servidor inteiro, nao de cada jogador. Completar o objetivo da 'pontos_conclusao'", False),
+    ("(aba Incursao) e cada sala superada da o que estiver em 'pontos_organizacao'.", False),
 ]
 
 
@@ -184,10 +190,10 @@ def aba_salas(wb):
 
     for i, sala in enumerate(SALAS, start=2):
         (sala_id, linha, nome, tipo, dif, pericias, descricao, imagem,
-         m_nome, m_ca, m_atk, m_dano, m_hp, recompensa) = sala
+         m_nome, m_ca, m_atk, m_dano, m_hp, recompensa, pontos) = sala
 
         valores = [sala_id, linha, nome, tipo, dif, None, None, pericias, descricao,
-                   imagem, m_nome, m_ca, m_atk, m_dano, m_hp, recompensa]
+                   imagem, m_nome, m_ca, m_atk, m_dano, m_hp, recompensa, pontos]
         for col, valor in enumerate(valores, start=1):
             c = ws.cell(row=i, column=col, value=valor)
             c.font = corpo
