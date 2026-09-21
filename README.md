@@ -34,12 +34,12 @@ uma run inteira simulada com dublês do Discord):
 
 1. https://discord.com/developers/applications → **New Application**
 2. Aba **Bot** → **Reset Token** → copie para `DISCORD_TOKEN` no `.env` (o token some da tela; se perder, é só resetar de novo)
-4. Opcional, para que só você possa adicionar o bot — **nesta ordem**, senão o portal recusa:
+3. Opcional, para que só você possa adicionar o bot — **nesta ordem**, senão o portal recusa:
    aba **Installation** → *Install Context*: apenas **Guild Install**, *Install Link*: **None** → salvar;
    só então aba **Bot** → desligue **Public Bot** → salvar
-5. Aba **OAuth2** → **URL Generator** → scopes `bot` + `applications.commands` → permissões:
+4. Aba **OAuth2** → **URL Generator** → scopes `bot` + `applications.commands` → permissões:
    *Send Messages*, *Embed Links*, *Attach Files*, *Read Message History*, *Use Slash Commands*
-6. Abra a URL gerada e adicione o bot ao seu servidor de testes
+5. Abra a URL gerada e adicione o bot ao seu servidor de testes
 6. No Discord, com o Modo Desenvolvedor ligado, clique com o botão direito no servidor → **Copiar ID do servidor** → `GUILD_ID` no `.env`
 
 Não são necessários *privileged intents* (o bot não lê o conteúdo das mensagens).
