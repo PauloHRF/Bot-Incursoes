@@ -177,12 +177,16 @@ def resultado_sala(resolucao: ResolucaoSala, apelidos: dict[int, str]) -> discor
     return e
 
 
-def descanso(sala: Sala) -> discord.Embed:
+def descanso(sala: Sala, curas: Optional[list[str]] = None) -> discord.Embed:
     e = discord.Embed(
         title=f"🔥 {sala.nome}", description=sala.descricao, color=COR_SUCESSO
     )
     if sala.recompensa:
         e.add_field(name="Recuperação", value=sala.recompensa, inline=False)
+    if curas:
+        e.add_field(name="HP recuperado", value="\n".join(curas), inline=False)
+    elif curas is not None:
+        e.add_field(name="HP", value="Todos já estavam inteiros.", inline=False)
     return _rodape(e, "Sem teste nesta sala.")
 
 
@@ -248,3 +252,129 @@ def status(
         inline=False,
     )
     return e
+
+
+# ------------------------------------------------------------ combate
+
+
+def _linha_hp(c) -> str:
+    if c.hp_atual <= 0:
+        return f"💀 ~~{c.nome}~~ — caído"
+    return f"❤️ {c.nome} — {barra(c.hp_atual, c.hp_max, 6)} {c.hp_atual}/{c.hp_max}"
+
+
+def combate(
+    sala: Sala, estado, ja_atacaram: int
+) -> tuple[discord.Embed, Optional[discord.File]]:
+    m = estado.monstro
+    e = discord.Embed(
+        title=f"⚔️ {sala.nome} — rodada {estado.rodada}",
+        description=sala.descricao if estado.rodada == 1 else None,
+        color=COR_FALHA,
+    )
+    e.add_field(
+        name=m.nome,
+        value=(
+            f"{barra(estado.monstro_hp, m.hp, 12)}  **{estado.monstro_hp}**/{m.hp} HP\n"
+            f"CA **{m.ca}** · Ataque **{fmt(m.ataque)}** · Dano **{m.dano}**"
+        ),
+        inline=False,
+    )
+    e.add_field(
+        name="Grupo",
+        value="\n".join(_linha_hp(c) for c in estado.combatentes) or "*ninguém*",
+        inline=False,
+    )
+    e.add_field(name="Atacaram nesta rodada", value=f"{ja_atacaram}/{len(estado.vivos)}", inline=True)
+    arquivo, url = anexo_da_imagem(sala.imagem) if estado.rodada == 1 else (None, None)
+    if url:
+        e.set_image(url=url)
+    return _rodape(
+        e, "Cada personagem de pé ataca uma vez. Quando todos atacarem, o monstro revida."
+    ), arquivo
+
+
+def rodada_resolvida(rodada: int, golpes: list, contra, alvo_nome: Optional[str], estado) -> discord.Embed:
+    e = discord.Embed(title=f"Rodada {rodada}", color=COR_SALA)
+    linhas = []
+    for g in golpes:
+        if g.acertou:
+            linhas.append(f"⚔️ {g.atacante} · 🎲 {g.d20} {fmt(g.bonus)} = **{g.total}** vs CA {g.ca_alvo} → **{g.dano}** de dano")
+        else:
+            linhas.append(f"💨 {g.atacante} · 🎲 {g.d20} {fmt(g.bonus)} = **{g.total}** vs CA {g.ca_alvo} → errou")
+    e.add_field(name="Ataques do grupo", value="\n".join(linhas) or "*ninguém atacou*", inline=False)
+
+    if contra is not None and alvo_nome:
+        if contra.acertou:
+            texto = (
+                f"🎲 {contra.d20} {fmt(contra.bonus)} = **{contra.total}** vs CA {contra.ca_alvo} "
+                f"→ **{contra.dano}** de dano em {alvo_nome}"
+            )
+        else:
+            texto = (
+                f"🎲 {contra.d20} {fmt(contra.bonus)} = **{contra.total}** vs CA {contra.ca_alvo} "
+                f"→ errou {alvo_nome}"
+            )
+        e.add_field(name=f"Contra-ataque de {estado.monstro.nome}", value=texto, inline=False)
+
+    e.add_field(
+        name=estado.monstro.nome,
+        value=f"{barra(estado.monstro_hp, estado.monstro.hp, 12)}  "
+        f"**{estado.monstro_hp}**/{estado.monstro.hp} HP",
+        inline=False,
+    )
+    caidos = estado.caidos
+    if caidos:
+        e.add_field(
+            name="Caídos", value=", ".join(c.nome for c in caidos), inline=False
+        )
+    return e
+
+
+def combate_vencido(sala: Sala, estado) -> discord.Embed:
+    e = discord.Embed(
+        title=f"⚔️ {estado.monstro.nome} foi derrotado",
+        description=f"O grupo supera **{sala.nome}** em {estado.rodada} rodada(s).",
+        color=COR_SUCESSO,
+    )
+    e.add_field(
+        name="Como o grupo saiu",
+        value="\n".join(_linha_hp(c) for c in estado.combatentes),
+        inline=False,
+    )
+    if sala.recompensa:
+        e.add_field(name="Recompensa", value=sala.recompensa, inline=False)
+    return e
+
+
+def run_fracassada(incursao: Incursao, estado) -> discord.Embed:
+    e = discord.Embed(
+        title="☠️ Incursão fracassada",
+        description=(
+            f"O grupo inteiro caiu diante de **{estado.monstro.nome}**. "
+            f"Ninguém volta com pontos de {incursao.organizacao}."
+        ),
+        color=COR_FALHA,
+    )
+    e.add_field(
+        name=estado.monstro.nome,
+        value=f"ainda de pé com {estado.monstro_hp}/{estado.monstro.hp} HP",
+        inline=False,
+    )
+    return e
+
+
+def run_concluida(incursao: Incursao, membros: list[discord.abc.User]) -> discord.Embed:
+    e = discord.Embed(
+        title=f"🏆 {incursao.nome} — objetivo cumprido",
+        description=incursao.objetivo.recompensa
+        or f"O grupo entrega o resultado a {incursao.organizacao}.",
+        color=COR_SUCESSO,
+    )
+    e.add_field(
+        name=f"Recompensa ({incursao.recompensa_mes} MEs por participante)",
+        value="\n".join(f"{m.mention} — {incursao.recompensa_mes} MEs" for m in membros),
+        inline=False,
+    )
+    e.add_field(name="Organização", value=incursao.organizacao, inline=True)
+    return _rodape(e, "Os pontos de Organização entram na próxima fase do bot.")

@@ -201,3 +201,106 @@ def barra(valor: int, maximo: int, casas: int = 10) -> str:
         return "▱" * casas
     cheias = max(0, min(casas, round(casas * valor / maximo)))
     return "▰" * cheias + "▱" * (casas - cheias)
+
+
+# ------------------------------------------------------------ combate
+
+# Rodada de combate: todo personagem de pé ataca uma vez, depois o monstro
+# contra-ataca um alvo. Repete até o monstro cair ou o grupo inteiro cair.
+
+
+@dataclass
+class EstadoCombate:
+    monstro: Monstro
+    monstro_hp: int
+    rodada: int
+    combatentes: list[Combatente]
+
+    @property
+    def vivos(self) -> list[Combatente]:
+        return [c for c in self.combatentes if not c.caido]
+
+    @property
+    def caidos(self) -> list[Combatente]:
+        return [c for c in self.combatentes if c.caido]
+
+    @property
+    def monstro_derrotado(self) -> bool:
+        return self.monstro_hp <= 0
+
+    @property
+    def grupo_caido(self) -> bool:
+        return not self.vivos
+
+    @property
+    def encerrado(self) -> bool:
+        return self.monstro_derrotado or self.grupo_caido
+
+    def combatente(self, user_id: int) -> Optional[Combatente]:
+        for c in self.combatentes:
+            if c.user_id == user_id:
+                return c
+        return None
+
+
+def atacar_monstro(
+    combatente: Combatente, estado: EstadoCombate, rng: Optional[random.Random] = None
+) -> GolpeAtaque:
+    """O personagem ataca o monstro. O dano já sai descontado do HP dele."""
+    golpe = atacar(
+        combatente.nome,
+        combatente.bonus_ataque,
+        combatente.dano_arma,
+        estado.monstro.nome,
+        estado.monstro.ca,
+        rng,
+    )
+    if golpe.acertou:
+        estado.monstro_hp = max(0, estado.monstro_hp - golpe.dano)
+    return golpe
+
+
+def sortear_alvo(
+    estado: EstadoCombate, rng: Optional[random.Random] = None
+) -> Optional[Combatente]:
+    """Quem o monstro ataca nesta rodada. Só quem está de pé pode ser alvo."""
+    vivos = estado.vivos
+    return _rng(rng).choice(vivos) if vivos else None
+
+
+def contra_atacar(
+    estado: EstadoCombate, alvo: Combatente, rng: Optional[random.Random] = None
+) -> GolpeAtaque:
+    """O monstro revida contra um personagem. O dano já sai descontado do HP dele."""
+    golpe = atacar(
+        estado.monstro.nome,
+        estado.monstro.ataque,
+        estado.monstro.dano,
+        alvo.nome,
+        alvo.ca,
+        rng,
+    )
+    if golpe.acertou:
+        alvo.hp_atual = max(0, alvo.hp_atual - golpe.dano)
+    return golpe
+
+
+# Quanto do HP máximo um personagem caído recupera ao descansar.
+FRACAO_DESCANSO_CAIDO = 0.5
+
+
+def aplicar_descanso(combatentes: list[Combatente]) -> list[str]:
+    """Descanso: quem está de pé recupera tudo, quem caiu volta com metade.
+
+    Devolve uma linha por personagem que mudou, para o embed da sala.
+    """
+    mudancas = []
+    for c in combatentes:
+        antes = c.hp_atual
+        if c.caido:
+            c.hp_atual = max(1, int(c.hp_max * FRACAO_DESCANSO_CAIDO))
+            mudancas.append(f"{c.nome} volta a lutar com {c.hp_atual}/{c.hp_max} de HP")
+        elif c.hp_atual < c.hp_max:
+            c.hp_atual = c.hp_max
+            mudancas.append(f"{c.nome} recupera {c.hp_max - antes} de HP ({c.hp_max}/{c.hp_max})")
+    return mudancas

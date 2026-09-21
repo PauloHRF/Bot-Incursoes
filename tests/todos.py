@@ -9,17 +9,23 @@ import sys
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
-SUITES = ("smoke.py", "test_run.py", "test_votacao.py")
+SUITES = ("smoke.py", "test_run.py", "test_votacao.py", "test_combate.py")
 
 
 def main() -> int:
     falhas = []
     for suite in SUITES:
         print(f"\n=== {suite} ===")
-        processo = subprocess.run(
-            [sys.executable, str(AQUI / suite)],
-            env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"},
-        )
+        try:
+            processo = subprocess.run(
+                [sys.executable, str(AQUI / suite)],
+                env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"},
+                timeout=180,
+            )
+        except subprocess.TimeoutExpired:
+            print(f"{suite}: estourou o tempo limite", flush=True)
+            falhas.append(suite)
+            continue
         if processo.returncode != 0:
             falhas.append(suite)
 

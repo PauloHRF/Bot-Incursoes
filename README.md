@@ -10,7 +10,7 @@ Design completo: `Incursões 2.0 — Bot de Discord (design).md`.
 - [x] **Fase 1** — ficha digital (cadastro, consulta, nível, ASI, perícias, combate)
 - [x] **Fase 2a** — formato do conteúdo: planilha da incursão, importador e validação
 - [x] **Fase 2b** — runs, salas, votação por botões, testes de perícia
-- [ ] **Fase 3** — combate por rodadas (CA / ataque / HP)
+- [x] **Fase 3** — combate por rodadas (CA / ataque / HP)
 - [ ] **Fase 4** — objetivo final e pontuação de Organização
 - [ ] **Fase 5** — hospedagem 24/7
 
@@ -58,6 +58,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/incursao entrar <id>` | Abre o recrutamento de uma incursão no canal |
 | `/incursao sala` | Reenvia a mensagem da sala atual |
 | `/incursao teste` | Rola o teste da sala (mesmo efeito do botão) |
+| `/incursao atacar` | Ataca o monstro da sala (mesmo efeito do botão) |
 | `/incursao votar <1-3>` | Vota por comando, se os botões falharem |
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
@@ -77,7 +78,14 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    tiver entre as listadas. Quem passa contribui a margem (rolagem + mod − CD) como
    progresso; quem falha contribui 0 e sofre a consequência do tipo da sala.
    A sala encerra quando o alvo é atingido ou quando todos rolaram.
-5. Depois de três linhas, o grupo chega ao Objetivo.
+5. Depois de três linhas, o grupo enfrenta o Objetivo, que é sempre um combate.
+
+Em sala de **Combate**, cada personagem de pé clica em **Atacar** uma vez por rodada
+(d20 + bônus de ataque contra a CA do monstro; acertou, rola o dano da arma). Quando
+todos atacam, o monstro revida contra um alvo sorteado entre os que estão de pé. Quem
+chega a 0 HP fica fora do resto daquele combate. O monstro cair supera a sala; o grupo
+inteiro cair encerra a run em fracasso. A sala de **Descanso** completa o HP de quem
+está machucado e devolve os caídos com metade do HP máximo.
 
 A run é assíncrona: o estado vive no banco, então o grupo pode levar dias e o bot pode
 reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinhos.
@@ -85,11 +93,6 @@ reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinh
 **Para testar à vontade**, rode `/config intervalo 0` uma vez: sem isso, quem entra numa run
 fica bloqueado pelos 7 dias de intervalo assim que ela começa. Para recomeçar, encerre a run
 atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/incursao entrar`.
-
-**Combate ainda não resolve.** Salas do tipo Combate e o confronto do Objetivo entram na
-fase 3; hoje o bot mostra o monstro e o grupo fica parado ali. Para testar o fluxo inteiro,
-escolha salas que não sejam de Combate — a incursão de exemplo tem opções sem combate em
-todas as três linhas.
 
 ## Conteúdo das incursões
 
@@ -134,6 +137,7 @@ src/
 tools/
   gerar_modelo_planilha.py   cria a planilha modelo já preenchida
   importar_planilha.py       planilha -> JSON, com validação
+  simular_combate.py         calibra os números de um combate fora do Discord
 data/
   planilhas/    planilhas de autoria das incursões (.xlsx)
   incursoes/    incursões convertidas em JSON — é o que o bot lê
@@ -143,6 +147,7 @@ tests/
   smoke.py      regras, persistência, schema de incursão, carga dos cogs
   test_run.py   uma run inteira simulada, do recrutamento ao objetivo
   test_votacao.py  empate, prazo, silêncio e restart
+  test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
   fakes.py      dublês do Discord usados pelos testes
 ```
 
@@ -154,3 +159,17 @@ ponto de partida:
 - `TIERS` — faixas de nível por tier (assumido 1–4 / 5–10 / 11–16 / 17–20)
 - `PESO_TIER` — peso de cada tier no alvo do objetivo principal
 - `CONSTANTE_OBJETIVO` — o `C` da fórmula do objetivo (design sugere +9 a +10)
+- `FRACAO_DESCANSO_CAIDO` em `src/motor.py` — quanto do HP máximo um caído recupera (hoje 1/2)
+
+**O combate está fácil demais com os números atuais.** Simulando 2000 confrontos contra o
+Guardião do Selo (CA 16, +7, 2d8+4, 58 HP) com cinco personagens de nível 8 (CA 17, +7,
+1d8+4, 60 HP): **100% de vitória, 2,8 rodadas, nenhum caído** — e continua 100% mesmo
+reduzindo o grupo a dois personagens ou o HP de cada um a 25. A causa é estrutural: o grupo
+desfere cinco ataques por rodada e o monstro devolve um. As alavancas para calibrar são
+aumentar muito o HP do chefe (na ordem de 200+), dar mais de um ataque por rodada ao
+monstro, ou reduzir o dano dos personagens. Para testar números novos sem
+abrir o Discord:
+
+```bash
+.venv/Scripts/python.exe tools/simular_combate.py data/incursoes/vortice_cripta.json
+```

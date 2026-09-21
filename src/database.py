@@ -85,6 +85,27 @@ CREATE TABLE IF NOT EXISTS run_votos (
     PRIMARY KEY (run_id, linha, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS run_combate (
+    run_id         INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    sala_id        TEXT    NOT NULL,
+    monstro_hp_max INTEGER NOT NULL,
+    monstro_hp     INTEGER NOT NULL,
+    rodada         INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (run_id, sala_id)
+);
+
+CREATE TABLE IF NOT EXISTS run_ataques (
+    run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    sala_id TEXT    NOT NULL,
+    rodada  INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    d20     INTEGER NOT NULL,
+    bonus   INTEGER NOT NULL,
+    ca_alvo INTEGER NOT NULL,
+    dano    INTEGER NOT NULL,
+    PRIMARY KEY (run_id, sala_id, rodada, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS config_guilda (
     guild_id       INTEGER PRIMARY KEY,
     intervalo_dias INTEGER NOT NULL
@@ -392,3 +413,109 @@ async def dias_desde_ultima_incursao(
     ) as cur:
         row = await cur.fetchone()
     return row["dias"] if row else None
+
+
+# ------------------------------------------------------------- combate
+
+
+async def iniciar_combate(
+    conn: aiosqlite.Connection, run_id: int, sala_id: str, monstro_hp: int
+) -> None:
+    """Cria o estado do combate daquela sala. Reentrar na mesma sala não reinicia."""
+    await conn.execute(
+        "INSERT OR IGNORE INTO run_combate (run_id, sala_id, monstro_hp_max, monstro_hp)"
+        " VALUES (?, ?, ?, ?)",
+        (run_id, sala_id, monstro_hp, monstro_hp),
+    )
+    await conn.commit()
+
+
+async def estado_combate(
+    conn: aiosqlite.Connection, run_id: int, sala_id: str
+) -> Optional[dict[str, Any]]:
+    async with conn.execute(
+        "SELECT * FROM run_combate WHERE run_id = ? AND sala_id = ?", (run_id, sala_id)
+    ) as cur:
+        row = await cur.fetchone()
+    return dict(row) if row else None
+
+
+async def atualizar_combate(
+    conn: aiosqlite.Connection, run_id: int, sala_id: str, monstro_hp: int, rodada: int
+) -> None:
+    await conn.execute(
+        "UPDATE run_combate SET monstro_hp = ?, rodada = ? WHERE run_id = ? AND sala_id = ?",
+        (monstro_hp, rodada, run_id, sala_id),
+    )
+    await conn.commit()
+
+
+async def registrar_ataque(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    sala_id: str,
+    rodada: int,
+    user_id: int,
+    d20: int,
+    bonus: int,
+    ca_alvo: int,
+    dano: int,
+) -> bool:
+    """False se o personagem já atacou nesta rodada."""
+    cur = await conn.execute(
+        "INSERT OR IGNORE INTO run_ataques"
+        " (run_id, sala_id, rodada, user_id, d20, bonus, ca_alvo, dano)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (run_id, sala_id, rodada, user_id, d20, bonus, ca_alvo, dano),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
+async def ataques_da_rodada(
+    conn: aiosqlite.Connection, run_id: int, sala_id: str, rodada: int
+) -> list[dict[str, Any]]:
+    async with conn.execute(
+        "SELECT * FROM run_ataques WHERE run_id = ? AND sala_id = ? AND rodada = ?"
+        " ORDER BY rowid",
+        (run_id, sala_id, rodada),
+    ) as cur:
+        return [dict(r) for r in await cur.fetchall()]
+
+
+async def inicializar_hp(conn: aiosqlite.Connection, run_id: int, guild_id: int) -> None:
+    """No começo da run, todo mundo entra com o HP máximo da ficha."""
+    await conn.execute(
+        "UPDATE run_participantes SET hp_atual = ("
+        "  SELECT hp_max FROM personagens p"
+        "  WHERE p.guild_id = ? AND p.user_id = run_participantes.user_id"
+        ") WHERE run_id = ?",
+        (guild_id, run_id),
+    )
+    await conn.commit()
+
+
+async def hp_dos_participantes(conn: aiosqlite.Connection, run_id: int) -> dict[int, Optional[int]]:
+    async with conn.execute(
+        "SELECT user_id, hp_atual FROM run_participantes WHERE run_id = ? ORDER BY rowid",
+        (run_id,),
+    ) as cur:
+        return {r["user_id"]: r["hp_atual"] for r in await cur.fetchall()}
+
+
+async def definir_hp(conn: aiosqlite.Connection, run_id: int, user_id: int, hp: int) -> None:
+    await conn.execute(
+        "UPDATE run_participantes SET hp_atual = ? WHERE run_id = ? AND user_id = ?",
+        (hp, run_id, user_id),
+    )
+    await conn.commit()
+
+
+async def definir_hp_varios(
+    conn: aiosqlite.Connection, run_id: int, hps: dict[int, int]
+) -> None:
+    await conn.executemany(
+        "UPDATE run_participantes SET hp_atual = ? WHERE run_id = ? AND user_id = ?",
+        [(hp, run_id, user_id) for user_id, hp in hps.items()],
+    )
+    await conn.commit()
