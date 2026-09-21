@@ -94,13 +94,20 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    progresso; quem falha contribui 0 e sofre a consequência do tipo da sala.
    A sala encerra quando o alvo é atingido ou quando todos rolaram.
 6. Depois de 3, 5 ou 7 salas (conforme o tamanho da incursão), o grupo enfrenta o Objetivo,
-   que é sempre um combate. Vencendo, o bot posta a **lore de fecho** — o epílogo só existe
-   se o grupo voltar vivo.
+   que é sempre um combate. O desfecho vem em dois embeds: um com a vitória, como o grupo
+   saiu, os MEs e os pontos de Organização, e outro com a **lore de fecho** — o epílogo só
+   existe se o grupo voltar vivo.
 
 Em sala de **Combate**, cada personagem de pé clica em **Atacar** uma vez por rodada
 (d20 + bônus de ataque contra a CA do monstro; acertou, rola o dano da arma). Quando
 todos atacam, o monstro revida contra um alvo sorteado entre os que estão de pé. Quem
 chega a 0 HP fica fora do resto daquele combate.
+
+O combate inteiro acontece **numa mensagem só**: o painel mostra o HP do monstro, o HP de
+cada personagem, o log da rodada que acabou e o botão de atacar, e é reescrito a cada
+rodada em vez de empilhar mensagens novas. Sala de combate também não posta descrição
+antes do painel — ele já traz tudo. Um confronto de dez rodadas ocupa o mesmo espaço no
+canal que um de duas.
 
 O **20 natural** acerta por mais alta que seja a CA e é crítico: os dados de dano são
 rolados em dobro, com o modificador entrando uma vez só (2d6+3 vira 4d6+3). O **1 natural**
@@ -165,9 +172,9 @@ A participação conta mesmo em derrota — o grupo tentou. Desistir não rende 
 mas os pontos das salas já superadas ficam. Cada motivo entra no placar uma vez só: a run
 guarda o lançamento, então reprocessar uma sala não infla o total.
 
-Ao fim da run o bot posta o balanço: de onde vieram os pontos e quanto a Organização tem
-agora. `/organizacao extrato` mostra o histórico, e `/organizacao ajustar` serve para
-lançar na mão o que aconteceu na mesa, fora do bot.
+O balanço (de onde vieram os pontos e quanto a Organização tem agora) vem junto do embed
+de desfecho da run, não como mensagem separada. `/organizacao extrato` mostra o histórico,
+e `/organizacao ajustar` serve para lançar na mão o que aconteceu na mesa, fora do bot.
 
 **MEs ficam fora do bot.** O embed final mostra quanto cada participante ganhou
 (`recompensa_mes` da planilha, 10 por padrão), mas quem registra isso é você, na sua

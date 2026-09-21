@@ -153,6 +153,8 @@ class FakeBot:
 
 # Monstro que todo mundo acerta e que morre num golpe.
 INDEFESO = {"nome": "Saco de Pancada", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 1}
+# Monstro que todo mundo acerta, mas aguenta varias rodadas sem revidar.
+DURAO = {"nome": "Saco Grande", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 120}
 # Monstro que ninguem acerta e que mata um personagem por rodada.
 IMBATIVEL = {"nome": "Ceifador", "ca": 40, "ataque": 40, "dano": "1d1+998", "hp": 999}
 

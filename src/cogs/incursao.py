@@ -747,22 +747,25 @@ class Incursoes(commands.Cog):
             return
 
         incursao = self._incursao_da_run(run)
-        embed, arquivo = E.sala_aberta(
-            sala, run["linha_atual"], 0, total, incursao.passos if incursao else None
-        )
-        view = ViewSala(self, run["id"], sala.id) if sala.tem_teste else None
-        mensagem = await canal.send(embed=embed, view=view, file=arquivo or discord.utils.MISSING)
         await db.atualizar_run(
             self.bot.db,
             run["id"],
             status="em_sala",
             sala_atual=sala.id,
-            mensagem_id=mensagem.id,
             votacao_expira_em=None,
         )
 
         if sala.e_combate:
+            # O painel do combate ja traz descricao, monstro e HP: uma mensagem so.
             await self._abrir_combate(await db.buscar_run(self.bot.db, run["id"]), sala)
+            return
+
+        embed, arquivo = E.sala_aberta(
+            sala, run["linha_atual"], 0, total, incursao.passos if incursao else None
+        )
+        view = ViewSala(self, run["id"], sala.id) if sala.tem_teste else None
+        mensagem = await canal.send(embed=embed, view=view, file=arquivo or discord.utils.MISSING)
+        await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
 
     async def _creditar(
         self, run: dict[str, Any], pontos: int, motivo: str, chave: str
@@ -781,17 +784,14 @@ class Incursoes(commands.Cog):
             chave=chave,
         )
 
-    async def _anunciar_pontos(self, run: dict[str, Any]) -> None:
-        """Fecha o balanço da run e posta o que cada motivo rendeu."""
+    async def _balanco(self, run: dict[str, Any]) -> tuple[list[dict[str, Any]], int]:
+        """Os lançamentos da run e o total da Organização, para o embed de desfecho."""
         incursao = self._incursao_da_run(run)
-        canal = await self._canal(run)
-        if not (incursao and canal):
-            return
+        if not incursao:
+            return [], 0
         lancamentos = await db.pontos_da_run(self.bot.db, run["id"])
-        if not lancamentos:
-            return
-        total_org = (await db.placar(self.bot.db, run["guild_id"])).get(incursao.organizacao, 0)
-        await canal.send(embed=E.pontos_da_run(incursao, lancamentos, total_org))
+        placar = await db.placar(self.bot.db, run["guild_id"])
+        return lancamentos, placar.get(incursao.organizacao, 0)
 
     def _passo(self, run: dict[str, Any]) -> int:
         """O passo atual do caminho. O objetivo fica um depois do último."""
@@ -841,14 +841,52 @@ class Incursoes(commands.Cog):
         monstro = motor.escalar_monstro(sala.monstro, niveis)
         await db.iniciar_combate(self.bot.db, run["id"], self._passo(run), sala.id, monstro.hp)
 
+        incursao = self._incursao_da_run(run)
+        e_objetivo = bool(incursao and sala.id == incursao.objetivo.id)
         estado = await self._estado_combate(run, sala)
-        embed, arquivo = E.combate(sala, estado, 0)
+        embed, arquivo = E.combate(
+            sala,
+            estado,
+            0,
+            e_objetivo=e_objetivo,
+            recompensa=sala.recompensa if e_objetivo else None,
+        )
         mensagem = await canal.send(
             embed=embed,
             view=ViewCombate(self, run["id"], sala.id),
             file=arquivo or discord.utils.MISSING,
         )
         await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
+
+    async def _atualizar_painel(
+        self,
+        run: dict[str, Any],
+        sala: Sala,
+        estado,
+        ja_atacaram: int,
+        rodada_anterior=None,
+        encerrado: bool = False,
+    ) -> None:
+        """Reescreve o painel do combate no lugar, sem postar mensagem nova."""
+        canal = await self._canal(run)
+        atual = await db.buscar_run(self.bot.db, run["id"])
+        if not canal or not atual or not atual["mensagem_id"]:
+            return
+        incursao = self._incursao_da_run(run)
+        embed, _ = E.combate(
+            sala,
+            estado,
+            ja_atacaram,
+            e_objetivo=bool(incursao and sala.id == incursao.objetivo.id),
+            rodada_anterior=rodada_anterior,
+            encerrado=encerrado,
+        )
+        view = None if encerrado else ViewCombate(self, run["id"], sala.id)
+        try:
+            mensagem = await canal.fetch_message(atual["mensagem_id"])
+            await mensagem.edit(embed=embed, view=view)
+        except discord.HTTPException:
+            pass
 
     async def _niveis(self, run: dict[str, Any]) -> list[int]:
         return [p["nivel"] for p in await db.personagens_da_run(self.bot.db, run["id"])]
@@ -930,14 +968,8 @@ class Incursoes(commands.Cog):
         )
         if estado.monstro_derrotado or len(ataques) >= len(estado.vivos):
             await self._fechar_rodada(run, sala, estado, ataques)
-        elif interaction.message is not None:
-            embed, _ = E.combate(sala, estado, len(ataques))
-            try:
-                await interaction.message.edit(
-                    embed=embed, view=ViewCombate(self, run_id, sala_id)
-                )
-            except discord.HTTPException:
-                pass
+        else:
+            await self._atualizar_painel(run, sala, estado, len(ataques))
 
     async def _fechar_rodada(
         self,
@@ -949,7 +981,6 @@ class Incursoes(commands.Cog):
         canal = await self._canal(run)
         if not canal:
             return
-        await self._limpar_botoes(await db.buscar_run(self.bot.db, run["id"]))
 
         golpes = [
             motor.GolpeAtaque(
@@ -971,44 +1002,49 @@ class Incursoes(commands.Cog):
                 contra = motor.contra_atacar(estado, alvo, None)
                 await db.definir_hp(self.bot.db, run["id"], alvo.user_id, alvo.hp_atual)
 
-        await canal.send(
-            embed=E.rodada_resolvida(
-                estado.rodada, golpes, contra, alvo.nome if alvo else None, estado
-            )
-        )
+        log = (estado.rodada, golpes, contra, alvo.nome if alvo else None)
 
         if estado.monstro_derrotado:
-            await canal.send(embed=E.combate_vencido(sala, estado))
-            await self._apos_combate_vencido(run, sala)
+            await self._atualizar_painel(
+                run, sala, estado, len(ataques), rodada_anterior=log, encerrado=True
+            )
+            await self._apos_combate_vencido(run, sala, estado)
             return
 
         if estado.grupo_caido:
+            await self._atualizar_painel(
+                run, sala, estado, len(ataques), rodada_anterior=log, encerrado=True
+            )
             await self._encerrar_run(run, "fracasso")
             incursao = self._incursao_da_run(run)
-            await canal.send(embed=E.run_fracassada(incursao, estado))
             # Mesmo derrotado, o grupo levou a run ate o fim: a participacao conta.
             await self._creditar(
                 run, config.PONTOS_PARTICIPACAO, "Participação na incursão", "participacao"
             )
-            await self._anunciar_pontos(await db.buscar_run(self.bot.db, run["id"]))
+            lancamentos, total = await self._balanco(run)
+            await canal.send(embed=E.run_fracassada(incursao, estado, lancamentos, total))
             return
 
-        # Proxima rodada: novo painel, novos ataques.
+        # Proxima rodada no mesmo painel, com o log da que acabou.
         estado.rodada += 1
         await db.atualizar_combate(
             self.bot.db, run["id"], self._passo(run), estado.monstro_hp, estado.rodada
         )
-        embed, _ = E.combate(sala, estado, 0)
-        mensagem = await canal.send(embed=embed, view=ViewCombate(self, run["id"], sala.id))
-        await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
+        await self._atualizar_painel(run, sala, estado, 0, rodada_anterior=log)
 
-    async def _apos_combate_vencido(self, run: dict[str, Any], sala: Sala) -> None:
+    async def _apos_combate_vencido(
+        self, run: dict[str, Any], sala: Sala, estado=None
+    ) -> None:
         incursao = self._incursao_da_run(run)
         if sala.pontos_organizacao:
             await self._creditar(
-                run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{self._passo(run)}:{sala.id}"
+                run,
+                sala.pontos_organizacao,
+                f"Sala superada: {sala.nome}",
+                f"sala:{self._passo(run)}:{sala.id}",
             )
 
+        canal = await self._canal(run)
         if sala.id == incursao.objetivo.id:
             await self._encerrar_run(run, "sucesso")
             await self._creditar(
@@ -1017,13 +1053,20 @@ class Incursoes(commands.Cog):
             await self._creditar(
                 run, incursao.pontos_conclusao, "Objetivo cumprido", "conclusao"
             )
-            canal = await self._canal(run)
             if canal:
-                await canal.send(embed=E.run_concluida(incursao, await self._membros(run)))
+                # Desfecho num embed so: vitoria, como o grupo saiu, MEs e pontos.
+                lancamentos, total = await self._balanco(run)
+                await canal.send(
+                    embed=E.run_concluida(
+                        incursao, await self._membros(run), estado, lancamentos, total
+                    )
+                )
                 if incursao.lore_final:
                     await canal.send(embed=E.lore_fecho(incursao))
-            await self._anunciar_pontos(await db.buscar_run(self.bot.db, run["id"]))
             return
+
+        if canal and estado is not None:
+            await canal.send(embed=E.combate_vencido(sala, estado))
 
         passo = run["linha_atual"]
         if passo < incursao.passos:
@@ -1126,11 +1169,6 @@ class Incursoes(commands.Cog):
         if not (incursao and canal):
             return
 
-        niveis = await self._niveis(run)
-        monstro = motor.escalar_monstro(incursao.objetivo.monstro, niveis)
-
-        embed, arquivo = E.objetivo(incursao, monstro.nome)
-        await canal.send(embed=embed, file=arquivo or discord.utils.MISSING)
         await db.atualizar_run(
             self.bot.db,
             run["id"],
@@ -1169,7 +1207,12 @@ class Incursoes(commands.Cog):
             ataques = await db.ataques_da_rodada(
                 self.bot.db, run["id"], self._passo(run), estado.rodada
             )
-            embed, arquivo = E.combate(sala, estado, len(ataques))
+            embed, arquivo = E.combate(
+                sala,
+                estado,
+                len(ataques),
+                e_objetivo=sala.id == incursao.objetivo.id,
+            )
             await interaction.response.send_message(
                 embed=embed,
                 view=ViewCombate(self, run["id"], sala.id),

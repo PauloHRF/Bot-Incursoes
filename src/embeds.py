@@ -252,30 +252,6 @@ def descanso(sala: Sala, curas: Optional[list[str]] = None) -> discord.Embed:
     return _rodape(e, "Sem teste nesta sala.")
 
 
-def objetivo(incursao: Incursao, monstro_nome: str) -> tuple[discord.Embed, Optional[discord.File]]:
-    sala = incursao.objetivo
-    e = discord.Embed(
-        title=f"🏁 {sala.nome}",
-        description=sala.descricao,
-        color=COR_FALHA,
-    )
-    m = sala.monstro
-    e.add_field(
-        name=f"⚔️ {monstro_nome}",
-        value=f"CA **{m.ca}** · Ataque **{fmt(m.ataque)}** · Dano **{m.dano}** · HP **{m.hp}**",
-        inline=False,
-    )
-    e.add_field(
-        name="Recompensa",
-        value=sala.recompensa or f"{incursao.recompensa_mes} MEs por participante",
-        inline=False,
-    )
-    arquivo, url = anexo_da_imagem(sala.imagem)
-    if url:
-        e.set_image(url=url)
-    return e, arquivo
-
-
 def status(
     run: dict[str, Any],
     incursao: Incursao,
@@ -347,13 +323,43 @@ def _linha_hp(c) -> str:
     return f"❤️ {c.nome} — {barra(c.hp_atual, c.hp_max, 6)} {c.hp_atual}/{c.hp_max}"
 
 
+def texto_do_contra_ataque(contra, alvo_nome: str) -> str:
+    """A linha do golpe do monstro, marcando 20 e 1 naturais."""
+    if contra.critico:
+        return (
+            f"{EMOJI_CRITICO} **CRITICO!** 🎲 **20** → **{contra.dano}** de dano "
+            f"em {alvo_nome} (dados dobrados)"
+        )
+    if contra.falha_critica:
+        return f"{EMOJI_FALHA_CRITICA} 🎲 **1** → erro critico, {alvo_nome} escapa"
+    rolagem = f"🎲 {contra.d20} {fmt(contra.bonus)} = **{contra.total}** vs CA {contra.ca_alvo}"
+    if contra.acertou:
+        return f"{rolagem} → **{contra.dano}** de dano em {alvo_nome}"
+    return f"{rolagem} → errou {alvo_nome}"
+
+
 def combate(
-    sala: Sala, estado, ja_atacaram: int
+    sala: Sala,
+    estado,
+    ja_atacaram: int,
+    *,
+    e_objetivo: bool = False,
+    recompensa: Optional[str] = None,
+    rodada_anterior: Optional[tuple] = None,
+    encerrado: bool = False,
 ) -> tuple[discord.Embed, Optional[discord.File]]:
+    """O painel do combate.
+
+    É a única mensagem do confronto: em vez de postar uma mensagem por rodada,
+    o bot edita este painel, guardando dentro dele o log da rodada que acabou.
+    `rodada_anterior` é (numero, golpes, contra, alvo_nome).
+    """
     m = estado.monstro
+    primeira = estado.rodada == 1 and rodada_anterior is None
+    titulo = "🏁" if e_objetivo else "⚔️"
     e = discord.Embed(
-        title=f"⚔️ {sala.nome} — rodada {estado.rodada}",
-        description=sala.descricao if estado.rodada == 1 else None,
+        title=f"{titulo} {sala.nome} — rodada {estado.rodada}",
+        description=sala.descricao if primeira else None,
         color=COR_FALHA,
     )
     e.add_field(
@@ -369,52 +375,36 @@ def combate(
         value="\n".join(_linha_hp(c) for c in estado.combatentes) or "*ninguém*",
         inline=False,
     )
-    e.add_field(name="Atacaram nesta rodada", value=f"{ja_atacaram}/{len(estado.vivos)}", inline=True)
-    arquivo, url = anexo_da_imagem(sala.imagem) if estado.rodada == 1 else (None, None)
+
+    if rodada_anterior:
+        numero, golpes, contra, alvo_nome = rodada_anterior
+        linhas = [linha_golpe(g) for g in golpes] or ["*ninguém atacou*"]
+        if contra is not None and alvo_nome:
+            linhas.append(f"↩️ **{m.nome}** · {texto_do_contra_ataque(contra, alvo_nome)}")
+        bloco = "\n".join(linhas)
+        if len(bloco) > 1024:
+            bloco = bloco[:1000].rsplit("\n", 1)[0] + "\n…"
+        e.add_field(name=f"Rodada {numero}", value=bloco, inline=False)
+
+    if recompensa and primeira:
+        e.add_field(name="Recompensa", value=recompensa, inline=False)
+
+    if not encerrado:
+        e.add_field(
+            name="Atacaram nesta rodada",
+            value=f"{ja_atacaram}/{len(estado.vivos)}",
+            inline=True,
+        )
+
+    arquivo, url = anexo_da_imagem(sala.imagem) if primeira else (None, None)
     if url:
         e.set_image(url=url)
-    return _rodape(
-        e, "Cada personagem de pé ataca uma vez. Quando todos atacarem, o monstro revida."
-    ), arquivo
-
-
-def rodada_resolvida(rodada: int, golpes: list, contra, alvo_nome: Optional[str], estado) -> discord.Embed:
-    e = discord.Embed(title=f"Rodada {rodada}", color=COR_SALA)
-    linhas = [linha_golpe(g) for g in golpes]
-    e.add_field(name="Ataques do grupo", value="\n".join(linhas) or "*ninguém atacou*", inline=False)
-
-    if contra is not None and alvo_nome:
-        if contra.critico:
-            texto = (
-                f"{EMOJI_CRITICO} **CRITICO!** 🎲 **20** → **{contra.dano}** de dano "
-                f"em {alvo_nome} (dados dobrados)"
-            )
-        elif contra.falha_critica:
-            texto = f"{EMOJI_FALHA_CRITICA} 🎲 **1** → erro critico, {alvo_nome} escapa"
-        elif contra.acertou:
-            texto = (
-                f"🎲 {contra.d20} {fmt(contra.bonus)} = **{contra.total}** vs CA {contra.ca_alvo} "
-                f"→ **{contra.dano}** de dano em {alvo_nome}"
-            )
-        else:
-            texto = (
-                f"🎲 {contra.d20} {fmt(contra.bonus)} = **{contra.total}** vs CA {contra.ca_alvo} "
-                f"→ errou {alvo_nome}"
-            )
-        e.add_field(name=f"Contra-ataque de {estado.monstro.nome}", value=texto, inline=False)
-
-    e.add_field(
-        name=estado.monstro.nome,
-        value=f"{barra(estado.monstro_hp, estado.monstro.hp, 12)}  "
-        f"**{estado.monstro_hp}**/{estado.monstro.hp} HP",
-        inline=False,
+    rodape = (
+        "Combate encerrado."
+        if encerrado
+        else "Cada personagem de pé ataca uma vez. Quando todos atacarem, o monstro revida."
     )
-    caidos = estado.caidos
-    if caidos:
-        e.add_field(
-            name="Caídos", value=", ".join(c.nome for c in caidos), inline=False
-        )
-    return e
+    return _rodape(e, rodape), arquivo
 
 
 def combate_vencido(sala: Sala, estado) -> discord.Embed:
@@ -433,37 +423,61 @@ def combate_vencido(sala: Sala, estado) -> discord.Embed:
     return e
 
 
-def run_fracassada(incursao: Incursao, estado) -> discord.Embed:
+def _campo_pontos(e: discord.Embed, lancamentos: list[dict], total: int, organizacao: str) -> None:
+    """Acrescenta o balanço de pontos ao embed de desfecho, em vez de outra mensagem."""
+    if not lancamentos:
+        return
+    ganho = sum(l["pontos"] for l in lancamentos)
+    linhas = [f"**+{l['pontos']}** · {l['motivo']}" for l in lancamentos]
+    linhas.append(f"**{organizacao}** agora tem **{total}** ponto(s).")
+    e.add_field(name=f"Pontos de Organização (+{ganho})", value="\n".join(linhas), inline=False)
+
+
+def run_fracassada(
+    incursao: Incursao,
+    estado,
+    lancamentos: Optional[list[dict]] = None,
+    total_org: int = 0,
+) -> discord.Embed:
     e = discord.Embed(
         title="☠️ Incursão fracassada",
         description=(
-            f"O grupo inteiro caiu diante de **{estado.monstro.nome}**. "
-            f"Ninguém volta com pontos de {incursao.organizacao}."
+            f"O grupo inteiro caiu diante de **{estado.monstro.nome}**, que fica de pé com "
+            f"{estado.monstro_hp}/{estado.monstro.hp} HP. Ninguém volta com o objetivo."
         ),
         color=COR_FALHA,
     )
-    e.add_field(
-        name=estado.monstro.nome,
-        value=f"ainda de pé com {estado.monstro_hp}/{estado.monstro.hp} HP",
-        inline=False,
-    )
+    _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
     return e
 
 
-def run_concluida(incursao: Incursao, membros: list[discord.abc.User]) -> discord.Embed:
+def run_concluida(
+    incursao: Incursao,
+    membros: list[discord.abc.User],
+    estado=None,
+    lancamentos: Optional[list[dict]] = None,
+    total_org: int = 0,
+) -> discord.Embed:
+    """O desfecho da run: vitória, como o grupo saiu, recompensa e pontos."""
     e = discord.Embed(
         title=f"🏆 {incursao.nome} — objetivo cumprido",
         description=incursao.objetivo.recompensa
         or f"O grupo entrega o resultado a {incursao.organizacao}.",
         color=COR_SUCESSO,
     )
+    if estado is not None:
+        e.add_field(
+            name=f"{estado.monstro.nome} caiu em {estado.rodada} rodada(s)",
+            value="\n".join(_linha_hp(c) for c in estado.combatentes),
+            inline=False,
+        )
     e.add_field(
         name=f"Recompensa ({incursao.recompensa_mes} MEs por participante)",
         value="\n".join(f"{m.mention} — {incursao.recompensa_mes} MEs" for m in membros),
         inline=False,
     )
-    e.add_field(name="Organização", value=incursao.organizacao, inline=True)
-    return _rodape(e, "Os pontos de Organização entram na próxima fase do bot.")
+    _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
+    return _rodape(e, "Anote os MEs na planilha: o bot não guarda saldo por jogador.")
 
 
 # ------------------------------------------- pontos de Organizacao
@@ -474,23 +488,6 @@ EMOJI_ORG = {
     "Guilda dos Mortos": "💀",
     "Sentinelas do Alvorecer": "🌅",
 }
-
-
-def pontos_da_run(incursao: Incursao, lancamentos: list[dict], total: int) -> discord.Embed:
-    """Balanço do que a run rendeu à Organização."""
-    ganho = sum(l["pontos"] for l in lancamentos)
-    e = discord.Embed(
-        title=f"{EMOJI_ORG.get(incursao.organizacao, '•')} {incursao.organizacao}",
-        description=f"Esta incursão rendeu **{ganho}** ponto(s) à Organização.",
-        color=COR_INCURSAO,
-    )
-    e.add_field(
-        name="De onde vieram",
-        value="\n".join(f"**+{l['pontos']}** · {l['motivo']}" for l in lancamentos),
-        inline=False,
-    )
-    e.add_field(name="Total da Organização no servidor", value=f"**{total}** ponto(s)", inline=False)
-    return e
 
 
 def placar_organizacoes(pontos: dict[str, int], organizacoes: tuple[str, ...]) -> discord.Embed:

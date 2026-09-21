@@ -17,6 +17,7 @@ from src.cogs.incursao import Incursoes, ViewCombate  # noqa: E402
 from fakes import (  # noqa: E402
     ATRIBUTOS,
     CANAL,
+    DURAO,
     GUILD,
     IMBATIVEL,
     INDEFESO,
@@ -35,6 +36,12 @@ _ABERTAS = []
 
 
 async def preparar(hp_max=40, ca=18, bonus_ataque=8, dano="1d6+3"):
+    # No Windows o arquivo so pode ser apagado depois que ninguem o mantem aberto.
+    while _ABERTAS:
+        try:
+            await _ABERTAS.pop().close()
+        except Exception:
+            pass
     config.DB_PATH = Path(__file__).resolve().parent / "teste_combate.db"
     config.DB_PATH.unlink(missing_ok=True)
     config.TAMANHO_GRUPO = 5
@@ -214,6 +221,77 @@ async def caso_rodadas_e_contra_ataque():
     print("  rodadas e contra-ataque: ok")
 
 
+async def caso_combate_nao_polui_o_canal():
+    """O combate inteiro cabe num painel editado, não numa mensagem por rodada."""
+    conn, canal, cog = await preparar()
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="limpo", monstro_objetivo=DURAO, salas=salas_sem_combate()
+    )
+    run = await montar_run(conn, canal, cog, "limpo")
+    run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
+    assert run["status"] == "objetivo"
+
+    antes = len(canal.mensagens)
+    painel_id = run["mensagem_id"]
+    rodadas = 0
+    for _ in range(40):
+        atual = await db.buscar_run(conn, run["id"])
+        if atual["status"] != "objetivo":
+            break
+        estado = await cog._estado_combate(atual, incursao.objetivo)
+        rodadas = max(rodadas, estado.rodada)
+        msg = await canal.fetch_message(atual["mensagem_id"])
+        for c in list(estado.vivos):
+            agora = await db.buscar_run(conn, run["id"])
+            if agora["status"] != "objetivo":
+                break
+            await cog.atacar(FakeInteraction(canal, c.user_id, msg), run["id"], incursao.objetivo.id)
+
+    assert (await db.buscar_run(conn, run["id"]))["status"] == "sucesso"
+    assert rodadas >= 3, f"o combate precisa durar algumas rodadas para o teste valer ({rodadas})"
+
+    novas = len(canal.mensagens) - antes
+    # O combate nao posta nada: o painel e editado. As mensagens novas sao so o
+    # desfecho (conclusao + epilogo), independentemente de quantas rodadas durou.
+    assert novas <= 3, f"{novas} mensagens novas em {rodadas} rodadas — o combate voltou a poluir"
+
+    # o painel continua sendo o mesmo, atualizado
+    painel = await canal.fetch_message(painel_id)
+    assert painel.embeds and "rodada" in (painel.embeds[0].title or "").lower()
+    assert painel.view is None, "o painel encerrado não mantém o botão de atacar"
+    print(f"  combate de {rodadas} rodadas em {novas} mensagens novas: ok")
+
+
+async def caso_sala_de_combate_nao_duplica_entrada():
+    """Entrar numa sala de combate posta só o painel, não a descrição antes."""
+    conn, canal, cog = await preparar()
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="entrada", salas=salas_de_combate(DURAO)
+    )
+    run = await montar_run(conn, canal, cog, "entrada")
+
+    antes = len(canal.mensagens)
+    alvo = (await cog._opcoes(run, 1))[0]
+    assert alvo.e_combate
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for user_id in JOGADORES:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
+
+    run = await db.buscar_run(conn, run["id"])
+    assert run["status"] == "em_sala" and run["sala_atual"] == alvo.id
+    novas = canal.mensagens[antes:]
+    com_embed = [m for m in novas if m.embeds]
+    assert len(com_embed) == 1, f"esperava só o painel, vieram {len(com_embed)} embeds"
+
+    painel = com_embed[0]
+    # o painel ja traz descricao, monstro e HP: nada se perdeu ao tirar a entrada
+    assert painel.embeds[0].description == alvo.descricao
+    campos = {f.name: f.value for f in painel.embeds[0].fields}
+    assert alvo.monstro.nome in campos
+    assert "Grupo" in campos
+    print("  sala de combate posta só o painel: ok")
+
+
 async def caso_derrota_total():
     """Com o grupo inteiro caído, a run termina em fracasso."""
     conn, canal, cog = await preparar(hp_max=10)
@@ -339,6 +417,8 @@ async def _casos():
     await caso_vitoria_no_objetivo()
     await caso_combate_no_meio_do_mapa()
     await caso_rodadas_e_contra_ataque()
+    await caso_combate_nao_polui_o_canal()
+    await caso_sala_de_combate_nao_duplica_entrada()
     await caso_derrota_total()
     await caso_descanso_cura()
     await caso_restart_no_combate()
