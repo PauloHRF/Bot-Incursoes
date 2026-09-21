@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import logging
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from .. import config, database as db, embeds as E, motor
 from ..incursoes import Incursao, Monstro, Sala, carregar_todas
@@ -27,8 +27,9 @@ def _agora() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _prazo() -> str:
-    return (_agora() + timedelta(minutes=config.MINUTOS_VOTACAO)).strftime("%Y-%m-%d %H:%M:%S")
+def maioria_de(total: int) -> int:
+    """Quantos votos fecham a votacao: mais da metade do grupo."""
+    return total // 2 + 1
 
 
 def _resolucao(sala: Sala, registros: list[dict[str, Any]], total: int) -> ResolucaoSala:
@@ -166,16 +167,6 @@ class Incursoes(commands.Cog):
     async def cog_load(self) -> None:
         self._carregar_tolerante()
         await self.restaurar_views()
-
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
-        # O loop so pode comecar com o cliente ja conectado, e on_ready repete
-        # a cada reconexao.
-        if not self.verificar_prazos.is_running():
-            self.verificar_prazos.start()
-
-    async def cog_unload(self) -> None:
-        self.verificar_prazos.cancel()
 
     def recarregar_incursoes(self) -> None:
         pasta = config.RAIZ / "data" / "incursoes"
@@ -570,7 +561,7 @@ class Incursoes(commands.Cog):
         votos = await db.votos_da_linha(self.bot.db, run["id"], linha)
         view = ViewVotacao(self, run["id"], linha, opcoes)
         mensagem = await canal.send(
-            embed=E.votacao(incursao, linha, opcoes, votos, max(0, total - len(votos))), view=view
+            embed=E.votacao(incursao, linha, opcoes, votos, total), view=view
         )
         await db.atualizar_run(
             self.bot.db,
@@ -579,7 +570,7 @@ class Incursoes(commands.Cog):
             linha_atual=linha,
             sala_atual=None,
             mensagem_id=mensagem.id,
-            votacao_expira_em=_prazo(),
+            votacao_expira_em=None,
         )
 
     async def votar(
@@ -605,16 +596,20 @@ class Incursoes(commands.Cog):
         if interaction.message is not None:
             try:
                 await interaction.message.edit(
-                    embed=E.votacao(incursao, linha, opcoes, votos, max(0, total - len(votos))),
+                    embed=E.votacao(incursao, linha, opcoes, votos, total),
                     view=ViewVotacao(self, run_id, linha, opcoes),
                 )
             except discord.HTTPException:
                 pass
 
-        if len(votos) >= total:
-            await self._fechar_votacao(run, linha, por_prazo=False)
+        await self._fechar_votacao(run, linha)
 
-    async def _fechar_votacao(self, run: dict[str, Any], linha: int, por_prazo: bool) -> None:
+    async def _fechar_votacao(self, run: dict[str, Any], linha: int) -> None:
+        """Fecha a votacao assim que uma sala tem a maioria do grupo.
+
+        Nao ha prazo: a run espera indefinidamente, mas nao espera quem falta
+        depois que o resultado ja esta decidido.
+        """
         run = await db.buscar_run(self.bot.db, run["id"])
         if not run or run["status"] != "escolhendo" or run["linha_atual"] != linha:
             return
@@ -629,30 +624,36 @@ class Incursoes(commands.Cog):
             contagem[opcao] = contagem.get(opcao, 0) + 1
 
         if not contagem:
-            # Ninguem votou: acao conservadora, o grupo mantem a posicao atual.
-            await db.atualizar_run(self.bot.db, run["id"], votacao_expira_em=_prazo())
-            await canal.send(
-                "Ninguém votou dentro do prazo. A votação continua aberta — "
-                "o grupo não avança até alguém escolher."
-            )
-            return
+            return  # ninguem votou ainda: a votacao segue aberta
 
+        total = len(await db.participantes(self.bot.db, run["id"]))
+        maioria = maioria_de(total)
         maximo = max(contagem.values())
         empatadas = [sala_id for sala_id, n in contagem.items() if n == maximo]
+        decidida = len(empatadas) == 1
 
-        if len(empatadas) > 1 and not por_prazo:
+        if decidida and maximo >= maioria:
+            # Maioria fechada: nao ha por que esperar quem ainda nao votou.
+            escolhida_id = empatadas[0]
+        elif len(votos) >= total and decidida:
+            # Todos votaram sem maioria absoluta: vale a mais votada.
+            escolhida_id = empatadas[0]
+        elif len(votos) >= total:
             await canal.send(
-                "Empate na votação. Ninguém avança enquanto o grupo não desempatar — "
-                "clique em outra opção para trocar seu voto."
+                "Empate na votação, com todo mundo já tendo votado. Ninguém avança "
+                "enquanto o grupo não desempatar — clique em outra opção para trocar seu voto."
             )
             return
-
-        if len(empatadas) > 1:
-            escolhida_id = random.SystemRandom().choice(empatadas)
-            nomes = ", ".join(incursao.sala(s).nome for s in empatadas)
-            await canal.send(f"Prazo esgotado com empate entre {nomes}. Sorteio decidiu.")
         else:
-            escolhida_id = empatadas[0]
+            return  # ainda da para virar: espera mais votos
+
+        faltaram = total - len(votos)
+        if faltaram > 0:
+            nome = incursao.sala(escolhida_id).nome
+            await canal.send(
+                f"**{nome}** fechou com {maximo} de {total} votos — maioria formada, "
+                f"o grupo não espera os {faltaram} que faltam."
+            )
 
         await self._limpar_botoes(run)
         await self._entrar_na_sala(run, incursao.sala(escolhida_id))
@@ -1215,16 +1216,6 @@ class Incursoes(commands.Cog):
         await interaction.response.send_message(
             f"Intervalo entre incursões ajustado para **{dias} dia(s)**.", ephemeral=True
         )
-
-    # ------------------------------------------------------------- prazos
-
-    @tasks.loop(minutes=1)
-    async def verificar_prazos(self) -> None:
-        try:
-            for run in await db.votacoes_expiradas(self.bot.db):
-                await self._fechar_votacao(run, run["linha_atual"], por_prazo=True)
-        except Exception:
-            log.exception("erro ao fechar votações vencidas")
 
 
 async def setup(bot: commands.Bot) -> None:

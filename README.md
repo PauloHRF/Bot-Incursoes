@@ -81,10 +81,11 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    direto. O personagem fica preso àquela run: é a ficha dele que rola os testes, ataca e
    leva dano.
 3. Ao chegar a 5 jogadores a run começa sozinha; quem abriu pode começar antes com **Começar**.
-4. Cada linha mostra as 3 salas daquela linha. Todos votam pelos botões; a votação fecha
-   assim que todos votam, ou no prazo (30 min por padrão), pela maioria simples.
-   Empate antes do prazo não avança — o grupo destrava trocando um voto. Empate no prazo
-   vai a sorteio, e prazo sem nenhum voto mantém a posição e renova.
+4. Cada linha mostra as 3 salas daquela linha. Todos votam pelos botões, e a votação fecha
+   assim que uma sala junta a **maioria do grupo** (3 de 5) — quem ainda não votou não
+   segura o grupo. Enquanto ninguém tem maioria, a votação continua aberta, **sem prazo**:
+   a run espera o tempo que precisar. Se todos votarem e der empate (2×2×1), ninguém avança
+   até alguém trocar o voto.
 5. Na sala, cada jogador rola uma vez pelo botão **Rolar teste**, com a melhor perícia que
    tiver entre as listadas. Quem passa contribui a margem (rolagem + mod − CD) como
    progresso; quem falha contribui 0 e sofre a consequência do tipo da sala.
@@ -221,7 +222,7 @@ tests/
   todos.py      roda todas as suítes
   smoke.py      regras, persistência, schema de incursão, carga dos cogs
   test_run.py   uma run inteira simulada, do recrutamento ao objetivo
-  test_votacao.py  empate, prazo, silêncio e restart
+  test_votacao.py  maioria, votos divididos, empate e restart
   test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco

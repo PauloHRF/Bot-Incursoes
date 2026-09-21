@@ -425,14 +425,6 @@ async def atualizar_run(conn: aiosqlite.Connection, run_id: int, **campos: Any) 
     await conn.commit()
 
 
-async def votacoes_expiradas(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
-    async with conn.execute(
-        "SELECT * FROM runs WHERE status = 'escolhendo' AND votacao_expira_em IS NOT NULL"
-        " AND votacao_expira_em <= datetime('now')"
-    ) as cur:
-        return [dict(r) for r in await cur.fetchall()]
-
-
 # ------------------------------------------------------- participantes
 
 

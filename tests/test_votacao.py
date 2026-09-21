@@ -51,38 +51,62 @@ async def preparar():
     return conn, canal, cog
 
 
-async def caso_maioria_no_prazo():
-    """Dois votam numa sala, um noutra; o prazo estoura e a maioria simples vence."""
+async def caso_maioria_fecha_sem_esperar():
+    """Assim que 3 dos 5 votam na mesma sala, o grupo avança."""
     conn, canal, cog = await preparar()
     run = await montar_run_em_votacao(conn, canal, cog)
     opcoes = cog.incursoes["vortice_cripta"].opcoes(1)
     msg = await canal.fetch_message(run["mensagem_id"])
 
+    # dois votos ainda nao decidem nada
     for user_id in JOGADORES[:2]:
         await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, opcoes[0].id)
-    await cog.votar(FakeInteraction(canal, JOGADORES[2], msg), run["id"], 1, opcoes[1].id)
-
-    # ainda faltam dois votos: nada se move
     assert (await db.buscar_run(conn, run["id"]))["status"] == "escolhendo"
 
-    await cog._fechar_votacao(run, 1, por_prazo=True)
+    # o terceiro fecha a maioria de 5, sem esperar os outros dois
+    await cog.votar(FakeInteraction(canal, JOGADORES[2], msg), run["id"], 1, opcoes[0].id)
     depois = await db.buscar_run(conn, run["id"])
-    assert depois["status"] in ("em_sala", "escolhendo")
-    assert depois["sala_atual"] == opcoes[0].id, "a sala mais votada deveria ter vencido"
+    assert depois["status"] == "em_sala", depois["status"]
+    assert depois["sala_atual"] == opcoes[0].id
+    assert len(await db.votos_da_linha(conn, run["id"], 1)) == 3, "avançou com 3 de 5"
+    assert any("não espera" in (m.content or "") for m in canal.mensagens)
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
-    print("  maioria simples no prazo: ok")
+    print("  maioria fecha sem esperar os que faltam: ok")
 
 
-async def caso_empate_antes_do_prazo():
-    """Todos votaram mas deu empate: ninguém avança, a votação segue aberta."""
+async def caso_votos_divididos_esperam():
+    """Enquanto ninguém tem maioria, a votação continua aberta."""
     conn, canal, cog = await preparar()
     run = await montar_run_em_votacao(conn, canal, cog)
     opcoes = cog.incursoes["vortice_cripta"].opcoes(1)
     msg = await canal.fetch_message(run["mensagem_id"])
 
-    # 2 x 2 x 1 -> empate entre as duas primeiras
+    # 2 x 1: ninguem chegou a 3
+    for user_id in JOGADORES[:2]:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, opcoes[0].id)
+    await cog.votar(FakeInteraction(canal, JOGADORES[2], msg), run["id"], 1, opcoes[1].id)
+    parado = await db.buscar_run(conn, run["id"])
+    assert parado["status"] == "escolhendo" and parado["sala_atual"] is None
+
+    # o quarto voto fecha a maioria na primeira
+    await cog.votar(FakeInteraction(canal, JOGADORES[3], msg), run["id"], 1, opcoes[0].id)
+    depois = await db.buscar_run(conn, run["id"])
+    assert depois["status"] == "em_sala" and depois["sala_atual"] == opcoes[0].id
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  votos divididos seguem esperando: ok")
+
+
+async def caso_empate_com_todos_votando():
+    """2x2x1: todos votaram, ninguém tem maioria, ninguém avança."""
+    conn, canal, cog = await preparar()
+    run = await montar_run_em_votacao(conn, canal, cog)
+    opcoes = cog.incursoes["vortice_cripta"].opcoes(1)
+    msg = await canal.fetch_message(run["mensagem_id"])
+
     for user_id, sala in zip(JOGADORES, [opcoes[0], opcoes[0], opcoes[1], opcoes[1], opcoes[2]]):
         await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, sala.id)
 
@@ -91,51 +115,32 @@ async def caso_empate_antes_do_prazo():
     assert depois["sala_atual"] is None
     assert any("Empate" in (m.content or "") for m in canal.mensagens)
 
-    # alguém troca o voto e o empate se desfaz
+    # alguém troca o voto e a maioria se forma
     await cog.votar(FakeInteraction(canal, JOGADORES[4], msg), run["id"], 1, opcoes[0].id)
     depois = await db.buscar_run(conn, run["id"])
     assert depois["status"] == "em_sala" and depois["sala_atual"] == opcoes[0].id
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
-    print("  empate antes do prazo: ok")
+    print("  empate com todos votando espera desempate: ok")
 
 
-async def caso_empate_no_prazo():
-    """Empate quando o prazo estoura: sorteio decide, entre as empatadas."""
+async def caso_sem_prazo():
+    """A votação não guarda prazo nenhum: espera indefinidamente."""
     conn, canal, cog = await preparar()
     run = await montar_run_em_votacao(conn, canal, cog)
-    opcoes = cog.incursoes["vortice_cripta"].opcoes(1)
-    msg = await canal.fetch_message(run["mensagem_id"])
+    assert run["votacao_expira_em"] is None, run["votacao_expira_em"]
 
-    await cog.votar(FakeInteraction(canal, JOGADORES[0], msg), run["id"], 1, opcoes[0].id)
-    await cog.votar(FakeInteraction(canal, JOGADORES[1], msg), run["id"], 1, opcoes[1].id)
-
-    await cog._fechar_votacao(run, 1, por_prazo=True)
-    depois = await db.buscar_run(conn, run["id"])
-    assert depois["sala_atual"] in (opcoes[0].id, opcoes[1].id)
-    assert any("Sorteio" in (m.content or "") for m in canal.mensagens)
-
-    await conn.close()
-    config.DB_PATH.unlink(missing_ok=True)
-    print("  empate no prazo resolvido por sorteio: ok")
-
-
-async def caso_ninguem_votou():
-    """Prazo estoura sem nenhum voto: posição mantida e prazo renovado."""
-    conn, canal, cog = await preparar()
-    run = await montar_run_em_votacao(conn, canal, cog)
-    prazo_antes = run["votacao_expira_em"]
-
-    await cog._fechar_votacao(run, 1, por_prazo=True)
+    # sem voto nenhum, nada acontece e nada e postado
+    antes = len(canal.mensagens)
+    await cog._fechar_votacao(run, 1)
     depois = await db.buscar_run(conn, run["id"])
     assert depois["status"] == "escolhendo" and depois["sala_atual"] is None
-    assert depois["votacao_expira_em"] >= prazo_antes
-    assert any("Ninguém votou" in (m.content or "") for m in canal.mensagens)
+    assert len(canal.mensagens) == antes
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
-    print("  ninguém votou: posição mantida: ok")
+    print("  sem prazo: a votação espera sem reclamar: ok")
 
 
 async def caso_restart():
@@ -231,10 +236,10 @@ async def caso_botoes_somem_ao_encerrar():
 
 
 async def main():
-    await caso_maioria_no_prazo()
-    await caso_empate_antes_do_prazo()
-    await caso_empate_no_prazo()
-    await caso_ninguem_votou()
+    await caso_maioria_fecha_sem_esperar()
+    await caso_votos_divididos_esperam()
+    await caso_empate_com_todos_votando()
+    await caso_sem_prazo()
     await caso_restart()
     await caso_intervalo_entre_incursoes()
     await caso_botoes_somem_ao_encerrar()

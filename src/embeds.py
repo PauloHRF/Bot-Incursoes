@@ -79,11 +79,15 @@ def recrutamento(
 
 
 def votacao(
-    incursao: Incursao, linha: int, opcoes: list[Sala], votos: dict[int, str], faltam: int
+    incursao: Incursao, linha: int, opcoes: list[Sala], votos: dict[int, str], total: int
 ) -> discord.Embed:
+    maioria = total // 2 + 1
     e = discord.Embed(
         title=f"Linha {linha} de 3 — para onde o grupo vai?",
-        description="Cada jogador escolhe uma saída. A votação fecha assim que todos votarem.",
+        description=(
+            f"Cada jogador escolhe uma saída. A votação fecha assim que uma sala "
+            f"chegar a **{maioria}** voto(s) — o grupo não espera quem faltar."
+        ),
         color=COR_INCURSAO,
     )
     contagem: dict[str, int] = {}
@@ -99,7 +103,15 @@ def votacao(
             inline=True,
         )
     e.add_field(name="Progresso", value=progresso_da_run(linha - 1), inline=False)
-    return _rodape(e, f"Faltam {faltam} voto(s). Prazo: {config.MINUTOS_VOTACAO} minutos.")
+    lider = max(contagem.values()) if contagem else 0
+    if lider >= maioria:
+        rodape = "Maioria formada."
+    else:
+        rodape = (
+            f"{len(votos)} de {total} votaram · faltam {maioria - lider} voto(s) "
+            f"numa mesma sala para fechar. Sem prazo: a votação espera."
+        )
+    return _rodape(e, rodape)
 
 
 def sala_aberta(
