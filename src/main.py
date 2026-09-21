@@ -10,7 +10,12 @@ from . import config, database
 
 log = logging.getLogger("incursoes")
 
-COGS = ("src.cogs.ficha", "src.cogs.incursao", "src.cogs.organizacao")
+COGS = (
+    "src.cogs.ajuda",
+    "src.cogs.ficha",
+    "src.cogs.incursao",
+    "src.cogs.organizacao",
+)
 
 
 class IncursoesBot(commands.Bot):

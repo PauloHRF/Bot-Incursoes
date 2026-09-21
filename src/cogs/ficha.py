@@ -115,6 +115,24 @@ class Ficha(commands.Cog):
 
     grupo = app_commands.Group(name="ficha", description="Fichas dos seus personagens")
 
+    async def _anunciar(
+        self,
+        interaction: discord.Interaction,
+        texto: str,
+        embed: Optional[discord.Embed] = None,
+    ) -> None:
+        """Avisa o canal. O grupo acompanha quem entrou e quem mudou de ficha."""
+        canal = interaction.channel
+        if canal is None:
+            return
+        try:
+            if embed is not None:
+                await canal.send(texto, embed=embed)
+            else:
+                await canal.send(texto)
+        except discord.HTTPException:
+            pass
+
     async def _sugerir_personagens(
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
@@ -266,6 +284,12 @@ class Ficha(commands.Cog):
             embed=embed_ficha(personagem, interaction.user),
             view=None,
         )
+        await self._anunciar(
+            interaction,
+            f"📜 {interaction.user.mention} registrou **{personagem['nome']}** "
+            f"— nivel {nivel}, {tier(nivel)}º tier.",
+            embed=embed_ficha(personagem, interaction.user),
+        )
 
     @grupo.command(name="listar", description="Mostra todos os seus personagens")
     @app_commands.describe(membro="Ver os personagens de outro jogador (opcional)")
@@ -348,11 +372,12 @@ class Ficha(commands.Cog):
         escolhido = await self._resolver(interaction, personagem)
         if not escolhido:
             return
+        antes = escolhido["nivel"]
         await db.atualizar_personagem(self.bot.db, escolhido["id"], "nivel", novo_nivel)
         await interaction.response.send_message(
-            f"**{escolhido['nome']}**: nivel {novo_nivel} | Tier {tier(novo_nivel)} | "
-            f"Proficiencia {fmt(bonus_proficiencia(novo_nivel))}.",
-            ephemeral=True,
+            f"📈 {interaction.user.mention} atualizou **{escolhido['nome']}**: "
+            f"nivel {antes} → **{novo_nivel}** | Tier {tier(novo_nivel)} | "
+            f"Proficiencia {fmt(bonus_proficiencia(novo_nivel))}."
         )
 
     @grupo.command(name="atributo", description="Atualiza um atributo apos um ASI")
@@ -377,9 +402,8 @@ class Ficha(commands.Cog):
         coluna = db.COLUNA_ATRIBUTO[atributo.value]
         await db.atualizar_personagem(self.bot.db, escolhido["id"], coluna, valor)
         await interaction.response.send_message(
-            f"**{escolhido['nome']}**: {atributo.name} agora e {valor} "
-            f"({fmt(modificador(valor))}).",
-            ephemeral=True,
+            f"💪 {interaction.user.mention} atualizou **{escolhido['nome']}**: "
+            f"{atributo.name} agora e {valor} ({fmt(modificador(valor))})."
         )
 
     @grupo.command(name="pericias", description="Ajusta quais pericias sao treinadas")
@@ -408,6 +432,12 @@ class Ficha(commands.Cog):
             embed=embed_ficha(atualizado, interaction.user),
             view=None,
         )
+        await self._anunciar(
+            interaction,
+            f"🎓 {interaction.user.mention} atualizou as pericias de "
+            f"**{atualizado['nome']}** ({len(atualizado['pericias'])} treinadas).",
+            embed=embed_ficha(atualizado, interaction.user),
+        )
 
     @grupo.command(name="combate", description="Atualiza CA, ataque, dano e HP de um personagem")
     @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
@@ -433,7 +463,9 @@ class Ficha(commands.Cog):
             await db.atualizar_personagem(self.bot.db, escolhido["id"], coluna, valor)
         atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
         await interaction.response.send_message(
-            embed=embed_ficha(atualizado, interaction.user), ephemeral=True
+            f"🛡️ {interaction.user.mention} atualizou os numeros de combate de "
+            f"**{atualizado['nome']}**.",
+            embed=embed_ficha(atualizado, interaction.user),
         )
 
     @grupo.command(
@@ -475,7 +507,8 @@ class Ficha(commands.Cog):
         else:
             aviso = f"**{escolhido['nome']}**: bonus de {pericia.value} removido."
         await interaction.response.send_message(
-            aviso, embed=embed_ficha(atualizado, interaction.user), ephemeral=True
+            f"✨ {interaction.user.mention} — {aviso}",
+            embed=embed_ficha(atualizado, interaction.user),
         )
 
     @grupo.command(name="remover", description="Apaga um personagem seu")
@@ -497,7 +530,7 @@ class Ficha(commands.Cog):
             return
         await db.remover_personagem(self.bot.db, escolhido["id"])
         await interaction.response.send_message(
-            f"**{escolhido['nome']}** foi apagado.", ephemeral=True
+            f"🗑️ {interaction.user.mention} apagou o personagem **{escolhido['nome']}**."
         )
 
 

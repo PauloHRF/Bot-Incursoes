@@ -48,6 +48,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 
 | Comando | Função |
 | --- | --- |
+| `/help [comando]` | Lista todos os comandos, com descrição; 🔒 marca os de admin |
 | `/ficha registrar` | Cria um personagem: nome, nível, os 6 atributos, CA/ataque/dano/HP e as perícias |
 | `/ficha listar [membro]` | Lista todos os personagens de um jogador |
 | `/ficha ver [personagem] [membro]` | Mostra a ficha com todos os modificadores calculados |
@@ -108,6 +109,16 @@ reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinh
 **Para testar à vontade**, rode `/config intervalo 0` uma vez: sem isso, quem entra numa run
 fica bloqueado pelos 7 dias de intervalo assim que ela começa. Para recomeçar, encerre a run
 atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/incursao entrar`.
+
+## Avisos no canal
+
+Mexer numa ficha aparece para o grupo: registrar um personagem posta a ficha no canal, e
+mudar nível, atributo, perícias, números de combate ou expertise posta uma linha dizendo o
+que mudou. Apagar um personagem também avisa. Só a consulta é privada — `/ficha ver` e
+`/ficha listar` continuam visíveis apenas para quem pediu.
+
+`/help` monta a lista a partir da própria árvore de comandos do bot, então nunca fica
+desatualizada. `/help ficha` filtra por grupo ou por comando.
 
 ## Personagens
 

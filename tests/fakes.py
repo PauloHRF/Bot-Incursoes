@@ -109,6 +109,7 @@ class FakeInteraction:
     def __init__(self, canal: FakeCanal, user_id: int, mensagem: FakeMensagem | None = None):
         self.canal = canal
         self.user = FakeUsuario(user_id)
+        self.channel = canal
         self.channel_id = canal.id
         self.guild_id = GUILD
         self.message = mensagem
