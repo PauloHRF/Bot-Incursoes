@@ -368,6 +368,8 @@ class Inimigo:
     dano: str
     hp_max: int
     hp_atual: int
+    # Perde a vez na proxima rodada: Stunning Strike e afins.
+    atordoado: bool = False
 
     @property
     def caido(self) -> bool:
@@ -443,6 +445,7 @@ def atacar_inimigo(
     dano_bonus: Optional[str] = None,
     garantido: bool = False,
     critico_forcado: bool = False,
+    bonus_extra: int = 0,
 ) -> GolpeAtaque:
     """O personagem ataca um inimigo. O dano já sai descontado do HP dele."""
     extra = combatente.dano_extra
@@ -452,7 +455,7 @@ def atacar_inimigo(
     vantagem = combatente.vantagem or inimigo.indice in combatente.vantagem_contra
     golpe = atacar(
         combatente.nome,
-        combatente.bonus_ataque,
+        combatente.bonus_ataque + bonus_extra,
         combatente.dano_arma,
         inimigo.nome,
         inimigo.ca,
@@ -507,6 +510,8 @@ def rodada_dos_inimigos(
     """
     golpes = []
     for inimigo in estado.inimigos_vivos:
+        if inimigo.atordoado:
+            continue  # perdeu a vez
         alvo = sortear_alvo(estado, rng)
         if alvo is None:
             break
@@ -534,6 +539,25 @@ def absorver(combatente: Combatente, dano: int) -> tuple[int, int]:
     no_hp = dano - no_thp
     combatente.hp_atual = max(0, combatente.hp_atual - no_hp)
     return no_thp, no_hp
+
+
+def vale_esquivar(combatente: Combatente, dano: int, limiar: float) -> bool:
+    """Se um golpe merece gastar a esquiva do combate.
+
+    Gasta quando o golpe derrubaria, ou quando leva uma fatia grande do que
+    resta — não faz sentido queimar o recurso num arranhão.
+    """
+    if dano <= 0:
+        return False
+    restante = combatente.hp_atual + combatente.thp
+    return dano >= restante or dano >= max(1, int(restante * limiar))
+
+
+def proxima_sequencia(pilha: int, acertou: bool, por_acerto: int, teto: int) -> int:
+    """Martial Arts: acerto empilha até o teto, erro zera."""
+    if not acertou:
+        return 0
+    return min(teto, pilha + por_acerto)
 
 
 def curar(combatente: Combatente, fracao: float) -> int:

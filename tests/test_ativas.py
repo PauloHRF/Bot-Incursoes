@@ -91,7 +91,11 @@ def caso_catalogo_das_ativas():
 
     assert "second_wind" in prontas and "cura_pelas_maos" in prontas
     assert "rage" in prontas and "marca_do_cacador" in prontas
-    assert "uncanny_dodge" in futuras, "reacao a um golpe sofrido ainda nao existe"
+    assert "uncanny_dodge" in prontas and "stunning_strike" in prontas
+    # so sobram as que repetem um teste de pericia: dependem do fluxo da sala
+    assert set(futuras) == {
+        "sobrevivente_repeticao", "lider_sagrado_repeticao"
+    }, futuras
     # toda acao tem um tipo que o cog sabe resolver
     for classe in cl.CLASSES.values():
         for _t, h in classe.habilidades_ate(10):

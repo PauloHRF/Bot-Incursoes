@@ -1070,6 +1070,8 @@ class Incursoes(commands.Cog):
                 quem.cura_por_turno, valor.get("cura_por_turno", 0.0)
             )
             quem.vantagem = quem.vantagem or bool(valor.get("vantagem"))
+            # A sequencia do Martial Arts nao entra aqui: ela e contada golpe a
+            # golpe dentro do turno, em atacar().
             return
 
         # Efeito posto num inimigo: quem ganha e o dono da marca.
@@ -1107,6 +1109,11 @@ class Incursoes(commands.Cog):
         ligados = await db.efeitos_ativos(
             self.bot.db, run["id"], passo, linha["rodada"] - 1
         )
+        for ligado in ligados:
+            if ligado["alvo_tipo"] == "inimigo" and ligado["efeito"] == "atordoado":
+                alvo = next((i for i in inimigos if i.indice == ligado["alvo_id"]), None)
+                if alvo:
+                    alvo.atordoado = True
         return EstadoCombate(
             inimigos=inimigos,
             rodada=linha["rodada"],
@@ -1231,11 +1238,22 @@ class Incursoes(commands.Cog):
         indice = await db.proximo_indice_de_ataque(
             self.bot.db, run_id, passo, estado.rodada, interaction.user.id
         )
+        personagem = await self._personagem_na_run(run, interaction.user.id)
+        sequencia = ((personagem or {}).get("efeitos") or {}).get("sequencia") or {}
+        pilha = await self._pilha_de_sequencia(run, interaction.user.id, passo)
         for _ in range(max(1, atacante.ataques)):
             atual = estado.alvo_preferido(alvo.indice) or estado.alvo_preferido()
             if atual is None:
                 break
-            golpe = motor.atacar_inimigo(atacante, atual, None)
+            # A sequencia ja conta dentro do turno: o segundo golpe usa o do primeiro.
+            golpe = motor.atacar_inimigo(atacante, atual, None, bonus_extra=pilha)
+            if sequencia:
+                pilha = motor.proxima_sequencia(
+                    pilha,
+                    golpe.acertou,
+                    sequencia.get("por_acerto", 1),
+                    sequencia.get("teto", 2),
+                )
             golpes.append((golpe, atual))
             await db.registrar_ataque(
                 self.bot.db,
@@ -1258,9 +1276,10 @@ class Incursoes(commands.Cog):
             passo,
             {inimigo.indice: inimigo.hp_atual for _golpe, inimigo in golpes},
         )
-        personagem = await self._personagem_na_run(run, interaction.user.id)
         if personagem:
             await self._totem_do_golpe(run, personagem, atacante, golpes)
+        if sequencia:
+            await self._guardar_sequencia(run, interaction.user.id, passo, pilha)
 
         await interaction.response.send_message(
             E.resumo_do_golpe([(g, i.nome) for g, i in golpes]), ephemeral=True
@@ -1540,10 +1559,13 @@ class Incursoes(commands.Cog):
                     habilidade.id, acao["efeitos"], expira,
                 )
 
-        texto = (
-            f"\u2728 **{habilidade.nome}**: o grupo ganha **{quanto}** de vida "
-            "temporaria e um bonus no proximo ataque."
-        )
+        if quanto:
+            texto = (
+                f"\u2728 **{habilidade.nome}**: o grupo ganha **{quanto}** de vida "
+                "temporaria e um bonus no proximo ataque."
+            )
+        else:
+            texto = f"\u2728 **{habilidade.nome}**: o grupo inteiro leva o bonus."
         await interaction.response.send_message(texto, ephemeral=True)
         await self._anunciar_habilidade(run, texto)
         atualizado = await self._estado_combate(run, sala)
@@ -1598,6 +1620,28 @@ class Incursoes(commands.Cog):
             )
             agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
             await self._atualizar_painel(run, sala, atualizado, len(agiram))
+
+    async def _pilha_de_sequencia(
+        self, run: dict[str, Any], user_id: int, passo: int
+    ) -> int:
+        """Martial Arts: quantos acertos seguidos o personagem ja emendou."""
+        for ligado in await db.efeitos_ativos(self.bot.db, run["id"], passo, 0):
+            if (
+                ligado["alvo_tipo"] == "personagem"
+                and ligado["alvo_id"] == user_id
+                and ligado["efeito"] == "martial_arts"
+            ):
+                return ligado["valor"].get("pilha", 0)
+        return 0
+
+    async def _guardar_sequencia(
+        self, run: dict[str, Any], user_id: int, passo: int, pilha: int
+    ) -> None:
+        # Prazo alto de proposito: a sequencia so morre junto com o combate.
+        await db.aplicar_efeito(
+            self.bot.db, run["id"], passo, "personagem", user_id,
+            "martial_arts", {"pilha": pilha}, 9999,
+        )
 
     async def _totem_do_golpe(
         self, run: dict[str, Any], personagem: dict[str, Any], combatente, golpes
@@ -1668,6 +1712,26 @@ class Incursoes(commands.Cog):
         if personagem:
             await self._totem_do_golpe(run, personagem, atacante, golpes)
 
+        if acao.get("atordoa"):
+            certeiro = next(((g, i) for g, i in golpes if g.acertou), None)
+            if certeiro:
+                await db.aplicar_efeito(
+                    self.bot.db, run["id"], passo, "inimigo", certeiro[1].indice,
+                    "atordoado", {}, estado.rodada + acao["atordoa"],
+                )
+                await self._anunciar_habilidade(
+                    run,
+                    f"\u2728 **{habilidade.nome}**: {certeiro[1].nome} fica "
+                    "atordoado e perde a proxima vez.",
+                )
+            else:
+                # So gasta o recurso quando acerta.
+                await db.devolver_uso(
+                    self.bot.db, run["id"], interaction.user.id,
+                    habilidade.chave_de_uso,
+                    self._chave_de_recarga(habilidade, run, passo),
+                )
+
         resumo = E.resumo_do_golpe([(g, i.nome) for g, i in golpes])
         if ganho:
             resumo += f"\nVida temporaria: **{atacante.thp}**."
@@ -1685,7 +1749,61 @@ class Incursoes(commands.Cog):
         else:
             await self._atualizar_painel(run, sala, estado, len(agiram))
 
-    async def _reacoes_ao_cair(self, run: dict[str, Any], estado, revides) -> None:
+    async def _reacao_de(self, personagem: dict[str, Any], quando: str):
+        """A reacao daquele gatilho, se o personagem tiver alguma."""
+        for _tier, habilidade in personagem.get("habilidades") or []:
+            acao = habilidade.acao or {}
+            if acao.get("tipo") == "reacao" and acao.get("quando") == quando:
+                return habilidade, acao
+        return None, None
+
+    async def _reacoes_do_revide(self, run: dict[str, Any], estado, revides) -> None:
+        """As reacoes que o golpe do inimigo dispara, na ordem em que importam.
+
+        A esquiva vem antes da queda: cortar o golpe pela metade pode evitar
+        que a segunda reacao precise acontecer.
+        """
+        await self._esquivas(run, revides)
+        await self._reacoes_ao_cair(run, revides)
+
+    async def _esquivas(self, run: dict[str, Any], revides) -> None:
+        """Uncanny Dodge: corta o golpe pesado pela metade, devolvendo o HP."""
+        passo = self._passo(run)
+        for golpe, atingido in revides:
+            if not golpe.acertou or golpe.dano <= 0:
+                continue
+            personagem = await self._personagem_na_run(run, atingido.user_id)
+            if not personagem:
+                continue
+            habilidade, acao = await self._reacao_de(personagem, "sofreu_golpe")
+            if habilidade is None:
+                continue
+            # O golpe ja entrou no HP: a conta e feita sobre como estava antes.
+            antes = motor.Combatente(
+                atingido.user_id, atingido.nome, atingido.ca, 0, "1d1",
+                atingido.hp_max, min(atingido.hp_max, atingido.hp_atual + golpe.dano),
+                thp=atingido.thp,
+            )
+            if not motor.vale_esquivar(antes, golpe.dano, acao.get("limiar", 1 / 3)):
+                continue
+            if not await db.gastar_uso(
+                self.bot.db, run["id"], atingido.user_id, habilidade.chave_de_uso,
+                self._chave_de_recarga(habilidade, run, passo), habilidade.vezes,
+            ):
+                continue
+            devolvido = golpe.dano - int(golpe.dano * acao.get("reduz", 0.5))
+            golpe.dano -= devolvido
+            atingido.hp_atual = min(atingido.hp_max, atingido.hp_atual + devolvido)
+            await db.definir_hp(
+                self.bot.db, run["id"], atingido.user_id, atingido.hp_atual
+            )
+            await self._anunciar_habilidade(
+                run,
+                f"\u2728 **{habilidade.nome}**: {atingido.nome} desvia e segura "
+                f"{devolvido} de dano.",
+            )
+
+    async def _reacoes_ao_cair(self, run: dict[str, Any], revides) -> None:
         """Relentless e afins: quem caiu nesta rodada pode nao cair de verdade."""
         passo = self._passo(run)
         for _golpe, atingido in revides:
@@ -1694,33 +1812,25 @@ class Incursoes(commands.Cog):
             personagem = await self._personagem_na_run(run, atingido.user_id)
             if not personagem:
                 continue
-            for _tier, habilidade in personagem.get("habilidades") or []:
-                acao = habilidade.acao or {}
-                if acao.get("tipo") != "reacao" or acao.get("quando") != "caiu":
-                    continue
-                if not await db.gastar_uso(
-                    self.bot.db,
-                    run["id"],
-                    atingido.user_id,
-                    habilidade.chave_de_uso,
-                    self._chave_de_recarga(habilidade, run, passo),
-                    habilidade.vezes,
-                ):
-                    continue
-                atingido.hp_atual = acao.get("hp", 1)
-                motor.ganhar_thp(atingido, motor.rolar_dano(acao["thp"]))
-                await db.definir_hp(
-                    self.bot.db, run["id"], atingido.user_id, atingido.hp_atual
-                )
-                await db.definir_thp(
-                    self.bot.db, run["id"], atingido.user_id, atingido.thp
-                )
-                await self._anunciar_habilidade(
-                    run,
-                    f"✨ **{habilidade.nome}**: {atingido.nome} se recusa a cair "
-                    f"— fica com {atingido.hp_atual} HP e {atingido.thp} de THP.",
-                )
-                break
+            habilidade, acao = await self._reacao_de(personagem, "caiu")
+            if habilidade is None:
+                continue
+            if not await db.gastar_uso(
+                self.bot.db, run["id"], atingido.user_id, habilidade.chave_de_uso,
+                self._chave_de_recarga(habilidade, run, passo), habilidade.vezes,
+            ):
+                continue
+            atingido.hp_atual = acao.get("hp", 1)
+            motor.ganhar_thp(atingido, motor.rolar_dano(acao["thp"]))
+            await db.definir_hp(
+                self.bot.db, run["id"], atingido.user_id, atingido.hp_atual
+            )
+            await db.definir_thp(self.bot.db, run["id"], atingido.user_id, atingido.thp)
+            await self._anunciar_habilidade(
+                run,
+                f"\u2728 **{habilidade.nome}**: {atingido.nome} se recusa a cair "
+                f"— fica com {atingido.hp_atual} HP e {atingido.thp} de THP.",
+            )
 
     async def _virar_efeitos(self, run: dict[str, Any], estado) -> None:
         """No fim da rodada: cura de quem tem cura por turno, e prazos vencidos."""
@@ -1785,7 +1895,7 @@ class Incursoes(commands.Cog):
                 await db.definir_thp(
                     self.bot.db, run["id"], atingido.user_id, atingido.thp
                 )
-            await self._reacoes_ao_cair(run, estado, revides)
+            await self._reacoes_do_revide(run, estado, revides)
 
         log = (estado.rodada, golpes, revides)
 

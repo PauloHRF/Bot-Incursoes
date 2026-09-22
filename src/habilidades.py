@@ -87,8 +87,10 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
         2: [Habilidade("expertise_1", "Expertise", ESCOLHA,
                        "Escolhe 2 pericias com proficiencia; o bonus delas dobra.")],
         3: [Habilidade("uncanny_dodge", "Uncanny Dodge", ATIVA,
-                       "1x por combate: reduz pela metade o dano de um golpe sofrido.",
-                       usos=_usos("combate"))],
+                       "1x por combate: corta pela metade o primeiro golpe pesado que sofrer.",
+                       usos=_usos("combate"),
+                       acao={"tipo": "reacao", "quando": "sofreu_golpe",
+                             "reduz": 0.5, "limiar": 1 / 3})],
         4: [Habilidade("expertise_2", "Expertise", ESCOLHA,
                        "Escolhe mais 2 pericias com proficiencia; o bonus delas dobra.")],
         5: [Habilidade("reliable_talent_mais", "Reliable Talent +", PASSIVA,
@@ -145,11 +147,14 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        usos=_usos("descanso"),
                        acao={"tipo": "golpes", "quantidade": 1})],
         2: [Habilidade("martial_arts", "Martial Arts", PASSIVA,
-                       "Ao acertar, o proximo ataque ganha +1 acerto, ate +2; errar zera.")],
+                       "Ao acertar, o proximo ataque ganha +1 acerto, ate +2; errar zera.",
+                       {"sequencia": {"por_acerto": 1, "teto": 2}})],
         3: [MULTIATAQUE,
             Habilidade("stunning_strike", "Stunning Strike", ATIVA,
-                       "1x por descanso: ao acertar, atordoa o inimigo por 1 rodada.",
-                       usos=_usos("descanso"))],
+                       "1x por descanso: um ataque que, se acertar, atordoa por 1 rodada. "
+                       "So gasta o uso quando acerta.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "golpes", "quantidade": 1, "atordoa": 1})],
         4: [Habilidade("mente_e_corpo", "Mente e Corpo", PASSIVA,
                        "+2 em Acrobacia, Atletismo, Percepcao, Furtividade e Sobrevivencia.",
                        {"bonus_pericia": {"Acrobacia": 2, "Atletismo": 2, "Percepção": 2,
@@ -242,7 +247,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        {"totem": {"gatilho": 18, "thp": 2, "aura": 2, "aura_dano": 3}}),
             Habilidade("guerreiros_ancioes", "Guerreiros ancioes", ATIVA,
                        "1x por incursao: o proximo ataque dos aliados crita com 18+.",
-                       usos=_usos("incursao"))],
+                       usos=_usos("incursao"),
+                       acao={"tipo": "grupo", "turnos": 1,
+                             "efeitos": {"critico_em": 18}})],
     },
 }
 
@@ -250,6 +257,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
 # O que o motor entende, e o valor neutro de cada coisa.
 NEUTRO: dict = {
     "totem": {},
+    "sequencia": {},
     "bonus_teste": 0,
     "bonus_pericia": {},
     "dano_extra": 0,
@@ -271,7 +279,9 @@ def juntar(lista: list[Habilidade]) -> dict:
     }
     for habilidade in lista:
         for chave, valor in (habilidade.efeito or {}).items():
-            if chave == "totem":
+            if chave == "sequencia":
+                juntos["sequencia"] = dict(valor)
+            elif chave == "totem":
                 # Vale a aura mais forte: o tier 5 substitui a do tier 2.
                 atual = juntos["totem"]
                 if valor.get("aura", 0) >= atual.get("aura", 0):

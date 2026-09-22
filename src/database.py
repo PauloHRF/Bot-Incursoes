@@ -1029,6 +1029,18 @@ async def gastar_uso(
     return cur.rowcount > 0
 
 
+async def devolver_uso(
+    conn: aiosqlite.Connection, run_id: int, user_id: int, habilidade: str, chave: str
+) -> None:
+    """Devolve um uso: a habilidade foi acionada mas não valeu (o golpe errou)."""
+    await conn.execute(
+        "UPDATE run_usos SET usos = MAX(0, usos - 1)"
+        " WHERE run_id = ? AND user_id = ? AND habilidade = ? AND chave = ?",
+        (run_id, user_id, habilidade, chave),
+    )
+    await conn.commit()
+
+
 async def contar_descanso(conn: aiosqlite.Connection, run_id: int) -> int:
     """Marca mais um descanso na run e devolve o novo total."""
     await conn.execute(

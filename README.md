@@ -190,14 +190,27 @@ inimigos, um aliado) recebe um segundo menu antes de gastar o uso. São treze:
 | golpe extra | *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*, *Rajada do Caçador*, *Golpe Divino* |
 | efeito com prazo | *Rage*, *Reckless Attack*, *Marca do Caçador*, *Caçador Supremo*, *Avatar da Luz* |
 | vida temporária | *Tradição xamânica* (dois caminhos), *Dança totêmica*, *Brutal Strike* |
-| reação | *Relentless* |
+| reação | *Relentless*, *Uncanny Dodge* |
+| condição no alvo | *Stunning Strike* |
 
 **Vida temporária (THP)** absorve o dano antes do HP e não empilha — vale sempre a maior,
 como em 5e. Some quando um combate novo começa, e aparece no painel como `30/40 +7 THP`.
 A *Convocação totêmica* do Xamã se apoia nela: com 18+ no d20 ele ganha 2 THP, e **enquanto
 ele tiver THP o grupo inteiro leva +1 em acerto e dano** (+2 e +3 no tier 5). *Relentless*
-é a primeira **reação**: quando o Bárbaro cairia a 0 HP, ele fica com 1 e ganha 1d12+7 de
-THP, uma vez por combate — não aparece no menu, dispara sozinha no gatilho.
+é uma **reação**: quando o Bárbaro cairia a 0 HP, ele fica com 1 e ganha 1d12+7 de THP,
+uma vez por combate.
+
+**Reações não aparecem no menu** — disparam sozinhas no gatilho, porque acontecem no turno do
+inimigo, quando ninguém está clicando. O *Uncanny Dodge* do Ladino corta um golpe pela metade,
+mas só entra quando o golpe **derrubaria** ou leva **um terço ou mais** do que resta (HP +
+THP): não faz sentido queimar o uso do combate inteiro num arranhão. O limiar é um número no
+catálogo, fácil de mexer se o grupo achar cedo ou tarde demais.
+
+*Stunning Strike* é a primeira **condição**: o Monge escolhe a habilidade na hora de bater e,
+se acertar, o inimigo perde a vez na rodada seguinte. Se errar, **o uso volta** — o documento
+pede exatamente isso. E *Martial Arts* soma +1 de acerto a cada golpe certeiro, até +2, já
+valendo dentro do próprio turno: com multiataque, o segundo golpe usa o bônus que o primeiro
+acabou de render. Errar zera a sequência.
 
 **Efeito com prazo** dura N turnos e conta sozinho: o bot guarda até que rodada ele vale e o
 apaga quando a rodada vira. Dá para reduzir dano recebido (Rage), rolar com **vantagem** —
@@ -213,11 +226,11 @@ mesma rodada. Cura não levanta quem já caiu — isso é assunto do descanso.
 combate, *por descanso* zera quando o grupo passa por uma sala de Descanso, e *por incursão*
 vale uma vez na run inteira. O contador vive no banco, então sobrevive a reinício do bot.
 
-**Ainda não valem**: *Uncanny Dodge* (reação a um golpe já sofrido), *Stunning Strike*
-(condição no alvo), *Martial Arts* (acumula bônus dentro do turno) e as escolhas de nível
-(Fighting Style, Expertise, Primal Knowledge, a do Xamã no tier 3). Todas aparecem na ficha
-marcadas *(em breve)*, e `/ficha upar` anuncia a habilidade nova do tier mesmo quando ela
-ainda não faz efeito.
+**Ainda não valem**: as duas que repetem um teste de perícia falhado (*Sobrevivente* do
+Patrulheiro e *Líder Sagrado* do Paladino), porque dependem do fluxo da sala e não do
+combate, e as escolhas de nível (Fighting Style, Expertise, Primal Knowledge, a do Xamã no
+tier 3). Aparecem na ficha marcadas *(em breve)*, e `/ficha upar` anuncia a habilidade nova
+do tier mesmo quando ela ainda não faz efeito.
 
 Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
 Cada um pode ter um **retrato**: `/ficha imagem <link>` guarda a URL, que aparece como
@@ -385,6 +398,7 @@ tests/
   test_ativas.py   habilidades ativas: usos, cura e golpes extras
   test_duracao.py  efeitos com prazo: Rage, Marca do Caçador e a virada da rodada
   test_thp.py      vida temporária: absorção, aura totêmica e Relentless
+  test_reacoes.py  esquiva, atordoamento e a sequência do Monge
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   test_critico_expertise.py  críticos, erro crítico e bônus por perícia

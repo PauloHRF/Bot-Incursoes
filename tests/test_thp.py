@@ -172,23 +172,34 @@ async def caso_relentless_segura_a_queda():
     for user_id in JOGADORES[:2]:
         await db.definir_hp(conn, run["id"], user_id, 1)
 
+    # o monstro erra com 1 natural, entao damos algumas rodadas
     msg = await canal.fetch_message(run["mensagem_id"])
-    for user_id in JOGADORES[:2]:
-        await cog.atacar(FakeInteraction(canal, user_id, msg), run["id"], "OBJ")
+    salvo = None
+    for _ in range(6):
+        atual = await db.buscar_run(conn, run["id"])
+        if atual["status"] != "objetivo":
+            break
+        estado = await cog._estado_combate(atual, incursao.objetivo)
+        for c in list(estado.vivos):
+            await cog.atacar(FakeInteraction(canal, c.user_id, msg), run["id"], "OBJ")
+        async with conn.execute(
+            "SELECT user_id, thp FROM run_participantes WHERE run_id = ? AND thp > 0",
+            (run["id"],),
+        ) as cur:
+            linha = await cur.fetchone()
+        if linha:
+            salvo = linha["user_id"]
+            break
+        for user_id in JOGADORES[:2]:
+            await db.definir_hp(conn, run["id"], user_id, 1)
 
+    assert salvo is not None, "Relentless tinha de ter segurado alguem"
     hps = await db.hp_dos_participantes(conn, run["id"])
-    salvos = [u for u, hp in hps.items() if hp and hp > 0]
-    assert salvos, f"Relentless tinha de ter segurado alguem: {hps}"
-    # quem foi salvo ficou com 1 HP e vida temporaria
-    async with conn.execute(
-        "SELECT user_id, thp FROM run_participantes WHERE run_id = ?", (run["id"],)
-    ) as cur:
-        thps = {r["user_id"]: r["thp"] for r in await cur.fetchall()}
-    assert any(thps[u] > 0 for u in salvos), thps
+    assert hps[salvo] >= 1, hps
     assert any("Relentless" in (m.content or "") for m in canal.mensagens)
 
     # e o uso acabou: e 1x por combate
-    gastos = await db.usos_da_run(conn, run["id"], salvos[0])
+    gastos = await db.usos_da_run(conn, run["id"], salvo)
     assert gastos.get(("relentless", f"combate:{passo}")) == 1, gastos
     print("  Relentless segura a queda uma vez por combate: ok")
 
