@@ -74,11 +74,13 @@ def testar(ficha: dict[str, Any], sala: Sala, rng: Optional[random.Random] = Non
     """Rola o teste da sala usando a melhor perícia da ficha entre as listadas."""
     if not sala.tem_teste or sala.cd is None:
         raise ValueError(f"a sala {sala.id} ({sala.tipo}) não é resolvida por teste de perícia")
+    efeitos = ficha.get("efeitos") or {}
     pericia, modificador = melhor_pericia(
         sala.pericias,
         ficha["numeros"],
         ficha["pericias"],
         ficha.get("bonus_pericias"),
+        efeitos,
     )
     return ResultadoTeste(
         user_id=ficha["user_id"],
@@ -221,6 +223,12 @@ class Combatente:
     dano_arma: str
     hp_max: int
     hp_atual: int
+    # O que as passivas da classe somam. Os defaults sao o personagem sem
+    # nenhuma habilidade automatica.
+    ataques: int = 1
+    critico_em: int = 20
+    dano_extra: int = 0
+    dano_ferido: int = 0
 
     @property
     def caido(self) -> bool:
@@ -235,6 +243,8 @@ class GolpeAtaque:
     bonus: int
     ca_alvo: int
     dano: int = 0
+    # Improved Critical desce este numero: o critico deixa de ser so o 20.
+    critico_em: int = 20
 
     @property
     def total(self) -> int:
@@ -245,13 +255,15 @@ class GolpeAtaque:
         # 20 natural sempre acerta; 1 natural sempre erra, por maior que seja o bonus.
         if self.d20 == 20:
             return True
+        if self.critico:  # o critico de 19 tambem acerta por si so
+            return True
         if self.d20 == 1:
             return False
         return self.total >= self.ca_alvo
 
     @property
     def critico(self) -> bool:
-        return self.d20 == 20
+        return self.d20 >= self.critico_em
 
     @property
     def falha_critica(self) -> bool:
@@ -265,11 +277,19 @@ def atacar(
     alvo_nome: str,
     ca_alvo: int,
     rng: Optional[random.Random] = None,
+    critico_em: int = 20,
+    dano_extra: int = 0,
 ) -> GolpeAtaque:
-    """Uma rolagem de ataque: d20 + bônus contra a CA. Acertou, rola o dano."""
-    golpe = GolpeAtaque(atacante_nome, alvo_nome, rolar_d20(rng), bonus, ca_alvo)
+    """Uma rolagem de ataque: d20 + bônus contra a CA. Acertou, rola o dano.
+
+    `dano_extra` é o que as passivas somam por golpe; entra depois do crítico,
+    porque dobra os dados, não os bônus fixos.
+    """
+    golpe = GolpeAtaque(
+        atacante_nome, alvo_nome, rolar_d20(rng), bonus, ca_alvo, critico_em=critico_em
+    )
     if golpe.acertou:
-        golpe.dano = rolar_dano(dano, rng, critico=golpe.critico)
+        golpe.dano = rolar_dano(dano, rng, critico=golpe.critico) + dano_extra
     return golpe
 
 
@@ -367,10 +387,18 @@ class EstadoCombate:
         return vivos[0] if vivos else None
 
 
+def esta_ferido(inimigo: Inimigo) -> bool:
+    """Metade ou menos do HP — o gatilho do Predador."""
+    return inimigo.hp_atual * 2 <= inimigo.hp_max
+
+
 def atacar_inimigo(
     combatente: Combatente, inimigo: Inimigo, rng: Optional[random.Random] = None
 ) -> GolpeAtaque:
     """O personagem ataca um inimigo. O dano já sai descontado do HP dele."""
+    extra = combatente.dano_extra
+    if combatente.dano_ferido and esta_ferido(inimigo):
+        extra += combatente.dano_ferido
     golpe = atacar(
         combatente.nome,
         combatente.bonus_ataque,
@@ -378,6 +406,8 @@ def atacar_inimigo(
         inimigo.nome,
         inimigo.ca,
         rng,
+        critico_em=combatente.critico_em,
+        dano_extra=extra,
     )
     if golpe.acertou:
         inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)

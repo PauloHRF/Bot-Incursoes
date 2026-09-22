@@ -917,6 +917,9 @@ class Incursoes(commands.Cog):
         """Monta os combatentes juntando a ficha de cada um com o HP atual da run."""
         combatentes = []
         for p in await db.personagens_da_run(self.bot.db, run["id"]):
+            # As passivas da classe entram como numero: multiataque, critico
+            # mais facil e dano extra saem daqui.
+            efeitos = p.get("efeitos") or {}
             combatentes.append(
                 Combatente(
                     user_id=p["user_id"],
@@ -926,6 +929,10 @@ class Incursoes(commands.Cog):
                     dano_arma=p["dano_arma"],
                     hp_max=p["hp_max"],
                     hp_atual=p["hp_max"] if p["hp_atual"] is None else p["hp_atual"],
+                    ataques=efeitos.get("ataques", 1),
+                    critico_em=efeitos.get("critico_em", 20),
+                    dano_extra=efeitos.get("dano_extra", 0),
+                    dano_ferido=efeitos.get("dano_ferido", 0),
                 )
             )
         return combatentes
@@ -1060,58 +1067,55 @@ class Incursoes(commands.Cog):
             )
             return
 
-        golpe = motor.atacar_inimigo(atacante, alvo, None)
-        novo = await db.registrar_ataque(
-            self.bot.db,
-            run_id,
-            self._passo(run),
-            estado.rodada,
-            interaction.user.id,
-            golpe.d20,
-            golpe.bonus,
-            golpe.ca_alvo,
-            golpe.dano,
-            alvo.indice,
-        )
-        if not novo:
+        passo = self._passo(run)
+        if await db.ja_atacou(
+            self.bot.db, run_id, passo, estado.rodada, interaction.user.id
+        ):
             await interaction.response.send_message(
                 "Você já atacou nesta rodada.", ephemeral=True
             )
             return
 
+        # Multiataque gasta o turno inteiro num clique so: se o alvo cair no
+        # meio, o golpe seguinte vai para o proximo inimigo de pe.
+        golpes: list[tuple[motor.GolpeAtaque, Any]] = []
+        for indice in range(max(1, atacante.ataques)):
+            atual = estado.alvo_preferido(alvo.indice) or estado.alvo_preferido()
+            if atual is None:
+                break
+            golpe = motor.atacar_inimigo(atacante, atual, None)
+            golpes.append((golpe, atual))
+            await db.registrar_ataque(
+                self.bot.db,
+                run_id,
+                passo,
+                estado.rodada,
+                interaction.user.id,
+                golpe.d20,
+                golpe.bonus,
+                golpe.ca_alvo,
+                golpe.dano,
+                atual.indice,
+                indice,
+            )
+
         await db.definir_hp_inimigos(
-            self.bot.db, run_id, self._passo(run), {alvo.indice: alvo.hp_atual}
+            self.bot.db,
+            run_id,
+            passo,
+            {inimigo.indice: inimigo.hp_atual for _golpe, inimigo in golpes},
         )
 
-        if golpe.critico:
-            texto = (
-                f"{E.EMOJI_CRITICO} 🎲 **20 natural** — **CRITICO!** "
-                f"**{golpe.dano}** de dano em {alvo.nome}, com os dados dobrados."
-            )
-        elif golpe.falha_critica:
-            texto = (
-                f"{E.EMOJI_FALHA_CRITICA} 🎲 **1 natural** — erro critico, "
-                "o golpe passa longe."
-            )
-        elif golpe.acertou:
-            texto = (
-                f"⚔️ 🎲 **{golpe.d20}** {golpe.bonus:+d} = **{golpe.total}** vs CA "
-                f"{golpe.ca_alvo} — acertou {alvo.nome}, **{golpe.dano}** de dano."
-            )
-        else:
-            texto = (
-                f"💨 🎲 **{golpe.d20}** {golpe.bonus:+d} = **{golpe.total}** vs CA "
-                f"{golpe.ca_alvo} — errou {alvo.nome}."
-            )
-        await interaction.response.send_message(texto, ephemeral=True)
-
-        ataques = await db.ataques_da_rodada(
-            self.bot.db, run_id, self._passo(run), estado.rodada
+        await interaction.response.send_message(
+            E.resumo_do_golpe([(g, i.nome) for g, i in golpes]), ephemeral=True
         )
-        if estado.inimigos_derrotados or len(ataques) >= len(estado.vivos):
+
+        ataques = await db.ataques_da_rodada(self.bot.db, run_id, passo, estado.rodada)
+        agiram = {a["user_id"] for a in ataques}
+        if estado.inimigos_derrotados or len(agiram) >= len(estado.vivos):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
-            await self._atualizar_painel(run, sala, estado, len(ataques))
+            await self._atualizar_painel(run, sala, estado, len(agiram))
 
     async def _fechar_rodada(
         self,
@@ -1128,18 +1132,20 @@ class Incursoes(commands.Cog):
             inimigo = estado.inimigo(indice)
             return inimigo.nome if inimigo else "?"
 
-        golpes = [
-            motor.GolpeAtaque(
-                atacante=(estado.combatente(a["user_id"]).nome
-                          if estado.combatente(a["user_id"]) else "?"),
-                alvo=nome_do_alvo(a["alvo"]),
-                d20=a["d20"],
-                bonus=a["bonus"],
-                ca_alvo=a["ca_alvo"],
-                dano=a["dano"],
+        golpes = []
+        for a in ataques:
+            quem = estado.combatente(a["user_id"])
+            golpes.append(
+                motor.GolpeAtaque(
+                    atacante=quem.nome if quem else "?",
+                    alvo=nome_do_alvo(a["alvo"]),
+                    d20=a["d20"],
+                    bonus=a["bonus"],
+                    ca_alvo=a["ca_alvo"],
+                    dano=a["dano"],
+                    critico_em=quem.critico_em if quem else 20,
+                )
             )
-            for a in ataques
-        ]
 
         # A vez dos inimigos: cada um de pe bate uma vez.
         revides: list[tuple[motor.GolpeAtaque, Any]] = []

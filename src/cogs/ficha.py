@@ -85,8 +85,10 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         inline=False,
     )
     if treinadas:
+        efeitos = personagem.get("efeitos")
         linhas = [
-            f"{p} {fmt(mod_pericia(p, numeros, treinadas, bonus))}" for p in sorted(treinadas)
+            f"{p} {fmt(mod_pericia(p, numeros, treinadas, bonus, efeitos))}"
+            for p in sorted(treinadas)
         ]
         e.add_field(
             name=f"Proficiencias ({len(treinadas)}/{numeros.pericias})",
@@ -100,10 +102,13 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
             inline=False,
         )
 
+    _campo_habilidades(e, personagem)
+
     if bonus:
         # Uma pericia sem proficiencia tambem pode ter bonus: mostramos o total.
         avulsas = [
-            f"{p} {fmt(bonus[p])} (total {fmt(mod_pericia(p, numeros, treinadas, bonus))})"
+            f"{p} {fmt(bonus[p])} (total "
+            f"{fmt(mod_pericia(p, numeros, treinadas, bonus, personagem.get('efeitos')))})"
             for p in sorted(bonus)
         ]
         e.add_field(name="Expertises", value=" | ".join(avulsas), inline=False)
@@ -112,6 +117,32 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
     if retrato:
         e.set_thumbnail(url=retrato)
     return _rodape_da_ficha(e, numeros, nivel)
+
+
+ICONE_HABILIDADE = {cl.PASSIVA: "⚙️", cl.ATIVA: "⚡", cl.ESCOLHA: "❓"}
+
+
+def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
+    """As habilidades que o personagem ja tem, por tier.
+
+    O icone diz se o bot ja aplica sozinho, se o jogador vai acionar ou se
+    falta escolher algo. Ativas e escolhas ainda nao mexem em conta nenhuma.
+    """
+    ganhas = personagem.get("habilidades") or []
+    if not ganhas:
+        return
+    linhas = []
+    for tier_da_habilidade, habilidade in ganhas:
+        icone = ICONE_HABILIDADE.get(habilidade.tipo, "")
+        pendente = "" if habilidade.automatica else " *(em breve)*"
+        linhas.append(
+            f"{icone} **{habilidade.nome}** (T{tier_da_habilidade}) — "
+            f"{habilidade.texto}{pendente}"
+        )
+    texto = "\n".join(linhas)
+    if len(texto) > 1024:
+        texto = texto[:1000].rsplit("\n", 1)[0] + "\n…"
+    e.add_field(name=f"Habilidades ({len(ganhas)})", value=texto, inline=False)
 
 
 def _rodape_da_ficha(e: discord.Embed, numeros, nivel: int) -> discord.Embed:
@@ -421,6 +452,12 @@ class Ficha(commands.Cog):
             ]
             if mudou:
                 linhas.append("Subiu de tier: " + " | ".join(mudou) + ".")
+            novas = classe.habilidades_do_tier(tier(depois))
+            if novas:
+                linhas.append(
+                    "Habilidade(s) novas: "
+                    + " | ".join(f"**{h.nome}** — {h.texto}" for h in novas)
+                )
             sobrando = novos.pericias - len(atualizado["pericias"])
             if sobrando > 0:
                 linhas.append(

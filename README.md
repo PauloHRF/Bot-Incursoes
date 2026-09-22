@@ -103,6 +103,10 @@ ataque contra a CA do alvo; acertou, rola o dano da arma). Quando todos atacam, 
 inimigo de pé** revida contra um alvo sorteado entre os personagens em pé. Quem chega a
 0 HP fica fora do resto daquele combate.
 
+Quem tem **Multiattack** (tier 3 de Bárbaro, Guerreiro, Monge e Patrulheiro) bate duas
+vezes por clique: o turno inteiro sai de uma vez, e se o alvo cair no meio o segundo golpe
+vai para o próximo inimigo de pé. O painel mostra os dois na mesma linha de log.
+
 Uma sala pode ter **até 6 criaturas**. Com mais de uma de pé, o botão **Atacar** vira um
 menu de alvos com o HP de cada uma; sobrando só uma, o botão volta. Cada criatura tem HP
 próprio, e a sala só é superada quando a última cai — derrubar uma não encerra nada. Bater
@@ -154,8 +158,31 @@ relação à tabela — mudar um número em `classes.py` muda todo mundo daquela
 **Classes prontas** (as do documento de fichas): Bárbaro, Guerreiro, Ladino, Monge,
 Paladino, Patrulheiro e Xamã. **Previstas, ainda sem tabela**: Artífice, Bardo, Bruxo,
 Clérigo, Druida, Feiticeiro e Mago — aparecem na lista de classes, mas o bot recusa o
-cadastro dizendo o que já dá para jogar. As habilidades de cada tier (passivas e ativas,
-com uso por combate, descanso ou incursão) ainda não existem: entram numa fatia própria.
+cadastro dizendo o que já dá para jogar.
+
+### Habilidades
+
+Cada tier traz uma ou duas habilidades (`src/habilidades.py`), listadas em `/ficha ver` com
+um ícone que diz o que o bot faz com elas:
+
+| Ícone | Tipo | Estado |
+| --- | --- | --- |
+| ⚙️ | passiva | já vale sozinha, sem ninguém pedir |
+| ⚡ | ativa | aparece na ficha, marcada *(em breve)* |
+| ❓ | escolha | idem — falta o jogador decidir algo |
+
+**As passivas que já valem** são as que se resolvem em número: *Reliable Talent* (+5 e
+depois +10 em todo teste), *Improved Critical* (crítico com 19), *Golpe Consagrado* (+2 de
+dano), *Predador* (+2 contra inimigo com metade ou menos do HP), *Multiattack* (2 golpes por
+rodada) e os +2 em listas de perícia do Monge, Patrulheiro, Paladino e Xamã. Quando duas
+versões da mesma passiva coexistem, vale a mais forte — o Reliable Talent do tier 5
+substitui o do tier 1, não soma.
+
+**Ainda não valem**: todas as ativas (Rage, Second Wind, Flurry of Blows e companhia, que
+precisam do sistema de usos por combate/descanso/incursão), as escolhas de nível (Fighting
+Style, Expertise, Primal Knowledge, a do Xamã no tier 3) e as passivas com estado no meio do
+combate (Martial Arts, Convocação totêmica). `/ficha upar` anuncia a habilidade nova do tier
+mesmo quando ela ainda não faz efeito, para o grupo saber o que ganhou.
 
 Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
 Cada um pode ter um **retrato**: `/ficha imagem <link>` guarda a URL, que aparece como
@@ -293,6 +320,7 @@ src/
   config.py     leitura do .env
   rules.py      tiers, bônus de perícia, tabela de perícias
   classes.py    as classes jogáveis e os números de cada tier
+  habilidades.py  o catálogo de habilidades por classe e tier
   database.py   SQLite (aiosqlite) — schema e acesso
   cogs/ficha.py comandos de ficha
   incursoes.py  schema das incursões: salas, monstros, validação, carregamento
@@ -318,6 +346,7 @@ tests/
   test_votacao.py  maioria, votos divididos, empate e restart
   test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
   test_bando.py    várias criaturas na mesma sala: alvo, HP separado e revide
+  test_habilidades.py  catálogo, passivas aplicadas e multiataque
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   test_critico_expertise.py  críticos, erro crítico e bônus por perícia

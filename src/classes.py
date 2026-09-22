@@ -4,15 +4,16 @@ A ficha deixou de ter atributos digitados: o jogador escolhe uma classe e as
 perícias em que tem proficiência, e todo o resto — HP, CA, acerto, dano e os
 bônus de perícia — sai da tabela da classe no tier atual.
 
-As habilidades (passivas e ativas) de cada tier ainda não estão implementadas;
-entram numa fatia própria, com o sistema de usos por combate, descanso e
-incursão. Aqui ficam só os números.
+As habilidades de cada tier estão em src/habilidades.py e são penduradas aqui
+na carga. As passivas que são número puro já valem; as ativas e as escolhas
+aparecem na ficha mas ainda não mexem em conta nenhuma.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
+from .habilidades import ATIVA, ESCOLHA, HABILIDADES, PASSIVA, Habilidade, juntar
 from .rules import TIER_MAXIMO, chave_comparacao, tier
 
 # As 14 classes do grupo. Só as que têm tabela aqui podem ser escolhidas; as
@@ -54,11 +55,29 @@ class Classe:
     nome: str
     resumo: str
     tiers: dict[int, NumerosDoTier]
+    habilidades: dict[int, list[Habilidade]] = field(default_factory=dict)
 
     def numeros(self, nivel: int) -> NumerosDoTier:
         """Os números da classe no nível pedido, pelo tier correspondente."""
         alvo = min(tier(nivel), max(self.tiers))
         return self.tiers[alvo]
+
+    def habilidades_ate(self, nivel: int) -> list[tuple[int, Habilidade]]:
+        """Tudo que o personagem já tem, do tier 1 até o dele."""
+        teto = min(tier(nivel), max(self.tiers))
+        return [
+            (t, h) for t in range(1, teto + 1) for h in self.habilidades.get(t, [])
+        ]
+
+    def habilidades_do_tier(self, tier_alvo: int) -> list[Habilidade]:
+        return list(self.habilidades.get(tier_alvo, []))
+
+
+__all__ = [
+    "ATIVA", "CLASSES", "CLASSES_PENDENTES", "CLASSES_PREVISTAS", "Classe",
+    "ESCOLHA", "Habilidade", "NumerosDoTier", "PASSIVA", "classe", "efeitos",
+    "habilidades", "numeros", "tier_maximo_com_tabela",
+]
 
 
 def _tabela(linhas: list[tuple]) -> dict[int, NumerosDoTier]:
@@ -156,6 +175,10 @@ CLASSES: dict[str, Classe] = {
     )
 }
 
+# As habilidades vivem em habilidades.py e sao penduradas na classe aqui.
+for _id, _tabela_hab in HABILIDADES.items():
+    object.__setattr__(CLASSES[_id], "habilidades", _tabela_hab)
+
 CLASSES_PENDENTES = tuple(
     nome
     for nome in CLASSES_PREVISTAS
@@ -178,6 +201,17 @@ def classe(identificador: Optional[str]) -> Optional[Classe]:
 def numeros(identificador: Optional[str], nivel: int) -> Optional[NumerosDoTier]:
     alvo = classe(identificador)
     return alvo.numeros(nivel) if alvo else None
+
+
+def habilidades(identificador: Optional[str], nivel: int) -> list[tuple[int, Habilidade]]:
+    """As habilidades que o personagem já tem, com o tier de cada uma."""
+    alvo = classe(identificador)
+    return alvo.habilidades_ate(nivel) if alvo else []
+
+
+def efeitos(identificador: Optional[str], nivel: int) -> dict:
+    """O que as passivas do personagem somam, pronto para o motor usar."""
+    return juntar([h for _tier, h in habilidades(identificador, nivel)])
 
 
 def tier_maximo_com_tabela() -> int:

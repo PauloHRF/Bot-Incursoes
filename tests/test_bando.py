@@ -51,7 +51,9 @@ async def preparar(inimigos_objetivo=3, monstro=INDEFESO):
     conn = await db.conectar()
     _ABERTAS.append(conn)
     await db.criar_schema(conn)
-    await criar_grupo(conn)
+    # Paladino nao tem Multiattack: cada clique e um golpe so, que e o que
+    # estes casos medem. O multiataque tem suite propria.
+    await criar_grupo(conn, classe="paladino")
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
     incursao, _ = montar_conteudo(

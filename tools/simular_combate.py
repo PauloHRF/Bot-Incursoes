@@ -36,10 +36,11 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
     )
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
         for c in list(estado.vivos):
-            alvo = estado.alvo_preferido()
-            if alvo is None:
-                break
-            motor.atacar_inimigo(c, alvo, rng)
+            for _ in range(max(1, c.ataques)):
+                alvo = estado.alvo_preferido()
+                if alvo is None:
+                    break
+                motor.atacar_inimigo(c, alvo, rng)
         if estado.inimigos_derrotados:
             break
         motor.rodada_dos_inimigos(estado, rng)
@@ -49,6 +50,7 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
 
 def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> dict:
     numeros = classes.classe(args.classe).numeros(args.nivel)
+    efeitos = classes.efeitos(args.classe, args.nivel)
     vitorias, rodadas, caidos = 0, [], []
     for _ in range(args.repeticoes):
         grupo = [
@@ -60,6 +62,10 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
                 dano_arma=numeros.dano,
                 hp_max=numeros.hp,
                 hp_atual=numeros.hp,
+                ataques=efeitos["ataques"],
+                critico_em=efeitos["critico_em"],
+                dano_extra=efeitos["dano_extra"],
+                dano_ferido=efeitos["dano_ferido"],
             )
             for i in range(tamanho)
         ]
@@ -123,10 +129,13 @@ def main() -> int:
         print(f"Classe '{args.classe}' nao existe.", file=sys.stderr)
         return 1
     n = do_grupo.numeros(args.nivel)
+    e = classes.efeitos(args.classe, args.nivel)
     print(
         f"Grupo: {do_grupo.nome} nivel {args.nivel} (tier {tier(args.nivel)}) — "
         f"CA {n.ca}, acerto {n.acerto:+d}, dano {n.dano}, {n.hp} HP"
-        f"  ({args.repeticoes} combates por linha)"
+        + (f", {e['ataques']}x por rodada" if e["ataques"] > 1 else "")
+        + (f", critico com {e['critico_em']}+" if e["critico_em"] < 20 else "")
+        + f"  ({args.repeticoes} combates por linha)"
     )
     print()
     print(f"{'grupo':>6}  {'vitória':>8}  {'rodadas':>8}  {'caídos':>7}")

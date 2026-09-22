@@ -423,6 +423,32 @@ def linha_golpe(g) -> str:
     return f"💨 {g.atacante} · {rolagem} → errou"
 
 
+def resumo_do_golpe(golpes: list[tuple]) -> str:
+    """O que o atacante vê depois de clicar: uma linha por golpe do turno."""
+    linhas = []
+    for golpe, alvo_nome in golpes:
+        if golpe.critico:
+            linhas.append(
+                f"{EMOJI_CRITICO} 🎲 **{golpe.d20}** — **CRITICO!** "
+                f"**{golpe.dano}** de dano em {alvo_nome}, com os dados dobrados."
+            )
+        elif golpe.falha_critica:
+            linhas.append(
+                f"{EMOJI_FALHA_CRITICA} 🎲 **1 natural** — erro critico, o golpe passa longe."
+            )
+        elif golpe.acertou:
+            linhas.append(
+                f"⚔️ 🎲 **{golpe.d20}** {fmt(golpe.bonus)} = **{golpe.total}** vs CA "
+                f"{golpe.ca_alvo} — acertou {alvo_nome}, **{golpe.dano}** de dano."
+            )
+        else:
+            linhas.append(
+                f"💨 🎲 **{golpe.d20}** {fmt(golpe.bonus)} = **{golpe.total}** vs CA "
+                f"{golpe.ca_alvo} — errou {alvo_nome}."
+            )
+    return "\n".join(linhas) or "Nenhum inimigo de pé para atacar."
+
+
 def _linha_inimigo(i) -> str:
     """Uma criatura no painel: barra de HP enquanto está de pé."""
     if i.caido:

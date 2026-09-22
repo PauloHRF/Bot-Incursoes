@@ -101,17 +101,22 @@ def mod_pericia(
     numeros,
     treinadas: list[str],
     bonus: dict[str, int] | None = None,
+    efeitos: dict | None = None,
 ) -> int:
-    """Modificador de um teste: o bônus da classe, dobrado pela proficiência.
+    """Modificador de um teste, somando tudo que vale para aquela perícia.
 
-    `numeros` são os da classe no tier atual (bonus_pericia e bonus_proficiencia).
-    `bonus` são as expertises: valores avulsos por perícia (item, talento, etc).
+    `numeros` são os da classe no tier atual (bonus_pericia e bonus_proficiencia),
+    `bonus` são as expertises (valores avulsos por perícia) e `efeitos` é o que as
+    passivas da classe dão: um bônus geral e outro por perícia.
     """
     total = (
         numeros.bonus_proficiencia if pericia in treinadas else numeros.bonus_pericia
     )
     if bonus:
         total += bonus.get(pericia, 0)
+    if efeitos:
+        total += efeitos.get("bonus_teste", 0)
+        total += (efeitos.get("bonus_pericia") or {}).get(pericia, 0)
     return total
 
 
@@ -120,9 +125,10 @@ def melhor_pericia(
     numeros,
     treinadas: list[str],
     bonus: dict[str, int] | None = None,
+    efeitos: dict | None = None,
 ) -> tuple[str, int]:
     """Dentre as perícias listadas pela sala, a melhor para este personagem."""
-    ranked = [(p, mod_pericia(p, numeros, treinadas, bonus)) for p in opcoes]
+    ranked = [(p, mod_pericia(p, numeros, treinadas, bonus, efeitos)) for p in opcoes]
     ranked.sort(key=lambda x: x[1], reverse=True)
     return ranked[0]
 

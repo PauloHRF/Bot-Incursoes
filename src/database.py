@@ -135,12 +135,13 @@ CREATE TABLE IF NOT EXISTS run_ataques (
     passo   INTEGER NOT NULL,
     rodada  INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
+    indice  INTEGER NOT NULL DEFAULT 0,
     d20     INTEGER NOT NULL,
     bonus   INTEGER NOT NULL,
     ca_alvo INTEGER NOT NULL,
     dano    INTEGER NOT NULL,
     alvo    INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (run_id, passo, rodada, user_id)
+    PRIMARY KEY (run_id, passo, rodada, user_id, indice)
 );
 
 CREATE TABLE IF NOT EXISTS placar_organizacoes (
@@ -277,6 +278,19 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
     if "alvo" not in await _colunas(conn, "run_ataques"):
         await conn.execute("ALTER TABLE run_ataques ADD COLUMN alvo INTEGER NOT NULL DEFAULT 0")
 
+    # Com multiataque um personagem grava mais de um golpe por rodada: a chave
+    # primaria passou a incluir o indice do golpe.
+    if "indice" not in await _colunas(conn, "run_ataques"):
+        await conn.execute("ALTER TABLE run_ataques RENAME TO run_ataques_v1")
+        await conn.executescript(SCHEMA)
+        await conn.execute(
+            "INSERT INTO run_ataques"
+            " (run_id, passo, rodada, user_id, indice, d20, bonus, ca_alvo, dano, alvo)"
+            " SELECT run_id, passo, rodada, user_id, 0, d20, bonus, ca_alvo, dano, alvo"
+            " FROM run_ataques_v1"
+        )
+        await conn.execute("DROP TABLE run_ataques_v1")
+
     if faltava_run_salas:
         # Runs em andamento nao guardavam por onde o grupo passou. Reconstroi o
         # historico do que da para saber: salas com rolagem ou com combate.
@@ -319,6 +333,8 @@ def _desserializar(row: aiosqlite.Row) -> dict[str, Any]:
     numeros = classes.numeros(p.get("classe"), p["nivel"])
     if numeros:
         p["numeros"] = numeros
+        p["efeitos"] = classes.efeitos(p["classe"], p["nivel"])
+        p["habilidades"] = classes.habilidades(p["classe"], p["nivel"])
         p["ca"] = numeros.ca
         p["bonus_ataque"] = numeros.acerto
         p["dano_arma"] = numeros.dano
@@ -818,16 +834,29 @@ async def registrar_ataque(
     ca_alvo: int,
     dano: int,
     alvo: int = 0,
+    indice: int = 0,
 ) -> bool:
-    """False se o personagem já atacou nesta rodada."""
+    """False se este golpe já estava gravado (clique repetido)."""
     cur = await conn.execute(
         "INSERT OR IGNORE INTO run_ataques"
-        " (run_id, passo, rodada, user_id, d20, bonus, ca_alvo, dano, alvo)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (run_id, passo, rodada, user_id, d20, bonus, ca_alvo, dano, alvo),
+        " (run_id, passo, rodada, user_id, indice, d20, bonus, ca_alvo, dano, alvo)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (run_id, passo, rodada, user_id, indice, d20, bonus, ca_alvo, dano, alvo),
     )
     await conn.commit()
     return cur.rowcount > 0
+
+
+async def ja_atacou(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
+) -> bool:
+    """Se o personagem já gastou o turno nesta rodada."""
+    async with conn.execute(
+        "SELECT 1 FROM run_ataques"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ? LIMIT 1",
+        (run_id, passo, rodada, user_id),
+    ) as cur:
+        return await cur.fetchone() is not None
 
 
 async def ataques_da_rodada(
@@ -835,7 +864,7 @@ async def ataques_da_rodada(
 ) -> list[dict[str, Any]]:
     async with conn.execute(
         "SELECT * FROM run_ataques WHERE run_id = ? AND passo = ? AND rodada = ?"
-        " ORDER BY rowid",
+        " ORDER BY rowid, indice",
         (run_id, passo, rodada),
     ) as cur:
         return [dict(r) for r in await cur.fetchall()]
