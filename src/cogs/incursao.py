@@ -127,6 +127,7 @@ class ViewCombate(discord.ui.View):
             menu.callback = self._escolher_alvo
             self.menu = menu
             self.add_item(menu)
+            self._botao_habilidade()
             return
         botao = discord.ui.Button(
             label="Atacar",
@@ -136,15 +137,95 @@ class ViewCombate(discord.ui.View):
         )
         botao.callback = self._atacar
         self.add_item(botao)
+        self._botao_habilidade()
+
+    def _botao_habilidade(self) -> None:
+        botao = discord.ui.Button(
+            label="Habilidade",
+            emoji="✨",
+            style=discord.ButtonStyle.secondary,
+            custom_id=f"inc:hab:{self.run_id}:{self.sala_id}",
+        )
+        botao.callback = self._habilidade
+        self.add_item(botao)
 
     async def _atacar(self, interaction: discord.Interaction) -> None:
         await self.cog.atacar(interaction, self.run_id, self.sala_id)
+
+    async def _habilidade(self, interaction: discord.Interaction) -> None:
+        await self.cog.abrir_habilidades(interaction, self.run_id, self.sala_id)
 
     async def _escolher_alvo(self, interaction: discord.Interaction) -> None:
         await self.cog.atacar(
             interaction, self.run_id, self.sala_id, int(self.menu.values[0])
         )
 
+
+class SeletorHabilidade(discord.ui.View):
+    """As ativas que o jogador pode usar agora, so para quem clicou."""
+
+    def __init__(self, cog: "Incursoes", run_id: int, sala_id: str, opcoes: list[tuple]):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.run_id = run_id
+        self.sala_id = sala_id
+        menu = discord.ui.Select(
+            placeholder="Qual habilidade?",
+            options=[
+                discord.SelectOption(label=nome, value=hid, description=descricao[:100])
+                for hid, nome, descricao in opcoes[:25]
+            ],
+        )
+        menu.callback = self._escolher
+        self.menu = menu
+        self.add_item(menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await self.cog.usar_habilidade(
+            interaction, self.run_id, self.sala_id, self.menu.values[0]
+        )
+
+
+class SeletorAlvoHabilidade(discord.ui.View):
+    """Em quem a habilidade cai: um inimigo, varios, ou um aliado."""
+
+    def __init__(
+        self,
+        cog: "Incursoes",
+        run_id: int,
+        sala_id: str,
+        habilidade_id: str,
+        opcoes: list[tuple],
+        maximo: int = 1,
+    ):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.run_id = run_id
+        self.sala_id = sala_id
+        self.habilidade_id = habilidade_id
+        menu = discord.ui.Select(
+            placeholder="Em quem?" if maximo == 1 else f"Em quem? (ate {maximo})",
+            min_values=1,
+            max_values=min(maximo, len(opcoes)),
+            options=[
+                discord.SelectOption(label=nome, value=valor, description=descricao[:100])
+                for valor, nome, descricao in opcoes[:25]
+            ],
+        )
+        menu.callback = self._escolher
+        self.menu = menu
+        self.add_item(menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await self.cog.usar_habilidade(
+            interaction,
+            self.run_id,
+            self.sala_id,
+            self.habilidade_id,
+            [int(v) for v in self.menu.values],
+        )
 
 class SeletorPersonagemEntrada(discord.ui.View):
     """Escolha de qual personagem levar para a run, mostrada só a quem clicou."""
@@ -850,6 +931,8 @@ class Incursoes(commands.Cog):
 
         if sala.tipo == "Descanso":
             await db.atualizar_run(self.bot.db, run["id"], status="em_sala", sala_atual=sala.id)
+            # O contador de descansos e o que zera as habilidades por descanso.
+            await db.contar_descanso(self.bot.db, run["id"])
             combatentes = await self._combatentes(run)
             mudancas = motor.aplicar_descanso(combatentes)
             await db.definir_hp_varios(
@@ -1079,7 +1162,12 @@ class Incursoes(commands.Cog):
         # Multiataque gasta o turno inteiro num clique so: se o alvo cair no
         # meio, o golpe seguinte vai para o proximo inimigo de pe.
         golpes: list[tuple[motor.GolpeAtaque, Any]] = []
-        for indice in range(max(1, atacante.ataques)):
+        # O indice continua de onde parou: uma habilidade pode ter gravado
+        # golpes antes do turno, e dois golpes nao podem dividir a mesma chave.
+        indice = await db.proximo_indice_de_ataque(
+            self.bot.db, run_id, passo, estado.rodada, interaction.user.id
+        )
+        for _ in range(max(1, atacante.ataques)):
             atual = estado.alvo_preferido(alvo.indice) or estado.alvo_preferido()
             if atual is None:
                 break
@@ -1098,6 +1186,7 @@ class Incursoes(commands.Cog):
                 atual.indice,
                 indice,
             )
+            indice += 1
 
         await db.definir_hp_inimigos(
             self.bot.db,
@@ -1116,6 +1205,286 @@ class Incursoes(commands.Cog):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
             await self._atualizar_painel(run, sala, estado, len(agiram))
+
+    # ------------------------------------------------------ habilidades
+
+    @staticmethod
+    def _chave_de_recarga(habilidade, run: dict[str, Any], passo: int) -> str:
+        """Quando esta habilidade zera: por combate, por descanso ou por run."""
+        if habilidade.escopo == "combate":
+            return f"combate:{passo}"
+        if habilidade.escopo == "descanso":
+            return f"descanso:{run['descansos']}"
+        return "incursao"
+
+    async def _habilidades_disponiveis(
+        self, run: dict[str, Any], personagem: dict[str, Any], passo: int
+    ) -> list[tuple]:
+        """As ativas que o bot ja executa e que ainda tem uso. (hab, restantes)."""
+        gastos = await db.usos_da_run(self.bot.db, run["id"], personagem["user_id"])
+        disponiveis = []
+        for _tier, habilidade in personagem.get("habilidades") or []:
+            if not habilidade.acionavel:
+                continue
+            chave = self._chave_de_recarga(habilidade, run, passo)
+            restantes = habilidade.vezes - gastos.get((habilidade.id, chave), 0)
+            if restantes > 0:
+                disponiveis.append((habilidade, restantes))
+        return disponiveis
+
+    async def _personagem_na_run(
+        self, run: dict[str, Any], user_id: int
+    ) -> Optional[dict[str, Any]]:
+        for p in await db.personagens_da_run(self.bot.db, run["id"]):
+            if p["user_id"] == user_id:
+                return p
+        return None
+
+    async def abrir_habilidades(
+        self, interaction: discord.Interaction, run_id: int, sala_id: str
+    ) -> None:
+        """Mostra, so para quem clicou, o que ele pode usar agora."""
+        run = await db.buscar_run(self.bot.db, run_id)
+        if not run or run["status"] not in ("em_sala", "objetivo"):
+            await interaction.response.send_message("Esta sala ja terminou.", ephemeral=True)
+            return
+        personagem = await self._personagem_na_run(run, interaction.user.id)
+        if personagem is None:
+            await interaction.response.send_message(
+                "Voce nao faz parte desta run.", ephemeral=True
+            )
+            return
+
+        disponiveis = await self._habilidades_disponiveis(
+            run, personagem, self._passo(run)
+        )
+        if not disponiveis:
+            await interaction.response.send_message(
+                "Voce nao tem habilidade para usar agora. Veja `/ficha ver`: as ativas "
+                "marcadas *(em breve)* ainda nao estao prontas, e as outras podem ter "
+                "acabado os usos.",
+                ephemeral=True,
+            )
+            return
+
+        opcoes = [
+            (h.id, h.nome, f"{restantes} uso(s) — {h.texto}")
+            for h, restantes in disponiveis
+        ]
+        await interaction.response.send_message(
+            "O que voce usa?",
+            view=SeletorHabilidade(self, run_id, sala_id, opcoes),
+            ephemeral=True,
+        )
+
+    async def usar_habilidade(
+        self,
+        interaction: discord.Interaction,
+        run_id: int,
+        sala_id: str,
+        habilidade_id: str,
+        alvos: Optional[list[int]] = None,
+    ) -> None:
+        """Gasta um uso e resolve a habilidade, pedindo alvo se precisar."""
+        run = await db.buscar_run(self.bot.db, run_id)
+        if not run or run["status"] not in ("em_sala", "objetivo"):
+            await interaction.response.send_message("Esta sala ja terminou.", ephemeral=True)
+            return
+        personagem = await self._personagem_na_run(run, interaction.user.id)
+        if personagem is None:
+            await interaction.response.send_message(
+                "Voce nao faz parte desta run.", ephemeral=True
+            )
+            return
+
+        passo = self._passo(run)
+        disponiveis = await self._habilidades_disponiveis(run, personagem, passo)
+        habilidade = next((h for h, _r in disponiveis if h.id == habilidade_id), None)
+        if habilidade is None:
+            await interaction.response.send_message(
+                "Essa habilidade nao esta disponivel agora.", ephemeral=True
+            )
+            return
+
+        incursao = self._incursao_da_run(run)
+        sala = self._sala(incursao, sala_id)
+        estado = await self._estado_combate(run, sala) if sala and sala.e_combate else None
+        acao = habilidade.acao or {}
+
+        # Quem usa precisa estar de pe quando a habilidade e de combate.
+        atacante = estado.combatente(interaction.user.id) if estado else None
+        if estado is not None and (atacante is None or atacante.caido):
+            await interaction.response.send_message(
+                "Voce esta caido — fica fora do resto deste combate.", ephemeral=True
+            )
+            return
+
+        if acao.get("tipo") == "golpes" and estado is None:
+            await interaction.response.send_message(
+                "Essa habilidade so vale em combate.", ephemeral=True
+            )
+            return
+
+        # Falta escolher em quem: abre o segundo menu antes de gastar o uso.
+        if alvos is None:
+            pedido = await self._pedir_alvo(interaction, run, sala_id, habilidade, estado)
+            if pedido is not False:
+                return
+            alvos = []
+
+        if not await db.gastar_uso(
+            self.bot.db,
+            run_id,
+            interaction.user.id,
+            habilidade.id,
+            self._chave_de_recarga(habilidade, run, passo),
+            habilidade.vezes,
+        ):
+            await interaction.response.send_message(
+                "Os usos desta habilidade ja acabaram.", ephemeral=True
+            )
+            return
+
+        if acao.get("tipo") == "cura":
+            await self._resolver_cura(interaction, run, habilidade, acao, alvos, estado)
+            return
+        await self._resolver_golpes(
+            interaction, run, sala, estado, atacante, habilidade, acao, alvos
+        )
+
+    async def _pedir_alvo(
+        self, interaction: discord.Interaction, run, sala_id, habilidade, estado
+    ):
+        """Abre o menu de alvo se a habilidade precisa de um. False = nao precisa."""
+        acao = habilidade.acao or {}
+        if acao.get("tipo") == "cura":
+            if acao.get("alvo") != "aliado":
+                return False
+            opcoes = [
+                (str(p["user_id"]), p["nome"], f"{p['hp_atual']}/{p['hp_max']} HP")
+                for p in await db.personagens_da_run(self.bot.db, run["id"])
+            ]
+        else:
+            vivos = estado.inimigos_vivos if estado else []
+            if len(vivos) <= 1 and acao.get("alvos", 1) <= 1:
+                return False
+            opcoes = [
+                (str(i.indice), i.nome, f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca}")
+                for i in vivos
+            ]
+        if not opcoes:
+            await interaction.response.send_message(
+                "Nao ha alvo possivel agora.", ephemeral=True
+            )
+            return True
+        await interaction.response.send_message(
+            f"**{habilidade.nome}** — escolha o alvo:",
+            view=SeletorAlvoHabilidade(
+                self, run["id"], sala_id, habilidade.id, opcoes, acao.get("alvos", 1)
+            ),
+            ephemeral=True,
+        )
+        return True
+
+    async def _resolver_cura(
+        self, interaction, run, habilidade, acao, alvos, estado
+    ) -> None:
+        """Cura a si mesmo ou a um aliado, dentro ou fora do combate."""
+        combatentes = estado.combatentes if estado else await self._combatentes(run)
+        alvo_id = alvos[0] if alvos else interaction.user.id
+        alvo = next((c for c in combatentes if c.user_id == alvo_id), None)
+        if alvo is None:
+            await interaction.response.send_message("Alvo invalido.", ephemeral=True)
+            return
+
+        curado = motor.curar(alvo, acao["fracao"])
+        await db.definir_hp(self.bot.db, run["id"], alvo.user_id, alvo.hp_atual)
+        if curado:
+            texto = (
+                f"\u2728 **{habilidade.nome}**: {alvo.nome} recupera **{curado}** de HP "
+                f"({alvo.hp_atual}/{alvo.hp_max})."
+            )
+        else:
+            texto = (
+                f"\u2728 **{habilidade.nome}**: {alvo.nome} nao recupera nada "
+                "(ja esta cheio, ou caido)."
+            )
+        await interaction.response.send_message(texto, ephemeral=True)
+        await self._anunciar_habilidade(run, texto)
+        if estado is not None:
+            sala = self._sala(self._incursao_da_run(run), run["sala_atual"])
+            ataques = await db.ataques_da_rodada(
+                self.bot.db, run["id"], self._passo(run), estado.rodada
+            )
+            agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
+            await self._atualizar_painel(run, sala, estado, len(agiram))
+
+    async def _resolver_golpes(
+        self, interaction, run, sala, estado, atacante, habilidade, acao, alvos
+    ) -> None:
+        """Os golpes extras de uma ativa: fora do turno, sem gastar o ataque."""
+        passo = self._passo(run)
+        escolhidos = [i for i in (estado.inimigo(v) for v in alvos) if i and not i.caido]
+        if not escolhidos:
+            vivo = estado.alvo_preferido()
+            escolhidos = [vivo] if vivo else []
+        if not escolhidos:
+            await interaction.response.send_message(
+                "Nao ha inimigo de pe para atacar.", ephemeral=True
+            )
+            return
+
+        golpes = []
+        indice = await db.proximo_indice_de_ataque(
+            self.bot.db, run["id"], passo, estado.rodada, interaction.user.id
+        )
+        for alvo in escolhidos:
+            for _ in range(acao.get("quantidade", 1)):
+                if alvo.caido:
+                    break
+                golpe = motor.atacar_inimigo(
+                    atacante,
+                    alvo,
+                    None,
+                    dano_bonus=acao.get("dano_bonus"),
+                    garantido=acao.get("garantido", False),
+                    critico_forcado=acao.get("critico", False),
+                )
+                golpes.append((golpe, alvo))
+                await db.registrar_ataque(
+                    self.bot.db, run["id"], passo, estado.rodada, interaction.user.id,
+                    golpe.d20, golpe.bonus, golpe.ca_alvo, golpe.dano, alvo.indice,
+                    indice, "habilidade",
+                )
+                indice += 1
+
+        await db.definir_hp_inimigos(
+            self.bot.db, run["id"], passo,
+            {inimigo.indice: inimigo.hp_atual for _g, inimigo in golpes},
+        )
+        resumo = E.resumo_do_golpe([(g, i.nome) for g, i in golpes])
+        await interaction.response.send_message(
+            f"\u2728 **{habilidade.nome}**\n{resumo}", ephemeral=True
+        )
+        await self._anunciar_habilidade(
+            run, f"\u2728 {atacante.nome} usa **{habilidade.nome}**."
+        )
+
+        ataques = await db.ataques_da_rodada(self.bot.db, run["id"], passo, estado.rodada)
+        agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
+        if estado.inimigos_derrotados or len(agiram) >= len(estado.vivos):
+            await self._fechar_rodada(run, sala, estado, ataques)
+        else:
+            await self._atualizar_painel(run, sala, estado, len(agiram))
+
+    async def _anunciar_habilidade(self, run: dict[str, Any], texto: str) -> None:
+        """O grupo ve que alguem usou uma habilidade, sem detalhe de rolagem."""
+        canal = await self._canal(run)
+        if canal:
+            try:
+                await canal.send(texto)
+            except discord.HTTPException:
+                pass
 
     async def _fechar_rodada(
         self,
@@ -1422,6 +1791,20 @@ class Incursoes(commands.Cog):
             )
             return
         await self.votar(interaction, run["id"], run["linha_atual"], opcoes[opcao - 1].id)
+
+    @grupo.command(
+        name="habilidade", description="Usa uma habilidade ativa do seu personagem"
+    )
+    async def habilidade_comando(self, interaction: discord.Interaction) -> None:
+        run = await self._run_do_contexto(interaction)
+        if not run:
+            return
+        if run["status"] not in ("em_sala", "objetivo") or not run["sala_atual"]:
+            await interaction.response.send_message(
+                "Só dentro de uma sala.", ephemeral=True
+            )
+            return
+        await self.abrir_habilidades(interaction, run["id"], run["sala_atual"])
 
     @grupo.command(
         name="atacar", description="Ataca o primeiro inimigo de pé (mesmo efeito do botão)"

@@ -245,6 +245,9 @@ class GolpeAtaque:
     dano: int = 0
     # Improved Critical desce este numero: o critico deixa de ser so o 20.
     critico_em: int = 20
+    # Ativas que dispensam a rolagem: o golpe acerta, ou ja sai critico.
+    garantido: bool = False
+    critico_forcado: bool = False
 
     @property
     def total(self) -> int:
@@ -252,6 +255,8 @@ class GolpeAtaque:
 
     @property
     def acertou(self) -> bool:
+        if self.garantido:
+            return True
         # 20 natural sempre acerta; 1 natural sempre erra, por maior que seja o bonus.
         if self.d20 == 20:
             return True
@@ -263,7 +268,7 @@ class GolpeAtaque:
 
     @property
     def critico(self) -> bool:
-        return self.d20 >= self.critico_em
+        return self.critico_forcado or self.d20 >= self.critico_em
 
     @property
     def falha_critica(self) -> bool:
@@ -279,17 +284,31 @@ def atacar(
     rng: Optional[random.Random] = None,
     critico_em: int = 20,
     dano_extra: int = 0,
+    dano_bonus: Optional[str] = None,
+    garantido: bool = False,
+    critico_forcado: bool = False,
 ) -> GolpeAtaque:
     """Uma rolagem de ataque: d20 + bônus contra a CA. Acertou, rola o dano.
 
     `dano_extra` é o que as passivas somam por golpe; entra depois do crítico,
-    porque dobra os dados, não os bônus fixos.
+    porque dobra os dados, não os bônus fixos. `dano_bonus` é uma expressão a
+    mais (o +3d8 do Golpe Divino), e `garantido`/`critico_forcado` são as
+    ativas que dispensam a rolagem de acerto.
     """
     golpe = GolpeAtaque(
-        atacante_nome, alvo_nome, rolar_d20(rng), bonus, ca_alvo, critico_em=critico_em
+        atacante_nome,
+        alvo_nome,
+        rolar_d20(rng),
+        bonus,
+        ca_alvo,
+        critico_em=critico_em,
+        garantido=garantido,
+        critico_forcado=critico_forcado,
     )
     if golpe.acertou:
         golpe.dano = rolar_dano(dano, rng, critico=golpe.critico) + dano_extra
+        if dano_bonus:
+            golpe.dano += rolar_dano(dano_bonus, rng, critico=golpe.critico)
     return golpe
 
 
@@ -393,7 +412,12 @@ def esta_ferido(inimigo: Inimigo) -> bool:
 
 
 def atacar_inimigo(
-    combatente: Combatente, inimigo: Inimigo, rng: Optional[random.Random] = None
+    combatente: Combatente,
+    inimigo: Inimigo,
+    rng: Optional[random.Random] = None,
+    dano_bonus: Optional[str] = None,
+    garantido: bool = False,
+    critico_forcado: bool = False,
 ) -> GolpeAtaque:
     """O personagem ataca um inimigo. O dano já sai descontado do HP dele."""
     extra = combatente.dano_extra
@@ -408,6 +432,9 @@ def atacar_inimigo(
         rng,
         critico_em=combatente.critico_em,
         dano_extra=extra,
+        dano_bonus=dano_bonus,
+        garantido=garantido,
+        critico_forcado=critico_forcado,
     )
     if golpe.acertou:
         inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
@@ -447,6 +474,19 @@ def rodada_dos_inimigos(
             break
         golpes.append((contra_atacar(inimigo, alvo, rng), alvo))
     return golpes
+
+
+def curar(combatente: Combatente, fracao: float) -> int:
+    """Cura uma fração do HP máximo, sem passar do teto. Devolve quanto curou.
+
+    Não levanta caído: quem está em 0 HP está fora do combate, e voltar é
+    assunto do descanso ou de uma habilidade que diga isso.
+    """
+    if combatente.caido:
+        return 0
+    antes = combatente.hp_atual
+    combatente.hp_atual = min(combatente.hp_max, antes + max(1, int(combatente.hp_max * fracao)))
+    return combatente.hp_atual - antes
 
 
 # Quanto do HP máximo um personagem caído recupera ao descansar.

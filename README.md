@@ -63,6 +63,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/incursao sala` | Reenvia a mensagem da sala atual |
 | `/incursao teste` | Rola o teste da sala (mesmo efeito do botão) |
 | `/incursao atacar` | Ataca o primeiro inimigo de pé (mesmo efeito do botão) |
+| `/incursao habilidade` | Abre o menu das suas habilidades ativas |
 | `/incursao votar <1-3>` | Vota por comando, se os botões falharem |
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
@@ -178,11 +179,26 @@ rodada) e os +2 em listas de perícia do Monge, Patrulheiro, Paladino e Xamã. Q
 versões da mesma passiva coexistem, vale a mais forte — o Reliable Talent do tier 5
 substitui o do tier 1, não soma.
 
-**Ainda não valem**: todas as ativas (Rage, Second Wind, Flurry of Blows e companhia, que
-precisam do sistema de usos por combate/descanso/incursão), as escolhas de nível (Fighting
-Style, Expertise, Primal Knowledge, a do Xamã no tier 3) e as passivas com estado no meio do
-combate (Martial Arts, Convocação totêmica). `/ficha upar` anuncia a habilidade nova do tier
-mesmo quando ela ainda não faz efeito, para o grupo saber o que ganhou.
+**As ativas prontas** têm botão: no painel de combate aparece **✨ Habilidade** ao lado de
+Atacar, e fora do combate existe `/incursao habilidade`. O menu mostra só o que o personagem
+pode usar naquele momento, com quantos usos restam; quem precisa de alvo (um inimigo, três
+inimigos, um aliado) recebe um segundo menu antes de gastar o uso. São oito por enquanto:
+*Second Wind*, *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*,
+*Rajada do Caçador*, *Cura pelas Mãos* e *Golpe Divino*.
+
+Golpe de habilidade é **extra**: não gasta o ataque do turno, então dá para usar e atacar na
+mesma rodada. Cura não levanta quem já caiu — isso é assunto do descanso.
+
+**Os usos recarregam** conforme o escopo declarado: *por combate* zera a cada sala de
+combate, *por descanso* zera quando o grupo passa por uma sala de Descanso, e *por incursão*
+vale uma vez na run inteira. O contador vive no banco, então sobrevive a reinício do bot.
+
+**Ainda não valem**: as ativas que dependem de duração, estado ou reação (Rage, Marca do
+Caçador, Uncanny Dodge, Stunning Strike, Avatar da Luz, as do Xamã com THP), as escolhas de
+nível (Fighting Style, Expertise, Primal Knowledge, a do Xamã no tier 3) e as passivas com
+estado no meio do combate (Martial Arts, Convocação totêmica). Todas aparecem na ficha
+marcadas *(em breve)*, e `/ficha upar` anuncia a habilidade nova do tier mesmo quando ela
+ainda não faz efeito.
 
 Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
 Cada um pode ter um **retrato**: `/ficha imagem <link>` guarda a URL, que aparece como
@@ -347,6 +363,7 @@ tests/
   test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
   test_bando.py    várias criaturas na mesma sala: alvo, HP separado e revide
   test_habilidades.py  catálogo, passivas aplicadas e multiataque
+  test_ativas.py   habilidades ativas: usos, cura e golpes extras
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   test_critico_expertise.py  críticos, erro crítico e bônus por perícia

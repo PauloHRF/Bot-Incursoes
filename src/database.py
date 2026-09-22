@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS runs (
     sala_atual    TEXT,
     mensagem_id   INTEGER,
     votacao_expira_em TEXT,
+    descansos     INTEGER NOT NULL DEFAULT 0,
     criada_em     TEXT NOT NULL DEFAULT (datetime('now')),
     atualizada_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -136,12 +137,25 @@ CREATE TABLE IF NOT EXISTS run_ataques (
     rodada  INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     indice  INTEGER NOT NULL DEFAULT 0,
+    -- "turno" e o ataque normal da rodada; o resto vem de habilidade.
+    origem  TEXT    NOT NULL DEFAULT 'turno',
     d20     INTEGER NOT NULL,
     bonus   INTEGER NOT NULL,
     ca_alvo INTEGER NOT NULL,
     dano    INTEGER NOT NULL,
     alvo    INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (run_id, passo, rodada, user_id, indice)
+);
+
+-- Quantas vezes cada um ja usou cada habilidade. A chave diz quando zera:
+-- "combate:<passo>", "descanso:<n>" ou "incursao".
+CREATE TABLE IF NOT EXISTS run_usos (
+    run_id     INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL,
+    habilidade TEXT    NOT NULL,
+    chave      TEXT    NOT NULL,
+    usos       INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (run_id, user_id, habilidade, chave)
 );
 
 CREATE TABLE IF NOT EXISTS placar_organizacoes (
@@ -274,12 +288,25 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
         )
         await conn.execute("DELETE FROM run_ataques")
 
+    # Contador de descansos: e ele que zera as habilidades "1x por descanso".
+    if "descansos" not in await _colunas(conn, "runs"):
+        await conn.execute(
+            "ALTER TABLE runs ADD COLUMN descansos INTEGER NOT NULL DEFAULT 0"
+        )
+
     # O log de ataque nao dizia em qual criatura o golpe caiu.
     if "alvo" not in await _colunas(conn, "run_ataques"):
         await conn.execute("ALTER TABLE run_ataques ADD COLUMN alvo INTEGER NOT NULL DEFAULT 0")
 
     # Com multiataque um personagem grava mais de um golpe por rodada: a chave
     # primaria passou a incluir o indice do golpe.
+    if "origem" not in await _colunas(conn, "run_ataques") and await _tabela_existe(
+        conn, "run_ataques"
+    ):
+        await conn.execute(
+            "ALTER TABLE run_ataques ADD COLUMN origem TEXT NOT NULL DEFAULT 'turno'"
+        )
+
     if "indice" not in await _colunas(conn, "run_ataques"):
         await conn.execute("ALTER TABLE run_ataques RENAME TO run_ataques_v1")
         await conn.executescript(SCHEMA)
@@ -835,13 +862,14 @@ async def registrar_ataque(
     dano: int,
     alvo: int = 0,
     indice: int = 0,
+    origem: str = "turno",
 ) -> bool:
     """False se este golpe já estava gravado (clique repetido)."""
     cur = await conn.execute(
         "INSERT OR IGNORE INTO run_ataques"
-        " (run_id, passo, rodada, user_id, indice, d20, bonus, ca_alvo, dano, alvo)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (run_id, passo, rodada, user_id, indice, d20, bonus, ca_alvo, dano, alvo),
+        " (run_id, passo, rodada, user_id, indice, origem, d20, bonus, ca_alvo, dano, alvo)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (run_id, passo, rodada, user_id, indice, origem, d20, bonus, ca_alvo, dano, alvo),
     )
     await conn.commit()
     return cur.rowcount > 0
@@ -850,13 +878,28 @@ async def registrar_ataque(
 async def ja_atacou(
     conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
 ) -> bool:
-    """Se o personagem já gastou o turno nesta rodada."""
+    """Se o personagem já gastou o turno nesta rodada.
+
+    Golpe de habilidade não conta: ele é extra, não é o turno.
+    """
     async with conn.execute(
         "SELECT 1 FROM run_ataques"
-        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ? LIMIT 1",
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?"
+        "   AND origem = 'turno' LIMIT 1",
         (run_id, passo, rodada, user_id),
     ) as cur:
         return await cur.fetchone() is not None
+
+
+async def proximo_indice_de_ataque(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
+) -> int:
+    async with conn.execute(
+        "SELECT COUNT(*) AS n FROM run_ataques"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?",
+        (run_id, passo, rodada, user_id),
+    ) as cur:
+        return (await cur.fetchone())["n"]
 
 
 async def ataques_da_rodada(
@@ -868,6 +911,55 @@ async def ataques_da_rodada(
         (run_id, passo, rodada),
     ) as cur:
         return [dict(r) for r in await cur.fetchall()]
+
+
+async def usos_da_run(
+    conn: aiosqlite.Connection, run_id: int, user_id: int
+) -> dict[tuple[str, str], int]:
+    """Quantas vezes cada habilidade já foi usada, por chave de recarga."""
+    async with conn.execute(
+        "SELECT habilidade, chave, usos FROM run_usos WHERE run_id = ? AND user_id = ?",
+        (run_id, user_id),
+    ) as cur:
+        return {(r["habilidade"], r["chave"]): r["usos"] for r in await cur.fetchall()}
+
+
+async def gastar_uso(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    user_id: int,
+    habilidade: str,
+    chave: str,
+    limite: int,
+) -> bool:
+    """Gasta um uso se ainda houver. False quando o limite já foi atingido.
+
+    A conta acontece no próprio UPDATE: dois cliques ao mesmo tempo não passam
+    do limite.
+    """
+    await conn.execute(
+        "INSERT OR IGNORE INTO run_usos (run_id, user_id, habilidade, chave, usos)"
+        " VALUES (?, ?, ?, ?, 0)",
+        (run_id, user_id, habilidade, chave),
+    )
+    cur = await conn.execute(
+        "UPDATE run_usos SET usos = usos + 1"
+        " WHERE run_id = ? AND user_id = ? AND habilidade = ? AND chave = ? AND usos < ?",
+        (run_id, user_id, habilidade, chave, limite),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
+async def contar_descanso(conn: aiosqlite.Connection, run_id: int) -> int:
+    """Marca mais um descanso na run e devolve o novo total."""
+    await conn.execute(
+        "UPDATE runs SET descansos = descansos + 1 WHERE id = ?", (run_id,)
+    )
+    await conn.commit()
+    async with conn.execute("SELECT descansos FROM runs WHERE id = ?", (run_id,)) as cur:
+        row = await cur.fetchone()
+    return row["descansos"] if row else 0
 
 
 async def inicializar_hp(conn: aiosqlite.Connection, run_id: int) -> None:
