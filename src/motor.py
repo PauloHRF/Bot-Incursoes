@@ -227,6 +227,8 @@ class Combatente:
     dano_arma: str
     hp_max: int
     hp_atual: int
+    # Vida temporaria: absorve dano antes do HP e some no fim do combate.
+    thp: int = 0
     # O que as passivas da classe somam. Os defaults sao o personagem sem
     # nenhuma habilidade automatica.
     ataques: int = 1
@@ -247,6 +249,10 @@ class Combatente:
         return self.ca + self.ca_extra
 
     @property
+    def tem_thp(self) -> bool:
+        return self.thp > 0
+
+    @property
     def caido(self) -> bool:
         return self.hp_atual <= 0
 
@@ -264,6 +270,8 @@ class GolpeAtaque:
     # Ativas que dispensam a rolagem: o golpe acerta, ou ja sai critico.
     garantido: bool = False
     critico_forcado: bool = False
+    # Quanto do dano a vida temporaria do alvo segurou.
+    absorvido: int = 0
 
     @property
     def total(self) -> int:
@@ -485,7 +493,7 @@ def contra_atacar(
         if alvo.reducao_dano:
             sofrido = max(1, int(round(sofrido * (1 - alvo.reducao_dano))))
             golpe.dano = sofrido
-        alvo.hp_atual = max(0, alvo.hp_atual - sofrido)
+        golpe.absorvido, _ = absorver(alvo, sofrido)
     return golpe
 
 
@@ -504,6 +512,28 @@ def rodada_dos_inimigos(
             break
         golpes.append((contra_atacar(inimigo, alvo, rng), alvo))
     return golpes
+
+
+def ganhar_thp(combatente: Combatente, quantidade: int) -> int:
+    """Vida temporária não empilha: vale a maior. Devolve quanto ficou.
+
+    Quem está caído não ganha THP — voltar a lutar é outra história.
+    """
+    if combatente.caido or quantidade <= 0:
+        return combatente.thp
+    combatente.thp = max(combatente.thp, quantidade)
+    return combatente.thp
+
+
+def absorver(combatente: Combatente, dano: int) -> tuple[int, int]:
+    """Passa o dano pela vida temporária primeiro. Devolve (do THP, do HP)."""
+    if dano <= 0:
+        return 0, 0
+    no_thp = min(combatente.thp, dano)
+    combatente.thp -= no_thp
+    no_hp = dano - no_thp
+    combatente.hp_atual = max(0, combatente.hp_atual - no_hp)
+    return no_thp, no_hp
 
 
 def curar(combatente: Combatente, fracao: float) -> int:

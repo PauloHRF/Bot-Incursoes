@@ -481,9 +481,11 @@ def _marcas_do_combatente(c) -> str:
 def _linha_hp(c) -> str:
     if c.hp_atual <= 0:
         return f"💀 ~~{c.nome}~~ — caído"
+    # A vida temporaria entra antes do HP, entao aparece separada.
+    temporaria = f" +{c.thp} THP" if getattr(c, "thp", 0) else ""
     return (
         f"❤️ {c.nome} — {barra(c.hp_atual, c.hp_max, 6)} "
-        f"{c.hp_atual}/{c.hp_max}{_marcas_do_combatente(c)}"
+        f"{c.hp_atual}/{c.hp_max}{temporaria}{_marcas_do_combatente(c)}"
     )
 
 

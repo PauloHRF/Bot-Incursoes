@@ -91,12 +91,14 @@ def caso_catalogo_das_ativas():
 
     assert "second_wind" in prontas and "cura_pelas_maos" in prontas
     assert "rage" in prontas and "marca_do_cacador" in prontas
-    assert "uncanny_dodge" in futuras, "reacao ainda nao existe"
+    assert "uncanny_dodge" in futuras, "reacao a um golpe sofrido ainda nao existe"
     # toda acao tem um tipo que o cog sabe resolver
     for classe in cl.CLASSES.values():
         for _t, h in classe.habilidades_ate(10):
             if h.acionavel:
-                assert h.acao["tipo"] in ("cura", "golpes", "duracao"), h.acao
+                assert h.acao["tipo"] in (
+                    "cura", "golpes", "duracao", "grupo", "reacao"
+                ), h.acao
     print(f"  {len(prontas)} ativas prontas, {len(futuras)} declaradas para depois: ok")
 
 

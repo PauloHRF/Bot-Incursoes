@@ -189,6 +189,15 @@ inimigos, um aliado) recebe um segundo menu antes de gastar o uso. São treze:
 | cura | *Second Wind*, *Cura pelas Mãos* |
 | golpe extra | *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*, *Rajada do Caçador*, *Golpe Divino* |
 | efeito com prazo | *Rage*, *Reckless Attack*, *Marca do Caçador*, *Caçador Supremo*, *Avatar da Luz* |
+| vida temporária | *Tradição xamânica* (dois caminhos), *Dança totêmica*, *Brutal Strike* |
+| reação | *Relentless* |
+
+**Vida temporária (THP)** absorve o dano antes do HP e não empilha — vale sempre a maior,
+como em 5e. Some quando um combate novo começa, e aparece no painel como `30/40 +7 THP`.
+A *Convocação totêmica* do Xamã se apoia nela: com 18+ no d20 ele ganha 2 THP, e **enquanto
+ele tiver THP o grupo inteiro leva +1 em acerto e dano** (+2 e +3 no tier 5). *Relentless*
+é a primeira **reação**: quando o Bárbaro cairia a 0 HP, ele fica com 1 e ganha 1d12+7 de
+THP, uma vez por combate — não aparece no menu, dispara sozinha no gatilho.
 
 **Efeito com prazo** dura N turnos e conta sozinho: o bot guarda até que rodada ele vale e o
 apaga quando a rodada vira. Dá para reduzir dano recebido (Rage), rolar com **vantagem** —
@@ -204,12 +213,11 @@ mesma rodada. Cura não levanta quem já caiu — isso é assunto do descanso.
 combate, *por descanso* zera quando o grupo passa por uma sala de Descanso, e *por incursão*
 vale uma vez na run inteira. O contador vive no banco, então sobrevive a reinício do bot.
 
-**Ainda não valem**: as que dependem de **THP** (Tradição xamânica, Dança totêmica,
-Convocação totêmica, Relentless, Brutal Strike), de **reação** ao golpe do inimigo (Uncanny
-Dodge) ou de **condição** no alvo (Stunning Strike), mais Martial Arts e as escolhas de
-nível (Fighting Style, Expertise, Primal Knowledge, a do Xamã no tier 3). Todas aparecem na
-ficha marcadas *(em breve)*, e `/ficha upar` anuncia a habilidade nova do tier mesmo quando
-ela ainda não faz efeito.
+**Ainda não valem**: *Uncanny Dodge* (reação a um golpe já sofrido), *Stunning Strike*
+(condição no alvo), *Martial Arts* (acumula bônus dentro do turno) e as escolhas de nível
+(Fighting Style, Expertise, Primal Knowledge, a do Xamã no tier 3). Todas aparecem na ficha
+marcadas *(em breve)*, e `/ficha upar` anuncia a habilidade nova do tier mesmo quando ela
+ainda não faz efeito.
 
 Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
 Cada um pode ter um **retrato**: `/ficha imagem <link>` guarda a URL, que aparece como
@@ -376,6 +384,7 @@ tests/
   test_habilidades.py  catálogo, passivas aplicadas e multiataque
   test_ativas.py   habilidades ativas: usos, cura e golpes extras
   test_duracao.py  efeitos com prazo: Rage, Marca do Caçador e a virada da rodada
+  test_thp.py      vida temporária: absorção, aura totêmica e Relentless
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   test_critico_expertise.py  críticos, erro crítico e bônus por perícia

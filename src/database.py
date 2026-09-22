@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS run_participantes (
     user_id       INTEGER NOT NULL,
     personagem_id INTEGER REFERENCES personagens(id) ON DELETE SET NULL,
     hp_atual      INTEGER,
+    -- Vida temporaria: zera quando um combate comeca.
+    thp           INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (run_id, user_id)
 );
 
@@ -303,6 +305,12 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
             " WHERE status IN ('recrutando', 'escolhendo', 'em_sala', 'objetivo')"
         )
         await conn.execute("DELETE FROM run_ataques")
+
+    # Vida temporaria dos participantes.
+    if "thp" not in await _colunas(conn, "run_participantes"):
+        await conn.execute(
+            "ALTER TABLE run_participantes ADD COLUMN thp INTEGER NOT NULL DEFAULT 0"
+        )
 
     # Contador de descansos: e ele que zera as habilidades "1x por descanso".
     if "descansos" not in await _colunas(conn, "runs"):
@@ -592,7 +600,7 @@ async def personagem_da_run(
 async def personagens_da_run(conn: aiosqlite.Connection, run_id: int) -> list[dict[str, Any]]:
     """Os personagens em jogo, na ordem em que entraram, com o HP atual da run."""
     async with conn.execute(
-        "SELECT p.*, rp.hp_atual AS hp_atual, rp.user_id AS user_id"
+        "SELECT p.*, rp.hp_atual AS hp_atual, rp.thp AS thp, rp.user_id AS user_id"
         " FROM run_participantes rp JOIN personagens p ON p.id = rp.personagem_id"
         " WHERE rp.run_id = ? ORDER BY rp.rowid",
         (run_id,),
@@ -810,10 +818,15 @@ async def iniciar_combate(
     inimigos: list[Any],
 ) -> None:
     """Cria o estado do combate daquele passo. Reabrir a mensagem não reinicia."""
-    await conn.execute(
+    novo = await conn.execute(
         "INSERT OR IGNORE INTO run_combate (run_id, passo, sala_id) VALUES (?, ?, ?)",
         (run_id, passo, sala_id),
     )
+    if novo.rowcount:
+        # Combate novo: a vida temporaria do anterior nao vale mais.
+        await conn.execute(
+            "UPDATE run_participantes SET thp = 0 WHERE run_id = ?", (run_id,)
+        )
     await conn.executemany(
         "INSERT OR IGNORE INTO run_inimigos"
         " (run_id, passo, indice, nome, ca, ataque, dano, hp_max, hp_atual)"
@@ -1057,6 +1070,32 @@ async def definir_hp(conn: aiosqlite.Connection, run_id: int, user_id: int, hp: 
         "UPDATE run_participantes SET hp_atual = ? WHERE run_id = ? AND user_id = ?",
         (hp, run_id, user_id),
     )
+    await conn.commit()
+
+
+async def definir_thp(
+    conn: aiosqlite.Connection, run_id: int, user_id: int, thp: int
+) -> None:
+    await conn.execute(
+        "UPDATE run_participantes SET thp = ? WHERE run_id = ? AND user_id = ?",
+        (max(0, thp), run_id, user_id),
+    )
+    await conn.commit()
+
+
+async def definir_thp_varios(
+    conn: aiosqlite.Connection, run_id: int, valores: dict[int, int]
+) -> None:
+    await conn.executemany(
+        "UPDATE run_participantes SET thp = ? WHERE run_id = ? AND user_id = ?",
+        [(max(0, thp), run_id, user_id) for user_id, thp in valores.items()],
+    )
+    await conn.commit()
+
+
+async def zerar_thp(conn: aiosqlite.Connection, run_id: int) -> None:
+    """A vida temporária não atravessa combates."""
+    await conn.execute("UPDATE run_participantes SET thp = 0 WHERE run_id = ?", (run_id,))
     await conn.commit()
 
 

@@ -37,6 +37,8 @@ class Habilidade:
     efeito: Optional[dict] = None
     usos: Optional[dict] = None
     acao: Optional[dict] = None
+    # Dois caminhos da mesma habilidade dividem o mesmo contador de usos.
+    recarga_com: Optional[str] = None
 
     @property
     def automatica(self) -> bool:
@@ -51,6 +53,10 @@ class Habilidade:
     @property
     def pronta(self) -> bool:
         return self.automatica or self.acionavel
+
+    @property
+    def chave_de_uso(self) -> str:
+        return self.recarga_com or self.id
 
     @property
     def escopo(self) -> str:
@@ -104,10 +110,15 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "efeitos": {"vantagem": True}})],
         4: [Habilidade("relentless", "Relentless", ATIVA,
                        "1x por combate: ao cair a 0 HP fica com 1 HP e ganha 1d12+7 de THP.",
-                       usos=_usos("combate"))],
+                       usos=_usos("combate"),
+                       acao={"tipo": "reacao", "quando": "caiu", "hp": 1,
+                             "thp": "1d12+7"})],
         5: [Habilidade("brutal_strike", "Brutal Strike", ATIVA,
-                       "1x por incursao: com Reckless Attack, +1d10 de dano e o mesmo em THP.",
-                       usos=_usos("incursao"))],
+                       "1x por incursao: com Reckless Attack ligado, +1d10 de dano e o "
+                       "mesmo em THP.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "golpes", "quantidade": 1, "dano_bonus": "1d10",
+                             "thp_igual_ao_bonus": True, "exige": "reckless_attack"})],
     },
     "guerreiro": {
         1: [Habilidade("second_wind", "Second Wind", ATIVA,
@@ -202,22 +213,33 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                                          "cura_por_turno": 0.05}})],
     },
     "xama": {
-        1: [Habilidade("tradicao_xamanica", "Tradicao xamanica", ATIVA,
-                       "1x por descanso: caminho marcial (+1d6 e THP) ou espiritual (cura).",
-                       usos=_usos("descanso"))],
+        1: [Habilidade("tradicao_marcial", "Tradicao xamanica — marcial", ATIVA,
+                       "1x por descanso: um ataque com +1d6 de dano; voce ganha 1d6 de THP.",
+                       usos=_usos("descanso"), recarga_com="tradicao_xamanica",
+                       acao={"tipo": "golpes", "quantidade": 1, "dano_bonus": "1d6",
+                             "thp_proprio": "1d6"}),
+            Habilidade("tradicao_espiritual", "Tradicao xamanica — espiritual", ATIVA,
+                       "1x por descanso: cura um aliado e da 1d6+3 de THP a ele.",
+                       usos=_usos("descanso"), recarga_com="tradicao_xamanica",
+                       acao={"tipo": "cura", "fracao": 0.3, "alvo": "aliado",
+                             "thp_alvo": "1d6+3"})],
         2: [Habilidade("convocacao_totemica", "Convocacao totemica", PASSIVA,
-                       "Com 18+ no d20 ganha 2 THP; com THP, o grupo ganha +1 em tudo.")],
+                       "Com 18+ no d20 ganha 2 THP; com THP, o grupo ganha +1 em tudo.",
+                       {"totem": {"gatilho": 18, "thp": 2, "aura": 1}})],
         3: [Habilidade("escolha_totemica", "Multiattack ou Cantico Benevolente", ESCOLHA,
                        "Escolhe entre atacar 2x por rodada ou dar 4 THP extra ao curar."),
             Habilidade("danca_totemica", "Danca totemica", ATIVA,
                        "1x por descanso: o grupo ganha 2d6+4 de THP e +1d6+4 no proximo ataque.",
-                       usos=_usos("descanso"))],
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "thp": "2d6+4", "turnos": 1,
+                             "efeitos": {"dano_bonus": "1d6+4"}})],
         4: [Habilidade("sintonizacao_ancestral", "Sintonizacao Ancestral", PASSIVA,
                        "+2 em Historia, Natureza, Medicina, Adestrar Animais e Intuicao.",
                        {"bonus_pericia": {"História": 2, "Natureza": 2, "Medicina": 2,
                                           "Adestrar Animais": 2, "Intuição": 2}})],
         5: [Habilidade("expansao_totemica", "Expansao totemica", PASSIVA,
-                       "Com THP, o grupo ganha +2 em acertos e +3 em cura e dano."),
+                       "Com THP, o grupo ganha +2 em acertos e +3 em cura e dano.",
+                       {"totem": {"gatilho": 18, "thp": 2, "aura": 2, "aura_dano": 3}}),
             Habilidade("guerreiros_ancioes", "Guerreiros ancioes", ATIVA,
                        "1x por incursao: o proximo ataque dos aliados crita com 18+.",
                        usos=_usos("incursao"))],
@@ -227,6 +249,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
 
 # O que o motor entende, e o valor neutro de cada coisa.
 NEUTRO: dict = {
+    "totem": {},
     "bonus_teste": 0,
     "bonus_pericia": {},
     "dano_extra": 0,
@@ -248,7 +271,12 @@ def juntar(lista: list[Habilidade]) -> dict:
     }
     for habilidade in lista:
         for chave, valor in (habilidade.efeito or {}).items():
-            if chave == "bonus_pericia":
+            if chave == "totem":
+                # Vale a aura mais forte: o tier 5 substitui a do tier 2.
+                atual = juntos["totem"]
+                if valor.get("aura", 0) >= atual.get("aura", 0):
+                    juntos["totem"] = dict(valor)
+            elif chave == "bonus_pericia":
                 for pericia, bonus in valor.items():
                     atual = juntos["bonus_pericia"].get(pericia, 0)
                     juntos["bonus_pericia"][pericia] = max(atual, bonus)
