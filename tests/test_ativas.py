@@ -90,12 +90,13 @@ def caso_catalogo_das_ativas():
             (prontas if h.acionavel else futuras).append(h.id)
 
     assert "second_wind" in prontas and "cura_pelas_maos" in prontas
-    assert "rage" in futuras, "Rage depende de duracao, fica para depois"
+    assert "rage" in prontas and "marca_do_cacador" in prontas
+    assert "uncanny_dodge" in futuras, "reacao ainda nao existe"
     # toda acao tem um tipo que o cog sabe resolver
     for classe in cl.CLASSES.values():
         for _t, h in classe.habilidades_ate(10):
             if h.acionavel:
-                assert h.acao["tipo"] in ("cura", "golpes"), h.acao
+                assert h.acao["tipo"] in ("cura", "golpes", "duracao"), h.acao
     print(f"  {len(prontas)} ativas prontas, {len(futuras)} declaradas para depois: ok")
 
 
@@ -184,11 +185,15 @@ async def caso_perfect_strike_acerta_sempre():
 
 async def caso_golpe_divino_soma_dados():
     """O +3d8 entra no dano, e o motor sabe aplicar sem o alvo mudar."""
+    import random
+
     paladino = motor.Combatente(1, "P", 20, 40, "1d1", 50, 50)
     alvo = motor.Inimigo(0, "Alvo", 1, 0, "1d1", 500, 500)
-    simples = motor.atacar_inimigo(paladino, alvo, None)
-    divino = motor.atacar_inimigo(paladino, alvo, None, dano_bonus="3d8")
+    # a mesma semente nos dois: so o 3d8 difere, sem depender da sorte do d20
+    simples = motor.atacar_inimigo(paladino, alvo, random.Random(7))
+    divino = motor.atacar_inimigo(paladino, alvo, random.Random(7), dano_bonus="3d8")
     assert simples.acertou and divino.acertou
+    assert simples.d20 == divino.d20
     assert divino.dano >= simples.dano + 3, (simples.dano, divino.dano)
     print("  Golpe Divino soma os dados extras: ok")
 

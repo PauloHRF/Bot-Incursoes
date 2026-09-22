@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
-SUITES = ("smoke.py", "test_run.py", "test_votacao.py", "test_combate.py", "test_pontos.py", "test_personagens.py", "test_critico_expertise.py", "test_ajuda_feedback.py", "test_geracao.py", "test_faixa.py", "test_tier.py", "test_semana.py", "test_registro.py", "test_bando.py", "test_habilidades.py", "test_ativas.py")
+SUITES = ("smoke.py", "test_run.py", "test_votacao.py", "test_combate.py", "test_pontos.py", "test_personagens.py", "test_critico_expertise.py", "test_ajuda_feedback.py", "test_geracao.py", "test_faixa.py", "test_tier.py", "test_semana.py", "test_registro.py", "test_bando.py", "test_habilidades.py", "test_ativas.py", "test_duracao.py")
 
 
 def main() -> int:

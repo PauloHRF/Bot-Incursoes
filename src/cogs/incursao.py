@@ -996,7 +996,9 @@ class Incursoes(commands.Cog):
             return incursao.passos + 1
         return run["linha_atual"]
 
-    async def _combatentes(self, run: dict[str, Any]) -> list[Combatente]:
+    async def _combatentes(
+        self, run: dict[str, Any], efeitos_ligados: Optional[list[dict]] = None
+    ) -> list[Combatente]:
         """Monta os combatentes juntando a ficha de cada um com o HP atual da run."""
         combatentes = []
         for p in await db.personagens_da_run(self.bot.db, run["id"]):
@@ -1018,7 +1020,37 @@ class Incursoes(commands.Cog):
                     dano_ferido=efeitos.get("dano_ferido", 0),
                 )
             )
+        for ligado in efeitos_ligados or []:
+            self._aplicar_ligado(combatentes, ligado)
         return combatentes
+
+    @staticmethod
+    def _aplicar_ligado(combatentes: list[Combatente], ligado: dict) -> None:
+        """Passa um efeito com prazo para o combatente a que ele pertence."""
+        valor = ligado["valor"] or {}
+        if ligado["alvo_tipo"] == "personagem":
+            quem = next(
+                (c for c in combatentes if c.user_id == ligado["alvo_id"]), None
+            )
+            if quem is None:
+                return
+            quem.dano_extra += valor.get("dano_extra", 0)
+            quem.ca_extra += valor.get("ca", 0)
+            quem.reducao_dano = max(quem.reducao_dano, valor.get("reducao_dano", 0.0))
+            quem.cura_por_turno = max(
+                quem.cura_por_turno, valor.get("cura_por_turno", 0.0)
+            )
+            quem.vantagem = quem.vantagem or bool(valor.get("vantagem"))
+            return
+
+        # Efeito posto num inimigo: quem ganha e o dono da marca.
+        dono = next((c for c in combatentes if c.user_id == ligado["dono"]), None)
+        if dono is None:
+            return
+        if valor.get("dano_bonus"):
+            dono.dano_por_alvo[ligado["alvo_id"]] = valor["dano_bonus"]
+        if valor.get("vantagem"):
+            dono.vantagem_contra.add(ligado["alvo_id"])
 
     async def _estado_combate(
         self, run: dict[str, Any], sala: Sala
@@ -1043,10 +1075,13 @@ class Incursoes(commands.Cog):
         ]
         if not inimigos:
             return None
+        ligados = await db.efeitos_ativos(
+            self.bot.db, run["id"], passo, linha["rodada"] - 1
+        )
         return EstadoCombate(
             inimigos=inimigos,
             rodada=linha["rodada"],
-            combatentes=await self._combatentes(run),
+            combatentes=await self._combatentes(run, ligados),
         )
 
     async def _abrir_combate(self, run: dict[str, Any], sala: Sala) -> None:
@@ -1348,6 +1383,11 @@ class Incursoes(commands.Cog):
         if acao.get("tipo") == "cura":
             await self._resolver_cura(interaction, run, habilidade, acao, alvos, estado)
             return
+        if acao.get("tipo") == "duracao":
+            await self._resolver_duracao(
+                interaction, run, sala, estado, habilidade, acao, alvos
+            )
+            return
         await self._resolver_golpes(
             interaction, run, sala, estado, atacante, habilidade, acao, alvos
         )
@@ -1419,6 +1459,51 @@ class Incursoes(commands.Cog):
             agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
             await self._atualizar_painel(run, sala, estado, len(agiram))
 
+    async def _resolver_duracao(
+        self, interaction, run, sala, estado, habilidade, acao, alvos
+    ) -> None:
+        """Liga um efeito com prazo em quem usou, ou no inimigo escolhido."""
+        passo = self._passo(run)
+        expira = estado.rodada + acao.get("turnos", 1)
+        if acao.get("alvo") == "inimigo":
+            alvo = estado.inimigo(alvos[0]) if alvos else estado.alvo_preferido()
+            if alvo is None or alvo.caido:
+                await interaction.response.send_message(
+                    "Esse inimigo nao esta de pe.", ephemeral=True
+                )
+                return
+            await db.aplicar_efeito(
+                self.bot.db, run["id"], passo, "inimigo", alvo.indice,
+                habilidade.id, acao["efeitos"], expira, dono=interaction.user.id,
+            )
+            alvo_nome = alvo.nome
+        else:
+            await db.aplicar_efeito(
+                self.bot.db, run["id"], passo, "personagem", interaction.user.id,
+                habilidade.id, acao["efeitos"], expira,
+            )
+            alvo_nome = None
+
+        quem = estado.combatente(interaction.user.id)
+        turnos = acao.get("turnos", 1)
+        alvo_texto = f" em **{alvo_nome}**" if alvo_nome else ""
+        texto = (
+            f"✨ **{habilidade.nome}**{alvo_texto} — vale por "
+            f"{turnos} turno(s), ate a rodada {expira - 1}."
+        )
+        await interaction.response.send_message(texto, ephemeral=True)
+        await self._anunciar_habilidade(
+            run, f"✨ {quem.nome if quem else 'Alguem'} usa **{habilidade.nome}**{alvo_texto}."
+        )
+
+        atualizado = await self._estado_combate(run, sala)
+        if atualizado is not None:
+            ataques = await db.ataques_da_rodada(
+                self.bot.db, run["id"], passo, atualizado.rodada
+            )
+            agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
+            await self._atualizar_painel(run, sala, atualizado, len(agiram))
+
     async def _resolver_golpes(
         self, interaction, run, sala, estado, atacante, habilidade, acao, alvos
     ) -> None:
@@ -1476,6 +1561,19 @@ class Incursoes(commands.Cog):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
             await self._atualizar_painel(run, sala, estado, len(agiram))
+
+    async def _virar_efeitos(self, run: dict[str, Any], estado) -> None:
+        """No fim da rodada: cura de quem tem cura por turno, e prazos vencidos."""
+        passo = self._passo(run)
+        curas = {}
+        for c in estado.vivos:
+            if c.cura_por_turno:
+                ganho = motor.curar(c, c.cura_por_turno)
+                if ganho:
+                    curas[c.user_id] = c.hp_atual
+        if curas:
+            await db.definir_hp_varios(self.bot.db, run["id"], curas)
+        await db.limpar_efeitos_vencidos(self.bot.db, run["id"], passo, estado.rodada)
 
     async def _anunciar_habilidade(self, run: dict[str, Any], texto: str) -> None:
         """O grupo ve que alguem usou uma habilidade, sem detalhe de rolagem."""
@@ -1551,6 +1649,7 @@ class Incursoes(commands.Cog):
         # Proxima rodada no mesmo painel, com o log da que acabou.
         estado.rodada += 1
         await db.atualizar_rodada(self.bot.db, run["id"], self._passo(run), estado.rodada)
+        await self._virar_efeitos(run, estado)
         await self._atualizar_painel(run, sala, estado, 0, rodada_anterior=log)
 
     async def _apos_combate_vencido(

@@ -147,6 +147,22 @@ CREATE TABLE IF NOT EXISTS run_ataques (
     PRIMARY KEY (run_id, passo, rodada, user_id, indice)
 );
 
+-- Efeitos com duracao dentro de um combate: Rage, Marca do Cacador e afins.
+-- alvo_tipo diz se cai num personagem ("personagem", alvo_id = user_id) ou numa
+-- criatura ("inimigo", alvo_id = indice). `dono` e quem ganha o beneficio de um
+-- efeito posto num inimigo.
+CREATE TABLE IF NOT EXISTS run_efeitos (
+    run_id    INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo     INTEGER NOT NULL,
+    alvo_tipo TEXT    NOT NULL,
+    alvo_id   INTEGER NOT NULL,
+    efeito    TEXT    NOT NULL,
+    dono      INTEGER,
+    valor     TEXT    NOT NULL DEFAULT '{}',
+    expira    INTEGER NOT NULL,
+    PRIMARY KEY (run_id, passo, alvo_tipo, alvo_id, efeito)
+);
+
 -- Quantas vezes cada um ja usou cada habilidade. A chave diz quando zera:
 -- "combate:<passo>", "descanso:<n>" ou "incursao".
 CREATE TABLE IF NOT EXISTS run_usos (
@@ -911,6 +927,55 @@ async def ataques_da_rodada(
         (run_id, passo, rodada),
     ) as cur:
         return [dict(r) for r in await cur.fetchall()]
+
+
+async def aplicar_efeito(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    alvo_tipo: str,
+    alvo_id: int,
+    efeito: str,
+    valor: dict[str, Any],
+    expira: int,
+    dono: Optional[int] = None,
+) -> None:
+    """Liga um efeito com prazo. Usar de novo renova, em vez de empilhar."""
+    await conn.execute(
+        "INSERT OR REPLACE INTO run_efeitos"
+        " (run_id, passo, alvo_tipo, alvo_id, efeito, dono, valor, expira)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            run_id, passo, alvo_tipo, alvo_id, efeito, dono,
+            json.dumps(valor, ensure_ascii=False), expira,
+        ),
+    )
+    await conn.commit()
+
+
+async def efeitos_ativos(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
+) -> list[dict[str, Any]]:
+    """Os efeitos que ainda valem nesta rodada."""
+    async with conn.execute(
+        "SELECT * FROM run_efeitos WHERE run_id = ? AND passo = ? AND expira > ?"
+        " ORDER BY rowid",
+        (run_id, passo, rodada),
+    ) as cur:
+        linhas = [dict(r) for r in await cur.fetchall()]
+    for linha in linhas:
+        linha["valor"] = json.loads(linha["valor"] or "{}")
+    return linhas
+
+
+async def limpar_efeitos_vencidos(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
+) -> None:
+    await conn.execute(
+        "DELETE FROM run_efeitos WHERE run_id = ? AND passo = ? AND expira <= ?",
+        (run_id, passo, rodada),
+    )
+    await conn.commit()
 
 
 async def usos_da_run(

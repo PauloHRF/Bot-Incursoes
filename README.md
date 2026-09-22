@@ -182,9 +182,20 @@ substitui o do tier 1, não soma.
 **As ativas prontas** têm botão: no painel de combate aparece **✨ Habilidade** ao lado de
 Atacar, e fora do combate existe `/incursao habilidade`. O menu mostra só o que o personagem
 pode usar naquele momento, com quantos usos restam; quem precisa de alvo (um inimigo, três
-inimigos, um aliado) recebe um segundo menu antes de gastar o uso. São oito por enquanto:
-*Second Wind*, *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*,
-*Rajada do Caçador*, *Cura pelas Mãos* e *Golpe Divino*.
+inimigos, um aliado) recebe um segundo menu antes de gastar o uso. São treze:
+
+| Efeito | Habilidades |
+| --- | --- |
+| cura | *Second Wind*, *Cura pelas Mãos* |
+| golpe extra | *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*, *Rajada do Caçador*, *Golpe Divino* |
+| efeito com prazo | *Rage*, *Reckless Attack*, *Marca do Caçador*, *Caçador Supremo*, *Avatar da Luz* |
+
+**Efeito com prazo** dura N turnos e conta sozinho: o bot guarda até que rodada ele vale e o
+apaga quando a rodada vira. Dá para reduzir dano recebido (Rage), rolar com **vantagem** —
+dois d20, fica o melhor —, somar CA e dano, curar uma fração por turno (Avatar da Luz) ou
+marcar **um inimigo específico** para levar dano extra só dele (Marca do Caçador, Caçador
+Supremo). No painel, quem está sob efeito aparece com 🛡️ (dano reduzido), 🎯 (vantagem) ou
+✨ (abençoado), e o inimigo marcado leva 🎯 no nome.
 
 Golpe de habilidade é **extra**: não gasta o ataque do turno, então dá para usar e atacar na
 mesma rodada. Cura não levanta quem já caiu — isso é assunto do descanso.
@@ -193,12 +204,12 @@ mesma rodada. Cura não levanta quem já caiu — isso é assunto do descanso.
 combate, *por descanso* zera quando o grupo passa por uma sala de Descanso, e *por incursão*
 vale uma vez na run inteira. O contador vive no banco, então sobrevive a reinício do bot.
 
-**Ainda não valem**: as ativas que dependem de duração, estado ou reação (Rage, Marca do
-Caçador, Uncanny Dodge, Stunning Strike, Avatar da Luz, as do Xamã com THP), as escolhas de
-nível (Fighting Style, Expertise, Primal Knowledge, a do Xamã no tier 3) e as passivas com
-estado no meio do combate (Martial Arts, Convocação totêmica). Todas aparecem na ficha
-marcadas *(em breve)*, e `/ficha upar` anuncia a habilidade nova do tier mesmo quando ela
-ainda não faz efeito.
+**Ainda não valem**: as que dependem de **THP** (Tradição xamânica, Dança totêmica,
+Convocação totêmica, Relentless, Brutal Strike), de **reação** ao golpe do inimigo (Uncanny
+Dodge) ou de **condição** no alvo (Stunning Strike), mais Martial Arts e as escolhas de
+nível (Fighting Style, Expertise, Primal Knowledge, a do Xamã no tier 3). Todas aparecem na
+ficha marcadas *(em breve)*, e `/ficha upar` anuncia a habilidade nova do tier mesmo quando
+ela ainda não faz efeito.
 
 Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
 Cada um pode ter um **retrato**: `/ficha imagem <link>` guarda a URL, que aparece como
@@ -364,6 +375,7 @@ tests/
   test_bando.py    várias criaturas na mesma sala: alvo, HP separado e revide
   test_habilidades.py  catálogo, passivas aplicadas e multiataque
   test_ativas.py   habilidades ativas: usos, cura e golpes extras
+  test_duracao.py  efeitos com prazo: Rage, Marca do Caçador e a virada da rodada
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   test_critico_expertise.py  críticos, erro crítico e bônus por perícia

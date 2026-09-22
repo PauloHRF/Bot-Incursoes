@@ -449,20 +449,42 @@ def resumo_do_golpe(golpes: list[tuple]) -> str:
     return "\n".join(linhas) or "Nenhum inimigo de pé para atacar."
 
 
-def _linha_inimigo(i) -> str:
+# Marcas dos efeitos com prazo, para o grupo ver o que esta ligado.
+MARCA_ALVO = "🎯"
+MARCA_PROTEGIDO = "🛡️"
+MARCA_ABENCOADO = "✨"
+
+
+def _linha_inimigo(i, marcado: bool = False) -> str:
     """Uma criatura no painel: barra de HP enquanto está de pé."""
     if i.caido:
         return f"☠️ ~~{i.nome}~~ — abatido"
+    alvo = f"{MARCA_ALVO} " if marcado else ""
     return (
-        f"👹 **{i.nome}** {barra(i.hp_atual, i.hp_max, 8)} "
+        f"👹 {alvo}**{i.nome}** {barra(i.hp_atual, i.hp_max, 8)} "
         f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca} · {fmt(i.ataque)} · {i.dano}"
     )
+
+
+def _marcas_do_combatente(c) -> str:
+    """Os efeitos com prazo que estao valendo naquele personagem."""
+    marcas = []
+    if getattr(c, "reducao_dano", 0):
+        marcas.append(MARCA_PROTEGIDO)
+    if getattr(c, "vantagem", False):
+        marcas.append(MARCA_ALVO)
+    if getattr(c, "ca_extra", 0) or getattr(c, "cura_por_turno", 0):
+        marcas.append(MARCA_ABENCOADO)
+    return (" " + "".join(marcas)) if marcas else ""
 
 
 def _linha_hp(c) -> str:
     if c.hp_atual <= 0:
         return f"💀 ~~{c.nome}~~ — caído"
-    return f"❤️ {c.nome} — {barra(c.hp_atual, c.hp_max, 6)} {c.hp_atual}/{c.hp_max}"
+    return (
+        f"❤️ {c.nome} — {barra(c.hp_atual, c.hp_max, 6)} "
+        f"{c.hp_atual}/{c.hp_max}{_marcas_do_combatente(c)}"
+    )
 
 
 def texto_do_contra_ataque(contra, alvo_nome: str) -> str:
@@ -509,9 +531,18 @@ def combate(
         if len(estado.inimigos) == 1
         else f"Inimigos ({de_pe} de pé de {len(estado.inimigos)})"
     )
+    marcados = {
+        indice
+        for c in estado.combatentes
+        for indice in list(getattr(c, "dano_por_alvo", {})) + list(
+            getattr(c, "vantagem_contra", set())
+        )
+    }
     e.add_field(
         name=rotulo,
-        value="\n".join(_linha_inimigo(i) for i in estado.inimigos),
+        value="\n".join(
+            _linha_inimigo(i, i.indice in marcados) for i in estado.inimigos
+        ),
         inline=False,
     )
     e.add_field(

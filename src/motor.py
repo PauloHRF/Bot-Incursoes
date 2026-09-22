@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import random
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Iterable, Optional
 
@@ -21,8 +21,12 @@ def _rng(rng: Optional[random.Random]) -> random.Random:
     return rng or random.SystemRandom()
 
 
-def rolar_d20(rng: Optional[random.Random] = None) -> int:
-    return _rng(rng).randint(1, 20)
+def rolar_d20(rng: Optional[random.Random] = None, vantagem: bool = False) -> int:
+    gerador = _rng(rng)
+    if vantagem:
+        # Vantagem: rola dois e fica com o melhor.
+        return max(gerador.randint(1, 20), gerador.randint(1, 20))
+    return gerador.randint(1, 20)
 
 
 def rolar_dano(
@@ -229,6 +233,18 @@ class Combatente:
     critico_em: int = 20
     dano_extra: int = 0
     dano_ferido: int = 0
+    # Efeitos com prazo, ligados por habilidade dentro do combate.
+    reducao_dano: float = 0.0
+    vantagem: bool = False
+    ca_extra: int = 0
+    cura_por_turno: float = 0.0
+    # Marca do Cacador e afins: valem so contra aquele inimigo.
+    dano_por_alvo: dict = field(default_factory=dict)
+    vantagem_contra: set = field(default_factory=set)
+
+    @property
+    def ca_efetiva(self) -> int:
+        return self.ca + self.ca_extra
 
     @property
     def caido(self) -> bool:
@@ -287,6 +303,7 @@ def atacar(
     dano_bonus: Optional[str] = None,
     garantido: bool = False,
     critico_forcado: bool = False,
+    vantagem: bool = False,
 ) -> GolpeAtaque:
     """Uma rolagem de ataque: d20 + bônus contra a CA. Acertou, rola o dano.
 
@@ -298,7 +315,7 @@ def atacar(
     golpe = GolpeAtaque(
         atacante_nome,
         alvo_nome,
-        rolar_d20(rng),
+        rolar_d20(rng, vantagem),
         bonus,
         ca_alvo,
         critico_em=critico_em,
@@ -423,6 +440,8 @@ def atacar_inimigo(
     extra = combatente.dano_extra
     if combatente.dano_ferido and esta_ferido(inimigo):
         extra += combatente.dano_ferido
+    marcado = combatente.dano_por_alvo.get(inimigo.indice)
+    vantagem = combatente.vantagem or inimigo.indice in combatente.vantagem_contra
     golpe = atacar(
         combatente.nome,
         combatente.bonus_ataque,
@@ -432,10 +451,14 @@ def atacar_inimigo(
         rng,
         critico_em=combatente.critico_em,
         dano_extra=extra,
-        dano_bonus=dano_bonus,
+        dano_bonus=dano_bonus or marcado,
         garantido=garantido,
         critico_forcado=critico_forcado,
+        vantagem=vantagem,
     )
+    # A marca soma junto com o dano bonus da propria habilidade.
+    if dano_bonus and marcado and golpe.acertou:
+        golpe.dano += rolar_dano(marcado, rng, critico=golpe.critico)
     if golpe.acertou:
         inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
     return golpe
@@ -453,9 +476,16 @@ def contra_atacar(
     inimigo: Inimigo, alvo: Combatente, rng: Optional[random.Random] = None
 ) -> GolpeAtaque:
     """Um inimigo revida contra um personagem. O dano já sai descontado do HP dele."""
-    golpe = atacar(inimigo.nome, inimigo.ataque, inimigo.dano, alvo.nome, alvo.ca, rng)
+    golpe = atacar(
+        inimigo.nome, inimigo.ataque, inimigo.dano, alvo.nome, alvo.ca_efetiva, rng
+    )
     if golpe.acertou:
-        alvo.hp_atual = max(0, alvo.hp_atual - golpe.dano)
+        # Rage e companhia cortam o dano recebido antes de ele entrar no HP.
+        sofrido = golpe.dano
+        if alvo.reducao_dano:
+            sofrido = max(1, int(round(sofrido * (1 - alvo.reducao_dano))))
+            golpe.dano = sofrido
+        alvo.hp_atual = max(0, alvo.hp_atual - sofrido)
     return golpe
 
 
