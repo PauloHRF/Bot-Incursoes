@@ -1514,8 +1514,14 @@ class Incursoes(commands.Cog):
         curado = motor.curar(alvo, acao["fracao"])
         await db.definir_hp(self.bot.db, run["id"], alvo.user_id, alvo.hp_atual)
         temporario = 0
-        if acao.get("thp_alvo"):
-            temporario = motor.ganhar_thp(alvo, motor.rolar_dano(acao["thp_alvo"]))
+        quanto_thp = motor.rolar_dano(acao["thp_alvo"]) if acao.get("thp_alvo") else 0
+        # Cantico Benevolente: a escolha do Xama soma THP em cima da cura.
+        quem_curou = await self._personagem_na_run(run, interaction.user.id)
+        extra_cantico = ((quem_curou or {}).get("efeitos") or {}).get("thp_na_cura", 0)
+        if extra_cantico and alvo.user_id != interaction.user.id:
+            quanto_thp += extra_cantico
+        if quanto_thp:
+            temporario = motor.ganhar_thp(alvo, quanto_thp)
             await db.definir_thp(self.bot.db, run["id"], alvo.user_id, alvo.thp)
         if curado:
             extra = f" e fica com **{temporario}** de THP" if temporario else ""

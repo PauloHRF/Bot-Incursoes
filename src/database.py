@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS personagens (
     nivel          INTEGER NOT NULL DEFAULT 1,
     pericias       TEXT    NOT NULL DEFAULT '[]',
     bonus_pericias TEXT    NOT NULL DEFAULT '{}',
+    -- O que o jogador decidiu em cada tier: {habilidade_id: valor}.
+    escolhas       TEXT    NOT NULL DEFAULT '{}',
     imagem         TEXT,
     criado_em      TEXT    NOT NULL DEFAULT (datetime('now')),
     atualizado_em  TEXT    NOT NULL DEFAULT (datetime('now'))
@@ -306,6 +308,14 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
         )
         await conn.execute("DELETE FROM run_ataques")
 
+    # As escolhas de nivel de cada personagem.
+    if await _tabela_existe(conn, "personagens") and "escolhas" not in await _colunas(
+        conn, "personagens"
+    ):
+        await conn.execute(
+            "ALTER TABLE personagens ADD COLUMN escolhas TEXT NOT NULL DEFAULT '{}'"
+        )
+
     # Vida temporaria dos participantes.
     if "thp" not in await _colunas(conn, "run_participantes"):
         await conn.execute(
@@ -381,13 +391,26 @@ def _desserializar(row: aiosqlite.Row) -> dict[str, Any]:
     # Normaliza fichas gravadas antes dos nomes de pericia ganharem acento.
     p["pericias"] = normalizar_lista_pericias(json.loads(p["pericias"]))
     p["bonus_pericias"] = _normalizar_bonus(json.loads(p.get("bonus_pericias") or "{}"))
+    p["escolhas"] = json.loads(p.get("escolhas") or "{}")
     numeros = classes.numeros(p.get("classe"), p["nivel"])
     if numeros:
+        efeitos = classes.efeitos(p["classe"], p["nivel"], p["escolhas"])
         p["numeros"] = numeros
-        p["efeitos"] = classes.efeitos(p["classe"], p["nivel"])
+        p["efeitos"] = efeitos
         p["habilidades"] = classes.habilidades(p["classe"], p["nivel"])
-        p["ca"] = numeros.ca
-        p["bonus_ataque"] = numeros.acerto
+        p["pendencias"] = classes.escolhas_pendentes(
+            p["classe"], p["nivel"], p["escolhas"]
+        )
+        # Primal Knowledge da proficiencia fora da cota da classe.
+        p["pericias_extras"] = classes.pericias_extras(
+            p["classe"], p["nivel"], p["escolhas"]
+        )
+        for extra in p["pericias_extras"]:
+            if extra not in p["pericias"]:
+                p["pericias"].append(extra)
+        # Fighting Style e afins entram aqui, por cima da tabela.
+        p["ca"] = numeros.ca + efeitos.get("ca", 0)
+        p["bonus_ataque"] = numeros.acerto + efeitos.get("acerto", 0)
         p["dano_arma"] = numeros.dano
         p["hp_max"] = numeros.hp
         p["pericias_permitidas"] = numeros.pericias
@@ -478,6 +501,26 @@ async def atualizar_pericias(
         "pericias",
         json.dumps(normalizar_lista_pericias(pericias), ensure_ascii=False),
     )
+
+
+async def definir_escolha(
+    conn: aiosqlite.Connection, personagem_id: int, habilidade: str, valor: Any
+) -> None:
+    """Grava o que o jogador decidiu numa habilidade de escolha."""
+    async with conn.execute(
+        "SELECT escolhas FROM personagens WHERE id = ?", (personagem_id,)
+    ) as cur:
+        linha = await cur.fetchone()
+    if not linha:
+        return
+    escolhas = json.loads(linha["escolhas"] or "{}")
+    escolhas[habilidade] = valor
+    await conn.execute(
+        "UPDATE personagens SET escolhas = ?, atualizado_em = datetime('now')"
+        " WHERE id = ?",
+        (json.dumps(escolhas, ensure_ascii=False), personagem_id),
+    )
+    await conn.commit()
 
 
 async def definir_bonus_pericia(

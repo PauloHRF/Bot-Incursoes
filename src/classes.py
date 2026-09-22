@@ -13,7 +13,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from .habilidades import ATIVA, ESCOLHA, HABILIDADES, PASSIVA, Habilidade, juntar
+from .habilidades import (
+    ATIVA,
+    ESCOLHA,
+    HABILIDADES,
+    PASSIVA,
+    Habilidade,
+    juntar,
+    juntar_efeito,
+)
 from .rules import TIER_MAXIMO, chave_comparacao, tier
 
 # As 14 classes do grupo. Só as que têm tabela aqui podem ser escolhidas; as
@@ -209,9 +217,60 @@ def habilidades(identificador: Optional[str], nivel: int) -> list[tuple[int, Hab
     return alvo.habilidades_ate(nivel) if alvo else []
 
 
-def efeitos(identificador: Optional[str], nivel: int) -> dict:
-    """O que as passivas do personagem somam, pronto para o motor usar."""
-    return juntar([h for _tier, h in habilidades(identificador, nivel)])
+def efeitos(
+    identificador: Optional[str], nivel: int, escolhas: Optional[dict] = None
+) -> dict:
+    """O que as passivas e as escolhas do personagem somam, pronto para o motor.
+
+    `escolhas` é o que o jogador decidiu em cada tier: {habilidade_id: valor}.
+    """
+    lista = [h for _tier, h in habilidades(identificador, nivel)]
+    juntos = juntar(lista)
+    for habilidade in lista:
+        decidido = (escolhas or {}).get(habilidade.id)
+        if not decidido or not habilidade.decidivel:
+            continue
+        juntar_escolha(juntos, habilidade, decidido)
+    return juntos
+
+
+def juntar_escolha(juntos: dict, habilidade: Habilidade, decidido) -> None:
+    """Aplica uma escolha já feita sobre os efeitos acumulados."""
+    forma = habilidade.escolha or {}
+    if forma.get("tipo") == "opcao":
+        opcao = next(
+            (o for o in forma.get("opcoes", []) if o["id"] == decidido), None
+        )
+        if opcao:
+            juntar_efeito(juntos, opcao.get("efeito") or {})
+        return
+    if forma.get("aplica") == "expertise":
+        juntos["expertise"] = sorted(set(juntos["expertise"]) | set(decidido or []))
+
+
+def escolhas_pendentes(
+    identificador: Optional[str], nivel: int, feitas: Optional[dict] = None
+) -> list[tuple[int, Habilidade]]:
+    """As decisões que o personagem já podia ter tomado e ainda não tomou."""
+    feitas = feitas or {}
+    return [
+        (t, h)
+        for t, h in habilidades(identificador, nivel)
+        if h.decidivel and not feitas.get(h.id)
+    ]
+
+
+def pericias_extras(identificador: Optional[str], nivel: int, escolhas: dict) -> list[str]:
+    """Proficiências ganhas por escolha (Primal Knowledge), fora a cota da classe."""
+    extras: list[str] = []
+    for _tier, habilidade in habilidades(identificador, nivel):
+        forma = habilidade.escolha or {}
+        if forma.get("aplica") != "proficiencia":
+            continue
+        for pericia in (escolhas or {}).get(habilidade.id) or []:
+            if pericia not in extras:
+                extras.append(pericia)
+    return extras
 
 
 def tier_maximo_com_tabela() -> int:

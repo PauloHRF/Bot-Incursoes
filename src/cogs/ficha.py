@@ -52,6 +52,85 @@ class SeletorPericias(discord.ui.View):
         await interaction.response.defer()
 
 
+class SeletorEscolha(discord.ui.View):
+    """As decisoes de tier que o personagem ainda nao tomou."""
+
+    def __init__(self, cog: "Ficha", personagem_id: int, pendencias: list):
+        super().__init__(timeout=300)
+        self.cog = cog
+        self.personagem_id = personagem_id
+        menu = discord.ui.Select(
+            placeholder="Qual decisao?",
+            options=[
+                discord.SelectOption(
+                    label=f"T{tier_da}: {h.nome}"[:100], value=h.id, description=h.texto[:100]
+                )
+                for tier_da, h in pendencias[:25]
+            ],
+        )
+        menu.callback = self._escolher
+        self.menu = menu
+        self.add_item(menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await self.cog.abrir_escolha(interaction, self.personagem_id, self.menu.values[0])
+
+
+class SeletorOpcao(discord.ui.View):
+    """Uma decisao de caminho unico: Fighting Style, a do Xama."""
+
+    def __init__(self, cog: "Ficha", personagem_id: int, habilidade):
+        super().__init__(timeout=300)
+        self.cog = cog
+        self.personagem_id = personagem_id
+        self.habilidade = habilidade
+        menu = discord.ui.Select(
+            placeholder=f"{habilidade.nome}: escolha um",
+            options=[
+                discord.SelectOption(
+                    label=o["nome"][:100], value=o["id"], description=o["texto"][:100]
+                )
+                for o in habilidade.escolha["opcoes"]
+            ],
+        )
+        menu.callback = self._escolher
+        self.menu = menu
+        self.add_item(menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await self.cog.gravar_escolha(
+            interaction, self.personagem_id, self.habilidade, self.menu.values[0]
+        )
+
+
+class SeletorPericiasDaEscolha(discord.ui.View):
+    """Uma decisao que pede pericias: Expertise, Primal Knowledge."""
+
+    def __init__(self, cog: "Ficha", personagem_id: int, habilidade, opcoes: list[str]):
+        super().__init__(timeout=300)
+        self.cog = cog
+        self.personagem_id = personagem_id
+        self.habilidade = habilidade
+        quantas = habilidade.escolha.get("quantidade", 1)
+        menu = discord.ui.Select(
+            placeholder=f"{habilidade.nome}: escolha {quantas}",
+            min_values=1,
+            max_values=min(quantas, len(opcoes)),
+            options=[discord.SelectOption(label=p) for p in opcoes[:25]],
+        )
+        menu.callback = self._escolher
+        self.menu = menu
+        self.add_item(menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await self.cog.gravar_escolha(
+            interaction, self.personagem_id, self.habilidade, list(self.menu.values)
+        )
+
+
 def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.Embed:
     nivel = personagem["nivel"]
     treinadas = personagem["pericias"]
@@ -76,11 +155,13 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         )
         return e
 
+    # CA e acerto saem do personagem, nao da tabela: o Fighting Style ja entrou.
     e.add_field(
         name="Combate",
         value=(
-            f"HP **{numeros.hp}** | CA **{numeros.ca}** | "
-            f"Acerto **{fmt(numeros.acerto)}** | Dano **{numeros.dano}**"
+            f"HP **{numeros.hp}** | CA **{personagem.get('ca', numeros.ca)}** | "
+            f"Acerto **{fmt(personagem.get('bonus_ataque', numeros.acerto))}** | "
+            f"Dano **{numeros.dano}**"
         ),
         inline=False,
     )
@@ -103,6 +184,7 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         )
 
     _campo_habilidades(e, personagem)
+    _campo_escolhas(e, personagem)
 
     if bonus:
         # Uma pericia sem proficiencia tambem pode ter bonus: mostramos o total.
@@ -125,8 +207,8 @@ ICONE_HABILIDADE = {cl.PASSIVA: "⚙️", cl.ATIVA: "⚡", cl.ESCOLHA: "❓"}
 def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
     """As habilidades que o personagem ja tem, por tier.
 
-    O icone diz se o bot ja aplica sozinho, se o jogador vai acionar ou se
-    falta escolher algo. Ativas e escolhas ainda nao mexem em conta nenhuma.
+    O icone diz se o bot aplica sozinho, se o jogador aciona ou se ha algo a
+    decidir. O que o bot ainda nao sabe resolver sai marcado.
     """
     ganhas = personagem.get("habilidades") or []
     if not ganhas:
@@ -143,6 +225,30 @@ def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
     if len(texto) > 1024:
         texto = texto[:1000].rsplit("\n", 1)[0] + "\n…"
     e.add_field(name=f"Habilidades ({len(ganhas)})", value=texto, inline=False)
+
+
+def _campo_escolhas(e: discord.Embed, personagem: dict[str, Any]) -> None:
+    """O que o jogador ja decidiu, e o que ainda falta decidir."""
+    feitas = personagem.get("escolhas") or {}
+    pendencias = personagem.get("pendencias") or []
+    linhas = []
+    for _tier, habilidade in personagem.get("habilidades") or []:
+        valor = feitas.get(habilidade.id)
+        if not valor or not habilidade.decidivel:
+            continue
+        if isinstance(valor, list):
+            escrito = ", ".join(valor)
+        else:
+            opcao = next(
+                (o for o in habilidade.escolha.get("opcoes", []) if o["id"] == valor),
+                None,
+            )
+            escrito = opcao["nome"] if opcao else str(valor)
+        linhas.append(f"**{habilidade.nome}**: {escrito}")
+    for _tier, habilidade in pendencias:
+        linhas.append(f"**{habilidade.nome}**: *a decidir* — `/ficha escolhas`")
+    if linhas:
+        e.add_field(name="Escolhas", value="\n".join(linhas), inline=False)
 
 
 def _rodape_da_ficha(e: discord.Embed, numeros, nivel: int) -> discord.Embed:
@@ -458,7 +564,13 @@ class Ficha(commands.Cog):
                     "Habilidade(s) novas: "
                     + " | ".join(f"**{h.nome}** — {h.texto}" for h in novas)
                 )
-            sobrando = novos.pericias - len(atualizado["pericias"])
+            # As proficiencias ganhas por escolha nao contam na cota da classe.
+            proprias = [
+                pericia
+                for pericia in atualizado["pericias"]
+                if pericia not in (atualizado.get("pericias_extras") or [])
+            ]
+            sobrando = novos.pericias - len(proprias)
             if sobrando > 0:
                 linhas.append(
                     f"Voce pode escolher mais **{sobrando}** pericia(s): use `/ficha pericias`."
@@ -466,6 +578,11 @@ class Ficha(commands.Cog):
         else:
             proximo = tier(antes) * 2 + 1
             linhas.append(f"Os numeros sobem no nivel {proximo}, quando o tier virar.")
+
+        pendencias = atualizado.get("pendencias") or []
+        if pendencias:
+            quais = " | ".join(f"**{h.nome}**" for _t, h in pendencias)
+            linhas.append(f"Decisao pendente: {quais} — use `/ficha escolhas`.")
 
         await interaction.response.send_message(
             "\n".join(linhas), embed=embed_ficha(atualizado, interaction.user)
@@ -555,6 +672,99 @@ class Ficha(commands.Cog):
         await interaction.response.send_message(
             f"✨ {interaction.user.mention} — {aviso}",
             embed=embed_ficha(atualizado, interaction.user),
+        )
+
+    # ------------------------------------------------------- escolhas
+
+    @grupo.command(
+        name="escolhas", description="Decide as escolhas de tier que ficaram pendentes"
+    )
+    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
+    async def escolhas(
+        self, interaction: discord.Interaction, personagem: Optional[str] = None
+    ) -> None:
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
+            return
+        pendencias = escolhido.get("pendencias") or []
+        if not pendencias:
+            await interaction.response.send_message(
+                f"**{escolhido['nome']}** nao tem nenhuma decisao pendente.", ephemeral=True
+            )
+            return
+        await interaction.response.send_message(
+            f"**{escolhido['nome']}** tem {len(pendencias)} decisao(oes) para tomar:",
+            view=SeletorEscolha(self, escolhido["id"], pendencias),
+            ephemeral=True,
+        )
+
+    async def abrir_escolha(
+        self, interaction: discord.Interaction, personagem_id: int, habilidade_id: str
+    ) -> None:
+        """Segundo passo: mostra as opcoes daquela decisao."""
+        personagem = await db.buscar_personagem(self.bot.db, personagem_id)
+        if not personagem or personagem["user_id"] != interaction.user.id:
+            await interaction.response.send_message("Esse personagem nao e seu.", ephemeral=True)
+            return
+        habilidade = next(
+            (h for _t, h in personagem.get("pendencias") or [] if h.id == habilidade_id),
+            None,
+        )
+        if habilidade is None:
+            await interaction.response.send_message(
+                "Essa decisao ja foi tomada.", ephemeral=True
+            )
+            return
+
+        forma = habilidade.escolha
+        if forma["tipo"] == "opcao":
+            await interaction.response.send_message(
+                f"**{habilidade.nome}** — {habilidade.texto}",
+                view=SeletorOpcao(self, personagem_id, habilidade),
+                ephemeral=True,
+            )
+            return
+
+        if forma.get("entre") == "proficientes":
+            opcoes = [
+                p for p in personagem["pericias"]
+                if p not in (personagem["efeitos"] or {}).get("expertise", [])
+            ]
+            if not opcoes:
+                await interaction.response.send_message(
+                    "Escolha as proficiencias primeiro, com `/ficha pericias`.",
+                    ephemeral=True,
+                )
+                return
+        else:
+            opcoes = [p for p in PERICIAS if p not in personagem["pericias"]]
+
+        await interaction.response.send_message(
+            f"**{habilidade.nome}** — {habilidade.texto}",
+            view=SeletorPericiasDaEscolha(self, personagem_id, habilidade, opcoes),
+            ephemeral=True,
+        )
+
+    async def gravar_escolha(
+        self, interaction: discord.Interaction, personagem_id: int, habilidade, valor
+    ) -> None:
+        """Ultimo passo: grava e mostra a ficha ja com a decisao valendo."""
+        await db.definir_escolha(self.bot.db, personagem_id, habilidade.id, valor)
+        atualizado = await db.buscar_personagem(self.bot.db, personagem_id)
+        escrito = valor if isinstance(valor, str) else ", ".join(valor)
+        if habilidade.escolha["tipo"] == "opcao":
+            opcao = next(
+                (o for o in habilidade.escolha["opcoes"] if o["id"] == valor), None
+            )
+            escrito = f"{opcao['nome']} ({opcao['texto']})" if opcao else valor
+        texto = (
+            f"\U0001f9ed {interaction.user.mention} decidiu **{habilidade.nome}** de "
+            f"**{atualizado['nome']}**: {escrito}."
+        )
+        await interaction.response.send_message(texto, ephemeral=True)
+        await self._anunciar(
+            interaction, texto, embed=embed_ficha(atualizado, interaction.user)
         )
 
     @grupo.command(name="imagem", description="Associa um retrato ao personagem")

@@ -109,9 +109,11 @@ def mod_pericia(
     `bonus` são as expertises (valores avulsos por perícia) e `efeitos` é o que as
     passivas da classe dão: um bônus geral e outro por perícia.
     """
-    total = (
-        numeros.bonus_proficiencia if pericia in treinadas else numeros.bonus_pericia
-    )
+    tem_proficiencia = pericia in treinadas
+    total = numeros.bonus_proficiencia if tem_proficiencia else numeros.bonus_pericia
+    if efeitos and tem_proficiencia and pericia in (efeitos.get("expertise") or []):
+        # Expertise dobra o bonus de proficiencia daquela pericia.
+        total += numeros.bonus_proficiencia
     if bonus:
         total += bonus.get(pericia, 0)
     if efeitos:

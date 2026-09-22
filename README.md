@@ -55,6 +55,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/ficha ver [personagem] [membro]` | Mostra a ficha com todos os modificadores calculados |
 | `/ficha upar [personagem]` | Sobe um nível (os números acompanham o tier) |
 | `/ficha pericias [personagem]` | Reabre o menu de proficiências da classe |
+| `/ficha escolhas [personagem]` | Decide as escolhas de tier pendentes |
 | `/ficha expertise <perícia> <bônus> [personagem]` | Soma um bônus avulso a uma perícia (0 remove) |
 | `/ficha imagem [link] [personagem]` | Associa um retrato ao personagem (sem link, remove) |
 | `/ficha remover <personagem>` | Apaga um personagem seu |
@@ -169,8 +170,8 @@ um ícone que diz o que o bot faz com elas:
 | Ícone | Tipo | Estado |
 | --- | --- | --- |
 | ⚙️ | passiva | já vale sozinha, sem ninguém pedir |
-| ⚡ | ativa | aparece na ficha, marcada *(em breve)* |
-| ❓ | escolha | idem — falta o jogador decidir algo |
+| ⚡ | ativa | o jogador aciona pelo botão ou por comando |
+| ❓ | escolha | o jogador decide algo ao chegar no tier |
 
 **As passivas que já valem** são as que se resolvem em número: *Reliable Talent* (+5 e
 depois +10 em todo teste), *Improved Critical* (crítico com 19), *Golpe Consagrado* (+2 de
@@ -228,9 +229,21 @@ vale uma vez na run inteira. O contador vive no banco, então sobrevive a reiní
 
 **Ainda não valem**: as duas que repetem um teste de perícia falhado (*Sobrevivente* do
 Patrulheiro e *Líder Sagrado* do Paladino), porque dependem do fluxo da sala e não do
-combate, e as escolhas de nível (Fighting Style, Expertise, Primal Knowledge, a do Xamã no
-tier 3). Aparecem na ficha marcadas *(em breve)*, e `/ficha upar` anuncia a habilidade nova
-do tier mesmo quando ela ainda não faz efeito.
+combate. Aparecem na ficha marcadas *(em breve)*.
+
+### Escolhas de tier
+
+Quatro habilidades pedem uma decisão do jogador, e o bot conduz: **Fighting Style** (+1
+acerto, +1 CA ou +2 dano), **Expertise** do Ladino (2 perícias no tier 2 e mais 2 no tier 4,
+com o bônus de proficiência dobrado), **Primal Knowledge** (2 proficiências a mais, fora da
+cota da classe) e a do **Xamã** no tier 3 (Multiattack ou Cântico Benevolente, que soma 4 de
+THP quando ele cura).
+
+`/ficha upar` avisa quando uma decisão fica pendente, e `/ficha escolhas` resolve — menu da
+decisão, menu das opções, pronto. A ficha mostra o que já foi decidido e o que falta, e o
+efeito vale na hora: escolher Defensivo muda a CA que aparece no `/ficha ver` e a que o
+monstro enfrenta. Expertise só oferece perícias em que o personagem tem proficiência; Primal
+Knowledge só oferece as que ele ainda não tem.
 
 Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
 Cada um pode ter um **retrato**: `/ficha imagem <link>` guarda a URL, que aparece como
@@ -399,6 +412,7 @@ tests/
   test_duracao.py  efeitos com prazo: Rage, Marca do Caçador e a virada da rodada
   test_thp.py      vida temporária: absorção, aura totêmica e Relentless
   test_reacoes.py  esquiva, atordoamento e a sequência do Monge
+  test_escolhas.py escolhas de tier: Fighting Style, Expertise e companhia
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   test_critico_expertise.py  críticos, erro crítico e bônus por perícia

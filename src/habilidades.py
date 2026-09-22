@@ -37,6 +37,8 @@ class Habilidade:
     efeito: Optional[dict] = None
     usos: Optional[dict] = None
     acao: Optional[dict] = None
+    # O que o jogador decide ao chegar no tier (ESCOLHA).
+    escolha: Optional[dict] = None
     # Dois caminhos da mesma habilidade dividem o mesmo contador de usos.
     recarga_com: Optional[str] = None
 
@@ -46,13 +48,18 @@ class Habilidade:
         return self.efeito is not None
 
     @property
+    def decidivel(self) -> bool:
+        """Se o bot sabe conduzir a escolha desta habilidade."""
+        return self.escolha is not None
+
+    @property
     def acionavel(self) -> bool:
         """Se o jogador já consegue usar esta habilidade pelo bot."""
         return self.acao is not None
 
     @property
     def pronta(self) -> bool:
-        return self.automatica or self.acionavel
+        return self.automatica or self.acionavel or self.decidivel
 
     @property
     def chave_de_uso(self) -> str:
@@ -85,14 +92,18 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
         1: [Habilidade("reliable_talent", "Reliable Talent", PASSIVA,
                        "Soma +5 em todo teste de pericia.", {"bonus_teste": 5})],
         2: [Habilidade("expertise_1", "Expertise", ESCOLHA,
-                       "Escolhe 2 pericias com proficiencia; o bonus delas dobra.")],
+                       "Escolhe 2 pericias com proficiencia; o bonus delas dobra.",
+                       escolha={"tipo": "pericias", "quantidade": 2,
+                                "entre": "proficientes", "aplica": "expertise"})],
         3: [Habilidade("uncanny_dodge", "Uncanny Dodge", ATIVA,
                        "1x por combate: corta pela metade o primeiro golpe pesado que sofrer.",
                        usos=_usos("combate"),
                        acao={"tipo": "reacao", "quando": "sofreu_golpe",
                              "reduz": 0.5, "limiar": 1 / 3})],
         4: [Habilidade("expertise_2", "Expertise", ESCOLHA,
-                       "Escolhe mais 2 pericias com proficiencia; o bonus delas dobra.")],
+                       "Escolhe mais 2 pericias com proficiencia; o bonus delas dobra.",
+                       escolha={"tipo": "pericias", "quantidade": 2,
+                                "entre": "proficientes", "aplica": "expertise"})],
         5: [Habilidade("reliable_talent_mais", "Reliable Talent +", PASSIVA,
                        "Soma +10 em todo teste de pericia.", {"bonus_teste": 10})],
     },
@@ -103,7 +114,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        acao={"tipo": "duracao", "turnos": 3, "alvo": "proprio",
                              "efeitos": {"dano_extra": 2, "reducao_dano": 0.5}})],
         2: [Habilidade("primal_knowledge", "Primal Knowledge", ESCOLHA,
-                       "Ganha proficiencia em mais 2 pericias.")],
+                       "Ganha proficiencia em mais 2 pericias.",
+                       escolha={"tipo": "pericias", "quantidade": 2,
+                                "entre": "todas", "aplica": "proficiencia"})],
         3: [MULTIATAQUE,
             Habilidade("reckless_attack", "Reckless Attack", ATIVA,
                        "1x por combate: os ataques do proximo turno tem vantagem.",
@@ -128,7 +141,15 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        usos=_usos("combate"),
                        acao={"tipo": "cura", "fracao": 0.3, "alvo": "proprio"})],
         2: [Habilidade("fighting_style", "Fighting Style", ESCOLHA,
-                       "Escolhe um: +1 acerto, +1 CA ou +2 de dano.")],
+                       "Escolhe um: +1 acerto, +1 CA ou +2 de dano.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "ofensivo", "nome": "Ofensivo",
+                            "texto": "+1 de acerto", "efeito": {"acerto": 1}},
+                           {"id": "defensivo", "nome": "Defensivo",
+                            "texto": "+1 de CA", "efeito": {"ca": 1}},
+                           {"id": "pesado", "nome": "Heavy",
+                            "texto": "+2 de dano", "efeito": {"dano_extra": 2}},
+                       ]})],
         3: [MULTIATAQUE,
             Habilidade("action_surge", "Action Surge", ATIVA,
                        "1x por combate: um ataque adicional imediato.",
@@ -232,7 +253,14 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "Com 18+ no d20 ganha 2 THP; com THP, o grupo ganha +1 em tudo.",
                        {"totem": {"gatilho": 18, "thp": 2, "aura": 1}})],
         3: [Habilidade("escolha_totemica", "Multiattack ou Cantico Benevolente", ESCOLHA,
-                       "Escolhe entre atacar 2x por rodada ou dar 4 THP extra ao curar."),
+                       "Escolhe entre atacar 2x por rodada ou dar 4 THP extra ao curar.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "multiataque", "nome": "Multiattack",
+                            "texto": "Ataca 2x por rodada", "efeito": {"ataques": 2}},
+                           {"id": "cantico", "nome": "Cantico Benevolente",
+                            "texto": "Curar da +4 de THP ao alvo",
+                            "efeito": {"thp_na_cura": 4}},
+                       ]}),
             Habilidade("danca_totemica", "Danca totemica", ATIVA,
                        "1x por descanso: o grupo ganha 2d6+4 de THP e +1d6+4 no proximo ataque.",
                        usos=_usos("descanso"),
@@ -257,6 +285,10 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
 # O que o motor entende, e o valor neutro de cada coisa.
 NEUTRO: dict = {
     "totem": {},
+    "acerto": 0,
+    "ca": 0,
+    "thp_na_cura": 0,
+    "expertise": [],
     "sequencia": {},
     "bonus_teste": 0,
     "bonus_pericia": {},
@@ -267,6 +299,27 @@ NEUTRO: dict = {
 }
 
 
+def juntar_efeito(juntos: dict, efeito: dict) -> None:
+    """Soma um efeito no acumulado, respeitando a regra de cada chave."""
+    for chave, valor in (efeito or {}).items():
+        if chave == "bonus_pericia":
+            for pericia, bonus in valor.items():
+                atual = juntos["bonus_pericia"].get(pericia, 0)
+                juntos["bonus_pericia"][pericia] = max(atual, bonus)
+        elif chave == "expertise":
+            juntos["expertise"] = sorted(set(juntos["expertise"]) | set(valor))
+        elif chave == "sequencia":
+            juntos["sequencia"] = dict(valor)
+        elif chave == "totem":
+            atual = juntos["totem"]
+            if valor.get("aura", 0) >= atual.get("aura", 0):
+                juntos["totem"] = dict(valor)
+        elif chave == "critico_em":
+            juntos["critico_em"] = min(juntos["critico_em"], valor)
+        elif chave in juntos:
+            juntos[chave] = max(juntos[chave], valor)
+
+
 def juntar(lista: list[Habilidade]) -> dict:
     """Soma numa coisa só o que as passivas da lista fazem.
 
@@ -274,24 +327,12 @@ def juntar(lista: list[Habilidade]) -> dict:
     Talent, que o tier 5 substitui por uma versão mais forte.
     """
     juntos: dict = {
-        chave: (dict(valor) if isinstance(valor, dict) else valor)
+        chave: (
+            dict(valor) if isinstance(valor, dict)
+            else (list(valor) if isinstance(valor, list) else valor)
+        )
         for chave, valor in NEUTRO.items()
     }
     for habilidade in lista:
-        for chave, valor in (habilidade.efeito or {}).items():
-            if chave == "sequencia":
-                juntos["sequencia"] = dict(valor)
-            elif chave == "totem":
-                # Vale a aura mais forte: o tier 5 substitui a do tier 2.
-                atual = juntos["totem"]
-                if valor.get("aura", 0) >= atual.get("aura", 0):
-                    juntos["totem"] = dict(valor)
-            elif chave == "bonus_pericia":
-                for pericia, bonus in valor.items():
-                    atual = juntos["bonus_pericia"].get(pericia, 0)
-                    juntos["bonus_pericia"][pericia] = max(atual, bonus)
-            elif chave == "critico_em":
-                juntos["critico_em"] = min(juntos["critico_em"], valor)
-            elif chave in juntos:
-                juntos[chave] = max(juntos[chave], valor)
+        juntar_efeito(juntos, habilidade.efeito or {})
     return juntos
