@@ -1,12 +1,13 @@
 """Montagem das mensagens que o grupo vê durante a run."""
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Optional
 
 import discord
 
-from . import config
+from . import config, retratos
 from .incursoes import Incursao, Sala
 from .motor import CONSEQUENCIA_FALHA, ResolucaoSala, barra, progresso_da_run
 from .rules import fmt, tier
@@ -62,13 +63,21 @@ def url_de_imagem(valor: Optional[str]) -> Optional[str]:
     return url if url.startswith(("http://", "https://")) else None
 
 
+def _classe_de(personagem: dict) -> str:
+    """O nome bonito da classe, ou o que estiver gravado se ela sumiu."""
+    from . import classes
+
+    achada = classes.classe(personagem.get("classe"))
+    return achada.nome if achada else str(personagem.get("classe") or "sem classe")
+
+
 def cartao_personagem(personagem: dict, membro) -> discord.Embed:
     """Retrato compacto de um personagem, para a abertura da run."""
     e = discord.Embed(
         title=personagem["nome"],
         description=(
-            f"{membro.mention} · nível {personagem['nivel']} · tier "
-            f"{tier(personagem['nivel'])}"
+            f"{membro.mention} · {_classe_de(personagem)} · nível "
+            f"{personagem['nivel']} (tier {tier(personagem['nivel'])})"
         ),
         color=COR_INCURSAO,
     )
@@ -84,6 +93,57 @@ def cartao_personagem(personagem: dict, membro) -> discord.Embed:
     if retrato:
         e.set_thumbnail(url=retrato)
     return e
+
+
+def grupo(personagens: list[dict], membros: list, com_faixa: bool) -> discord.Embed:
+    """O grupo inteiro num embed só, para acompanhar a faixa de retratos."""
+    e = discord.Embed(title="🎒 O grupo", color=COR_INCURSAO)
+    e.description = "\n".join(
+        f"**{p['nome']}** — {m.mention} · {_classe_de(p)} nv {p['nivel']} · "
+        f"CA {p['ca']} · ⚔️ {fmt(p['bonus_ataque'])} · ❤️ {p['hp_max']}"
+        for p, m in zip(personagens, membros)
+    )
+    if com_faixa:
+        e.set_image(url=f"attachment://{retratos.ARQUIVO}")
+    return e
+
+
+async def faixa_do_grupo(personagens: list[dict]) -> Optional[discord.File]:
+    """Os retratos lado a lado num PNG só, ou None se não dá para montar."""
+    itens = [(p["nome"], url_de_imagem(p.get("imagem"))) for p in personagens]
+    if not any(url for _, url in itens):
+        return None  # ninguém pôs retrato: uma faixa de iniciais não paga o anexo
+    dados = await retratos.faixa(itens)
+    if not dados:
+        return None
+    return discord.File(BytesIO(dados), filename=retratos.ARQUIVO)
+
+
+async def abertura_do_grupo(
+    personagens: list[dict], membros: list
+) -> tuple[list[discord.Embed], Optional[discord.File]]:
+    """Como o grupo se apresenta no começo da run.
+
+    Com Pillow, um embed só e os retratos lado a lado numa imagem. Sem ela,
+    o plano B: um card por personagem, cada um com sua miniatura.
+    """
+    arquivo = await faixa_do_grupo(personagens)
+    if arquivo is not None:
+        return [grupo(personagens, membros, com_faixa=True)], arquivo
+    sem_retrato = not any(url_de_imagem(p.get("imagem")) for p in personagens)
+    if retratos.disponivel() or sem_retrato:
+        return [grupo(personagens, membros, com_faixa=False)], None
+    return [cartao_personagem(p, m) for p, m in zip(personagens, membros)], None
+
+
+def exigencia_de_tier(incursao: Incursao) -> str:
+    """A linha que diz quem pode entrar nesta incursão."""
+    if incursao.aberta_a_todos:
+        return "🎚️ Tier livre — qualquer personagem entra"
+    return (
+        f"🎚️ Tier {incursao.tier} — entra quem for tier {incursao.tier} ou menos "
+        f"(até o nível {incursao.nivel_maximo})"
+    )
 
 
 def chamada(texto: str, limite: int = 400) -> str:
@@ -118,6 +178,7 @@ def recrutamento(
         inline=True,
     )
     e.add_field(name="Recompensa", value=f"{incursao.recompensa_mes} MEs", inline=True)
+    e.add_field(name="Quem pode entrar", value=exigencia_de_tier(incursao), inline=False)
     lista = "\n".join(f"{i}. {m.mention}" for i, m in enumerate(membros, start=1)) or "*ninguém ainda*"
     e.add_field(
         name=f"Grupo ({len(membros)}/{config.TAMANHO_GRUPO})",
@@ -222,10 +283,17 @@ def sala_aberta(
         e.add_field(name="Rolaram", value=f"{ja_rolaram}/{total}", inline=True)
         rodape = "Cada jogador rola uma vez, com a melhor perícia que tiver entre as listadas."
     elif sala.e_combate:
-        m = sala.monstro
         e.add_field(
-            name=f"⚔️ {m.nome}",
-            value=f"CA **{m.ca}** · Ataque **{fmt(m.ataque)}** · Dano **{m.dano}** · HP **{m.hp}**",
+            name="⚔️ " + (
+                sala.monstros[0].nome
+                if len(sala.monstros) == 1
+                else f"{len(sala.monstros)} criaturas"
+            ),
+            value="\n".join(
+                f"**{m.nome}** — CA **{m.ca}** · Ataque **{fmt(m.ataque)}** · "
+                f"Dano **{m.dano}** · HP **{m.hp}**"
+                for m in sala.monstros
+            ) or "*sem criatura*",
             inline=False,
         )
         rodape = "Sala de combate."
@@ -355,6 +423,16 @@ def linha_golpe(g) -> str:
     return f"💨 {g.atacante} · {rolagem} → errou"
 
 
+def _linha_inimigo(i) -> str:
+    """Uma criatura no painel: barra de HP enquanto está de pé."""
+    if i.caido:
+        return f"☠️ ~~{i.nome}~~ — abatido"
+    return (
+        f"👹 **{i.nome}** {barra(i.hp_atual, i.hp_max, 8)} "
+        f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca} · {fmt(i.ataque)} · {i.dano}"
+    )
+
+
 def _linha_hp(c) -> str:
     if c.hp_atual <= 0:
         return f"💀 ~~{c.nome}~~ — caído"
@@ -392,7 +470,6 @@ def combate(
     o bot edita este painel, guardando dentro dele o log da rodada que acabou.
     `rodada_anterior` é (numero, golpes, contra, alvo_nome).
     """
-    m = estado.monstro
     primeira = estado.rodada == 1 and rodada_anterior is None
     titulo = "🏁" if e_objetivo else "⚔️"
     e = discord.Embed(
@@ -400,12 +477,15 @@ def combate(
         description=sala.descricao if primeira else None,
         color=COR_FALHA,
     )
+    de_pe = len(estado.inimigos_vivos)
+    rotulo = (
+        estado.inimigos[0].nome
+        if len(estado.inimigos) == 1
+        else f"Inimigos ({de_pe} de pé de {len(estado.inimigos)})"
+    )
     e.add_field(
-        name=m.nome,
-        value=(
-            f"{barra(estado.monstro_hp, m.hp, 12)}  **{estado.monstro_hp}**/{m.hp} HP\n"
-            f"CA **{m.ca}** · Ataque **{fmt(m.ataque)}** · Dano **{m.dano}**"
-        ),
+        name=rotulo,
+        value="\n".join(_linha_inimigo(i) for i in estado.inimigos),
         inline=False,
     )
     e.add_field(
@@ -415,10 +495,12 @@ def combate(
     )
 
     if rodada_anterior:
-        numero, golpes, contra, alvo_nome = rodada_anterior
+        numero, golpes, revides = rodada_anterior
         linhas = [linha_golpe(g) for g in golpes] or ["*ninguém atacou*"]
-        if contra is not None and alvo_nome:
-            linhas.append(f"↩️ **{m.nome}** · {texto_do_contra_ataque(contra, alvo_nome)}")
+        for contra, atingido in revides:
+            linhas.append(
+                f"↩️ **{contra.atacante}** · {texto_do_contra_ataque(contra, atingido.nome)}"
+            )
         bloco = "\n".join(linhas)
         if len(bloco) > 1024:
             bloco = bloco[:1000].rsplit("\n", 1)[0] + "\n…"
@@ -437,17 +519,30 @@ def combate(
     arquivo, url = anexo_da_imagem(sala.imagem) if primeira else (None, None)
     if url:
         e.set_image(url=url)
-    rodape = (
-        "Combate encerrado."
-        if encerrado
-        else "Cada personagem de pé ataca uma vez. Quando todos atacarem, o monstro revida."
-    )
+    if encerrado:
+        rodape = "Combate encerrado."
+    elif len(estado.inimigos) > 1:
+        rodape = (
+            "Cada personagem de pé ataca um alvo. Quando todos atacarem, "
+            "cada inimigo de pé revida."
+        )
+    else:
+        rodape = (
+            "Cada personagem de pé ataca uma vez. Quando todos atacarem, o monstro revida."
+        )
     return _rodape(e, rodape), arquivo
+
+
+def _quem_caiu(estado) -> str:
+    """Como nomear os inimigos abatidos: um nome, ou quantos eram."""
+    if len(estado.inimigos) == 1:
+        return f"{estado.inimigos[0].nome} foi derrotado"
+    return f"{len(estado.inimigos)} inimigos foram derrotados"
 
 
 def combate_vencido(sala: Sala, estado) -> discord.Embed:
     e = discord.Embed(
-        title=f"⚔️ {estado.monstro.nome} foi derrotado",
+        title=f"⚔️ {_quem_caiu(estado)}",
         description=f"O grupo supera **{sala.nome}** em {estado.rodada} rodada(s).",
         color=COR_SUCESSO,
     )
@@ -480,8 +575,9 @@ def run_fracassada(
     e = discord.Embed(
         title="☠️ Incursão fracassada",
         description=(
-            f"O grupo inteiro caiu diante de **{estado.monstro.nome}**, que fica de pé com "
-            f"{estado.monstro_hp}/{estado.monstro.hp} HP. Ninguém volta com o objetivo."
+            "O grupo inteiro caiu diante de "
+            + ", ".join(f"**{i.nome}**" for i in estado.inimigos_vivos)
+            + ". Ninguém volta com o objetivo."
         ),
         color=COR_FALHA,
     )
@@ -505,7 +601,7 @@ def run_concluida(
     )
     if estado is not None:
         e.add_field(
-            name=f"{estado.monstro.nome} caiu em {estado.rodada} rodada(s)",
+            name=f"{_quem_caiu(estado)} em {estado.rodada} rodada(s)",
             value="\n".join(_linha_hp(c) for c in estado.combatentes),
             inline=False,
         )

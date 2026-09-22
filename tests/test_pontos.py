@@ -16,7 +16,7 @@ from src.cogs.incursao import Incursoes  # noqa: E402
 from src.cogs.organizacao import Organizacao  # noqa: E402
 from src.incursoes import ORGANIZACOES  # noqa: E402
 from fakes import (  # noqa: E402
-    ATRIBUTOS,
+    CLASSE_PADRAO,
     CANAL,
     GUILD,
     IMBATIVEL,
@@ -26,6 +26,7 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    atacar_ate_cair,
     criar_grupo,
     montar_conteudo,
     salas_sem_combate,
@@ -34,7 +35,7 @@ from fakes import (  # noqa: E402
 _ABERTAS = []
 
 
-async def preparar(hp_max=40):
+async def preparar(nivel=8):
     # No Windows o arquivo so pode ser apagado depois que ninguem o mantem aberto.
     while _ABERTAS:
         try:
@@ -48,7 +49,7 @@ async def preparar(hp_max=40):
     conn = await db.conectar()
     _ABERTAS.append(conn)
     await db.criar_schema(conn)
-    await criar_grupo(conn, hp_max=hp_max)
+    await criar_grupo(conn, nivel=nivel)
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
     return conn, canal, cog
@@ -105,8 +106,7 @@ async def caso_conclusao_credita():
     run = await atravessar(conn, canal, cog, run, incursao)
     assert run["status"] == "objetivo"
 
-    msg = await canal.fetch_message(run["mensagem_id"])
-    await cog.atacar(FakeInteraction(canal, JOGADORES[0], msg), run["id"], "OBJ")
+    await atacar_ate_cair(conn, canal, cog, run["id"], "OBJ")
 
     run = await db.buscar_run(conn, run["id"])
     assert run["status"] == "sucesso"
@@ -140,8 +140,7 @@ async def caso_salas_secundarias_pontuam():
     for chave in superadas:
         assert por_chave[chave] == 3, por_chave
 
-    msg = await canal.fetch_message((await db.buscar_run(conn, run["id"]))["mensagem_id"])
-    await cog.atacar(FakeInteraction(canal, JOGADORES[0], msg), run["id"], "OBJ")
+    await atacar_ate_cair(conn, canal, cog, run["id"], "OBJ")
 
     total = (await db.placar(conn, GUILD))["Vórtice Oculto"]
     esperado = 2 + 10 + sum(por_chave[c] for c in superadas)
@@ -150,7 +149,7 @@ async def caso_salas_secundarias_pontuam():
 
 
 async def caso_fracasso_credita_so_participacao():
-    conn, canal, cog = await preparar(hp_max=10)
+    conn, canal, cog = await preparar(nivel=1)
     incursao, _ = montar_conteudo(
         cog, incursao_id="derrota", monstro_objetivo=IMBATIVEL, pontos_conclusao=10,
         salas=salas_sem_combate(),

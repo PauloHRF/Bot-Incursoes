@@ -18,13 +18,13 @@ from .. import config, database as db, embeds as E, motor
 from ..incursoes import (
     BancoDeSalas,
     Incursao,
-    Monstro,
     Sala,
     arquivo_da_organizacao,
     carregar_bancos,
     carregar_todas,
 )
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
+from ..rules import tier
 
 log = logging.getLogger("incursoes.run")
 
@@ -97,11 +97,37 @@ class ViewSala(discord.ui.View):
 
 
 class ViewCombate(discord.ui.View):
-    def __init__(self, cog: "Incursoes", run_id: int, sala_id: str):
+    """Botao de atacar; com mais de um inimigo de pe, vira escolha de alvo."""
+
+    def __init__(
+        self,
+        cog: "Incursoes",
+        run_id: int,
+        sala_id: str,
+        inimigos: Optional[list[motor.Inimigo]] = None,
+    ):
         super().__init__(timeout=None)
         self.cog = cog
         self.run_id = run_id
         self.sala_id = sala_id
+        vivos = [i for i in (inimigos or []) if not i.caido]
+        if len(vivos) > 1:
+            menu = discord.ui.Select(
+                placeholder="Atacar quem?",
+                custom_id=f"inc:alvo:{run_id}:{sala_id}",
+                options=[
+                    discord.SelectOption(
+                        label=i.nome[:100],
+                        value=str(i.indice),
+                        description=f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca}",
+                    )
+                    for i in vivos[:25]
+                ],
+            )
+            menu.callback = self._escolher_alvo
+            self.menu = menu
+            self.add_item(menu)
+            return
         botao = discord.ui.Button(
             label="Atacar",
             emoji="⚔️",
@@ -113,6 +139,11 @@ class ViewCombate(discord.ui.View):
 
     async def _atacar(self, interaction: discord.Interaction) -> None:
         await self.cog.atacar(interaction, self.run_id, self.sala_id)
+
+    async def _escolher_alvo(self, interaction: discord.Interaction) -> None:
+        await self.cog.atacar(
+            interaction, self.run_id, self.sala_id, int(self.menu.values[0])
+        )
 
 
 class SeletorPersonagemEntrada(discord.ui.View):
@@ -128,7 +159,10 @@ class SeletorPersonagemEntrada(discord.ui.View):
                 discord.SelectOption(
                     label=p["nome"],
                     value=str(p["id"]),
-                    description=f"Nivel {p['nivel']} · CA {p['ca']} · HP {p['hp_max']}",
+                    description=(
+                        f"Nivel {p['nivel']} (tier {tier(p['nivel'])}) · "
+                        f"CA {p['ca']} · HP {p['hp_max']}"
+                    ),
                 )
                 for p in personagens[:25]
             ],
@@ -225,7 +259,10 @@ class Incursoes(commands.Cog):
             if sala and sala.tem_teste:
                 return ViewSala(self, run["id"], sala.id)
             if sala and sala.e_combate:
-                return ViewCombate(self, run["id"], sala.id)
+                estado = await self._estado_combate(run, sala)
+                return ViewCombate(
+                    self, run["id"], sala.id, estado.inimigos if estado else None
+                )
         return None
 
     # ------------------------------------------------------------ apoio
@@ -311,6 +348,17 @@ class Incursoes(commands.Cog):
         ids = await db.opcoes_do_passo(self.bot.db, run["id"], passo)
         return [s for s in (self._sala(incursao, i) for i in ids) if s]
 
+    async def _sortear_opcoes(self, run: dict[str, Any], passo: int) -> list[str]:
+        """Sorteia e grava as salas daquele passo, fora as que o grupo já atravessou."""
+        incursao = self._incursao_da_run(run)
+        banco = self.bancos.get(incursao.organizacao) if incursao else None
+        if not banco:
+            return []
+        visitadas = await db.salas_visitadas(self.bot.db, run["id"])
+        opcoes = motor.sortear_passo(banco.salas, visitadas)
+        await db.gravar_opcoes(self.bot.db, run["id"], passo, opcoes)
+        return opcoes
+
     async def _run_do_contexto(
         self, interaction: discord.Interaction, exigir_participante: bool = True
     ) -> Optional[dict[str, Any]]:
@@ -356,7 +404,8 @@ class Incursoes(commands.Cog):
                 name=f"{inc.nome}  ·  `{inc.id}`",
                 value=(
                     f"{inc.organizacao} — {inc.tamanho.lower()} ({inc.passos} salas + objetivo)"
-                    f" — {inc.recompensa_mes} MEs"
+                    f" — {inc.recompensa_mes} MEs\n"
+                    + E.exigencia_de_tier(inc)
                     + ("" if salas_no_banco else "\n⚠️ sem banco de salas carregado")
                 ),
                 inline=False,
@@ -409,6 +458,7 @@ class Incursoes(commands.Cog):
         meus = await db.listar_personagens(
             self.bot.db, interaction.guild_id, interaction.user.id
         )
+        elegiveis = self._elegiveis(incursao, meus)
         if personagem:
             escolhido = await db.personagem_por_nome(
                 self.bot.db, interaction.guild_id, interaction.user.id, personagem
@@ -420,12 +470,22 @@ class Incursoes(commands.Cog):
                     ephemeral=True,
                 )
                 return
-        elif len(meus) == 1:
-            escolhido = meus[0]
+            if not motor.pode_encarar(escolhido["nivel"], incursao.tier):
+                await interaction.response.send_message(
+                    self._fora_do_tier(incursao, [escolhido]), ephemeral=True
+                )
+                return
+        elif not elegiveis:
+            await interaction.response.send_message(
+                self._fora_do_tier(incursao, meus), ephemeral=True
+            )
+            return
+        elif len(elegiveis) == 1:
+            escolhido = elegiveis[0]
         else:
             await interaction.response.send_message(
-                "Voce tem mais de um personagem: "
-                f"{', '.join(p['nome'] for p in meus)}. "
+                "Voce tem mais de um personagem para esta incursão: "
+                f"{', '.join(p['nome'] for p in elegiveis)}. "
                 "Diga qual no campo `personagem`.",
                 ephemeral=True,
             )
@@ -446,6 +506,23 @@ class Incursoes(commands.Cog):
         mensagem = await interaction.original_response()
         await db.atualizar_run(self.bot.db, run_id, mensagem_id=mensagem.id)
 
+    @staticmethod
+    def _elegiveis(incursao: Incursao, personagens: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Só os personagens que cabem no tier da incursão."""
+        return [p for p in personagens if motor.pode_encarar(p["nivel"], incursao.tier)]
+
+    @staticmethod
+    def _fora_do_tier(incursao: Incursao, personagens: list[dict[str, Any]]) -> str:
+        """Explica por que nenhum daqueles personagens pode entrar."""
+        quem = ", ".join(
+            f"**{p['nome']}** (nível {p['nivel']}, tier {tier(p['nivel'])})" for p in personagens
+        )
+        return (
+            f"**{incursao.nome}** é de tier {incursao.tier}: entra quem for tier "
+            f"{incursao.tier} ou menos, ou seja, até o nível {incursao.nivel_maximo}. "
+            f"Seus personagens estão acima disso: {quem}."
+        )
+
     async def _motivo_de_bloqueio(self, guild_id: int, user_id: int) -> Optional[str]:
         """Texto do impedimento para entrar numa run, ou None se estiver liberado."""
         personagens = await db.listar_personagens(self.bot.db, guild_id, user_id)
@@ -456,13 +533,16 @@ class Incursoes(commands.Cog):
         outra = await db.run_viva_do_jogador(self.bot.db, guild_id, user_id)
         if outra:
             return f"Você já está na run #{outra['id']}. Termine ou desista dela antes."
-        intervalo = await db.intervalo_dias(self.bot.db, guild_id)
-        dias = await db.dias_desde_ultima_incursao(self.bot.db, guild_id, user_id)
-        if dias is not None and dias < intervalo:
-            faltam = intervalo - dias
+        semanas = await db.intervalo_semanas(self.bot.db, guild_id)
+        ultima = await db.ultima_incursao(self.bot.db, guild_id, user_id)
+        agora = datetime.now(config.FUSO)
+        if not motor.entrada_liberada(ultima, agora, semanas):
+            volta = motor.virada_da_vaga(ultima, semanas)
+            quantas = "semana" if semanas == 1 else f"{semanas} semanas"
             return (
-                f"Você participou de uma incursão há {dias:.1f} dia(s). "
-                f"O intervalo é de {intervalo} dias — faltam {faltam:.1f}."
+                f"Você já entrou numa incursão nesta {quantas} "
+                f"(em {ultima:%d/%m}). O intervalo vira na segunda-feira: "
+                f"sua vaga volta em **{volta:%d/%m}**."
             )
         return None
 
@@ -502,6 +582,14 @@ class Incursoes(commands.Cog):
             return
         if len(await db.participantes(self.bot.db, run_id)) >= config.TAMANHO_GRUPO:
             await interaction.response.send_message("O grupo já está cheio.", ephemeral=True)
+            return
+
+        # Ultima checagem: o menu pode estar velho, e o nivel pode ter subido nesse meio-tempo.
+        incursao = self._incursao_da_run(run)
+        if incursao and not motor.pode_encarar(personagem["nivel"], incursao.tier):
+            await interaction.response.send_message(
+                self._fora_do_tier(incursao, [personagem]), ephemeral=True
+            )
             return
 
         await db.adicionar_participante(self.bot.db, run_id, interaction.user.id, personagem_id)
@@ -545,12 +633,18 @@ class Incursoes(commands.Cog):
             personagens = await db.listar_personagens(
                 self.bot.db, run["guild_id"], interaction.user.id
             )
-            if len(personagens) == 1:
-                await self.efetivar_entrada(interaction, run_id, personagens[0]["id"])
+            elegiveis = self._elegiveis(incursao, personagens)
+            if not elegiveis:
+                await interaction.response.send_message(
+                    self._fora_do_tier(incursao, personagens), ephemeral=True
+                )
+                return
+            if len(elegiveis) == 1:
+                await self.efetivar_entrada(interaction, run_id, elegiveis[0]["id"])
             else:
                 await interaction.response.send_message(
                     "Escolha com qual personagem entrar:",
-                    view=SeletorPersonagemEntrada(self, run_id, personagens),
+                    view=SeletorPersonagemEntrada(self, run_id, elegiveis),
                     ephemeral=True,
                 )
             return
@@ -600,16 +694,8 @@ class Incursoes(commands.Cog):
                     "então não dá para sortear o caminho. Avise quem administra o bot."
                 )
             return
-        try:
-            mapa = motor.sortear_mapa(banco.salas, incursao.passos)
-        except ValueError as exc:
-            if canal:
-                await canal.send(f"Não consegui montar o caminho: {exc}.")
-            return
-
         await db.marcar_ultima_incursao(self.bot.db, run["guild_id"], participantes)
         await db.inicializar_hp(self.bot.db, run["id"])
-        await db.gravar_mapa(self.bot.db, run["id"], mapa)
         await db.atualizar_run(self.bot.db, run["id"], status="escolhendo", linha_atual=1)
 
         if canal:
@@ -619,13 +705,13 @@ class Incursoes(commands.Cog):
                     await mensagem.edit(view=None)
                 except discord.HTTPException:
                     pass
-            # Lore e o grupo na mesma mensagem: um embed por personagem, com o retrato.
-            cartoes = []
-            for p in await db.personagens_da_run(self.bot.db, run["id"]):
-                membro = await self._membro(run, p["user_id"])
-                cartoes.append(E.cartao_personagem(p, membro))
+            # Lore e o grupo na mesma mensagem, com os retratos lado a lado.
+            personagens = await db.personagens_da_run(self.bot.db, run["id"])
+            membros = [await self._membro(run, p["user_id"]) for p in personagens]
+            cartoes, faixa = await E.abertura_do_grupo(personagens, membros)
             await canal.send(
-                embeds=[E.lore_abertura(incursao, len(participantes)), *cartoes[:9]]
+                embeds=[E.lore_abertura(incursao, len(participantes)), *cartoes[:9]],
+                file=faixa or discord.utils.MISSING,
             )
         await self._abrir_votacao(await db.buscar_run(self.bot.db, run["id"]), 1)
 
@@ -637,6 +723,13 @@ class Incursoes(commands.Cog):
         if not (incursao and canal):
             return
         opcoes = await self._opcoes(run, linha)
+        if not opcoes:
+            try:
+                await self._sortear_opcoes(run, linha)
+            except ValueError as exc:
+                await canal.send(f"Não consegui sortear as salas deste passo: {exc}.")
+                return
+            opcoes = await self._opcoes(run, linha)
         if not opcoes:
             await canal.send(
                 "Não achei as salas sorteadas para este passo. O banco da Organização mudou?"
@@ -751,6 +844,8 @@ class Incursoes(commands.Cog):
         canal = await self._canal(run)
         if not canal:
             return
+        # Atravessar a sala a tira do sorteio: ela nao volta a ser oferecida.
+        await db.registrar_visita(self.bot.db, run["id"], self._passo(run), sala.id)
         total = len(await db.participantes(self.bot.db, run["id"]))
 
         if sala.tipo == "Descanso":
@@ -838,15 +933,28 @@ class Incursoes(commands.Cog):
     async def _estado_combate(
         self, run: dict[str, Any], sala: Sala
     ) -> Optional[EstadoCombate]:
-        linha = await db.estado_combate(self.bot.db, run["id"], self._passo(run))
+        passo = self._passo(run)
+        linha = await db.estado_combate(self.bot.db, run["id"], passo)
         if not linha:
             return None
-        # O HP maximo vem do banco: se o monstro for escalado, e esse que vale.
-        base = sala.monstro
-        monstro = Monstro(base.nome, base.ca, base.ataque, base.dano, linha["monstro_hp_max"])
+        # Os numeros vem do banco, nao do conteudo: se o inimigo for escalado, e
+        # esse que vale pelo resto do combate.
+        inimigos = [
+            motor.Inimigo(
+                indice=r["indice"],
+                nome=r["nome"],
+                ca=r["ca"],
+                ataque=r["ataque"],
+                dano=r["dano"],
+                hp_max=r["hp_max"],
+                hp_atual=r["hp_atual"],
+            )
+            for r in await db.inimigos_do_combate(self.bot.db, run["id"], passo)
+        ]
+        if not inimigos:
+            return None
         return EstadoCombate(
-            monstro=monstro,
-            monstro_hp=linha["monstro_hp"],
+            inimigos=inimigos,
             rodada=linha["rodada"],
             combatentes=await self._combatentes(run),
         )
@@ -856,8 +964,8 @@ class Incursoes(commands.Cog):
         if not canal:
             return
         niveis = await self._niveis(run)
-        monstro = motor.escalar_monstro(sala.monstro, niveis)
-        await db.iniciar_combate(self.bot.db, run["id"], self._passo(run), sala.id, monstro.hp)
+        inimigos = [motor.escalar_monstro(m, niveis) for m in sala.monstros]
+        await db.iniciar_combate(self.bot.db, run["id"], self._passo(run), sala.id, inimigos)
 
         incursao = self._incursao_da_run(run)
         e_objetivo = bool(incursao and sala.id == incursao.objetivo.id)
@@ -871,7 +979,7 @@ class Incursoes(commands.Cog):
         )
         mensagem = await canal.send(
             embed=embed,
-            view=ViewCombate(self, run["id"], sala.id),
+            view=ViewCombate(self, run["id"], sala.id, estado.inimigos if estado else None),
             file=arquivo or discord.utils.MISSING,
         )
         await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
@@ -899,7 +1007,9 @@ class Incursoes(commands.Cog):
             rodada_anterior=rodada_anterior,
             encerrado=encerrado,
         )
-        view = None if encerrado else ViewCombate(self, run["id"], sala.id)
+        view = (
+            None if encerrado else ViewCombate(self, run["id"], sala.id, estado.inimigos)
+        )
         try:
             mensagem = await canal.fetch_message(atual["mensagem_id"])
             await mensagem.edit(embed=embed, view=view)
@@ -909,7 +1019,13 @@ class Incursoes(commands.Cog):
     async def _niveis(self, run: dict[str, Any]) -> list[int]:
         return [p["nivel"] for p in await db.personagens_da_run(self.bot.db, run["id"])]
 
-    async def atacar(self, interaction: discord.Interaction, run_id: int, sala_id: str) -> None:
+    async def atacar(
+        self,
+        interaction: discord.Interaction,
+        run_id: int,
+        sala_id: str,
+        alvo_indice: Optional[int] = None,
+    ) -> None:
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo") or run["sala_atual"] != sala_id:
             await interaction.response.send_message("Este combate já terminou.", ephemeral=True)
@@ -937,7 +1053,14 @@ class Incursoes(commands.Cog):
             )
             return
 
-        golpe = motor.atacar_monstro(atacante, estado, None)
+        alvo = estado.alvo_preferido(alvo_indice)
+        if alvo is None:
+            await interaction.response.send_message(
+                "Esse inimigo já caiu — escolha outro alvo.", ephemeral=True
+            )
+            return
+
+        golpe = motor.atacar_inimigo(atacante, alvo, None)
         novo = await db.registrar_ataque(
             self.bot.db,
             run_id,
@@ -948,6 +1071,7 @@ class Incursoes(commands.Cog):
             golpe.bonus,
             golpe.ca_alvo,
             golpe.dano,
+            alvo.indice,
         )
         if not novo:
             await interaction.response.send_message(
@@ -955,14 +1079,14 @@ class Incursoes(commands.Cog):
             )
             return
 
-        await db.atualizar_combate(
-            self.bot.db, run_id, self._passo(run), estado.monstro_hp, estado.rodada
+        await db.definir_hp_inimigos(
+            self.bot.db, run_id, self._passo(run), {alvo.indice: alvo.hp_atual}
         )
 
         if golpe.critico:
             texto = (
                 f"{E.EMOJI_CRITICO} 🎲 **20 natural** — **CRITICO!** "
-                f"**{golpe.dano}** de dano, com os dados dobrados."
+                f"**{golpe.dano}** de dano em {alvo.nome}, com os dados dobrados."
             )
         elif golpe.falha_critica:
             texto = (
@@ -972,19 +1096,19 @@ class Incursoes(commands.Cog):
         elif golpe.acertou:
             texto = (
                 f"⚔️ 🎲 **{golpe.d20}** {golpe.bonus:+d} = **{golpe.total}** vs CA "
-                f"{golpe.ca_alvo} — acertou, **{golpe.dano}** de dano."
+                f"{golpe.ca_alvo} — acertou {alvo.nome}, **{golpe.dano}** de dano."
             )
         else:
             texto = (
                 f"💨 🎲 **{golpe.d20}** {golpe.bonus:+d} = **{golpe.total}** vs CA "
-                f"{golpe.ca_alvo} — errou."
+                f"{golpe.ca_alvo} — errou {alvo.nome}."
             )
         await interaction.response.send_message(texto, ephemeral=True)
 
         ataques = await db.ataques_da_rodada(
             self.bot.db, run_id, self._passo(run), estado.rodada
         )
-        if estado.monstro_derrotado or len(ataques) >= len(estado.vivos):
+        if estado.inimigos_derrotados or len(ataques) >= len(estado.vivos):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
             await self._atualizar_painel(run, sala, estado, len(ataques))
@@ -1000,11 +1124,15 @@ class Incursoes(commands.Cog):
         if not canal:
             return
 
+        def nome_do_alvo(indice: int) -> str:
+            inimigo = estado.inimigo(indice)
+            return inimigo.nome if inimigo else "?"
+
         golpes = [
             motor.GolpeAtaque(
                 atacante=(estado.combatente(a["user_id"]).nome
                           if estado.combatente(a["user_id"]) else "?"),
-                alvo=estado.monstro.nome,
+                alvo=nome_do_alvo(a["alvo"]),
                 d20=a["d20"],
                 bonus=a["bonus"],
                 ca_alvo=a["ca_alvo"],
@@ -1013,16 +1141,18 @@ class Incursoes(commands.Cog):
             for a in ataques
         ]
 
-        contra, alvo = None, None
-        if not estado.monstro_derrotado:
-            alvo = motor.sortear_alvo(estado)
-            if alvo is not None:
-                contra = motor.contra_atacar(estado, alvo, None)
-                await db.definir_hp(self.bot.db, run["id"], alvo.user_id, alvo.hp_atual)
+        # A vez dos inimigos: cada um de pe bate uma vez.
+        revides: list[tuple[motor.GolpeAtaque, Any]] = []
+        if not estado.inimigos_derrotados:
+            revides = motor.rodada_dos_inimigos(estado, None)
+            for _, atingido in revides:
+                await db.definir_hp(
+                    self.bot.db, run["id"], atingido.user_id, atingido.hp_atual
+                )
 
-        log = (estado.rodada, golpes, contra, alvo.nome if alvo else None)
+        log = (estado.rodada, golpes, revides)
 
-        if estado.monstro_derrotado:
+        if estado.inimigos_derrotados:
             await self._atualizar_painel(
                 run, sala, estado, len(ataques), rodada_anterior=log, encerrado=True
             )
@@ -1045,9 +1175,7 @@ class Incursoes(commands.Cog):
 
         # Proxima rodada no mesmo painel, com o log da que acabou.
         estado.rodada += 1
-        await db.atualizar_combate(
-            self.bot.db, run["id"], self._passo(run), estado.monstro_hp, estado.rodada
-        )
+        await db.atualizar_rodada(self.bot.db, run["id"], self._passo(run), estado.rodada)
         await self._atualizar_painel(run, sala, estado, 0, rodada_anterior=log)
 
     async def _apos_combate_vencido(
@@ -1289,7 +1417,9 @@ class Incursoes(commands.Cog):
             return
         await self.votar(interaction, run["id"], run["linha_atual"], opcoes[opcao - 1].id)
 
-    @grupo.command(name="atacar", description="Ataca o monstro da sala (mesmo efeito do botão)")
+    @grupo.command(
+        name="atacar", description="Ataca o primeiro inimigo de pé (mesmo efeito do botão)"
+    )
     async def atacar_comando(self, interaction: discord.Interaction) -> None:
         run = await self._run_do_contexto(interaction)
         if not run:
@@ -1362,14 +1492,22 @@ class Incursoes(commands.Cog):
         name="config", description="Ajustes do bot (admin)", default_permissions=discord.Permissions(manage_guild=True)
     )
 
-    @config_grupo.command(name="intervalo", description="Dias mínimos entre incursões do mesmo jogador")
+    @config_grupo.command(
+        name="intervalo",
+        description="Semanas entre incursões do mesmo jogador (a semana vira na segunda)",
+    )
     async def config_intervalo(
-        self, interaction: discord.Interaction, dias: app_commands.Range[int, 0, 365]
+        self, interaction: discord.Interaction, semanas: app_commands.Range[int, 0, 52]
     ) -> None:
-        await db.definir_intervalo(self.bot.db, interaction.guild_id, dias)
-        await interaction.response.send_message(
-            f"Intervalo entre incursões ajustado para **{dias} dia(s)**.", ephemeral=True
-        )
+        await db.definir_intervalo(self.bot.db, interaction.guild_id, semanas)
+        if semanas == 0:
+            texto = "Intervalo desligado: cada jogador pode entrar quantas vezes quiser."
+        else:
+            texto = (
+                f"Intervalo ajustado para **{semanas} semana(s)**, contadas da "
+                "segunda-feira: quem entrar no sábado joga de novo na segunda."
+            )
+        await interaction.response.send_message(texto, ephemeral=True)
 
 
 async def setup(bot: commands.Bot) -> None:

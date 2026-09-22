@@ -5,27 +5,32 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src import config, database as db
+from src import classes, config, database as db
 from src.rules import (
-    bonus_proficiencia,
+    NIVEL_MAXIMO,
+    TIER_MAXIMO,
     melhor_pericia,
     mod_pericia,
-    modificador,
     normalizar_pericia,
     tier,
 )
 
 # --- regras ---
-assert [bonus_proficiencia(n) for n in (1, 4, 5, 9, 13, 17, 20)] == [2, 2, 3, 4, 5, 6, 6]
-assert [modificador(v) for v in (8, 10, 14, 15, 20)] == [-1, 0, 2, 2, 5]
-assert [tier(n) for n in (1, 4, 5, 10, 11, 16, 17, 20)] == [1, 1, 2, 2, 3, 3, 4, 4]
+assert NIVEL_MAXIMO == TIER_MAXIMO * 2
+# toda classe jogavel tem tabela ate o ultimo tier
+assert classes.tier_maximo_com_tabela() == TIER_MAXIMO
+for c in classes.CLASSES.values():
+    assert set(c.tiers) == set(range(1, TIER_MAXIMO + 1)), c.nome
+    assert c.numeros(NIVEL_MAXIMO) is c.tiers[TIER_MAXIMO]
+assert [tier(n) for n in (1, 2, 3, 4, 5, 9, 10, 99)] == [1, 1, 2, 2, 3, 5, 5, 5]
 
-atributos = {"FOR": 10, "DES": 16, "CON": 14, "INT": 12, "SAB": 13, "CAR": 8}
-# Furtividade (DES +3) treinada no nivel 5 -> +3 +3 = +6
-assert mod_pericia("Furtividade", atributos, 5, ["Furtividade"]) == 6
-# Nao treinada -> so o mod do atributo
-assert mod_pericia("Acrobacia", atributos, 5, ["Furtividade"]) == 3
-assert melhor_pericia(["Atletismo", "Furtividade"], atributos, 5, ["Furtividade"]) == ("Furtividade", 6)
+# O bonus de pericia vem da classe, nao de atributo: +3, ou +5 com proficiencia.
+numeros = classes.classe("ladino").numeros(1)
+assert mod_pericia("Furtividade", numeros, ["Furtividade"]) == 5
+assert mod_pericia("Acrobacia", numeros, ["Furtividade"]) == 3
+assert melhor_pericia(["Atletismo", "Furtividade"], numeros, ["Furtividade"]) == ("Furtividade", 5)
+# a expertise soma por cima
+assert mod_pericia("Acrobacia", numeros, [], {"Acrobacia": 4}) == 7
 
 # nomes de pericia aceitam grafia sem acento e caixa diferente
 assert normalizar_pericia("investigacao") == "Investigação"
@@ -44,26 +49,27 @@ async def main():
 
     # um personagem, com atributos, pericias e combate de uma vez so
     vhalor_id = await db.criar_personagem(
-        conn, 1, 42, "Vhalor", 5, atributos, ["Furtividade", "Percepção"],
-        combate={"ca": 17, "bonus_ataque": 7, "dano_arma": "1d8+4", "hp_max": 54},
+        conn, 1, 42, "Vhalor", "ladino", ["Furtividade", "Percepção"], nivel=5
     )
     assert vhalor_id
     f = await db.buscar_personagem(conn, vhalor_id)
     assert f["nome"] == "Vhalor" and f["nivel"] == 5
     assert f["pericias"] == ["Furtividade", "Percepção"]
-    assert f["atributos"] == atributos
-    assert (f["ca"], f["bonus_ataque"], f["dano_arma"], f["hp_max"]) == (17, 7, "1d8+4", 54)
+    # os numeros de combate saem da tabela do Ladino no tier 3 (nivel 5-6)
+    assert (f["ca"], f["bonus_ataque"], f["dano_arma"], f["hp_max"]) == (16, 7, "4d6+4", 45)
 
-    # sem campos de combate, valem os defaults
-    magro_id = await db.criar_personagem(conn, 1, 42, "Sem Arma", 1, atributos, [])
+    # quem comeca no nivel 1 pega o tier 1 da propria classe
+    magro_id = await db.criar_personagem(conn, 1, 42, "Sem Arma", "monge", [])
     magro = await db.buscar_personagem(conn, magro_id)
-    assert magro["ca"] == 10 and magro["hp_max"] == 10 and magro["dano_arma"] == "1d6"
+    assert (magro["ca"], magro["hp_max"], magro["dano_arma"]) == (16, 17, "1d6+3")
+    assert magro["nivel"] == 1, "todo personagem nasce no nivel 1"
 
-    # subir de nivel nao apaga nada e muda a proficiencia
+    # subir de nivel nao apaga nada e os numeros acompanham o tier
     assert await db.atualizar_personagem(conn, vhalor_id, "nivel", 9)
     f = await db.buscar_personagem(conn, vhalor_id)
-    assert f["nivel"] == 9 and f["ca"] == 17 and f["pericias"] == ["Furtividade", "Percepção"]
-    assert mod_pericia("Furtividade", f["atributos"], f["nivel"], f["pericias"]) == 7
+    assert f["nivel"] == 9 and f["pericias"] == ["Furtividade", "Percepção"]
+    assert (f["ca"], f["bonus_ataque"], f["dano_arma"], f["hp_max"]) == (18, 10, "6d6+5", 73)
+    assert mod_pericia("Furtividade", f["numeros"], f["pericias"]) == 11
 
     # o mesmo jogador tem varios personagens, buscaveis por nome
     assert len(await db.listar_personagens(conn, 1, 42)) == 2
@@ -71,9 +77,9 @@ async def main():
     assert await db.personagem_por_nome(conn, 1, 42, "Ninguem") is None
 
     # dois personagens do mesmo jogador nao podem ter o mesmo nome
-    assert await db.criar_personagem(conn, 1, 42, "Vhalor", 3, atributos, []) is None
+    assert await db.criar_personagem(conn, 1, 42, "Vhalor", "monge", []) is None
     # mas jogadores diferentes podem repetir nome
-    assert await db.criar_personagem(conn, 1, 43, "Vhalor", 3, atributos, []) is not None
+    assert await db.criar_personagem(conn, 1, 43, "Vhalor", "monge", []) is not None
 
     # apagar um nao mexe nos outros
     assert await db.remover_personagem(conn, magro_id)
@@ -106,7 +112,8 @@ async def main():
     assert inc.organizacao == "Vórtice Oculto"
     assert inc.tamanho in TAMANHOS and inc.passos == TAMANHOS[inc.tamanho]
     assert inc.lore_inicial and inc.lore_final, "a incursão de exemplo precisa das duas lores"
-    assert inc.objetivo.tipo == "Combate" and inc.objetivo.monstro.hp > 0
+    assert inc.objetivo.tipo == "Combate" and inc.objetivo.monstros
+    assert all(m.hp > 0 for m in inc.objetivo.monstros)
     # o JSON sobrevive a uma ida e volta pelo validador
     assert de_dict(inc.para_dict()).para_dict() == inc.para_dict()
 
@@ -134,13 +141,13 @@ async def main():
 
     def vira_evento(d):
         d["objetivo"]["tipo"] = "Evento"
-        d["objetivo"]["monstro"] = None
+        d["objetivo"]["monstros"] = []
 
     recusa(bom, vira_evento, "desafio final é sempre Combate")
     recusa(bom, lambda d: d.update(tamanho="Gigante"), "tamanho")
     recusa(bom, lambda d: d.update(lore_inicial="", descricao=""), "lore de abertura")
-    recusa(bom, lambda d: d["objetivo"].update(monstro=None), "precisa dos dados do monstro")
-    recusa(bom, lambda d: d["objetivo"]["monstro"].update(dano="muito"), "fora do formato")
+    recusa(bom, lambda d: d["objetivo"].update(monstros=[]), "precisa de pelo menos uma criatura")
+    recusa(bom, lambda d: d["objetivo"]["monstros"][0].update(dano="muito"), "fora do formato")
     recusa(bom, lambda d: d.update(organizacao="Clube do Livro"), "organizacao")
     recusa(bom, lambda d: d.update(id="Vórtice Cripta"), "letras minúsculas")
     recusa(bom, lambda d: d.update(pontos_conclusao=-5), "não pode ser negativo")

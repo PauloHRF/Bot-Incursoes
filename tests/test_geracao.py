@@ -62,39 +62,84 @@ async def montar_run(conn, canal, cog, incursao_id="t"):
 
 
 def caso_sorteio_puro():
-    """O sorteio nunca repete dentro do passo e sempre entrega o caminho pedido."""
+    """O sorteio nunca repete dentro do passo nem oferece sala ja visitada."""
     rng = random.Random(11)
+    banco = salas_falsas(12)
 
-    # banco folgado: 7 passos x 3 = 21, e o banco tem 21
-    mapa = motor.sortear_mapa(salas_falsas(21), 7, rng=rng)
-    assert len(mapa) == 7
-    assert all(len(set(p)) == OPCOES_POR_PASSO for p in mapa)
-    todos = [s for p in mapa for s in p]
-    assert len(set(todos)) == 21, "com banco exato, nenhuma sala se repete na run"
+    passo = motor.sortear_passo(banco, rng=rng)
+    assert len(passo) == OPCOES_POR_PASSO and len(set(passo)) == OPCOES_POR_PASSO
 
-    # banco apertado: repete entre passos, nunca dentro de um
-    mapa = motor.sortear_mapa(salas_falsas(4), 5, rng=rng)
-    assert len(mapa) == 5
-    assert all(len(set(p)) == OPCOES_POR_PASSO for p in mapa)
+    # o que ja foi visitado sai do bolo
+    visitadas = ["S0", "S1", "S2", "S3"]
+    for _ in range(30):
+        passo = motor.sortear_passo(banco, visitadas, rng=rng)
+        assert not (set(passo) & set(visitadas)), passo
+        assert len(set(passo)) == OPCOES_POR_PASSO
 
-    # o minimo possivel
-    mapa = motor.sortear_mapa(salas_falsas(3), 3, rng=rng)
-    assert all(sorted(p) == ["S0", "S1", "S2"] for p in mapa)
+    # sobrando menos que 3 salas novas, o passo sai menor em vez de repetir
+    quase_tudo = [f"S{i}" for i in range(10)]
+    passo = motor.sortear_passo(banco, quase_tudo, rng=rng)
+    assert sorted(passo) == ["S10", "S11"], passo
 
-    # banco menor que um passo nao monta caminho
+    # sem sala nova nenhuma, o sorteio recusa em vez de reoferecer
     try:
-        motor.sortear_mapa(salas_falsas(2), 3, rng=rng)
+        motor.sortear_passo(banco, [f"S{i}" for i in range(12)], rng=rng)
     except ValueError as exc:
-        assert "ao menos" in str(exc)
+        assert "passou por todas" in str(exc)
     else:
-        raise AssertionError("deveria recusar banco menor que um passo")
+        raise AssertionError("deveria recusar quando o banco acabou")
 
-    # duas runs do mesmo banco dão caminhos diferentes
-    banco = salas_falsas(15)
-    a = motor.sortear_mapa(banco, 5, rng=random.Random(1))
-    b = motor.sortear_mapa(banco, 5, rng=random.Random(2))
+    # duas runs do mesmo banco dao caminhos diferentes
+    a = motor.sortear_passo(banco, rng=random.Random(1))
+    b = motor.sortear_passo(banco, rng=random.Random(2))
     assert a != b, "o caminho deveria variar entre runs"
     print("  sorteio: sem repetição no passo, varia entre runs: ok")
+
+
+async def atravessar(conn, canal, cog, run, incursao, ate=None):
+    """Leva o grupo passo a passo, sempre pela primeira opção. Devolve as visitadas."""
+    escolhidas = []
+    for passo in range(1, (ate or incursao.passos) + 1):
+        run = await db.buscar_run(conn, run["id"])
+        if run["status"] != "escolhendo":
+            break
+        alvo = (await cog._opcoes(run, passo))[0]
+        escolhidas.append(alvo.id)
+        msg = await canal.fetch_message(run["mensagem_id"])
+        for user_id in JOGADORES:
+            await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], passo, alvo.id)
+        atual = await db.buscar_run(conn, run["id"])
+        if atual["status"] == "em_sala":
+            msg_sala = await canal.fetch_message(atual["mensagem_id"])
+            for user_id in JOGADORES:
+                agora = await db.buscar_run(conn, run["id"])
+                if agora["status"] != "em_sala":
+                    break
+                await cog.rolar(FakeInteraction(canal, user_id, msg_sala), run["id"], alvo.id)
+    return escolhidas
+
+
+async def caso_sala_visitada_nao_volta():
+    """Uma sala atravessada some do sorteio dos passos seguintes."""
+    conn, canal, cog = await preparar()
+    # banco justo: 5 passos e 6 salas, entao o sorteio precisa mesmo se virar
+    incursao, _ = montar_conteudo(cog, tamanho="Média", salas=salas_sem_combate(6))
+    run = await montar_run(conn, canal, cog)
+
+    # no comeco so o primeiro passo esta sorteado: o caminho e gerado passo a passo
+    assert len(await db.mapa_da_run(conn, run["id"])) == 1
+
+    escolhidas = await atravessar(conn, canal, cog, run, incursao)
+    assert len(escolhidas) == incursao.passos
+    assert len(set(escolhidas)) == len(escolhidas), f"o grupo repetiu sala: {escolhidas}"
+    assert await db.salas_visitadas(conn, run["id"]) == escolhidas
+
+    # nenhuma opcao de um passo era uma sala ja visitada antes dele
+    mapa = await db.mapa_da_run(conn, run["id"])
+    for indice, opcoes in enumerate(mapa):
+        ja_vistas = set(escolhidas[:indice])
+        assert not (set(opcoes) & ja_vistas), (indice, opcoes, ja_vistas)
+    print("  sala visitada não volta a ser oferecida: ok")
 
 
 async def caso_tamanhos():
@@ -107,12 +152,14 @@ async def caso_tamanhos():
         assert incursao.passos == esperado
         run = await montar_run(conn, canal, cog)
 
+        # o caminho e sorteado passo a passo, entao so o primeiro nasce com a run
+        assert len(await db.mapa_da_run(conn, run["id"])) == 1
+        await atravessar(conn, canal, cog, run, incursao)
+
         mapa = await db.mapa_da_run(conn, run["id"])
         assert len(mapa) == esperado, f"{tamanho}: esperava {esperado} passos, veio {len(mapa)}"
         assert all(len(p) == OPCOES_POR_PASSO for p in mapa)
-        # com banco folgado, nenhuma sala se repete no caminho inteiro
-        achatado = [s for p in mapa for s in p]
-        assert len(set(achatado)) == len(achatado)
+        assert (await db.buscar_run(conn, run["id"]))["status"] == "objetivo"
     print(f"  tamanhos {', '.join(f'{t}={n}' for t, n in TAMANHOS.items())}: ok")
 
 
@@ -171,45 +218,6 @@ async def caso_lore_abre_e_fecha():
     print("  lore abre a run e o epílogo só vem com a vitória: ok")
 
 
-async def caso_sala_repetida_tem_estado_proprio():
-    """A mesma sala sorteada em dois passos é um desafio novo a cada visita."""
-    conn, canal, cog = await preparar()
-    # banco do tamanho exato de um passo: os 3 passos oferecem as mesmas 3 salas
-    incursao, banco = montar_conteudo(cog, tamanho="Curta", salas=salas_sem_combate(3))
-    run = await montar_run(conn, canal, cog)
-
-    mapa = await db.mapa_da_run(conn, run["id"])
-    assert len(mapa) == 3 and all(sorted(p) == sorted(mapa[0]) for p in mapa)
-
-    escolhida = (await cog._opcoes(run, 1))[0].id
-    for passo in (1, 2):
-        run = await db.buscar_run(conn, run["id"])
-        assert run["linha_atual"] == passo
-        msg = await canal.fetch_message(run["mensagem_id"])
-        for user_id in JOGADORES:
-            await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], passo, escolhida)
-
-        atual = await db.buscar_run(conn, run["id"])
-        assert atual["sala_atual"] == escolhida
-        msg_sala = await canal.fetch_message(atual["mensagem_id"])
-        rolou = False
-        for user_id in JOGADORES:
-            agora = await db.buscar_run(conn, run["id"])
-            if agora["status"] != "em_sala":
-                break
-            inter = FakeInteraction(canal, user_id, msg_sala)
-            await cog.rolar(inter, run["id"], escolhida)
-            # a segunda visita nao pode dizer "ja rolou"
-            assert "🎲" in inter.resposta, (passo, inter.resposta)
-            rolou = True
-        assert rolou, f"passo {passo}: ninguém conseguiu rolar na sala repetida"
-
-        registros = await db.testes_da_sala(conn, run["id"], passo)
-        assert registros, f"passo {passo} sem rolagens gravadas"
-
-    print("  sala repetida em outro passo começa do zero: ok")
-
-
 async def caso_sem_banco_nao_comeca():
     """Sem banco da Organização, a run avisa em vez de quebrar."""
     conn, canal, cog = await preparar()
@@ -228,7 +236,7 @@ async def main():
         caso_sorteio_puro()
         await caso_tamanhos()
         await caso_lore_abre_e_fecha()
-        await caso_sala_repetida_tem_estado_proprio()
+        await caso_sala_visitada_nao_volta()
         await caso_sem_banco_nao_comeca()
     finally:
         for conn in _ABERTAS:

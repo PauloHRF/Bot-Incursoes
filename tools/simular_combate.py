@@ -17,45 +17,54 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src import motor  # noqa: E402
+from src import classes, motor  # noqa: E402
+from src.rules import tier  # noqa: E402
 from src.incursoes import Monstro, carregar  # noqa: E402
 
 LIMITE_RODADAS = 50
 
 
-def um_combate(monstro: Monstro, grupo: list[motor.Combatente], rng: random.Random):
-    estado = motor.EstadoCombate(monstro, monstro.hp, 1, grupo)
+def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: random.Random):
+    """Uma sala inteira: o grupo foca o primeiro de pé, e cada inimigo revida."""
+    estado = motor.EstadoCombate(
+        [
+            motor.Inimigo(i, m.nome, m.ca, m.ataque, m.dano, m.hp, m.hp)
+            for i, m in enumerate(monstros)
+        ],
+        1,
+        grupo,
+    )
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
         for c in list(estado.vivos):
-            motor.atacar_monstro(c, estado, rng)
-            if estado.monstro_derrotado:
+            alvo = estado.alvo_preferido()
+            if alvo is None:
                 break
-        if estado.monstro_derrotado:
+            motor.atacar_inimigo(c, alvo, rng)
+        if estado.inimigos_derrotados:
             break
-        alvo = motor.sortear_alvo(estado, rng)
-        if alvo is not None:
-            motor.contra_atacar(estado, alvo, rng)
+        motor.rodada_dos_inimigos(estado, rng)
         estado.rodada += 1
     return estado
 
 
-def simular(monstro: Monstro, tamanho: int, args, rng: random.Random) -> dict:
+def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> dict:
+    numeros = classes.classe(args.classe).numeros(args.nivel)
     vitorias, rodadas, caidos = 0, [], []
     for _ in range(args.repeticoes):
         grupo = [
             motor.Combatente(
                 user_id=i,
                 nome=f"P{i}",
-                ca=args.ca,
-                bonus_ataque=args.ataque,
-                dano_arma=args.dano,
-                hp_max=args.hp_personagem,
-                hp_atual=args.hp_personagem,
+                ca=numeros.ca,
+                bonus_ataque=numeros.acerto,
+                dano_arma=numeros.dano,
+                hp_max=numeros.hp,
+                hp_atual=numeros.hp,
             )
             for i in range(tamanho)
         ]
-        estado = um_combate(monstro, grupo, rng)
-        if estado.monstro_derrotado:
+        estado = um_combate(monstros, grupo, rng)
+        if estado.inimigos_derrotados:
             vitorias += 1
             rodadas.append(estado.rodada)
         caidos.append(len(estado.caidos))
@@ -71,10 +80,12 @@ def main() -> int:
     parser.add_argument("incursao", type=Path, help="JSON da incursão")
     parser.add_argument("--sala", help="ID da sala de combate (padrão: o objetivo)")
     parser.add_argument("--repeticoes", type=int, default=2000)
-    parser.add_argument("--hp-personagem", type=int, default=60)
-    parser.add_argument("--ca", type=int, default=17)
-    parser.add_argument("--ataque", type=int, default=7)
-    parser.add_argument("--dano", default="1d8+4")
+    parser.add_argument(
+        "--classe",
+        default="guerreiro",
+        help="Classe do grupo simulado (" + ", ".join(sorted(classes.CLASSES)) + ")",
+    )
+    parser.add_argument("--nivel", type=int, default=8, help="Nivel do grupo (1 a 10)")
     parser.add_argument("--semente", type=int, default=None)
     grupo_monstro = parser.add_argument_group("sobreporem os números do monstro (para calibrar)")
     grupo_monstro.add_argument("--hp-monstro", type=int)
@@ -92,24 +103,35 @@ def main() -> int:
         print(f"A sala '{sala.id}' é do tipo {sala.tipo}, não Combate.", file=sys.stderr)
         return 1
 
-    base = sala.monstro
-    m = Monstro(
-        nome=base.nome,
-        ca=args.ca_monstro if args.ca_monstro is not None else base.ca,
-        ataque=args.ataque_monstro if args.ataque_monstro is not None else base.ataque,
-        dano=args.dano_monstro or base.dano,
-        hp=args.hp_monstro if args.hp_monstro is not None else base.hp,
-    )
+    # As sobreposicoes valem para todas as criaturas da sala, para calibrar rapido.
+    monstros = [
+        Monstro(
+            nome=base.nome,
+            ca=args.ca_monstro if args.ca_monstro is not None else base.ca,
+            ataque=args.ataque_monstro if args.ataque_monstro is not None else base.ataque,
+            dano=args.dano_monstro or base.dano,
+            hp=args.hp_monstro if args.hp_monstro is not None else base.hp,
+        )
+        for base in sala.monstros
+    ]
     rng = random.Random(args.semente)
     print(f"{incursao.nome} — {sala.nome}")
-    print(f"{m.nome}: CA {m.ca}, ataque {m.ataque:+d}, dano {m.dano}, {m.hp} HP")
+    for m in monstros:
+        print(f"{m.nome}: CA {m.ca}, ataque {m.ataque:+d}, dano {m.dano}, {m.hp} HP")
+    do_grupo = classes.classe(args.classe)
+    if do_grupo is None:
+        print(f"Classe '{args.classe}' nao existe.", file=sys.stderr)
+        return 1
+    n = do_grupo.numeros(args.nivel)
     print(
-        f"Personagens: CA {args.ca}, ataque {args.ataque:+d}, dano {args.dano}, "
-        f"{args.hp_personagem} HP  ({args.repeticoes} combates por linha)\n"
+        f"Grupo: {do_grupo.nome} nivel {args.nivel} (tier {tier(args.nivel)}) — "
+        f"CA {n.ca}, acerto {n.acerto:+d}, dano {n.dano}, {n.hp} HP"
+        f"  ({args.repeticoes} combates por linha)"
     )
+    print()
     print(f"{'grupo':>6}  {'vitória':>8}  {'rodadas':>8}  {'caídos':>7}")
     for tamanho in (5, 4, 3, 2):
-        r = simular(m, tamanho, args, rng)
+        r = simular(monstros, tamanho, args, rng)
         print(f"{tamanho:>6}  {r['taxa']:>7.1%}  {r['rodadas']:>8.1f}  {r['caidos']:>7.1f}")
     return 0
 

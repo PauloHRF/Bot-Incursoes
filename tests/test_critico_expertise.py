@@ -9,13 +9,13 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db, embeds as E, motor  # noqa: E402
+from src import classes, config, database as db, embeds as E, motor  # noqa: E402
 from src.cogs.ficha import Ficha, embed_ficha  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.incursoes import Monstro, Sala  # noqa: E402
 from src.rules import melhor_pericia, mod_pericia  # noqa: E402
 from fakes import (  # noqa: E402
-    ATRIBUTOS,
+    CLASSE_PADRAO,
     CANAL,
     GUILD,
     INDEFESO,
@@ -134,25 +134,25 @@ def caso_critico_sobrevive_ao_banco():
 
 
 def caso_bonus_entra_no_modificador():
-    atributos = {"FOR": 10, "DES": 16, "CON": 14, "INT": 12, "SAB": 13, "CAR": 8}
+    # Guerreiro no tier 4 (nivel 7-8): +5 de pericia, +10 com proficiencia
+    numeros = classes.classe(CLASSE_PADRAO).numeros(8)
     treinadas = ["Furtividade"]
 
-    # DES +3, proficiencia +3 no nivel 8 -> +6
-    assert mod_pericia("Furtividade", atributos, 8, treinadas) == 6
-    # com +2 de expertise -> +8
-    assert mod_pericia("Furtividade", atributos, 8, treinadas, {"Furtividade": 2}) == 8
-    # pericia nao treinada tambem aceita bonus: DES +3 e mais +4
-    assert mod_pericia("Acrobacia", atributos, 8, treinadas, {"Acrobacia": 4}) == 7
+    assert mod_pericia("Furtividade", numeros, treinadas) == 10
+    # com +2 de expertise
+    assert mod_pericia("Furtividade", numeros, treinadas, {"Furtividade": 2}) == 12
+    # pericia sem proficiencia tambem aceita bonus: +5 e mais +4
+    assert mod_pericia("Acrobacia", numeros, treinadas, {"Acrobacia": 4}) == 9
     # bonus negativo desce o modificador
-    assert mod_pericia("Furtividade", atributos, 8, treinadas, {"Furtividade": -2}) == 4
+    assert mod_pericia("Furtividade", numeros, treinadas, {"Furtividade": -2}) == 8
     # bonus de outra pericia nao vaza
-    assert mod_pericia("Furtividade", atributos, 8, treinadas, {"Atletismo": 9}) == 6
+    assert mod_pericia("Furtividade", numeros, treinadas, {"Atletismo": 9}) == 10
 
     # o bonus pode mudar qual pericia e a melhor da sala
-    assert melhor_pericia(["Atletismo", "Furtividade"], atributos, 8, treinadas)[0] == "Furtividade"
+    assert melhor_pericia(["Atletismo", "Furtividade"], numeros, treinadas)[0] == "Furtividade"
     assert melhor_pericia(
-        ["Atletismo", "Furtividade"], atributos, 8, treinadas, {"Atletismo": 10}
-    ) == ("Atletismo", 10)
+        ["Atletismo", "Furtividade"], numeros, treinadas, {"Atletismo": 10}
+    ) == ("Atletismo", 15)
     print("  bônus entra no modificador e pode virar a melhor perícia: ok")
 
 
@@ -161,7 +161,7 @@ async def caso_expertise_persistida():
     ficha_cog = Ficha(FakeBot(conn, canal))
     dono = JOGADORES[0]
     pid = await db.criar_personagem(
-        conn, GUILD, dono, "Vhalor", 8, ATRIBUTOS, ["Furtividade"]
+        conn, GUILD, dono, "Vhalor", CLASSE_PADRAO, ["Furtividade"], nivel=8
     )
 
     class Escolha:
@@ -175,7 +175,9 @@ async def caso_expertise_persistida():
 
     p = await db.buscar_personagem(conn, pid)
     assert p["bonus_pericias"] == {"Furtividade": 3}, p["bonus_pericias"]
-    assert mod_pericia("Furtividade", p["atributos"], p["nivel"], p["pericias"], p["bonus_pericias"]) == 9
+    assert mod_pericia(
+        "Furtividade", p["numeros"], p["pericias"], p["bonus_pericias"]
+    ) == p["numeros"].bonus_proficiencia + 3
 
     # a ficha mostra a expertise
     campos = {f.name: f.value for f in embed_ficha(p, inter.user).fields}
@@ -196,7 +198,7 @@ async def caso_expertise_persistida():
     assert p["bonus_pericias"] == {"Arcanismo": 2}
 
     # o bonus e de um personagem so
-    outro = await db.criar_personagem(conn, GUILD, dono, "Kaelen", 3, ATRIBUTOS, [])
+    outro = await db.criar_personagem(conn, GUILD, dono, "Kaelen", CLASSE_PADRAO, [], nivel=3)
     assert (await db.buscar_personagem(conn, outro))["bonus_pericias"] == {}
     print("  expertise gravada, somada e removida com 0: ok")
 
@@ -222,7 +224,7 @@ async def caso_expertise_vale_na_run():
     com_bonus = await db.buscar_personagem(conn, personagem["id"])
     com_bonus["user_id"] = dono
     resultado = motor.testar(com_bonus, sala, DadoFixo([10]))
-    sem_bonus = mod_pericia("Percepção", com_bonus["atributos"], com_bonus["nivel"], com_bonus["pericias"])
+    sem_bonus = mod_pericia("Percepção", com_bonus["numeros"], com_bonus["pericias"])
     assert resultado.modificador == sem_bonus + 7, (resultado.modificador, sem_bonus)
     print("  expertise vale no teste de perícia da sala: ok")
 

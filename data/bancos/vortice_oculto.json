@@ -16,7 +16,7 @@
       "imagem": null,
       "recompensa": "Um fragmento de selo para quem passa ileso.",
       "pontos_organizacao": 1,
-      "monstro": null
+      "monstros": []
     },
     {
       "id": "VO02",
@@ -34,7 +34,7 @@
       "imagem": null,
       "recompensa": "Revela a CA do próximo inimigo.",
       "pontos_organizacao": 2,
-      "monstro": null
+      "monstros": []
     },
     {
       "id": "VO03",
@@ -48,13 +48,22 @@
       "imagem": null,
       "recompensa": null,
       "pontos_organizacao": 1,
-      "monstro": {
-        "nome": "Sentinela de Basalto",
-        "ca": 14,
-        "ataque": 5,
-        "dano": "1d10+3",
-        "hp": 26
-      }
+      "monstros": [
+        {
+          "nome": "Sentinela de Basalto 1",
+          "ca": 14,
+          "ataque": 5,
+          "dano": "1d10+3",
+          "hp": 26
+        },
+        {
+          "nome": "Sentinela de Basalto 2",
+          "ca": 14,
+          "ataque": 5,
+          "dano": "1d10+3",
+          "hp": 26
+        }
+      ]
     },
     {
       "id": "VO04",
@@ -72,7 +81,7 @@
       "imagem": null,
       "recompensa": null,
       "pontos_organizacao": 1,
-      "monstro": null
+      "monstros": []
     },
     {
       "id": "VO05",
@@ -86,7 +95,7 @@
       "imagem": null,
       "recompensa": "O grupo recupera o fôlego.",
       "pontos_organizacao": 0,
-      "monstro": null
+      "monstros": []
     },
     {
       "id": "VO06",
@@ -103,7 +112,7 @@
       "imagem": null,
       "recompensa": "Materiais raros para quem passar no teste.",
       "pontos_organizacao": 3,
-      "monstro": null
+      "monstros": []
     },
     {
       "id": "VO07",
@@ -117,13 +126,15 @@
       "imagem": null,
       "recompensa": null,
       "pontos_organizacao": 2,
-      "monstro": {
-        "nome": "Cria do Vazio",
-        "ca": 15,
-        "ataque": 6,
-        "dano": "2d6+2",
-        "hp": 34
-      }
+      "monstros": [
+        {
+          "nome": "Cria do Vazio",
+          "ca": 15,
+          "ataque": 6,
+          "dano": "2d6+2",
+          "hp": 34
+        }
+      ]
     },
     {
       "id": "VO08",
@@ -141,7 +152,7 @@
       "imagem": null,
       "recompensa": "O chefe começa o confronto final com 10 de HP a menos.",
       "pontos_organizacao": 2,
-      "monstro": null
+      "monstros": []
     },
     {
       "id": "VO09",
@@ -159,7 +170,7 @@
       "imagem": null,
       "recompensa": null,
       "pontos_organizacao": 1,
-      "monstro": null
+      "monstros": []
     },
     {
       "id": "VO10",
@@ -177,7 +188,7 @@
       "imagem": null,
       "recompensa": "Atalho: a próxima sala começa com metade do progresso feito.",
       "pontos_organizacao": 2,
-      "monstro": null
+      "monstros": []
     },
     {
       "id": "VO11",
@@ -191,13 +202,36 @@
       "imagem": null,
       "recompensa": null,
       "pontos_organizacao": 2,
-      "monstro": {
-        "nome": "Coisa do Umbral",
-        "ca": 16,
-        "ataque": 6,
-        "dano": "2d8+3",
-        "hp": 40
-      }
+      "monstros": [
+        {
+          "nome": "Coisa do Umbral",
+          "ca": 16,
+          "ataque": 6,
+          "dano": "2d8+3",
+          "hp": 40
+        },
+        {
+          "nome": "Larva do Umbral 1",
+          "ca": 12,
+          "ataque": 3,
+          "dano": "1d6",
+          "hp": 9
+        },
+        {
+          "nome": "Larva do Umbral 2",
+          "ca": 12,
+          "ataque": 3,
+          "dano": "1d6",
+          "hp": 9
+        },
+        {
+          "nome": "Larva do Umbral 3",
+          "ca": 12,
+          "ataque": 3,
+          "dano": "1d6",
+          "hp": 9
+        }
+      ]
     },
     {
       "id": "VO12",
@@ -214,7 +248,7 @@
       "imagem": null,
       "recompensa": "Um item mágico menor, a critério do GM.",
       "pontos_organizacao": 3,
-      "monstro": null
+      "monstros": []
     }
   ]
 }

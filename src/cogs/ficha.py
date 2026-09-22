@@ -1,5 +1,7 @@
-"""Fichas digitais: cadastro, consulta e manutencao (nivel / ASI / pericias).
+"""Fichas digitais: cadastro por classe, consulta e manutencao.
 
+O personagem e a classe: o jogador escolhe uma e as pericias com proficiencia,
+e os numeros (HP, CA, acerto, dano) saem da tabela da classe no tier atual.
 Um jogador pode ter varios personagens. Os comandos aceitam o nome de qual
 mexer; quem so tem um nao precisa dizer nada.
 """
@@ -11,36 +13,28 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import database as db
+from .. import classes as cl, database as db
 from ..embeds import url_de_imagem
-from ..rules import (
-    ATRIBUTOS,
-    PERICIAS,
-    bonus_proficiencia,
-    fmt,
-    mod_pericia,
-    modificador,
-    tier,
-)
+from ..rules import NIVEL_MAXIMO, PERICIAS, fmt, mod_pericia, tier
 
 LIMITE_PERSONAGENS = 25  # o seletor do Discord nao mostra mais que isso
 
 
 class SeletorPericias(discord.ui.View):
-    """Menu de selecao das pericias treinadas, restrito a quem abriu."""
+    """Menu das pericias com proficiencia, limitado ao que a classe concede."""
 
-    def __init__(self, dono_id: int, marcadas: list[str]):
+    def __init__(self, dono_id: int, marcadas: list[str], limite: int):
         super().__init__(timeout=300)
         self.dono_id = dono_id
+        self.limite = limite
         self.escolhidas: Optional[list[str]] = None
         opcoes = [
-            discord.SelectOption(label=p, description=ATRIBUTOS[attr], default=p in marcadas)
-            for p, attr in PERICIAS.items()
+            discord.SelectOption(label=p, default=p in marcadas) for p in PERICIAS
         ]
         self.menu = discord.ui.Select(
-            placeholder="Escolha as pericias treinadas",
+            placeholder=f"Escolha ate {limite} pericia(s) com proficiencia",
             min_values=0,
-            max_values=len(opcoes),
+            max_values=min(limite, len(opcoes)),
             options=opcoes,
         )
         self.menu.callback = self._escolher
@@ -61,55 +55,77 @@ class SeletorPericias(discord.ui.View):
 def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.Embed:
     nivel = personagem["nivel"]
     treinadas = personagem["pericias"]
-    atributos = personagem["atributos"]
     bonus = personagem.get("bonus_pericias") or {}
+    classe = cl.classe(personagem.get("classe"))
+    numeros = personagem.get("numeros")
 
     e = discord.Embed(
         title=personagem["nome"],
         description=(
-            f"Nivel {nivel} | Tier {tier(nivel)} | "
-            f"Proficiencia {fmt(bonus_proficiencia(nivel))}"
+            f"{classe.nome if classe else personagem.get('classe')} | "
+            f"Nivel {nivel} | Tier {tier(nivel)}"
         ),
         color=discord.Color.dark_gold(),
     )
     e.set_author(name=autor.display_name, icon_url=autor.display_avatar.url)
+    if numeros is None:
+        e.add_field(
+            name="Classe desconhecida",
+            value="Esta ficha aponta para uma classe que o bot nao conhece mais.",
+            inline=False,
+        )
+        return e
+
     e.add_field(
-        name="Atributos",
-        value=" | ".join(
-            f"**{s}** {atributos[s]} ({fmt(modificador(atributos[s]))})" for s in ATRIBUTOS
+        name="Combate",
+        value=(
+            f"HP **{numeros.hp}** | CA **{numeros.ca}** | "
+            f"Acerto **{fmt(numeros.acerto)}** | Dano **{numeros.dano}**"
         ),
         inline=False,
     )
     if treinadas:
         linhas = [
-            f"{p} {fmt(mod_pericia(p, atributos, nivel, treinadas, bonus))}"
-            for p in sorted(treinadas)
+            f"{p} {fmt(mod_pericia(p, numeros, treinadas, bonus))}" for p in sorted(treinadas)
         ]
         e.add_field(
-            name=f"Pericias treinadas ({len(treinadas)})", value=" | ".join(linhas), inline=False
+            name=f"Proficiencias ({len(treinadas)}/{numeros.pericias})",
+            value=" | ".join(linhas),
+            inline=False,
         )
     else:
-        e.add_field(name="Pericias treinadas", value="nenhuma - use /ficha pericias", inline=False)
+        e.add_field(
+            name=f"Proficiencias (0/{numeros.pericias})",
+            value="nenhuma - use /ficha pericias",
+            inline=False,
+        )
 
     if bonus:
-        # Uma pericia nao treinada tambem pode ter bonus: mostramos o total dela.
+        # Uma pericia sem proficiencia tambem pode ter bonus: mostramos o total.
         avulsas = [
-            f"{p} {fmt(bonus[p])} (total {fmt(mod_pericia(p, atributos, nivel, treinadas, bonus))})"
+            f"{p} {fmt(bonus[p])} (total {fmt(mod_pericia(p, numeros, treinadas, bonus))})"
             for p in sorted(bonus)
         ]
         e.add_field(name="Expertises", value=" | ".join(avulsas), inline=False)
-    e.add_field(
-        name="Combate",
-        value=(
-            f"CA **{personagem['ca']}** | Ataque **{fmt(personagem['bonus_ataque'])}** | "
-            f"Dano **{personagem['dano_arma']}** | HP **{personagem['hp_max']}**"
-        ),
-        inline=False,
-    )
+
     retrato = url_de_imagem(personagem.get("imagem"))
     if retrato:
         e.set_thumbnail(url=retrato)
-    e.set_footer(text="Modificadores calculados a partir do nivel e dos atributos")
+    return _rodape_da_ficha(e, numeros, nivel)
+
+
+def _rodape_da_ficha(e: discord.Embed, numeros, nivel: int) -> discord.Embed:
+    resto = (
+        f"Proximo tier no nivel {tier(nivel) * 2 + 1}"
+        if nivel < NIVEL_MAXIMO
+        else "Nivel maximo"
+    )
+    e.set_footer(
+        text=(
+            f"Teste de pericia: {fmt(numeros.bonus_pericia)}, "
+            f"{fmt(numeros.bonus_proficiencia)} com proficiencia | {resto}"
+        )
+    )
     return e
 
 
@@ -189,46 +205,43 @@ class Ficha(commands.Cog):
 
     @grupo.command(
         name="registrar",
-        description="Cadastra um personagem: nivel, atributos, combate e pericias",
+        description="Cria um personagem: nome, classe e as pericias com proficiencia",
     )
     @app_commands.describe(
         nome="Nome do personagem",
-        nivel="Nivel atual (1-20)",
-        forca="Valor de Forca",
-        destreza="Valor de Destreza",
-        constituicao="Valor de Constituicao",
-        inteligencia="Valor de Inteligencia",
-        sabedoria="Valor de Sabedoria",
-        carisma="Valor de Carisma",
-        ca="Classe de Armadura",
-        bonus_ataque="Bonus de ataque da arma principal",
-        dano_arma="Dado de dano da arma, ex.: 1d8+3",
-        hp_maximo="Pontos de vida maximos",
-        imagem="Link do retrato do personagem (opcional, http ou https)",
+        classe="Qual classe. Todo personagem comeca no nivel 1.",
+        imagem="Link do retrato (opcional, http ou https)",
+    )
+    @app_commands.choices(
+        classe=[
+            app_commands.Choice(name=c.nome, value=c.id)
+            for c in sorted(cl.CLASSES.values(), key=lambda c: c.nome)
+        ]
     )
     async def registrar(
         self,
         interaction: discord.Interaction,
         nome: app_commands.Range[str, 1, 60],
-        nivel: app_commands.Range[int, 1, 20],
-        forca: app_commands.Range[int, 1, 30],
-        destreza: app_commands.Range[int, 1, 30],
-        constituicao: app_commands.Range[int, 1, 30],
-        inteligencia: app_commands.Range[int, 1, 30],
-        sabedoria: app_commands.Range[int, 1, 30],
-        carisma: app_commands.Range[int, 1, 30],
-        ca: app_commands.Range[int, 1, 40],
-        bonus_ataque: app_commands.Range[int, -5, 30],
-        dano_arma: app_commands.Range[str, 1, 20],
-        hp_maximo: app_commands.Range[int, 1, 999],
+        classe: app_commands.Choice[str],
         imagem: Optional[app_commands.Range[str, 1, 500]] = None,
     ) -> None:
+        escolhida = cl.classe(classe.value)
+        if escolhida is None:
+            await interaction.response.send_message(
+                f"A classe **{classe.name}** ainda nao esta pronta. "
+                f"Por enquanto da para jogar de: {self._classes_prontas()}.",
+                ephemeral=True,
+            )
+            return
+
         retrato = url_de_imagem(imagem)
         if imagem and not retrato:
             await interaction.response.send_message(
                 "O link do retrato precisa comecar com http:// ou https://.", ephemeral=True
             )
             return
+
+        nome = nome.strip()
         existentes = await db.listar_personagens(
             self.bot.db, interaction.guild_id, interaction.user.id
         )
@@ -239,30 +252,19 @@ class Ficha(commands.Cog):
                 ephemeral=True,
             )
             return
-        if any(p["nome"].lower() == nome.strip().lower() for p in existentes):
+        if any(p["nome"].lower() == nome.lower() for p in existentes):
             await interaction.response.send_message(
                 f"Voce ja tem um personagem chamado **{nome}**. Escolha outro nome.",
                 ephemeral=True,
             )
             return
 
-        atributos = {
-            "FOR": forca,
-            "DES": destreza,
-            "CON": constituicao,
-            "INT": inteligencia,
-            "SAB": sabedoria,
-            "CAR": carisma,
-        }
-        combate = {
-            "ca": ca,
-            "bonus_ataque": bonus_ataque,
-            "dano_arma": dano_arma,
-            "hp_max": hp_maximo,
-        }
-        view = SeletorPericias(interaction.user.id, [])
+        numeros = escolhida.numeros(1)
+        view = SeletorPericias(interaction.user.id, [], numeros.pericias)
         await interaction.response.send_message(
-            f"**{nome}**, nivel {nivel}. Agora marque as pericias treinadas:",
+            f"**{nome}**, {escolhida.nome} de nivel 1 — HP {numeros.hp}, CA {numeros.ca}, "
+            f"acerto {fmt(numeros.acerto)}, dano {numeros.dano}.\n"
+            f"Agora escolha ate **{numeros.pericias}** pericia(s) com proficiencia:",
             view=view,
             ephemeral=True,
         )
@@ -278,10 +280,8 @@ class Ficha(commands.Cog):
             interaction.guild_id,
             interaction.user.id,
             nome,
-            nivel,
-            atributos,
+            escolhida.id,
             view.escolhidas,
-            combate=combate,
             imagem=retrato,
         )
         if personagem_id is None:
@@ -299,10 +299,14 @@ class Ficha(commands.Cog):
         )
         await self._anunciar(
             interaction,
-            f"📜 {interaction.user.mention} registrou **{personagem['nome']}** "
-            f"— nivel {nivel}, {tier(nivel)}º tier.",
+            f"📜 {interaction.user.mention} registrou **{personagem['nome']}**, "
+            f"{escolhida.nome} de nivel 1.",
             embed=embed_ficha(personagem, interaction.user),
         )
+
+    @staticmethod
+    def _classes_prontas() -> str:
+        return ", ".join(sorted(c.nome for c in cl.CLASSES.values()))
 
     @grupo.command(name="listar", description="Mostra todos os seus personagens")
     @app_commands.describe(membro="Ver os personagens de outro jogador (opcional)")
@@ -371,55 +375,68 @@ class Ficha(commands.Cog):
             embed=embed_ficha(escolhido, interaction.user), ephemeral=True
         )
 
-    @grupo.command(
-        name="nivel", description="Atualiza o nivel (o bonus de proficiencia se recalcula sozinho)"
-    )
+    @grupo.command(name="upar", description="Sobe um nivel do personagem")
     @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
     @app_commands.autocomplete(personagem=_sugerir_personagens)
-    async def nivel(
-        self,
-        interaction: discord.Interaction,
-        novo_nivel: app_commands.Range[int, 1, 20],
-        personagem: Optional[str] = None,
+    async def upar(
+        self, interaction: discord.Interaction, personagem: Optional[str] = None
     ) -> None:
         escolhido = await self._resolver(interaction, personagem)
         if not escolhido:
             return
         antes = escolhido["nivel"]
-        await db.atualizar_personagem(self.bot.db, escolhido["id"], "nivel", novo_nivel)
-        await interaction.response.send_message(
-            f"📈 {interaction.user.mention} atualizou **{escolhido['nome']}**: "
-            f"nivel {antes} → **{novo_nivel}** | Tier {tier(novo_nivel)} | "
-            f"Proficiencia {fmt(bonus_proficiencia(novo_nivel))}."
-        )
-
-    @grupo.command(name="atributo", description="Atualiza um atributo apos um ASI")
-    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
-    @app_commands.choices(
-        atributo=[
-            app_commands.Choice(name=f"{nome} ({sigla})", value=sigla)
-            for sigla, nome in ATRIBUTOS.items()
-        ]
-    )
-    @app_commands.autocomplete(personagem=_sugerir_personagens)
-    async def atributo(
-        self,
-        interaction: discord.Interaction,
-        atributo: app_commands.Choice[str],
-        valor: app_commands.Range[int, 1, 30],
-        personagem: Optional[str] = None,
-    ) -> None:
-        escolhido = await self._resolver(interaction, personagem)
-        if not escolhido:
+        if antes >= NIVEL_MAXIMO:
+            await interaction.response.send_message(
+                f"**{escolhido['nome']}** ja esta no nivel maximo ({NIVEL_MAXIMO}).",
+                ephemeral=True,
+            )
             return
-        coluna = db.COLUNA_ATRIBUTO[atributo.value]
-        await db.atualizar_personagem(self.bot.db, escolhido["id"], coluna, valor)
+
+        classe = cl.classe(escolhido.get("classe"))
+        if classe is None:
+            await interaction.response.send_message(
+                "Nao reconheco a classe desta ficha.", ephemeral=True
+            )
+            return
+
+        depois = antes + 1
+        await db.atualizar_personagem(self.bot.db, escolhido["id"], "nivel", depois)
+        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
+
+        velhos, novos = classe.numeros(antes), classe.numeros(depois)
+        linhas = [
+            f"📈 {interaction.user.mention} subiu **{escolhido['nome']}** "
+            f"para o **nivel {depois}** (tier {tier(depois)})."
+        ]
+        if novos is not velhos:
+            mudou = [
+                f"{rotulo} {antigo} → **{novo}**"
+                for rotulo, antigo, novo in (
+                    ("HP", velhos.hp, novos.hp),
+                    ("CA", velhos.ca, novos.ca),
+                    ("Acerto", fmt(velhos.acerto), fmt(novos.acerto)),
+                    ("Dano", velhos.dano, novos.dano),
+                )
+                if antigo != novo
+            ]
+            if mudou:
+                linhas.append("Subiu de tier: " + " | ".join(mudou) + ".")
+            sobrando = novos.pericias - len(atualizado["pericias"])
+            if sobrando > 0:
+                linhas.append(
+                    f"Voce pode escolher mais **{sobrando}** pericia(s): use `/ficha pericias`."
+                )
+        else:
+            proximo = tier(antes) * 2 + 1
+            linhas.append(f"Os numeros sobem no nivel {proximo}, quando o tier virar.")
+
         await interaction.response.send_message(
-            f"💪 {interaction.user.mention} atualizou **{escolhido['nome']}**: "
-            f"{atributo.name} agora e {valor} ({fmt(modificador(valor))})."
+            "\n".join(linhas), embed=embed_ficha(atualizado, interaction.user)
         )
 
-    @grupo.command(name="pericias", description="Ajusta quais pericias sao treinadas")
+    @grupo.command(
+        name="pericias", description="Escolhe as pericias com proficiencia"
+    )
     @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
     @app_commands.autocomplete(personagem=_sugerir_personagens)
     async def pericias(
@@ -428,9 +445,18 @@ class Ficha(commands.Cog):
         escolhido = await self._resolver(interaction, personagem)
         if not escolhido:
             return
-        view = SeletorPericias(interaction.user.id, escolhido["pericias"])
+        numeros = escolhido.get("numeros")
+        if numeros is None:
+            await interaction.response.send_message(
+                "Nao reconheco a classe desta ficha.", ephemeral=True
+            )
+            return
+        view = SeletorPericias(interaction.user.id, escolhido["pericias"], numeros.pericias)
         await interaction.response.send_message(
-            f"Pericias treinadas de **{escolhido['nome']}**:", view=view, ephemeral=True
+            f"Proficiencias de **{escolhido['nome']}** "
+            f"({escolhido['classe']}, ate {numeros.pericias}):",
+            view=view,
+            ephemeral=True,
         )
         await view.wait()
         if view.escolhidas is None:
@@ -447,37 +473,8 @@ class Ficha(commands.Cog):
         )
         await self._anunciar(
             interaction,
-            f"🎓 {interaction.user.mention} atualizou as pericias de "
-            f"**{atualizado['nome']}** ({len(atualizado['pericias'])} treinadas).",
-            embed=embed_ficha(atualizado, interaction.user),
-        )
-
-    @grupo.command(name="combate", description="Atualiza CA, ataque, dano e HP de um personagem")
-    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
-    @app_commands.autocomplete(personagem=_sugerir_personagens)
-    async def combate(
-        self,
-        interaction: discord.Interaction,
-        ca: app_commands.Range[int, 1, 40],
-        bonus_ataque: app_commands.Range[int, -5, 30],
-        dano_arma: app_commands.Range[str, 1, 20],
-        hp_maximo: app_commands.Range[int, 1, 999],
-        personagem: Optional[str] = None,
-    ) -> None:
-        escolhido = await self._resolver(interaction, personagem)
-        if not escolhido:
-            return
-        for coluna, valor in (
-            ("ca", ca),
-            ("bonus_ataque", bonus_ataque),
-            ("dano_arma", dano_arma),
-            ("hp_max", hp_maximo),
-        ):
-            await db.atualizar_personagem(self.bot.db, escolhido["id"], coluna, valor)
-        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
-        await interaction.response.send_message(
-            f"🛡️ {interaction.user.mention} atualizou os numeros de combate de "
-            f"**{atualizado['nome']}**.",
+            f"🎓 {interaction.user.mention} atualizou as proficiencias de "
+            f"**{atualizado['nome']}** ({len(atualizado['pericias'])}/{numeros.pericias}).",
             embed=embed_ficha(atualizado, interaction.user),
         )
 
@@ -508,8 +505,7 @@ class Ficha(commands.Cog):
         if bonus:
             total = mod_pericia(
                 pericia.value,
-                atualizado["atributos"],
-                atualizado["nivel"],
+                atualizado["numeros"],
                 atualizado["pericias"],
                 atualizado["bonus_pericias"],
             )

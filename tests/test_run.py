@@ -76,11 +76,11 @@ async def main() -> None:
     assert run["linha_atual"] == 1
     assert len(await db.participantes(conn, run["id"])) == 5
     # entrar na run marca o intervalo de todo mundo
-    assert await db.dias_desde_ultima_incursao(conn, GUILD, JOGADORES[3]) is not None
+    assert await db.ultima_incursao(conn, GUILD, JOGADORES[3]) is not None
 
-    # o caminho foi sorteado ao comecar
+    # o caminho nasce passo a passo: so o primeiro esta sorteado
     mapa = await db.mapa_da_run(conn, run["id"])
-    assert len(mapa) == incursao.passos, mapa
+    assert len(mapa) == 1, mapa
     assert all(len(set(p)) == 3 for p in mapa), "3 opcoes distintas por passo"
 
     # --- as salas do caminho ---

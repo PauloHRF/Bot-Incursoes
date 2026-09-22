@@ -12,7 +12,7 @@ from src import config, database as db  # noqa: E402
 from src.cogs.ajuda import Ajuda, coletar  # noqa: E402
 from src.cogs.ficha import Ficha  # noqa: E402
 from fakes import (  # noqa: E402
-    ATRIBUTOS,
+    CLASSE_PADRAO,
     CANAL,
     GUILD,
     JOGADORES,
@@ -71,7 +71,7 @@ async def caso_help_lista_tudo():
 
     achatado = " ".join(c[0] for c in todos)
     for esperado in (
-        "/ficha registrar", "/ficha expertise", "/ficha imagem",
+        "/ficha registrar", "/ficha expertise", "/ficha imagem", "/ficha upar",
         "/incursao entrar", "/incursao atacar",
         "/organizacao placar", "/config intervalo", "/help",
     ):
@@ -86,10 +86,13 @@ async def caso_help_lista_tudo():
     assert not any("ficha registrar" in a for a in admins)
     assert not any("organizacao placar" in a for a in admins)
 
-    # comando com muitos campos vira linha curta
+    # o cadastro virou nome + classe: nao ha mais numero para digitar
     registrar = next(c for c in todos if c[0].startswith("/ficha registrar"))
-    assert "campos)" in registrar[0], registrar[0]
-    assert len(registrar[0]) < 60, "a assinatura longa precisa sair encurtada"
+    assert "<classe>" in registrar[0], registrar[0]
+    assert "<nivel>" not in registrar[0], registrar[0]
+    # nenhuma assinatura fica comprida demais para a lista
+    longo = max(todos, key=lambda c: len(c[0]))
+    assert len(longo[0]) < 60, longo[0]
 
     for cog in list(bot.extensions):
         await bot.unload_extension(cog)
@@ -141,7 +144,9 @@ async def caso_registrar_avisa_o_canal():
     assert len(canal.mensagens) == antes + 1
 
     # o fluxo real: cria o personagem e anuncia com a ficha
-    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", 5, ATRIBUTOS, ["Atletismo"])
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", CLASSE_PADRAO, ["Atletismo"], nivel=5
+    )
     personagem = await db.buscar_personagem(conn, pid)
     from src.cogs.ficha import embed_ficha
 
@@ -158,30 +163,21 @@ async def caso_registrar_avisa_o_canal():
 
 
 async def caso_atualizacoes_sao_publicas():
-    """Nivel, atributo, combate, expertise e remover respondem sem ephemeral."""
+    """Upar, expertise e remover respondem no canal, sem ephemeral."""
     conn, canal, ficha = await preparar()
     dono = JOGADORES[0]
     await db.criar_personagem(
-        conn, GUILD, dono, "Vhalor", 5, ATRIBUTOS, ["Atletismo"],
-        combate={"ca": 15, "bonus_ataque": 5, "dano_arma": "1d8+3", "hp_max": 40},
+        conn, GUILD, dono, "Vhalor", CLASSE_PADRAO, ["Atletismo"], nivel=5
     )
 
     def publica(interacao):
         # o dublê registra a mensagem no canal quando nao e ephemeral
         return interacao._mensagem_resposta is not None and interacao._mensagem_resposta.id != -1
 
-    nivel = FakeInteraction(canal, dono)
-    await ficha.nivel.callback(ficha, nivel, 9)
-    assert publica(nivel), "o aviso de nivel deveria ser publico"
-    assert "5" in nivel.resposta and "9" in nivel.resposta
-
-    atributo = FakeInteraction(canal, dono)
-    await ficha.atributo.callback(ficha, atributo, Escolha("FOR"), 18)
-    assert publica(atributo) and "18" in atributo.resposta
-
-    combate = FakeInteraction(canal, dono)
-    await ficha.combate.callback(ficha, combate, 18, 7, "1d12+4", 60)
-    assert publica(combate) and "Vhalor" in combate.resposta
+    upou = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, upou)
+    assert publica(upou), "o aviso de nivel deveria ser publico"
+    assert "nivel 6" in upou.resposta and "Vhalor" in upou.resposta
 
     expertise = FakeInteraction(canal, dono)
     await ficha.expertise.callback(ficha, expertise, Escolha("Atletismo"), 3)

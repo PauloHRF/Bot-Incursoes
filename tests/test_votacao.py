@@ -11,7 +11,7 @@ sys.path.insert(0, str(RAIZ))
 from src import config, database as db  # noqa: E402
 from src.cogs.incursao import Incursoes, ViewVotacao  # noqa: E402
 from fakes import (  # noqa: E402
-    ATRIBUTOS,
+    CLASSE_PADRAO,
     CANAL,
     GUILD,
     JOGADORES,

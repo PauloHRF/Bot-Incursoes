@@ -8,7 +8,8 @@ from __future__ import annotations
 import random
 import re
 from dataclasses import dataclass
-from typing import Any, Optional
+from datetime import datetime, timedelta
+from typing import Any, Iterable, Optional
 
 from .incursoes import OPCOES_POR_PASSO, Monstro, Sala
 from .rules import PESO_TIER, melhor_pericia, tier
@@ -75,8 +76,7 @@ def testar(ficha: dict[str, Any], sala: Sala, rng: Optional[random.Random] = Non
         raise ValueError(f"a sala {sala.id} ({sala.tipo}) não é resolvida por teste de perícia")
     pericia, modificador = melhor_pericia(
         sala.pericias,
-        ficha["atributos"],
-        ficha["nivel"],
+        ficha["numeros"],
         ficha["pericias"],
         ficha.get("bonus_pericias"),
     )
@@ -90,35 +90,54 @@ def testar(ficha: dict[str, Any], sala: Sala, rng: Optional[random.Random] = Non
     )
 
 
-def sortear_mapa(
+def sortear_passo(
     salas: list[Sala],
-    passos: int,
+    visitadas: Iterable[str] = (),
     opcoes: int = OPCOES_POR_PASSO,
     rng: Optional[random.Random] = None,
-) -> list[list[str]]:
-    """Monta o caminho da run: `passos` grupos de `opcoes` salas sorteadas do banco.
+) -> list[str]:
+    """As salas oferecidas num passo, sorteadas do banco da Organização.
 
-    Duas salas nunca se repetem dentro do mesmo passo. Entre passos diferentes,
-    a repetição só acontece quando o banco é pequeno demais para o caminho todo
-    — aí o baralho é reembaralhado em vez de faltar opção.
+    Nenhuma sala que o grupo já atravessou volta a ser oferecida: o caminho é
+    sorteado passo a passo, quando o passo abre, e não de uma vez no começo.
+    Se sobrarem menos salas novas que o número de opções, o passo sai menor —
+    melhor escolher entre duas portas do que voltar para a mesma câmara.
     """
-    if len(salas) < opcoes:
+    ja_visitadas = set(visitadas)
+    candidatas = [s for s in salas if s.id not in ja_visitadas]
+    if not candidatas:
         raise ValueError(
-            f"o banco tem {len(salas)} sala(s); são precisas ao menos {opcoes} por passo"
+            f"o banco tem {len(salas)} sala(s) e o grupo já passou por todas elas"
         )
-    gerador = _rng(rng)
-    baralho: list[Sala] = []
-    mapa = []
-    for _ in range(passos):
-        if len(baralho) < opcoes:
-            # Repoe o baralho, deixando de fora o que ja esta separado para este passo.
-            resto = list(baralho)
-            novas = [s for s in salas if s not in resto]
-            gerador.shuffle(novas)
-            baralho = resto + novas
-        passo, baralho = baralho[:opcoes], baralho[opcoes:]
-        mapa.append([s.id for s in passo])
-    return mapa
+    return [s.id for s in _rng(rng).sample(candidatas, min(opcoes, len(candidatas)))]
+
+
+# ------------------------------------------------------- janela semanal
+
+
+def segunda_da_semana(momento: datetime) -> datetime:
+    """A segunda-feira 00:00 da semana daquele momento."""
+    return (momento - timedelta(days=momento.weekday())).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+
+
+def virada_da_vaga(ultima: datetime, semanas: int = 1) -> datetime:
+    """Quando a vaga do jogador volta: a segunda-feira N semanas depois da que ele jogou.
+
+    Contando pela segunda, e não por 7 dias corridos: quem entrou no sábado joga
+    de novo na segunda, e a semana do grupo inteiro vira junto.
+    """
+    return segunda_da_semana(ultima) + timedelta(weeks=max(1, semanas))
+
+
+def entrada_liberada(
+    ultima: Optional[datetime], agora: datetime, semanas: int = 1
+) -> bool:
+    """Se o jogador já pode entrar numa nova incursão."""
+    if semanas <= 0 or ultima is None:
+        return True
+    return agora >= virada_da_vaga(ultima, semanas)
 
 
 # Consequência individual de falhar, por tipo de sala (tabela do documento de design).
@@ -181,6 +200,16 @@ def escalar_monstro(monstro: Monstro, tiers_do_grupo: list[int]) -> Monstro:
 def peso_do_grupo(niveis: list[int]) -> int:
     """Soma dos pesos por tier dos participantes (fórmula do objetivo principal)."""
     return sum(PESO_TIER[tier(n)] for n in niveis)
+
+
+def pode_encarar(nivel: int, tier_incursao: int) -> bool:
+    """Se um personagem daquele nível pode entrar numa incursão daquele tier.
+
+    Abaixo do tier pode: o personagem novo pega carona com o grupo e sobe. Acima
+    não: uma incursão feita para quem está começando não é lugar de quem já
+    passou dela.
+    """
+    return tier(nivel) <= tier_incursao
 
 
 @dataclass
@@ -260,14 +289,30 @@ def barra(valor: int, maximo: int, casas: int = 10) -> str:
 
 # ------------------------------------------------------------ combate
 
-# Rodada de combate: todo personagem de pé ataca uma vez, depois o monstro
-# contra-ataca um alvo. Repete até o monstro cair ou o grupo inteiro cair.
+# Rodada de combate: todo personagem de pé ataca uma vez o inimigo que escolher,
+# depois cada inimigo de pé revida num alvo sorteado. Repete até um dos lados cair.
+
+
+@dataclass
+class Inimigo:
+    """Uma criatura da sala, com HP próprio. Uma sala pode ter várias."""
+
+    indice: int
+    nome: str
+    ca: int
+    ataque: int
+    dano: str
+    hp_max: int
+    hp_atual: int
+
+    @property
+    def caido(self) -> bool:
+        return self.hp_atual <= 0
 
 
 @dataclass
 class EstadoCombate:
-    monstro: Monstro
-    monstro_hp: int
+    inimigos: list[Inimigo]
     rodada: int
     combatentes: list[Combatente]
 
@@ -280,8 +325,13 @@ class EstadoCombate:
         return [c for c in self.combatentes if c.caido]
 
     @property
-    def monstro_derrotado(self) -> bool:
-        return self.monstro_hp <= 0
+    def inimigos_vivos(self) -> list[Inimigo]:
+        return [i for i in self.inimigos if not i.caido]
+
+    @property
+    def inimigos_derrotados(self) -> bool:
+        """Só acaba quando a sala inteira cai, não o primeiro inimigo."""
+        return not self.inimigos_vivos
 
     @property
     def grupo_caido(self) -> bool:
@@ -289,7 +339,7 @@ class EstadoCombate:
 
     @property
     def encerrado(self) -> bool:
-        return self.monstro_derrotado or self.grupo_caido
+        return self.inimigos_derrotados or self.grupo_caido
 
     def combatente(self, user_id: int) -> Optional[Combatente]:
         for c in self.combatentes:
@@ -297,47 +347,76 @@ class EstadoCombate:
                 return c
         return None
 
+    def inimigo(self, indice: int) -> Optional[Inimigo]:
+        for i in self.inimigos:
+            if i.indice == indice:
+                return i
+        return None
 
-def atacar_monstro(
-    combatente: Combatente, estado: EstadoCombate, rng: Optional[random.Random] = None
+    def alvo_preferido(self, indice: Optional[int] = None) -> Optional[Inimigo]:
+        """O inimigo escolhido, se ainda estiver de pé; senão o primeiro vivo.
+
+        Com um inimigo só na sala ninguém precisa escolher nada.
+        """
+        if indice is not None:
+            alvo = self.inimigo(indice)
+            if alvo is not None and not alvo.caido:
+                return alvo
+            return None
+        vivos = self.inimigos_vivos
+        return vivos[0] if vivos else None
+
+
+def atacar_inimigo(
+    combatente: Combatente, inimigo: Inimigo, rng: Optional[random.Random] = None
 ) -> GolpeAtaque:
-    """O personagem ataca o monstro. O dano já sai descontado do HP dele."""
+    """O personagem ataca um inimigo. O dano já sai descontado do HP dele."""
     golpe = atacar(
         combatente.nome,
         combatente.bonus_ataque,
         combatente.dano_arma,
-        estado.monstro.nome,
-        estado.monstro.ca,
+        inimigo.nome,
+        inimigo.ca,
         rng,
     )
     if golpe.acertou:
-        estado.monstro_hp = max(0, estado.monstro_hp - golpe.dano)
+        inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
     return golpe
 
 
 def sortear_alvo(
     estado: EstadoCombate, rng: Optional[random.Random] = None
 ) -> Optional[Combatente]:
-    """Quem o monstro ataca nesta rodada. Só quem está de pé pode ser alvo."""
+    """Quem um inimigo ataca. Só quem está de pé pode ser alvo."""
     vivos = estado.vivos
     return _rng(rng).choice(vivos) if vivos else None
 
 
 def contra_atacar(
-    estado: EstadoCombate, alvo: Combatente, rng: Optional[random.Random] = None
+    inimigo: Inimigo, alvo: Combatente, rng: Optional[random.Random] = None
 ) -> GolpeAtaque:
-    """O monstro revida contra um personagem. O dano já sai descontado do HP dele."""
-    golpe = atacar(
-        estado.monstro.nome,
-        estado.monstro.ataque,
-        estado.monstro.dano,
-        alvo.nome,
-        alvo.ca,
-        rng,
-    )
+    """Um inimigo revida contra um personagem. O dano já sai descontado do HP dele."""
+    golpe = atacar(inimigo.nome, inimigo.ataque, inimigo.dano, alvo.nome, alvo.ca, rng)
     if golpe.acertou:
         alvo.hp_atual = max(0, alvo.hp_atual - golpe.dano)
     return golpe
+
+
+def rodada_dos_inimigos(
+    estado: EstadoCombate, rng: Optional[random.Random] = None
+) -> list[tuple[GolpeAtaque, Combatente]]:
+    """A vez dos inimigos: cada um de pé bate uma vez, num alvo sorteado.
+
+    É aqui que um grupo de criaturas pesa — cinco lobos batem cinco vezes por
+    rodada. Para quando o grupo inteiro cai: não se ataca quem já está no chão.
+    """
+    golpes = []
+    for inimigo in estado.inimigos_vivos:
+        alvo = sortear_alvo(estado, rng)
+        if alvo is None:
+            break
+        golpes.append((contra_atacar(inimigo, alvo, rng), alvo))
+    return golpes
 
 
 # Quanto do HP máximo um personagem caído recupera ao descansar.

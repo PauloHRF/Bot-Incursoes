@@ -3,6 +3,7 @@
   "nome": "A Cripta do Vórtice",
   "organizacao": "Vórtice Oculto",
   "tamanho": "Média",
+  "tier": 4,
   "lore_inicial": "Um selo antigo cedeu sob a cidade e algo do outro lado começou a vazar. Três dias depois, os cães pararam de latir no bairro inteiro e uma rua acordou com as portas trancadas por dentro e ninguém atrás delas.\n\nO Vórtice Oculto já sabia do selo — foi um dos seus que o fez, há muito tempo. Agora quer o Olho de volta antes que a fenda se alargue o bastante para alguém de fora perceber de quem foi a culpa. Vocês descem hoje.",
   "lore_final": "O Olho para de piscar assim que sai do pedestal, e o silêncio que vem depois é pior que o zumbido. Lá em cima, os cães voltam a latir.\n\nA Organização recebe o Olho sem cerimônia, como quem recolhe uma ferramenta emprestada. Ninguém menciona o que ele guardava, nem por que o selo tinha a marca de um deles. Vocês recebem o pagamento, e a instrução de não voltar àquela rua.",
   "imagem_capa": null,
@@ -20,12 +21,28 @@
     "imagem": null,
     "recompensa": "10 MEs por participante + pontos com o Vórtice Oculto",
     "pontos_organizacao": 0,
-    "monstro": {
-      "nome": "Guardião do Selo",
-      "ca": 16,
-      "ataque": 7,
-      "dano": "2d8+4",
-      "hp": 58
-    }
+    "monstros": [
+      {
+        "nome": "Guardião do Selo",
+        "ca": 16,
+        "ataque": 7,
+        "dano": "2d8+4",
+        "hp": 58
+      },
+      {
+        "nome": "Acólito do Selo 1",
+        "ca": 13,
+        "ataque": 4,
+        "dano": "1d8+2",
+        "hp": 18
+      },
+      {
+        "nome": "Acólito do Selo 2",
+        "ca": 13,
+        "ataque": 4,
+        "dano": "1d8+2",
+        "hp": 18
+      }
+    ]
   }
 }

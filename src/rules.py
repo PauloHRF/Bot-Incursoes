@@ -1,4 +1,7 @@
-"""Regras de ficha: modificadores, proficiência, tier e perícias (5e)."""
+"""Regras de ficha: tier, bônus de perícia e a tabela de perícias.
+
+Os números de combate não estão aqui: saem da classe, em src/classes.py.
+"""
 from __future__ import annotations
 
 import unicodedata
@@ -34,11 +37,17 @@ PERICIAS = {
     "Sobrevivência": "SAB",
 }
 
-# Faixas de nível por tier. Ajuste aqui se as Incursões originais usarem outro corte.
-TIERS = ((4, 1), (10, 2), (16, 3), (20, 4))
+# Um tier a cada 2 níveis: 1-2 = tier 1, 3-4 = tier 2, ... 9-10 = tier 5.
+# O teto de nível é o alcance das tabelas de classe (src/classes.py), que hoje
+# vão até o tier 5. Subir o teto é acrescentar tiers lá e mexer só nestes números.
+NIVEIS_POR_TIER = 2
+NIVEL_MAXIMO = 10
+TIER_MAXIMO = NIVEL_MAXIMO // NIVEIS_POR_TIER
 
 # Peso de cada tier no alvo do objetivo principal (doc: soma dos pesos + C).
-PESO_TIER = {1: 1, 2: 2, 3: 3, 4: 4}
+# Com o tier a cada 2 níveis o peso é o próprio tier; a constante precisa ser
+# recalibrada junto quando a regra de escala do chefe for fechada.
+PESO_TIER = {t: t for t in range(1, TIER_MAXIMO + 1)}
 CONSTANTE_OBJETIVO = 9
 
 
@@ -71,38 +80,36 @@ def normalizar_lista_pericias(nomes: list[str]) -> list[str]:
     return saida
 
 
-def modificador(valor: int) -> int:
-    """Modificador de atributo: (valor - 10) // 2."""
-    return (valor - 10) // 2
-
-
-def bonus_proficiencia(nivel: int) -> int:
-    """2 + floor((nível - 1) / 4)."""
-    return 2 + (nivel - 1) // 4
-
-
 def tier(nivel: int) -> int:
-    for teto, t in TIERS:
-        if nivel <= teto:
-            return t
-    return TIERS[-1][1]
+    """Tier do personagem: um a cada 2 níveis (1-2 = 1, 3-4 = 2, ... 19-20 = 10)."""
+    return max(1, min(TIER_MAXIMO, (nivel + NIVEIS_POR_TIER - 1) // NIVEIS_POR_TIER))
+
+
+def nivel_maximo_do_tier(tier_alvo: int) -> int:
+    """O maior nível que ainda cabe naquele tier: tier 3 -> nível 6."""
+    return tier_alvo * NIVEIS_POR_TIER
+
+
+def faixa_do_tier(tier_alvo: int) -> tuple[int, int]:
+    """Os níveis daquele tier: tier 3 -> (5, 6)."""
+    teto = nivel_maximo_do_tier(tier_alvo)
+    return teto - NIVEIS_POR_TIER + 1, teto
 
 
 def mod_pericia(
     pericia: str,
-    atributos: dict[str, int],
-    nivel: int,
+    numeros,
     treinadas: list[str],
     bonus: dict[str, int] | None = None,
 ) -> int:
-    """Modificador final: atributo + proficiência se treinada + bônus da perícia.
+    """Modificador de um teste: o bônus da classe, dobrado pela proficiência.
 
-    `bonus` sao as expertises: valores avulsos por pericia (item, talento, etc).
+    `numeros` são os da classe no tier atual (bonus_pericia e bonus_proficiencia).
+    `bonus` são as expertises: valores avulsos por perícia (item, talento, etc).
     """
-    chave = PERICIAS[pericia]
-    total = modificador(atributos[chave])
-    if pericia in treinadas:
-        total += bonus_proficiencia(nivel)
+    total = (
+        numeros.bonus_proficiencia if pericia in treinadas else numeros.bonus_pericia
+    )
     if bonus:
         total += bonus.get(pericia, 0)
     return total
@@ -110,13 +117,12 @@ def mod_pericia(
 
 def melhor_pericia(
     opcoes: list[str],
-    atributos: dict[str, int],
-    nivel: int,
+    numeros,
     treinadas: list[str],
     bonus: dict[str, int] | None = None,
 ) -> tuple[str, int]:
     """Dentre as perícias listadas pela sala, a melhor para este personagem."""
-    ranked = [(p, mod_pericia(p, atributos, nivel, treinadas, bonus)) for p in opcoes]
+    ranked = [(p, mod_pericia(p, numeros, treinadas, bonus)) for p in opcoes]
     ranked.sort(key=lambda x: x[1], reverse=True)
     return ranked[0]
 

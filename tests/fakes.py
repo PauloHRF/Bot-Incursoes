@@ -18,9 +18,10 @@ GUILD = 1
 CANAL = 99
 JOGADORES = [101, 102, 103, 104, 105]
 
-ATRIBUTOS = {"FOR": 14, "DES": 16, "CON": 14, "INT": 12, "SAB": 13, "CAR": 10}
-TREINADAS = ["Acrobacia", "Arcanismo", "Investigação", "Percepção", "Prestidigitação",
-             "Furtividade", "Atletismo", "Religião", "Intuição", "História"]
+# A ficha nao tem mais atributos: a classe define os numeros, e o jogador so
+# escolhe as pericias com proficiencia.
+CLASSE_PADRAO = "guerreiro"
+TREINADAS = ["Atletismo", "Percepção", "Intuição"]
 
 
 # ----------------------------------------------------------------- dublês
@@ -45,6 +46,7 @@ class FakeMensagem:
         self.embeds = [kw["embed"]] if kw.get("embed") else []
         self.view = kw.get("view")
         self.content = kw.get("content")
+        self.arquivo = kw.get("arquivo")
 
     async def edit(self, **kw):
         if "embed" in kw:
@@ -63,7 +65,14 @@ class FakeCanal:
     async def send(self, content=None, *, embed=None, embeds=None, view=None,
                    file=discord.utils.MISSING):
         self._proximo_id += 1
-        msg = FakeMensagem(self, self._proximo_id, content=content, embed=embed, view=view)
+        msg = FakeMensagem(
+            self,
+            self._proximo_id,
+            content=content,
+            embed=embed,
+            view=view,
+            arquivo=None if file is discord.utils.MISSING else file,
+        )
         if embeds:
             msg.embeds = list(embeds)
         self.mensagens.append(msg)
@@ -104,6 +113,9 @@ class FakeResposta:
                 content, embed=embed, view=view
             )
 
+    async def send_modal(self, modal):
+        self.interacao.modal_enviado = modal
+
     async def defer(self, **kw):
         self.interacao.adiado = True
 
@@ -119,6 +131,7 @@ class FakeInteraction:
         self.response = FakeResposta(self)
         self.resposta = None
         self.view_enviada = None
+        self.modal_enviado = None
         self.adiado = False
         self._mensagem_resposta = None
 
@@ -157,7 +170,7 @@ class FakeBot:
 # Monstro que todo mundo acerta e que morre num golpe.
 INDEFESO = {"nome": "Saco de Pancada", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 1}
 # Monstro que todo mundo acerta, mas aguenta varias rodadas sem revidar.
-DURAO = {"nome": "Saco Grande", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 120}
+DURAO = {"nome": "Saco Grande", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 400}
 # Monstro que ninguem acerta e que mata um personagem por rodada.
 IMBATIVEL = {"nome": "Ceifador", "ca": 40, "ataque": 40, "dano": "1d1+998", "hp": 999}
 
@@ -182,7 +195,7 @@ def sala(sala_id, tipo, **extra):
         "cd": None,
         "alvo_progresso": None,
         "imagem": None,
-        "monstro": None,
+        "monstros": [],
         "recompensa": None,
         "pontos_organizacao": 0,
     }
@@ -197,9 +210,14 @@ def salas_sem_combate(quantas=6, tipo="Evento", pontos=0):
     return [sala(f"E{i}", tipo, pontos_organizacao=pontos) for i in range(1, quantas + 1)]
 
 
-def salas_de_combate(monstro=INDEFESO, quantas=4, pontos=0):
+def salas_de_combate(monstro=INDEFESO, quantas=4, pontos=0, quantidade=1):
     return [
-        sala(f"C{i}", "Combate", monstro=copy.deepcopy(monstro), pontos_organizacao=pontos)
+        sala(
+            f"C{i}",
+            "Combate",
+            monstros=[dict(copy.deepcopy(monstro), quantidade=quantidade)],
+            pontos_organizacao=pontos,
+        )
         for i in range(1, quantas + 1)
     ]
 
@@ -210,7 +228,9 @@ def montar_conteudo(
     incursao_id="t",
     organizacao=ORG_PADRAO,
     tamanho="Curta",
+    tier=None,
     monstro_objetivo=INDEFESO,
+    inimigos_objetivo=1,
     salas=None,
     pontos_conclusao=10,
     pontos_objetivo=0,
@@ -223,6 +243,7 @@ def montar_conteudo(
             "nome": f"Incursão {incursao_id}",
             "organizacao": organizacao,
             "tamanho": tamanho,
+            "tier": tier,
             "lore_inicial": LORE_TESTE,
             "lore_final": lore_final,
             "imagem_capa": None,
@@ -231,7 +252,9 @@ def montar_conteudo(
             "objetivo": sala(
                 "OBJ",
                 "Combate",
-                monstro=copy.deepcopy(monstro_objetivo),
+                monstros=[
+                    dict(copy.deepcopy(monstro_objetivo), quantidade=inimigos_objetivo)
+                ],
                 pontos_organizacao=pontos_objetivo,
             ),
         }
@@ -249,20 +272,42 @@ async def opcoes_ids(cog, conn, run_id, passo):
     return await db.opcoes_do_passo(conn, run_id, passo)
 
 
-async def criar_grupo(
-    conn, nivel=8, hp_max=40, ca=18, bonus_ataque=8, dano="1d6+3", nomes=None
-):
+async def criar_grupo(conn, nivel=8, classe=CLASSE_PADRAO, nomes=None, pericias=None):
     """Cria um personagem para cada jogador de teste. Devolve {user_id: personagem_id}."""
     ids = {}
     for user_id in JOGADORES:
         nome = (nomes or {}).get(user_id, f"Heroi{user_id}")
         ids[user_id] = await db.criar_personagem(
-            conn, GUILD, user_id, nome, nivel, ATRIBUTOS, TREINADAS,
-            combate={
-                "ca": ca,
-                "bonus_ataque": bonus_ataque,
-                "dano_arma": dano,
-                "hp_max": hp_max,
-            },
+            conn,
+            GUILD,
+            user_id,
+            nome,
+            classe,
+            list(pericias if pericias is not None else TREINADAS),
+            nivel=nivel,
         )
     return ids
+
+
+async def atacar_ate_cair(conn, canal, cog, run_id, sala_id, limite=30):
+    """Ataca ate o combate terminar.
+
+    Um golpe so nao basta nem contra CA 1: o 1 natural erra sempre.
+    """
+    ultima = None
+    for _ in range(limite):
+        atual = await db.buscar_run(conn, run_id)
+        if atual["status"] not in ("em_sala", "objetivo") or atual["sala_atual"] != sala_id:
+            return ultima
+        incursao_atual = cog.incursoes[atual["incursao_id"]]
+        estado = await cog._estado_combate(atual, cog._sala(incursao_atual, sala_id))
+        if estado is None:
+            return ultima
+        msg = await canal.fetch_message(atual["mensagem_id"])
+        for c in list(estado.vivos):
+            depois = await db.buscar_run(conn, run_id)
+            if depois["status"] not in ("em_sala", "objetivo") or depois["sala_atual"] != sala_id:
+                return ultima
+            ultima = FakeInteraction(canal, c.user_id, msg)
+            await cog.atacar(ultima, run_id, sala_id)
+    return ultima

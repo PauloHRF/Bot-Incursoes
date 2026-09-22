@@ -19,6 +19,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.incursoes import ORGANIZACOES, TAMANHOS  # noqa: E402
+from src.rules import TIER_MAXIMO  # noqa: E402
 
 FONTE = "Arial"
 cab_fonte = Font(name=FONTE, size=10, bold=True, color="FFFFFF")
@@ -50,11 +51,27 @@ META = [
     ("nome", "A Cripta do Vórtice", "Nome exibido aos jogadores."),
     ("organizacao", "Vórtice Oculto", "De qual Organização é a incursão. Define o banco de salas usado no sorteio."),
     ("tamanho", "Média", "Curta (3 salas), Média (5) ou Longa (7), sempre mais o objetivo."),
+    ("tier", 4, f"Tier da incursão, de 1 a {TIER_MAXIMO} (um tier a cada 2 níveis). "
+     "Só entra quem for deste tier ou de um mais baixo: tier 4 aceita até o nível 8."),
     ("lore_inicial", LORE_INICIAL, "Texto de abertura, postado quando a run começa."),
     ("lore_final", LORE_FINAL, "Epílogo, postado só quando o grupo cumpre o objetivo."),
     ("imagem_capa", "", "URL da imagem de capa. Opcional."),
     ("recompensa_mes", 10, "MEs por participante ao completar o objetivo."),
     ("pontos_conclusao", 10, "Pontos de Organização que a conclusão rende ao servidor."),
+]
+
+CABECALHO_MONSTROS = (
+    ("nome", 24, "Nome da criatura."),
+    ("quantidade", 12, "Quantas iguais. Vazio ou 1 = uma."),
+    ("ca", 8, "Classe de Armadura."),
+    ("ataque", 10, "Bonus de ataque (ex.: 5)."),
+    ("dano", 12, "Dado de dano (ex.: 1d8+2)."),
+    ("hp", 8, "Pontos de vida de cada uma."),
+)
+
+# A escolta do chefe, na aba 'Monstros'.
+ESCOLTA = [
+    ("Acólito do Selo", 2, 13, 4, "1d8+2", 18),
 ]
 
 OBJETIVO = [
@@ -65,6 +82,8 @@ OBJETIVO = [
      "guarda não tem nome porque nada que o viu voltou para dar um.", "Texto do embed da sala final."),
     ("imagem", "", "Caminho em assets/ ou URL. Opcional."),
     ("monstro_nome", "Guardião do Selo", "Nome do chefe."),
+    ("monstro_quantidade", 1, "Quantos chefes iguais. Vazio ou 1 = um. O total da sala, "
+     "contando a aba 'Monstros', nao passa de 6."),
     ("monstro_ca", 16, "Classe de Armadura do chefe."),
     ("monstro_ataque", 7, "Bônus de ataque do chefe."),
     ("monstro_dano", "2d8+4", "Dado de dano do chefe (ex.: 2d8+4)."),
@@ -138,6 +157,11 @@ def gerar(destino: Path) -> Path:
     dv_tam = DataValidation(type="list", formula1=f'"{",".join(TAMANHOS)}"', allow_blank=False)
     ws.add_data_validation(dv_tam)
     dv_tam.add("B5")
+    dv_tier = DataValidation(
+        type="whole", operator="between", formula1=1, formula2=TIER_MAXIMO, allow_blank=True
+    )
+    ws.add_data_validation(dv_tier)
+    dv_tier.add("B6")
     ws.cell(row=1, column=2).comment = Comment(
         "Uma linha por campo. Nao apague nem renomeie os campos da coluna A.",
         "Incursoes 2.0",
@@ -146,6 +170,25 @@ def gerar(destino: Path) -> Path:
     )
 
     _aba_chave_valor(wb, "Objetivo", OBJETIVO, "valor")
+
+    ws = wb.create_sheet("Monstros")
+    for i, (titulo, largura, ajuda) in enumerate(CABECALHO_MONSTROS, start=1):
+        c = ws.cell(row=1, column=i, value=titulo)
+        c.font = cab_fonte
+        c.fill = cab_fill
+        c.comment = Comment(ajuda, "Incursoes 2.0", height=80, width=260)
+        ws.column_dimensions[get_column_letter(i)].width = largura
+    ws.cell(row=1, column=1).comment = Comment(
+        "Criaturas que lutam AO LADO do chefe. O que estiver aqui se soma ao monstro_*"
+        " da aba Objetivo, ate 6 no total. Deixe vazia para um chefe sozinho.",
+        "Incursoes 2.0",
+        height=110,
+        width=300,
+    )
+    for i, linha in enumerate(ESCOLTA, start=2):
+        for col, valor in enumerate(linha, start=1):
+            ws.cell(row=i, column=col, value=valor).font = corpo
+    ws.freeze_panes = "A2"
 
     destino.parent.mkdir(parents=True, exist_ok=True)
     wb.save(destino)

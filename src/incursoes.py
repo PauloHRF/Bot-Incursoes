@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from .rules import chave_comparacao, normalizar_pericia
+from .rules import TIER_MAXIMO, chave_comparacao, nivel_maximo_do_tier, normalizar_pericia
 
 TIPOS_SALA = ("Combate", "Descanso", "Armadilha", "Evento", "Tesouro")
 ORGANIZACOES = (
@@ -29,6 +29,9 @@ TAMANHOS = {"Curta": 3, "Média": 5, "Longa": 7}
 
 # Quantas opções o grupo recebe em cada passo.
 OPCOES_POR_PASSO = 3
+
+# Quantas criaturas uma sala de combate pode ter.
+MAX_INIMIGOS = 6
 
 # Tipos que resolvem a sala por teste de perícia (margem vs CD).
 TIPOS_COM_TESTE = ("Armadilha", "Evento", "Tesouro")
@@ -86,9 +89,14 @@ class Sala:
     alvo_progresso: Optional[int] = None
     pericias: list[str] = field(default_factory=list)
     imagem: Optional[str] = None
-    monstro: Optional[Monstro] = None
+    monstros: list[Monstro] = field(default_factory=list)
     recompensa: Optional[str] = None
     pontos_organizacao: int = 0
+
+    @property
+    def monstro(self) -> Optional[Monstro]:
+        """O primeiro inimigo da sala, para quando basta um nome."""
+        return self.monstros[0] if self.monstros else None
 
     @property
     def tem_teste(self) -> bool:
@@ -111,7 +119,7 @@ class Sala:
             "imagem": self.imagem,
             "recompensa": self.recompensa,
             "pontos_organizacao": self.pontos_organizacao,
-            "monstro": self.monstro.para_dict() if self.monstro else None,
+            "monstros": [m.para_dict() for m in self.monstros],
         }
 
 
@@ -143,6 +151,9 @@ class Incursao:
     lore_inicial: str
     objetivo: Sala
     tamanho: str = "Média"
+    # Teto de nível do grupo: quem está acima deste tier não entra. Sem valor na
+    # planilha, a incursão fica aberta a todo mundo em vez de trancar o servidor.
+    tier: int = TIER_MAXIMO
     lore_final: Optional[str] = None
     imagem_capa: Optional[str] = None
     recompensa_mes: int = 10
@@ -153,12 +164,22 @@ class Incursao:
         """Quantas salas o grupo atravessa antes do objetivo."""
         return TAMANHOS[self.tamanho]
 
+    @property
+    def nivel_maximo(self) -> int:
+        """O maior nível que ainda pode entrar: tier 3 -> nível 6."""
+        return nivel_maximo_do_tier(self.tier)
+
+    @property
+    def aberta_a_todos(self) -> bool:
+        return self.tier >= TIER_MAXIMO
+
     def para_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "nome": self.nome,
             "organizacao": self.organizacao,
             "tamanho": self.tamanho,
+            "tier": self.tier,
             "lore_inicial": self.lore_inicial,
             "lore_final": self.lore_final,
             "imagem_capa": self.imagem_capa,
@@ -175,6 +196,44 @@ def _inteiro(valor: Any) -> Optional[int]:
         return int(float(valor))
     except (TypeError, ValueError):
         return None
+
+
+def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) -> list[Monstro]:
+    """Uma entrada de criatura vira N monstros, conforme a quantidade.
+
+    Com quantidade > 1 cada cópia ganha um número no nome ('Lobo 1', 'Lobo 2'),
+    para o grupo saber em qual está batendo.
+    """
+    nome = str(bruto.get("nome") or "").strip()
+    ca, ataque, hp = (
+        _inteiro(bruto.get("ca")),
+        _inteiro(bruto.get("ataque")),
+        _inteiro(bruto.get("hp")),
+    )
+    dano = str(bruto.get("dano") or "").strip()
+    quantidade = _inteiro(bruto.get("quantidade"))
+    if quantidade is None:
+        quantidade = 1
+
+    if not nome:
+        problemas.append(f"{onde}: a criatura precisa de um nome.")
+    for rotulo, valor in (("ca", ca), ("ataque", ataque), ("hp", hp)):
+        if valor is None:
+            problemas.append(f"{onde}: criatura '{nome or '?'}' sem '{rotulo}'.")
+    if hp is not None and hp <= 0:
+        problemas.append(f"{onde}: o HP de '{nome or '?'}' precisa ser maior que zero.")
+    if not EXPR_DANO.match(dano):
+        problemas.append(f"{onde}: dano '{dano}' fora do formato esperado (ex.: 2d6+3).")
+    if not 1 <= quantidade <= MAX_INIMIGOS:
+        problemas.append(
+            f"{onde}: quantidade de '{nome or '?'}' precisa ser de 1 a {MAX_INIMIGOS}."
+        )
+        return []
+    if not nome or None in (ca, ataque, hp) or not EXPR_DANO.match(dano):
+        return []
+    if quantidade == 1:
+        return [Monstro(nome, ca, ataque, dano, hp)]
+    return [Monstro(f"{nome} {n}", ca, ataque, dano, hp) for n in range(1, quantidade + 1)]
 
 
 def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Optional[Sala]:
@@ -235,32 +294,24 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
         problemas.append(f"{onde}: pontos_organizacao não pode ser negativo.")
         pontos_sala = 0
 
-    monstro = None
-    bruto_monstro = dados.get("monstro")
+    # 'monstro' (singular) e o formato antigo: uma criatura so por sala.
+    brutos = dados.get("monstros") or []
+    if not brutos and dados.get("monstro"):
+        brutos = [dados["monstro"]]
+    monstros: list[Monstro] = []
+    for bruto in brutos:
+        monstros.extend(_monstros_de_dict(bruto, onde, problemas))
+
     if tipo == "Combate":
-        if not bruto_monstro:
-            problemas.append(f"{onde}: sala de Combate precisa dos dados do monstro.")
-        else:
-            m_nome = str(bruto_monstro.get("nome") or "").strip()
-            m_ca, m_atk, m_hp = (
-                _inteiro(bruto_monstro.get("ca")),
-                _inteiro(bruto_monstro.get("ataque")),
-                _inteiro(bruto_monstro.get("hp")),
+        if not brutos:
+            problemas.append(f"{onde}: sala de Combate precisa de pelo menos uma criatura.")
+        elif len(monstros) > MAX_INIMIGOS:
+            problemas.append(
+                f"{onde}: {len(monstros)} criaturas na mesma sala; o máximo é {MAX_INIMIGOS}."
             )
-            m_dano = str(bruto_monstro.get("dano") or "").strip()
-            if not m_nome:
-                problemas.append(f"{onde}: o monstro precisa de um nome.")
-            for rotulo, valor in (("ca", m_ca), ("ataque", m_atk), ("hp", m_hp)):
-                if valor is None:
-                    problemas.append(f"{onde}: monstro sem '{rotulo}'.")
-            if m_hp is not None and m_hp <= 0:
-                problemas.append(f"{onde}: o HP do monstro precisa ser maior que zero.")
-            if not EXPR_DANO.match(m_dano):
-                problemas.append(f"{onde}: dano '{m_dano}' fora do formato esperado (ex.: 2d6+3).")
-            if m_nome and None not in (m_ca, m_atk, m_hp):
-                monstro = Monstro(m_nome, m_ca, m_atk, m_dano, m_hp)
-    elif bruto_monstro:
-        problemas.append(f"{onde}: só salas de Combate têm monstro.")
+            monstros = monstros[:MAX_INIMIGOS]
+    elif brutos:
+        problemas.append(f"{onde}: só salas de Combate têm criatura.")
 
     return Sala(
         id=sala_id,
@@ -272,7 +323,7 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
         alvo_progresso=alvo,
         pericias=pericias,
         imagem=(str(dados.get("imagem")).strip() or None) if dados.get("imagem") else None,
-        monstro=monstro,
+        monstros=monstros,
         recompensa=(str(dados.get("recompensa")).strip() or None) if dados.get("recompensa") else None,
         pontos_organizacao=pontos_sala,
     )
@@ -349,6 +400,16 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
         )
         tamanho = "Média"
 
+    tier_incursao = _inteiro(dados.get("tier"))
+    if tier_incursao is None:
+        tier_incursao = TIER_MAXIMO  # sem tier declarado, ninguém fica de fora
+    elif not 1 <= tier_incursao <= TIER_MAXIMO:
+        problemas.append(
+            f"tier '{dados.get('tier')}' inválido: use de 1 a {TIER_MAXIMO} "
+            "(um tier a cada 2 níveis: o tier N aceita até o nível 2N)."
+        )
+        tier_incursao = TIER_MAXIMO
+
     recompensa = _inteiro(dados.get("recompensa_mes"))
     if recompensa is None or recompensa < 0:
         problemas.append("recompensa_mes precisa ser um número de MEs (ex.: 10).")
@@ -381,6 +442,7 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
         lore_inicial=lore_inicial,
         lore_final=lore_final,
         tamanho=tamanho,
+        tier=tier_incursao,
         objetivo=objetivo,
         imagem_capa=(str(dados.get("imagem_capa")).strip() or None)
         if dados.get("imagem_capa")

@@ -47,6 +47,8 @@ CABECALHOS = [
     ("descricao", 62, "Texto do embed da sala."),
     ("imagem", 26, "Caminho em assets/ ou URL da imagem da sala."),
     ("monstro_nome", 22, "Só em salas de Combate."),
+    ("monstro_quantidade", 12, "Quantas criaturas iguais. Vazio ou 1 = uma. Máximo 6 por sala, "
+     "contando as da aba 'Monstros'."),
     ("monstro_ca", 11, "Classe de Armadura do monstro."),
     ("monstro_ataque", 15, "Bônus de ataque do monstro (ex.: 6)."),
     ("monstro_dano", 14, "Dado de dano do monstro (ex.: 2d6+3)."),
@@ -106,6 +108,15 @@ SALAS = [
      "Moedas, dentes e anéis cobrem o fundo raso. Cada objeto foi deixado por alguém pedindo "
      "passagem — e a maioria não conseguiu.",
      "", "", "", "", "", "", "Um item mágico menor, a critério do GM.", 3),
+]
+
+# Salas em que a mesma criatura aparece repetida (sala_id -> quantidade).
+QUANTIDADES = {"VO03": 2}
+
+# Criaturas extras, para salas com um bando misto. Vao na aba 'Monstros' e se
+# somam ao monstro_* da linha da sala.
+MONSTROS_EXTRAS = [
+    ("VO11", "Larva do Umbral", 3, 12, 3, "1d6", 9),
 ]
 
 DIFICULDADES = [("Fácil", 10, 5), ("Média", 15, 10), ("Difícil", 20, 15)]
@@ -176,7 +187,8 @@ def gerar(organizacao: str, destino: Path) -> Path:
         (sala_id, nome, tipo, dif, pericias, descricao, imagem,
          m_nome, m_ca, m_atk, m_dano, m_hp, recompensa, pontos) = sala
         valores = [sala_id, nome, tipo, dif, None, None, pericias, descricao, imagem,
-                   m_nome, m_ca, m_atk, m_dano, m_hp, recompensa, pontos]
+                   m_nome, QUANTIDADES.get(sala_id), m_ca, m_atk, m_dano, m_hp,
+                   recompensa, pontos]
         for col, valor in enumerate(valores, start=1):
             c = ws.cell(row=i, column=col, value=valor)
             c.font = corpo
@@ -204,6 +216,38 @@ def gerar(organizacao: str, destino: Path) -> Path:
     dv_dif = DataValidation(type="list", formula1="=Dificuldades!$A$2:$A$4", allow_blank=True)
     ws.add_data_validation(dv_dif)
     dv_dif.add(f"D2:D{ultima + 50}")
+
+    ws = wb.create_sheet("Monstros")
+    cabecalho_monstros = (
+        ("sala_id", 10, "De qual sala desta planilha esta criatura e."),
+        ("nome", 22, "Nome da criatura."),
+        ("quantidade", 12, "Quantas iguais. Vazio ou 1 = uma."),
+        ("ca", 8, "Classe de Armadura."),
+        ("ataque", 10, "Bonus de ataque (ex.: 4)."),
+        ("dano", 12, "Dado de dano (ex.: 1d6+2)."),
+        ("hp", 8, "Pontos de vida de cada uma."),
+    )
+    for i, (titulo, largura, ajuda) in enumerate(cabecalho_monstros, start=1):
+        c = ws.cell(row=1, column=i, value=titulo)
+        c.font = cab_fonte
+        c.fill = cab_fill
+        c.alignment = Alignment(vertical="center", horizontal="center", wrap_text=True)
+        c.comment = Comment(ajuda, "Incursoes 2.0", height=80, width=260)
+        ws.column_dimensions[get_column_letter(i)].width = largura
+    ws.cell(row=1, column=1).comment = Comment(
+        "Criaturas EXTRAS de uma sala, para um bando misto. O que estiver aqui se soma"
+        " ao monstro_* da linha da sala, ate 6 criaturas por sala."
+        " Deixe a aba vazia se cada sala tiver so um tipo de criatura.",
+        "Incursoes 2.0",
+        height=120,
+        width=300,
+    )
+    for i, linha in enumerate(MONSTROS_EXTRAS, start=2):
+        for col, valor in enumerate(linha, start=1):
+            c = ws.cell(row=i, column=col, value=valor)
+            c.font = corpo
+            c.border = borda
+    ws.freeze_panes = "A2"
 
     ws = wb.create_sheet("Dificuldades")
     for i, (titulo, largura) in enumerate((("dificuldade", 14), ("cd", 8), ("alvo_progresso", 16)), start=1):

@@ -11,11 +11,11 @@ sys.path.insert(0, str(RAIZ))
 
 import aiosqlite  # noqa: E402
 
-from src import config, database as db  # noqa: E402
+from src import classes, config, database as db  # noqa: E402
 from src.cogs.ficha import Ficha  # noqa: E402
 from src.cogs.incursao import Incursoes, SeletorPersonagemEntrada  # noqa: E402
 from fakes import (  # noqa: E402
-    ATRIBUTOS,
+    CLASSE_PADRAO,
     CANAL,
     GUILD,
     INDEFESO,
@@ -77,7 +77,7 @@ async def preparar(nome_db="teste_personagens.db"):
 
 
 async def caso_migracao_do_banco_antigo():
-    """Cada ficha do schema antigo vira o primeiro personagem daquele jogador."""
+    """A ficha sem classe nao tem como virar ficha nova: o banco e limpo."""
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -97,9 +97,9 @@ async def caso_migracao_do_banco_antigo():
         (GUILD, JOGADORES[0], json.dumps(["Furtividade", "Percepcao"], ensure_ascii=False)),
     )
     await bruto.execute(
-        "INSERT INTO personagens (guild_id,user_id,nome,nivel,forca,destreza,constituicao,"
-        "inteligencia,sabedoria,carisma,pericias) VALUES (?,?,'Brannak',5,16,10,15,8,12,10,'[]')",
-        (GUILD, JOGADORES[1]),
+        "INSERT INTO runs (guild_id, canal_id, incursao_id, criador_id, status)"
+        " VALUES (?, ?, 't', ?, 'em_sala')",
+        (GUILD, CANAL, JOGADORES[0]),
     )
     await bruto.commit()
     await bruto.close()
@@ -108,30 +108,28 @@ async def caso_migracao_do_banco_antigo():
     _ABERTAS.append(conn)
     await db.criar_schema(conn)
 
-    vhalor = await db.personagem_por_nome(conn, GUILD, JOGADORES[0], "Vhalor")
-    assert vhalor, "a ficha antiga sumiu na migração"
-    assert (vhalor["ca"], vhalor["bonus_ataque"], vhalor["dano_arma"], vhalor["hp_max"]) == (
-        17, 7, "1d8+4", 54,
-    )
-    # os nomes sem acento sao normalizados na leitura
-    assert vhalor["pericias"] == ["Furtividade", "Percepção"]
-
-    # o relogio do intervalo foi para a tabela de jogadores
-    dias = await db.dias_desde_ultima_incursao(conn, GUILD, JOGADORES[0])
-    assert dias is not None and dias > 5, dias
-    assert await db.dias_desde_ultima_incursao(conn, GUILD, JOGADORES[1]) is None
-
-    # agora o mesmo jogador pode ter um segundo personagem
-    assert await db.criar_personagem(conn, GUILD, JOGADORES[0], "Kaelen", 3, ATRIBUTOS, [])
-    assert len(await db.listar_personagens(conn, GUILD, JOGADORES[0])) == 2
-
-    # subir o bot de novo nao duplica nada nem deixa a tabela antiga para tras
-    await db.criar_schema(conn)
-    assert len(await db.listar_personagens(conn, GUILD, JOGADORES[0])) == 2
+    # as fichas antigas somem: sem classe, nao da para derivar os numeros novos
+    assert await db.listar_personagens(conn, GUILD, JOGADORES[0]) == []
+    assert "classe" in await db._colunas(conn, "personagens")
+    assert "forca" not in await db._colunas(conn, "personagens")
     assert not await db._tabela_existe(conn, "personagens_v1")
-    assert "personagem_id" in await db._colunas(conn, "run_participantes")
 
-    print("  banco antigo migra sem perder ficha: ok")
+    # e a run que dependia delas e encerrada, em vez de ficar sem grupo
+    async with conn.execute("SELECT status FROM runs") as cur:
+        assert [r["status"] for r in await cur.fetchall()] == ["desistiu"]
+
+    # o cadastro novo funciona no banco migrado
+    novo_id = await db.criar_personagem(
+        conn, GUILD, JOGADORES[0], "Kaelen", CLASSE_PADRAO, ["Atletismo"]
+    )
+    assert novo_id
+    kaelen = await db.buscar_personagem(conn, novo_id)
+    assert kaelen["nivel"] == 1 and kaelen["classe"] == CLASSE_PADRAO
+
+    # subir o bot de novo nao apaga o que acabou de ser criado
+    await db.criar_schema(conn)
+    assert len(await db.listar_personagens(conn, GUILD, JOGADORES[0])) == 1
+    print("  fichas sem classe sao apagadas na migracao: ok")
 
 
 async def caso_entrar_escolhendo_personagem():
@@ -140,8 +138,7 @@ async def caso_entrar_escolhendo_personagem():
     await criar_grupo(conn)
     dono = JOGADORES[0]
     await db.criar_personagem(
-        conn, GUILD, dono, "Kaelen", 3, ATRIBUTOS, ["Arcanismo"],
-        combate={"ca": 12, "bonus_ataque": 4, "dano_arma": "1d4+1", "hp_max": 18},
+        conn, GUILD, dono, "Kaelen", "monge", ["Arcanismo"], nivel=3
     )
 
     # sem dizer qual, o bot pede para escolher e nao cria run
@@ -161,7 +158,9 @@ async def caso_entrar_escolhendo_personagem():
     run = await db.run_do_canal(conn, CANAL)
     assert run is not None
     escolhido = await db.personagem_da_run(conn, run["id"], dono)
-    assert escolhido["nome"] == "Kaelen" and escolhido["hp_max"] == 18
+    assert escolhido["nome"] == "Kaelen"
+    # o HP vem da tabela do Monge no tier 2, nao do Heroi (Guerreiro nivel 8)
+    assert escolhido["hp_max"] == classes.classe("monge").numeros(3).hp
     print("  /incursao entrar escolhe o personagem: ok")
 
 
@@ -171,8 +170,7 @@ async def caso_botao_entrar_com_varios():
     await criar_grupo(conn)
     convidado = JOGADORES[1]
     kaelen = await db.criar_personagem(
-        conn, GUILD, convidado, "Kaelen", 3, ATRIBUTOS, ["Arcanismo"],
-        combate={"ca": 12, "bonus_ataque": 4, "dano_arma": "1d4+1", "hp_max": 18},
+        conn, GUILD, convidado, "Kaelen", "monge", ["Arcanismo"], nivel=3
     )
 
     await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), "t")
@@ -208,12 +206,11 @@ async def caso_botao_entrar_com_varios():
 async def caso_personagem_escolhido_e_o_que_joga():
     """A run usa a ficha do personagem escolhido, não de outro do mesmo jogador."""
     conn, canal, cog = await preparar()
-    await criar_grupo(conn, hp_max=40)
+    await criar_grupo(conn)
     dono = JOGADORES[0]
-    frangote = await db.criar_personagem(
-        conn, GUILD, dono, "Frangote", 1, ATRIBUTOS, [],
-        combate={"ca": 8, "bonus_ataque": 0, "dano_arma": "1d4", "hp_max": 7},
-    )
+    frangote = await db.criar_personagem(conn, GUILD, dono, "Frangote", "monge", [])
+    fraco = classes.classe("monge").numeros(1)
+    forte = classes.classe(CLASSE_PADRAO).numeros(8)
 
     await cog.entrar.callback(cog, FakeInteraction(canal, dono), "t", personagem="Frangote")
     run = await db.run_do_canal(conn, CANAL)
@@ -223,12 +220,12 @@ async def caso_personagem_escolhido_e_o_que_joga():
 
     # o HP inicial veio da ficha do Frangote, nao do Heroi
     hps = await db.hp_dos_participantes(conn, run["id"])
-    assert hps[dono] == 7, hps
-    assert hps[JOGADORES[1]] == 40
+    assert hps[dono] == fraco.hp, hps
+    assert hps[JOGADORES[1]] == forte.hp
 
     combatentes = await cog._combatentes(await db.buscar_run(conn, run["id"]))
     dele = next(c for c in combatentes if c.user_id == dono)
-    assert dele.nome == "Frangote" and dele.ca == 8 and dele.hp_max == 7
+    assert dele.nome == "Frangote" and dele.ca == fraco.ca and dele.hp_max == fraco.hp
 
     # e o nivel que entra na conta do objetivo e o do Frangote
     niveis = await cog._niveis(await db.buscar_run(conn, run["id"]))
@@ -241,7 +238,7 @@ async def caso_intervalo_e_por_jogador():
     conn, canal, cog = await preparar()
     await criar_grupo(conn)
     dono = JOGADORES[0]
-    await db.criar_personagem(conn, GUILD, dono, "Reserva", 4, ATRIBUTOS, [])
+    await db.criar_personagem(conn, GUILD, dono, "Reserva", CLASSE_PADRAO, [], nivel=4)
 
     await cog.entrar.callback(cog, FakeInteraction(canal, dono), "t", personagem=f"Heroi{dono}")
     run = await db.run_do_canal(conn, CANAL)
@@ -272,12 +269,14 @@ async def caso_comandos_de_ficha():
     assert await ficha_cog._resolver(vazio, None) is None
     assert "ainda nao tem personagem" in vazio.resposta
 
-    primeiro = await db.criar_personagem(conn, GUILD, dono, "Vhalor", 5, ATRIBUTOS, ["Atletismo"])
+    primeiro = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", CLASSE_PADRAO, ["Atletismo"], nivel=5
+    )
     # com um so, nao precisa dizer qual
     um = FakeInteraction(canal, dono)
     assert (await ficha_cog._resolver(um, None))["id"] == primeiro
 
-    await db.criar_personagem(conn, GUILD, dono, "Kaelen", 3, ATRIBUTOS, [])
+    await db.criar_personagem(conn, GUILD, dono, "Kaelen", CLASSE_PADRAO, [], nivel=3)
     # com dois, precisa
     dois = FakeInteraction(canal, dono)
     assert await ficha_cog._resolver(dois, None) is None
@@ -290,10 +289,10 @@ async def caso_comandos_de_ficha():
     assert await ficha_cog._resolver(inexistente, "Zed") is None
     assert "nenhum personagem chamado" in inexistente.resposta
 
-    # atualizar o nivel de um nao mexe no outro
+    # upar um nao mexe no outro
     alvo = FakeInteraction(canal, dono)
-    await ficha_cog.nivel.callback(ficha_cog, alvo, 12, personagem="Kaelen")
-    assert (await db.personagem_por_nome(conn, GUILD, dono, "Kaelen"))["nivel"] == 12
+    await ficha_cog.upar.callback(ficha_cog, alvo, personagem="Kaelen")
+    assert (await db.personagem_por_nome(conn, GUILD, dono, "Kaelen"))["nivel"] == 4
     assert (await db.personagem_por_nome(conn, GUILD, dono, "Vhalor"))["nivel"] == 5
     print("  comandos de ficha resolvem o personagem: ok")
 
@@ -349,17 +348,14 @@ async def caso_retrato_do_personagem():
     assert run["status"] == "escolhendo"
     aberturas = [
         m for m in canal.mensagens[antes:]
-        if len(m.embeds) > 1 and any(e.title == f"Heroi{dono}" for e in m.embeds)
+        if any(e.title == "🎒 O grupo" for e in m.embeds)
     ]
     assert len(aberturas) == 1, "lore e grupo deveriam vir numa mensagem só"
-    cartoes = [e for e in aberturas[0].embeds if e.title and e.title.startswith("Heroi")]
-    assert len(cartoes) == len(JOGADORES), cartoes
-    com_retrato = [e for e in cartoes if e.thumbnail.url == link]
-    assert len(com_retrato) == 1, "só um personagem tem retrato neste teste"
-
-    # sem retrato o cartao continua valendo, so sem imagem
-    sem = [e for e in cartoes if e.thumbnail.url is None]
-    assert len(sem) == len(JOGADORES) - 1
+    grupo = next(e for e in aberturas[0].embeds if e.title == "🎒 O grupo")
+    for user_id in JOGADORES:
+        assert f"Heroi{user_id}" in grupo.description, user_id
+    # o link do teste nao resolve, entao a run abre sem a faixa, e nao quebrada
+    assert grupo.image.url is None
 
     # tirar o retrato deixa o campo vazio
     limpa = FakeInteraction(canal, dono)

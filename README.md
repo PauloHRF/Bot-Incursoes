@@ -50,13 +50,11 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | Comando | Função |
 | --- | --- |
 | `/help [comando]` | Lista todos os comandos, com descrição; 🔒 marca os de admin |
-| `/ficha registrar` | Cria um personagem: nome, nível, os 6 atributos, CA/ataque/dano/HP e as perícias |
+| `/ficha registrar <nome> <classe> [imagem]` | Cria um personagem no nível 1; as proficiências vêm num menu depois |
 | `/ficha listar [membro]` | Lista todos os personagens de um jogador |
 | `/ficha ver [personagem] [membro]` | Mostra a ficha com todos os modificadores calculados |
-| `/ficha nivel <n> [personagem]` | Atualiza o nível (proficiência e tier se recalculam sozinhos) |
-| `/ficha atributo <attr> <valor> [personagem]` | Atualiza um atributo após um ASI |
-| `/ficha pericias [personagem]` | Reabre o seletor de perícias treinadas |
-| `/ficha combate <ca> <ataque> <dano> <hp> [personagem]` | Corrige os números de combate |
+| `/ficha upar [personagem]` | Sobe um nível (os números acompanham o tier) |
+| `/ficha pericias [personagem]` | Reabre o menu de proficiências da classe |
 | `/ficha expertise <perícia> <bônus> [personagem]` | Soma um bônus avulso a uma perícia (0 remove) |
 | `/ficha imagem [link] [personagem]` | Associa um retrato ao personagem (sem link, remove) |
 | `/ficha remover <personagem>` | Apaga um personagem seu |
@@ -64,7 +62,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/incursao entrar <id> [personagem]` | Abre o recrutamento de uma incursão no canal |
 | `/incursao sala` | Reenvia a mensagem da sala atual |
 | `/incursao teste` | Rola o teste da sala (mesmo efeito do botão) |
-| `/incursao atacar` | Ataca o monstro da sala (mesmo efeito do botão) |
+| `/incursao atacar` | Ataca o primeiro inimigo de pé (mesmo efeito do botão) |
 | `/incursao votar <1-3>` | Vota por comando, se os botões falharem |
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
@@ -72,7 +70,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/organizacao placar` | Pontos das quatro Organizações no servidor |
 | `/organizacao extrato [org]` | Últimos lançamentos, com o motivo de cada um |
 | `/organizacao ajustar <org> <pontos> <motivo>` | (admin) Lança pontos na mão, para correções |
-| `/config intervalo <dias>` | (admin) Intervalo mínimo entre incursões do mesmo jogador |
+| `/config intervalo <semanas>` | (admin) Semanas entre incursões do mesmo jogador; 0 libera geral |
 
 ## Como uma run acontece
 
@@ -83,10 +81,10 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    direto. O personagem fica preso àquela run: é a ficha dele que rola os testes, ataca e
    leva dano.
 3. Ao chegar a 5 jogadores a run começa sozinha; quem abriu pode começar antes com **Começar**.
-   Aí o bot posta a **lore de abertura** junto com o grupo — um card por personagem, com
-   nível, CA, HP e o retrato de quem tiver — e sorteia o caminho: 3 salas por passo,
-   tiradas do banco da Organização.
-4. Cada passo mostra as 3 salas sorteadas para ele. Todos votam pelos botões, e a votação fecha
+   Aí o bot posta a **lore de abertura** junto com o grupo — uma linha por personagem com
+   nível, CA, ataque e HP, e os retratos lado a lado numa faixa só.
+4. Cada passo sorteia 3 salas do banco da Organização na hora em que abre, deixando de fora
+   as que o grupo já atravessou. Todos votam pelos botões, e a votação fecha
    assim que uma sala junta a **maioria do grupo** (3 de 5) — quem ainda não votou não
    segura o grupo. Enquanto ninguém tem maioria, a votação continua aberta, **sem prazo**:
    a run espera o tempo que precisar. Se todos votarem e der empate (2×2×1), ninguém avança
@@ -100,35 +98,41 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    saiu, os MEs e os pontos de Organização, e outro com a **lore de fecho** — o epílogo só
    existe se o grupo voltar vivo.
 
-Em sala de **Combate**, cada personagem de pé clica em **Atacar** uma vez por rodada
-(d20 + bônus de ataque contra a CA do monstro; acertou, rola o dano da arma). Quando
-todos atacam, o monstro revida contra um alvo sorteado entre os que estão de pé. Quem
-chega a 0 HP fica fora do resto daquele combate.
+Em sala de **Combate**, cada personagem de pé ataca uma vez por rodada (d20 + bônus de
+ataque contra a CA do alvo; acertou, rola o dano da arma). Quando todos atacam, **cada
+inimigo de pé** revida contra um alvo sorteado entre os personagens em pé. Quem chega a
+0 HP fica fora do resto daquele combate.
 
-O combate inteiro acontece **numa mensagem só**: o painel mostra o HP do monstro, o HP de
-cada personagem, o log da rodada que acabou e o botão de atacar, e é reescrito a cada
-rodada em vez de empilhar mensagens novas. Sala de combate também não posta descrição
+Uma sala pode ter **até 6 criaturas**. Com mais de uma de pé, o botão **Atacar** vira um
+menu de alvos com o HP de cada uma; sobrando só uma, o botão volta. Cada criatura tem HP
+próprio, e a sala só é superada quando a última cai — derrubar uma não encerra nada. Bater
+em quem já caiu não gasta o turno: o bot avisa e você escolhe outro alvo. É aqui que um
+bando pesa de verdade: cinco lobos batem cinco vezes por rodada.
+
+O combate inteiro acontece **numa mensagem só**: o painel mostra o HP de cada inimigo, o HP
+de cada personagem, o log da rodada que acabou e o botão (ou menu) de atacar, e é reescrito
+a cada rodada em vez de empilhar mensagens novas. Sala de combate também não posta descrição
 antes do painel — ele já traz tudo. Um confronto de dez rodadas ocupa o mesmo espaço no
 canal que um de duas.
 
 O **20 natural** acerta por mais alta que seja a CA e é crítico: os dados de dano são
 rolados em dobro, com o modificador entrando uma vez só (2d6+3 vira 4d6+3). O **1 natural**
 erra por maior que seja o bônus. Os dois aparecem marcados no log da rodada — 💥 no crítico
-e 💢 no erro crítico — e valem tanto para o grupo quanto para o monstro. O monstro cair supera a sala; o grupo
-inteiro cair encerra a run em fracasso. A sala de **Descanso** completa o HP de quem
+e 💢 no erro crítico — e valem tanto para o grupo quanto para os inimigos. A última criatura
+cair supera a sala; o grupo inteiro cair encerra a run em fracasso. A sala de **Descanso** completa o HP de quem
 está machucado e devolve os caídos com metade do HP máximo.
 
 A run é assíncrona: o estado vive no banco, então o grupo pode levar dias e o bot pode
 reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinhos.
 
 **Para testar à vontade**, rode `/config intervalo 0` uma vez: sem isso, quem entra numa run
-fica bloqueado pelos 7 dias de intervalo assim que ela começa. Para recomeçar, encerre a run
+fica bloqueado até a virada da semana assim que ela começa. Para recomeçar, encerre a run
 atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/incursao entrar`.
 
 ## Avisos no canal
 
 Mexer numa ficha aparece para o grupo: registrar um personagem posta a ficha no canal, e
-mudar nível, atributo, perícias, números de combate ou expertise posta uma linha dizendo o
+subir de nível, trocar as proficiências ou mexer numa expertise posta uma linha dizendo o
 que mudou. Apagar um personagem também avisa. Só a consulta é privada — `/ficha ver` e
 `/ficha listar` continuam visíveis apenas para quem pediu.
 
@@ -137,25 +141,68 @@ desatualizada. `/help ficha` filtra por grupo ou por comando.
 
 ## Personagens
 
+O personagem é **a classe**: ninguém digita atributo nem número de combate. `/ficha registrar
+<nome> <classe>` cria no **nível 1**, abre o menu de proficiências que aquela classe concede
+e pronto — HP, CA, acerto, dano e os bônus de perícia saem da tabela da classe no tier atual
+(`src/classes.py`). Subir é `/ficha upar`, um nível por vez até o **10**; quando o nível vira
+o tier, os números sobem juntos e o bot diz o que mudou.
+
+Por isso nada disso fica gravado na ficha: o bot guarda classe, nível, proficiências,
+expertises e retrato, e deriva o resto na leitura. Uma ficha nunca fica desatualizada em
+relação à tabela — mudar um número em `classes.py` muda todo mundo daquela classe.
+
+**Classes prontas** (as do documento de fichas): Bárbaro, Guerreiro, Ladino, Monge,
+Paladino, Patrulheiro e Xamã. **Previstas, ainda sem tabela**: Artífice, Bardo, Bruxo,
+Clérigo, Druida, Feiticeiro e Mago — aparecem na lista de classes, mas o bot recusa o
+cadastro dizendo o que já dá para jogar. As habilidades de cada tier (passivas e ativas,
+com uso por combate, descanso ou incursão) ainda não existem: entram numa fatia própria.
+
 Cada jogador pode ter vários personagens (até 25) e escolhe qual leva para cada incursão.
 Cada um pode ter um **retrato**: `/ficha imagem <link>` guarda a URL, que aparece como
-miniatura em `/ficha ver` e no card do personagem na abertura da run. Só `http://` e
-`https://` são aceitos — o bot guarda o link, não a imagem, então hospede onde quiser
-(inclusive num anexo do próprio Discord, copiando o link da imagem).
+miniatura em `/ficha ver` e, na abertura da run, numa faixa com o grupo inteiro lado a lado.
+Só `http://` e `https://` são aceitos — o bot guarda o link, não a imagem, então hospede
+onde quiser (inclusive num anexo do próprio Discord, copiando o link da imagem).
+
+A faixa é montada pelo bot com Pillow (`pip install -r requirements.txt`): ele baixa os
+retratos na hora de começar, recorta cada um em quadrado e escreve o nome embaixo. Quem não
+tem retrato entra com a inicial. Sem Pillow instalada, ou se nenhum link carregar, a run abre
+igual — só sem a faixa.
 Os comandos de ficha aceitam o nome no campo `personagem`, com autocompletar; quem só tem
 um personagem pode omitir. Dois personagens do mesmo jogador não podem ter o mesmo nome.
+
+### Tier
+
+O tier sai do nível, **um a cada 2 níveis**: nível 1-2 é tier 1, 3-4 é tier 2, até 9-10, que
+é tier 5. O nível máximo é **10** porque é até onde vão as tabelas de classe; para subir o
+teto basta acrescentar tiers em `src/classes.py`. Cada incursão declara o tier dela na
+planilha, e a regra de entrada é de mão única: **quem está no tier da incursão ou abaixo
+entra; quem está acima, não**. Um personagem de nível 3 pode encarar uma incursão de tier 5 a
+reboque do grupo, mas um de nível 9 não volta para varrer uma de tier 2. Incursão sem tier na
+planilha fica aberta a qualquer nível.
+
+A regra vale nos três caminhos de entrada: `/incursao entrar`, o botão **Entrar** e o menu de
+escolha de personagem — que passa a oferecer só quem cabe. Quem não tem nenhum personagem
+elegível recebe o teto de nível da incursão na recusa, e o recrutamento mostra a exigência
+antes de alguém clicar.
 
 **Os limites continuam sendo do jogador, não do personagem**: o intervalo entre incursões
 vale para a pessoa (ter três personagens não dá direito a três incursões por semana), e
 ninguém participa de duas runs ao mesmo tempo, nem com personagens diferentes.
 
-Bancos criados antes desta mudança são migrados sozinhos na primeira vez que o bot sobe:
-cada ficha vira o primeiro personagem daquele jogador, com atributos, perícias, números de
-combate e a data da última incursão preservados.
+### Intervalo entre incursões
+
+A vaga é semanal e **vira na segunda-feira**, não sete dias depois da última run: quem
+entrou no sábado joga de novo na segunda, e a semana do grupo inteiro começa junto.
+`/config intervalo <semanas>` muda quantas semanas cada jogador espera (1 é o padrão, 0
+libera geral para o playtest). A segunda-feira é contada no horário de Brasília; se o grupo
+for de outro fuso, ajuste `FUSO_UTC` no `.env`. Bancos que guardavam o intervalo em dias são
+convertidos sozinhos na primeira subida — 7 dias viram 1 semana.
 
 ## Perícias e expertise
 
-O modificador de uma perícia sai de **atributo + proficiência (se treinada) + bônus avulso**.
+O modificador de uma perícia sai da **classe**: um bônus fixo do tier, dobrado quando o
+personagem tem proficiência naquela perícia (o Ladino no tier 1 tem +3, ou +5 com
+proficiência), mais o bônus avulso.
 O bônus avulso é o que `/ficha expertise` define, para cobrir item mágico, talento ou
 qualquer outra fonte: `/ficha expertise Furtividade 2` soma +2, e `0` remove. Aceita
 negativo, serve para perícia não treinada e vale por personagem, não por jogador.
@@ -198,8 +245,8 @@ dungeon saem daqui:
 .venv/Scripts/python.exe tools/importar_banco.py data/planilhas/banco_vortice_oculto.xlsx
 ```
 
-**A incursão** guarda a lore de abertura, a lore de fecho, o tamanho e a sala final —
-nenhuma sala do meio:
+**A incursão** guarda a lore de abertura, a lore de fecho, o tamanho, o tier e a sala
+final — nenhuma sala do meio:
 
 ```bash
 .venv/Scripts/python.exe tools/gerar_modelo_planilha.py minha_incursao.xlsx
@@ -210,20 +257,29 @@ Os dois modelos já vêm preenchidos com um exemplo jogável: o banco do Vórtic
 (12 salas) e *A Cripta do Vórtice*. Depois de importar, `/incursao recarregar` faz o bot
 reler tudo sem reiniciar.
 
-**Quantas salas escrever no banco**: o mínimo é 3 (um passo). Uma dungeon longa tem 7
-passos, então 21 salas cobrem uma run inteira sem repetir nenhuma. Com menos que isso o
-sorteio reembaralha e pode repetir uma sala em passos diferentes — nunca dentro do mesmo
-passo. Uma sala repetida é um desafio novo: as rolagens e o HP do monstro começam do zero
-na segunda visita.
+**Como pôr mais de uma criatura numa sala**: a coluna `monstro_quantidade` repete a mesma
+criatura (3 = "Lobo 1", "Lobo 2", "Lobo 3"). Para um bando misto, preencha a aba
+**Monstros** — no banco ela tem `sala_id` e é somada à criatura da linha da sala; na
+planilha da incursão ela é a escolta do chefe. O limite é 6 criaturas por sala, contando as
+duas fontes. Os dois modelos já vêm com exemplos: as Sentinelas de Basalto são duas, o
+Guardião Adormecido vem com três Larvas, e o Olho do Vórtice tem dois Acólitos.
+
+**Quantas salas escrever no banco**: o caminho é sorteado passo a passo, quando o passo
+abre, e **nenhuma sala que o grupo já atravessou volta a ser oferecida**. Uma sala recusada
+na votação pode reaparecer mais à frente; a que o grupo entrou, não. Por isso o banco precisa
+de pelo menos 3 salas além das que o caminho consome: 9 salas cobrem uma dungeon longa (7
+passos) com folga. Se as salas novas acabarem, o passo sai com duas opções em vez de três —
+melhor escolher entre duas portas do que voltar para a mesma câmara.
 
 Os importadores validam antes de gravar e, se algo estiver errado, listam **todos** os
 problemas sem escrever nada. Eles exigem:
 
 - incursão com lore de abertura, tamanho válido (Curta/Média/Longa) e Organização conhecida
-- Objetivo sempre do tipo **Combate**, com nome, CA, ataque, dano e HP do monstro
+- `tier` de 1 a 10, ou em branco para deixar a incursão aberta a qualquer nível
+- Objetivo sempre do tipo **Combate**, com nome, CA, ataque, dano e HP de cada criatura
 - banco com ao menos 3 salas e `sala_id` único
 - salas de Armadilha / Evento / Tesouro com dificuldade, CD, alvo e ao menos uma perícia
-- salas de Combate com monstro, e sem CD nem perícia (mecânica própria)
+- salas de Combate com 1 a 6 criaturas, e sem CD nem perícia (mecânica própria)
 - perícias existentes (com ou sem acento) e pontos não negativos
 
 Serve tanto Excel quanto Google Sheets — neste, baixe em *Arquivo → Fazer download →
@@ -235,7 +291,8 @@ Microsoft Excel (.xlsx)* antes de importar.
 src/
   main.py       ponto de entrada, carrega cogs e sincroniza comandos
   config.py     leitura do .env
-  rules.py      proficiência, modificadores, tiers, tabela de perícias
+  rules.py      tiers, bônus de perícia, tabela de perícias
+  classes.py    as classes jogáveis e os números de cada tier
   database.py   SQLite (aiosqlite) — schema e acesso
   cogs/ficha.py comandos de ficha
   incursoes.py  schema das incursões: salas, monstros, validação, carregamento
@@ -251,7 +308,7 @@ tools/
   simular_combate.py         calibra os números de um combate fora do Discord
 data/
   planilhas/    planilhas de autoria das incursões (.xlsx)
-  incursoes/    incursões convertidas em JSON — lore, tamanho e sala final
+  incursoes/    incursões convertidas em JSON — lore, tamanho, tier e sala final
   bancos/       bancos de salas por Organização — o que alimenta o sorteio
 assets/         imagens das salas
 tests/
@@ -260,10 +317,15 @@ tests/
   test_run.py   uma run inteira simulada, do recrutamento ao objetivo
   test_votacao.py  maioria, votos divididos, empate e restart
   test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
+  test_bando.py    várias criaturas na mesma sala: alvo, HP separado e revide
   test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
   test_personagens.py  vários personagens, escolha ao entrar e migração do banco
   test_critico_expertise.py  críticos, erro crítico e bônus por perícia
   test_geracao.py  tamanhos, sorteio do caminho e as duas lores
+  test_faixa.py    a faixa com os retratos do grupo na abertura
+  test_semana.py   a virada do intervalo na segunda-feira
+  test_registro.py cadastro por classe, proficiências e /ficha upar
+  test_tier.py     quem pode entrar em cada incursão
   fakes.py      dublês do Discord usados pelos testes
 ```
 
@@ -272,19 +334,18 @@ tests/
 Valores em `src/rules.py` que o documento de design deixou em aberto ou marcou como
 ponto de partida:
 
-- `TIERS` — faixas de nível por tier (assumido 1–4 / 5–10 / 11–16 / 17–20)
-- `PESO_TIER` — peso de cada tier no alvo do objetivo principal
+- `NIVEIS_POR_TIER` e `NIVEL_MAXIMO` — hoje 2 níveis por tier e teto no nível 10 (5 tiers)
+- as tabelas de `src/classes.py` — HP, CA, acerto, dano e perícias de cada classe por tier
+- `PESO_TIER` — peso de cada tier no alvo do objetivo principal (hoje o próprio tier)
 - `CONSTANTE_OBJETIVO` — o `C` da fórmula do objetivo (design sugere +9 a +10)
 - `FRACAO_DESCANSO_CAIDO` em `src/motor.py` — quanto do HP máximo um caído recupera (hoje 1/2)
 
-**O combate está fácil demais com os números atuais.** Simulando 2000 confrontos contra o
-Guardião do Selo (CA 16, +7, 2d8+4, 58 HP) com cinco personagens de nível 8 (CA 17, +7,
-1d8+4, 60 HP): **100% de vitória, 2,8 rodadas, nenhum caído** — e continua 100% mesmo
-reduzindo o grupo a dois personagens ou o HP de cada um a 25. A causa é estrutural: o grupo
-desfere cinco ataques por rodada e o monstro devolve um. As alavancas para calibrar são
-aumentar muito o HP do chefe (na ordem de 200+), dar mais de um ataque por rodada ao
-monstro, ou reduzir o dano dos personagens. Para testar números novos sem
-abrir o Discord:
+**Os monstros de exemplo ficaram fracos para as tabelas de classe.** O objetivo é o Guardião
+do Selo (CA 16, +7, 2d8+4, 58 HP) mais dois Acólitos (CA 13, +4, 1d8+2, 18 HP). Contra cinco
+Guerreiros de nível 8 (CA 20, +9, 1d10+8, 75 HP, que é o que a tabela dá): **100% de vitória,
+2,6 rodadas, nenhum caído** — e continua 100% com só dois personagens. Os números do chefe
+foram escritos para fichas montadas à mão, mais fracas que as de classe. Recalibrar isso é
+tarefa do playtest; o simulador aceita `--classe` e `--nivel` para comparar:
 
 ```bash
 .venv/Scripts/python.exe tools/simular_combate.py data/incursoes/vortice_cripta.json

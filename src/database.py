@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import aiosqlite
@@ -10,40 +11,21 @@ from . import config
 from .rules import normalizar_lista_pericias, normalizar_pericia
 
 # sigla do atributo -> coluna no banco
-COLUNA_ATRIBUTO = {
-    "FOR": "forca",
-    "DES": "destreza",
-    "CON": "constituicao",
-    "INT": "inteligencia",
-    "SAB": "sabedoria",
-    "CAR": "carisma",
-}
-
-COLUNAS_EDITAVEIS = {
-    "nome", "nivel", "pericias", "ca", "bonus_ataque", "dano_arma", "hp_max", "imagem",
-    *COLUNA_ATRIBUTO.values(),
-}
+COLUNAS_EDITAVEIS = {"nome", "nivel", "classe", "pericias", "imagem"}
 
 SCHEMA = """
 -- Um jogador pode ter varios personagens; escolhe qual usar ao entrar na run.
+-- Os numeros de combate nao ficam aqui: saem da tabela da classe no tier atual
+-- (src/classes.py) e sao acrescentados na leitura, em _desserializar.
 CREATE TABLE IF NOT EXISTS personagens (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     guild_id       INTEGER NOT NULL,
     user_id        INTEGER NOT NULL,
     nome           TEXT    NOT NULL,
-    nivel          INTEGER NOT NULL,
-    forca          INTEGER NOT NULL,
-    destreza       INTEGER NOT NULL,
-    constituicao   INTEGER NOT NULL,
-    inteligencia   INTEGER NOT NULL,
-    sabedoria      INTEGER NOT NULL,
-    carisma        INTEGER NOT NULL,
+    classe         TEXT    NOT NULL,
+    nivel          INTEGER NOT NULL DEFAULT 1,
     pericias       TEXT    NOT NULL DEFAULT '[]',
     bonus_pericias TEXT    NOT NULL DEFAULT '{}',
-    ca             INTEGER NOT NULL DEFAULT 10,
-    bonus_ataque   INTEGER NOT NULL DEFAULT 0,
-    dano_arma      TEXT    NOT NULL DEFAULT '1d6',
-    hp_max         INTEGER NOT NULL DEFAULT 10,
     imagem         TEXT,
     criado_em      TEXT    NOT NULL DEFAULT (datetime('now')),
     atualizado_em  TEXT    NOT NULL DEFAULT (datetime('now'))
@@ -118,14 +100,34 @@ CREATE TABLE IF NOT EXISTS run_mapa (
     PRIMARY KEY (run_id, passo, posicao)
 );
 
-CREATE TABLE IF NOT EXISTS run_combate (
-    run_id         INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
-    passo          INTEGER NOT NULL,
-    sala_id        TEXT    NOT NULL,
-    monstro_hp_max INTEGER NOT NULL,
-    monstro_hp     INTEGER NOT NULL,
-    rodada         INTEGER NOT NULL DEFAULT 1,
+-- A sala que o grupo escolheu em cada passo: o sorteio nunca reoferece uma delas.
+CREATE TABLE IF NOT EXISTS run_salas (
+    run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo   INTEGER NOT NULL,
+    sala_id TEXT    NOT NULL,
     PRIMARY KEY (run_id, passo)
+);
+
+CREATE TABLE IF NOT EXISTS run_combate (
+    run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo   INTEGER NOT NULL,
+    sala_id TEXT    NOT NULL,
+    rodada  INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (run_id, passo)
+);
+
+-- Uma sala de combate pode ter varias criaturas, cada uma com o proprio HP.
+CREATE TABLE IF NOT EXISTS run_inimigos (
+    run_id   INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo    INTEGER NOT NULL,
+    indice   INTEGER NOT NULL,
+    nome     TEXT    NOT NULL,
+    ca       INTEGER NOT NULL,
+    ataque   INTEGER NOT NULL,
+    dano     TEXT    NOT NULL,
+    hp_max   INTEGER NOT NULL,
+    hp_atual INTEGER NOT NULL,
+    PRIMARY KEY (run_id, passo, indice)
 );
 
 CREATE TABLE IF NOT EXISTS run_ataques (
@@ -137,6 +139,7 @@ CREATE TABLE IF NOT EXISTS run_ataques (
     bonus   INTEGER NOT NULL,
     ca_alvo INTEGER NOT NULL,
     dano    INTEGER NOT NULL,
+    alvo    INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (run_id, passo, rodada, user_id)
 );
 
@@ -164,8 +167,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_lancamento_unico
     WHERE run_id IS NOT NULL AND chave IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS config_guilda (
-    guild_id       INTEGER PRIMARY KEY,
-    intervalo_dias INTEGER NOT NULL
+    guild_id          INTEGER PRIMARY KEY,
+    intervalo_semanas INTEGER NOT NULL
 );
 
 -- Um canal so pode ter uma run viva por vez.
@@ -196,31 +199,53 @@ async def _colunas(conn: aiosqlite.Connection, tabela: str) -> set[str]:
 
 async def criar_schema(conn: aiosqlite.Connection) -> None:
     """Cria o schema e migra bancos da versao de um personagem por jogador."""
-    migrando = await _tabela_existe(conn, "personagens") and "id" not in await _colunas(
-        conn, "personagens"
+    # A ficha passou a ser por classe: os numeros saem da tabela da classe e nao
+    # ha como adivinhar a classe de um personagem antigo, que tinha atributos
+    # digitados a mao. As fichas antigas sao apagadas e o grupo recadastra.
+    limpando_fichas = await _tabela_existe(conn, "personagens") and (
+        "classe" not in await _colunas(conn, "personagens")
     )
-    if migrando:
-        # A tabela antiga tinha PK (guild_id, user_id). Guardamos de lado, deixamos
-        # o schema criar a nova e copiamos cada ficha como o primeiro personagem.
-        await conn.execute("ALTER TABLE personagens RENAME TO personagens_v1")
+    if limpando_fichas:
+        await conn.execute("DROP TABLE personagens")
+        await conn.execute("DROP TABLE IF EXISTS personagens_v1")
+
+    faltava_run_salas = not await _tabela_existe(conn, "run_salas")
+
+    # O combate de uma criatura so guardava o HP na propria run_combate, e nao
+    # guardava CA, ataque nem dano: nao da para remontar um combate em andamento
+    # com varias criaturas a partir dele.
+    migrando_combate = await _tabela_existe(conn, "run_combate") and (
+        "monstro_hp" in await _colunas(conn, "run_combate")
+    )
+    if migrando_combate:
+        await conn.execute("DROP TABLE run_combate")
+
+    # O intervalo passou de dias corridos para semanas com virada na segunda.
+    migrando_intervalo = await _tabela_existe(
+        conn, "config_guilda"
+    ) and "intervalo_semanas" not in await _colunas(conn, "config_guilda")
+    if migrando_intervalo:
+        await conn.execute("ALTER TABLE config_guilda RENAME TO config_guilda_v1")
 
     await conn.executescript(SCHEMA)
 
-    if migrando:
+    if migrando_intervalo:
+        # 7 dias viram 1 semana, 14 viram 2; o 0 do playtest continua sendo 0.
         await conn.execute(
-            "INSERT INTO personagens"
-            " (guild_id, user_id, nome, nivel, forca, destreza, constituicao,"
-            "  inteligencia, sabedoria, carisma, pericias, ca, bonus_ataque, dano_arma, hp_max)"
-            " SELECT guild_id, user_id, nome, nivel, forca, destreza, constituicao,"
-            "  inteligencia, sabedoria, carisma, pericias, ca, bonus_ataque, dano_arma, hp_max"
-            " FROM personagens_v1"
+            "INSERT INTO config_guilda (guild_id, intervalo_semanas)"
+            " SELECT guild_id, CASE WHEN intervalo_dias <= 0 THEN 0"
+            "   ELSE MAX(1, (intervalo_dias + 6) / 7) END"
+            " FROM config_guilda_v1"
         )
+        await conn.execute("DROP TABLE config_guilda_v1")
+
+    if limpando_fichas:
+        # Sem fichas, nao ha run viva que sobreviva: todas sao encerradas.
         await conn.execute(
-            "INSERT OR IGNORE INTO jogadores (guild_id, user_id, ultima_incursao)"
-            " SELECT guild_id, user_id, ultima_incursao FROM personagens_v1"
-            " WHERE ultima_incursao IS NOT NULL"
+            "UPDATE runs SET status = 'desistiu'"
+            " WHERE status IN ('recrutando', 'escolhendo', 'em_sala', 'objetivo')"
         )
-        await conn.execute("DROP TABLE personagens_v1")
+        await conn.execute("DELETE FROM run_participantes")
 
     # Bancos anteriores nao tinham com qual personagem a pessoa entrou na run.
     if "personagem_id" not in await _colunas(conn, "run_participantes"):
@@ -239,15 +264,28 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
             await conn.execute(f"DROP TABLE IF EXISTS {tabela}")
         await conn.executescript(SCHEMA)
 
-    # Nem os bonus avulsos por pericia (expertise).
-    if "bonus_pericias" not in await _colunas(conn, "personagens"):
+    if migrando_combate:
+        # Runs paradas num combate do modelo antigo sao encerradas, em vez de
+        # voltarem com um inimigo inventado.
         await conn.execute(
-            "ALTER TABLE personagens ADD COLUMN bonus_pericias TEXT NOT NULL DEFAULT '{}'"
+            "UPDATE runs SET status = 'desistiu'"
+            " WHERE status IN ('recrutando', 'escolhendo', 'em_sala', 'objetivo')"
         )
+        await conn.execute("DELETE FROM run_ataques")
 
-    # Nem o retrato do personagem.
-    if "imagem" not in await _colunas(conn, "personagens"):
-        await conn.execute("ALTER TABLE personagens ADD COLUMN imagem TEXT")
+    # O log de ataque nao dizia em qual criatura o golpe caiu.
+    if "alvo" not in await _colunas(conn, "run_ataques"):
+        await conn.execute("ALTER TABLE run_ataques ADD COLUMN alvo INTEGER NOT NULL DEFAULT 0")
+
+    if faltava_run_salas:
+        # Runs em andamento nao guardavam por onde o grupo passou. Reconstroi o
+        # historico do que da para saber: salas com rolagem ou com combate.
+        for tabela in ("run_combate", "run_testes"):
+            if await _tabela_existe(conn, tabela):
+                await conn.execute(
+                    "INSERT OR IGNORE INTO run_salas (run_id, passo, sala_id)"
+                    f" SELECT DISTINCT run_id, passo, sala_id FROM {tabela}"
+                )
 
     await conn.commit()
 
@@ -267,11 +305,25 @@ def _normalizar_bonus(bruto: dict[str, Any]) -> dict[str, int]:
 
 
 def _desserializar(row: aiosqlite.Row) -> dict[str, Any]:
+    """A ficha como o resto do bot a lê: o gravado mais os números da classe.
+
+    CA, acerto, dano e HP máximo não são gravados — mudam sozinhos quando o
+    personagem sobe de tier, e derivar na leitura evita ficha desatualizada.
+    """
+    from . import classes  # aqui dentro: classes importa rules, nao database
+
     p = dict(row)
     # Normaliza fichas gravadas antes dos nomes de pericia ganharem acento.
     p["pericias"] = normalizar_lista_pericias(json.loads(p["pericias"]))
     p["bonus_pericias"] = _normalizar_bonus(json.loads(p.get("bonus_pericias") or "{}"))
-    p["atributos"] = {sigla: p[col] for sigla, col in COLUNA_ATRIBUTO.items()}
+    numeros = classes.numeros(p.get("classe"), p["nivel"])
+    if numeros:
+        p["numeros"] = numeros
+        p["ca"] = numeros.ca
+        p["bonus_ataque"] = numeros.acerto
+        p["dano_arma"] = numeros.dano
+        p["hp_max"] = numeros.hp
+        p["pericias_permitidas"] = numeros.pericias
     return p
 
 
@@ -280,31 +332,22 @@ async def criar_personagem(
     guild_id: int,
     user_id: int,
     nome: str,
-    nivel: int,
-    atributos: dict[str, int],
+    classe: str,
     pericias: list[str],
-    combate: Optional[dict[str, Any]] = None,
+    nivel: int = 1,
     bonus_pericias: Optional[dict[str, int]] = None,
     imagem: Optional[str] = None,
 ) -> Optional[int]:
     """Cria um personagem. Devolve None se o jogador ja tem outro com esse nome."""
-    combate = combate or {}
     try:
         cur = await conn.execute(
-            "INSERT INTO personagens (guild_id, user_id, nome, nivel, forca, destreza,"
-            " constituicao, inteligencia, sabedoria, carisma, pericias,"
-            " bonus_pericias, ca, bonus_ataque, dano_arma, hp_max, imagem)"
-            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO personagens"
+            " (guild_id, user_id, nome, classe, nivel, pericias, bonus_pericias, imagem)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
-                guild_id, user_id, nome.strip(), nivel,
-                atributos["FOR"], atributos["DES"], atributos["CON"],
-                atributos["INT"], atributos["SAB"], atributos["CAR"],
+                guild_id, user_id, nome.strip(), classe, nivel,
                 json.dumps(normalizar_lista_pericias(pericias), ensure_ascii=False),
                 json.dumps(_normalizar_bonus(bonus_pericias or {}), ensure_ascii=False),
-                combate.get("ca", 10),
-                combate.get("bonus_ataque", 0),
-                combate.get("dano_arma", "1d6"),
-                combate.get("hp_max", 10),
                 imagem or None,
             ),
         )
@@ -536,19 +579,34 @@ async def run_viva_do_jogador(
 # ---------------------------------------------------------------- mapa
 
 
-async def gravar_mapa(
-    conn: aiosqlite.Connection, run_id: int, mapa: list[list[str]]
+async def gravar_opcoes(
+    conn: aiosqlite.Connection, run_id: int, passo: int, opcoes: list[str]
 ) -> None:
-    """Fixa o caminho sorteado, para que ele nao mude a cada leitura."""
+    """Fixa as salas sorteadas para um passo, para que nao mudem a cada leitura."""
     await conn.executemany(
         "INSERT OR REPLACE INTO run_mapa (run_id, passo, posicao, sala_id) VALUES (?, ?, ?, ?)",
-        [
-            (run_id, passo, posicao, sala_id)
-            for passo, opcoes in enumerate(mapa, start=1)
-            for posicao, sala_id in enumerate(opcoes)
-        ],
+        [(run_id, passo, posicao, sala_id) for posicao, sala_id in enumerate(opcoes)],
     )
     await conn.commit()
+
+
+async def registrar_visita(
+    conn: aiosqlite.Connection, run_id: int, passo: int, sala_id: str
+) -> None:
+    """Marca a sala que o grupo atravessou naquele passo."""
+    await conn.execute(
+        "INSERT OR REPLACE INTO run_salas (run_id, passo, sala_id) VALUES (?, ?, ?)",
+        (run_id, passo, sala_id),
+    )
+    await conn.commit()
+
+
+async def salas_visitadas(conn: aiosqlite.Connection, run_id: int) -> list[str]:
+    """As salas por onde o grupo já passou nesta run."""
+    async with conn.execute(
+        "SELECT sala_id FROM run_salas WHERE run_id = ? ORDER BY passo", (run_id,)
+    ) as cur:
+        return [r["sala_id"] for r in await cur.fetchall()]
 
 
 async def opcoes_do_passo(conn: aiosqlite.Connection, run_id: int, passo: int) -> list[str]:
@@ -633,19 +691,19 @@ async def votos_da_linha(conn: aiosqlite.Connection, run_id: int, linha: int) ->
 # -------------------------------------------------------------- config
 
 
-async def intervalo_dias(conn: aiosqlite.Connection, guild_id: int) -> int:
+async def intervalo_semanas(conn: aiosqlite.Connection, guild_id: int) -> int:
     async with conn.execute(
-        "SELECT intervalo_dias FROM config_guilda WHERE guild_id = ?", (guild_id,)
+        "SELECT intervalo_semanas FROM config_guilda WHERE guild_id = ?", (guild_id,)
     ) as cur:
         row = await cur.fetchone()
-    return row["intervalo_dias"] if row else config.INTERVALO_DIAS
+    return row["intervalo_semanas"] if row else config.INTERVALO_SEMANAS
 
 
-async def definir_intervalo(conn: aiosqlite.Connection, guild_id: int, dias: int) -> None:
+async def definir_intervalo(conn: aiosqlite.Connection, guild_id: int, semanas: int) -> None:
     await conn.execute(
-        "INSERT INTO config_guilda (guild_id, intervalo_dias) VALUES (?, ?)"
-        " ON CONFLICT (guild_id) DO UPDATE SET intervalo_dias = excluded.intervalo_dias",
-        (guild_id, dias),
+        "INSERT INTO config_guilda (guild_id, intervalo_semanas) VALUES (?, ?)"
+        " ON CONFLICT (guild_id) DO UPDATE SET intervalo_semanas = excluded.intervalo_semanas",
+        (guild_id, semanas),
     )
     await conn.commit()
 
@@ -663,30 +721,68 @@ async def marcar_ultima_incursao(
     await conn.commit()
 
 
-async def dias_desde_ultima_incursao(
+async def ultima_incursao(
     conn: aiosqlite.Connection, guild_id: int, user_id: int
-) -> Optional[float]:
-    """None se o jogador nunca participou de uma incursão."""
+) -> Optional[datetime]:
+    """Quando o jogador entrou na última incursão, no fuso do servidor.
+
+    O banco grava em UTC; a janela semanal é contada no fuso de quem joga.
+    """
     async with conn.execute(
-        "SELECT julianday('now') - julianday(ultima_incursao) AS dias FROM jogadores"
+        "SELECT ultima_incursao FROM jogadores"
         " WHERE guild_id = ? AND user_id = ? AND ultima_incursao IS NOT NULL",
         (guild_id, user_id),
     ) as cur:
         row = await cur.fetchone()
-    return row["dias"] if row else None
+    if not row:
+        return None
+    marcado = datetime.strptime(row["ultima_incursao"], "%Y-%m-%d %H:%M:%S")
+    return marcado.replace(tzinfo=timezone.utc).astimezone(config.FUSO)
 
 
 # ------------------------------------------------------------- combate
 
 
 async def iniciar_combate(
-    conn: aiosqlite.Connection, run_id: int, passo: int, sala_id: str, monstro_hp: int
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    sala_id: str,
+    inimigos: list[Any],
 ) -> None:
     """Cria o estado do combate daquele passo. Reabrir a mensagem não reinicia."""
     await conn.execute(
-        "INSERT OR IGNORE INTO run_combate (run_id, passo, sala_id, monstro_hp_max, monstro_hp)"
-        " VALUES (?, ?, ?, ?, ?)",
-        (run_id, passo, sala_id, monstro_hp, monstro_hp),
+        "INSERT OR IGNORE INTO run_combate (run_id, passo, sala_id) VALUES (?, ?, ?)",
+        (run_id, passo, sala_id),
+    )
+    await conn.executemany(
+        "INSERT OR IGNORE INTO run_inimigos"
+        " (run_id, passo, indice, nome, ca, ataque, dano, hp_max, hp_atual)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            (run_id, passo, i, m.nome, m.ca, m.ataque, m.dano, m.hp, m.hp)
+            for i, m in enumerate(inimigos)
+        ],
+    )
+    await conn.commit()
+
+
+async def inimigos_do_combate(
+    conn: aiosqlite.Connection, run_id: int, passo: int
+) -> list[dict[str, Any]]:
+    async with conn.execute(
+        "SELECT * FROM run_inimigos WHERE run_id = ? AND passo = ? ORDER BY indice",
+        (run_id, passo),
+    ) as cur:
+        return [dict(r) for r in await cur.fetchall()]
+
+
+async def definir_hp_inimigos(
+    conn: aiosqlite.Connection, run_id: int, passo: int, por_indice: dict[int, int]
+) -> None:
+    await conn.executemany(
+        "UPDATE run_inimigos SET hp_atual = ? WHERE run_id = ? AND passo = ? AND indice = ?",
+        [(hp, run_id, passo, indice) for indice, hp in por_indice.items()],
     )
     await conn.commit()
 
@@ -701,12 +797,12 @@ async def estado_combate(
     return dict(row) if row else None
 
 
-async def atualizar_combate(
-    conn: aiosqlite.Connection, run_id: int, passo: int, monstro_hp: int, rodada: int
+async def atualizar_rodada(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
 ) -> None:
     await conn.execute(
-        "UPDATE run_combate SET monstro_hp = ?, rodada = ? WHERE run_id = ? AND passo = ?",
-        (monstro_hp, rodada, run_id, passo),
+        "UPDATE run_combate SET rodada = ? WHERE run_id = ? AND passo = ?",
+        (rodada, run_id, passo),
     )
     await conn.commit()
 
@@ -721,13 +817,14 @@ async def registrar_ataque(
     bonus: int,
     ca_alvo: int,
     dano: int,
+    alvo: int = 0,
 ) -> bool:
     """False se o personagem já atacou nesta rodada."""
     cur = await conn.execute(
         "INSERT OR IGNORE INTO run_ataques"
-        " (run_id, passo, rodada, user_id, d20, bonus, ca_alvo, dano)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (run_id, passo, rodada, user_id, d20, bonus, ca_alvo, dano),
+        " (run_id, passo, rodada, user_id, d20, bonus, ca_alvo, dano, alvo)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (run_id, passo, rodada, user_id, d20, bonus, ca_alvo, dano, alvo),
     )
     await conn.commit()
     return cur.rowcount > 0
@@ -745,12 +842,18 @@ async def ataques_da_rodada(
 
 
 async def inicializar_hp(conn: aiosqlite.Connection, run_id: int) -> None:
-    """No começo da run, cada personagem entra com o HP máximo da própria ficha."""
-    await conn.execute(
-        "UPDATE run_participantes SET hp_atual = ("
-        "  SELECT hp_max FROM personagens p WHERE p.id = run_participantes.personagem_id"
-        ") WHERE run_id = ?",
-        (run_id,),
+    """No começo da run, cada personagem entra com o HP máximo da própria ficha.
+
+    O HP máximo sai da tabela da classe, não de uma coluna, então a conta é feita
+    aqui em vez de num UPDATE com subconsulta.
+    """
+    await conn.executemany(
+        "UPDATE run_participantes SET hp_atual = ? WHERE run_id = ? AND user_id = ?",
+        [
+            (p["hp_max"], run_id, p["user_id"])
+            for p in await personagens_da_run(conn, run_id)
+            if p.get("hp_max")
+        ],
     )
     await conn.commit()
 

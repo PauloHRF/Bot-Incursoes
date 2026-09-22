@@ -12,10 +12,10 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db, motor  # noqa: E402
+from src import classes, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes, ViewCombate  # noqa: E402
 from fakes import (  # noqa: E402
-    ATRIBUTOS,
+    CLASSE_PADRAO,
     CANAL,
     DURAO,
     GUILD,
@@ -26,6 +26,7 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    atacar_ate_cair,
     criar_grupo,
     montar_conteudo,
     salas_de_combate,
@@ -35,7 +36,7 @@ from fakes import (  # noqa: E402
 _ABERTAS = []
 
 
-async def preparar(hp_max=40, ca=18, bonus_ataque=8, dano="1d6+3"):
+async def preparar(classe=CLASSE_PADRAO, nivel=8):
     # No Windows o arquivo so pode ser apagado depois que ninguem o mantem aberto.
     while _ABERTAS:
         try:
@@ -48,7 +49,7 @@ async def preparar(hp_max=40, ca=18, bonus_ataque=8, dano="1d6+3"):
     conn = await db.conectar()
     _ABERTAS.append(conn)
     await db.criar_schema(conn)
-    await criar_grupo(conn, hp_max=hp_max, ca=ca, bonus_ataque=bonus_ataque, dano=dano)
+    await criar_grupo(conn, nivel=nivel, classe=classe)
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
     return conn, canal, cog
@@ -85,37 +86,15 @@ async def atravessar_ate_objetivo(conn, canal, cog, run, incursao):
     return await db.buscar_run(conn, run["id"])
 
 
-async def atacar_ate_cair(conn, canal, cog, run_id, sala_id, limite=30):
-    """Ataca ate o combate terminar.
-
-    Um golpe so nao basta nem contra CA 1: o 1 natural erra sempre.
-    """
-    ultima = None
-    for _ in range(limite):
-        atual = await db.buscar_run(conn, run_id)
-        if atual["status"] not in ("em_sala", "objetivo") or atual["sala_atual"] != sala_id:
-            return ultima
-        incursao_atual = cog.incursoes[atual["incursao_id"]]
-        estado = await cog._estado_combate(atual, cog._sala(incursao_atual, sala_id))
-        if estado is None:
-            return ultima
-        msg = await canal.fetch_message(atual["mensagem_id"])
-        for c in list(estado.vivos):
-            depois = await db.buscar_run(conn, run_id)
-            if depois["status"] not in ("em_sala", "objetivo") or depois["sala_atual"] != sala_id:
-                return ultima
-            ultima = FakeInteraction(canal, c.user_id, msg)
-            await cog.atacar(ultima, run_id, sala_id)
-    return ultima
-
-
 async def caso_hp_inicial():
     """Ao começar a run, todo mundo entra com o HP máximo da ficha."""
-    conn, canal, cog = await preparar(hp_max=37)
+    conn, canal, cog = await preparar(classe="monge", nivel=3)
     montar_conteudo(cog, salas=salas_sem_combate())
     run = await montar_run(conn, canal, cog, "t")
     hps = await db.hp_dos_participantes(conn, run["id"])
-    assert set(hps.values()) == {37}, hps
+    # o HP e o da tabela do Monge no tier 2, nao um numero digitado na ficha
+    esperado = classes.classe("monge").numeros(3).hp
+    assert set(hps.values()) == {esperado}, (hps, esperado)
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print("  HP inicializado no começo da run: ok")
@@ -130,7 +109,8 @@ async def caso_vitoria_no_objetivo():
 
     assert run["status"] == "objetivo" and run["sala_atual"] == "OBJ", run
     estado = await cog._estado_combate(run, incursao.objetivo)
-    assert estado is not None and estado.monstro_hp == 1 and estado.rodada == 1
+    assert estado is not None and estado.rodada == 1
+    assert [i.hp_atual for i in estado.inimigos] == [1]
 
     # CA 1 e 1 HP caem rapido, mas o 1 natural ainda erra: ataca ate derrubar
     msg = await canal.fetch_message(run["mensagem_id"])
@@ -179,7 +159,7 @@ async def caso_combate_no_meio_do_mapa():
 
 async def caso_rodadas_e_contra_ataque():
     """Todos atacam uma vez; aí o monstro revida e a rodada vira."""
-    conn, canal, cog = await preparar(hp_max=200)
+    conn, canal, cog = await preparar(classe="barbaro", nivel=10)
     incursao, _ = montar_conteudo(
         cog, incursao_id="rodadas", monstro_objetivo=IMBATIVEL, salas=salas_sem_combate()
     )
@@ -207,7 +187,7 @@ async def caso_rodadas_e_contra_ataque():
     # o monstro tem +40 de ataque, mas um 1 natural ainda erra: 0 ou 1 caido
     assert len(estado.caidos) <= 1, estado.caidos
     # so um 20 natural tira HP desse monstro
-    assert estado.monstro_hp <= 999
+    assert estado.inimigos[0].hp_atual <= 999
 
     # quem caiu não ataca mais
     if estado.caidos:
@@ -287,14 +267,14 @@ async def caso_sala_de_combate_nao_duplica_entrada():
     # o painel ja traz descricao, monstro e HP: nada se perdeu ao tirar a entrada
     assert painel.embeds[0].description == alvo.descricao
     campos = {f.name: f.value for f in painel.embeds[0].fields}
-    assert alvo.monstro.nome in campos
+    assert alvo.monstros[0].nome in campos
     assert "Grupo" in campos
     print("  sala de combate posta só o painel: ok")
 
 
 async def caso_derrota_total():
     """Com o grupo inteiro caído, a run termina em fracasso."""
-    conn, canal, cog = await preparar(hp_max=10)
+    conn, canal, cog = await preparar(classe="monge", nivel=1)
     incursao, _ = montar_conteudo(
         cog, incursao_id="letal", monstro_objetivo=IMBATIVEL, salas=salas_sem_combate()
     )
@@ -324,7 +304,7 @@ async def caso_derrota_total():
 
 async def caso_descanso_cura():
     """A sala de Descanso levanta os caídos e completa quem está machucado."""
-    conn, canal, cog = await preparar(hp_max=40)
+    conn, canal, cog = await preparar()
     # banco so de Descanso: o primeiro passo cura o grupo na certa
     incursao, _ = montar_conteudo(
         cog, incursao_id="cura", salas=salas_sem_combate(tipo="Descanso")
@@ -339,9 +319,13 @@ async def caso_descanso_cura():
     for user_id in JOGADORES:
         await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
 
+    # o HP maximo vem da classe: o teste compara com a tabela, nao com um numero solto
+    maximo = classes.classe(CLASSE_PADRAO).numeros(8).hp
     hps = await db.hp_dos_participantes(conn, run["id"])
-    assert hps[JOGADORES[0]] == 20, f"caído deveria voltar com metade, veio {hps[JOGADORES[0]]}"
-    assert hps[JOGADORES[1]] == 40, f"machucado deveria completar, veio {hps[JOGADORES[1]]}"
+    assert hps[JOGADORES[0]] == maximo // 2, (
+        f"caído deveria voltar com metade, veio {hps[JOGADORES[0]]}"
+    )
+    assert hps[JOGADORES[1]] == maximo, f"machucado deveria completar, veio {hps[JOGADORES[1]]}"
     assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == 2
 
     await conn.close()
@@ -380,21 +364,22 @@ async def caso_motor_puro():
     """O dano nunca fica negativo e o HP nunca passa do máximo nem do zero."""
     from src.incursoes import Monstro
 
-    monstro = Monstro("Teste", ca=10, ataque=5, dano="1d4", hp=10)
+    inimigo = motor.Inimigo(0, "Teste", ca=10, ataque=5, dano="1d4", hp_max=10, hp_atual=2)
     grupo = [motor.Combatente(1, "A", ca=10, bonus_ataque=5, dano_arma="1d4", hp_max=10, hp_atual=3)]
-    estado = motor.EstadoCombate(monstro, 2, 1, grupo)
+    estado = motor.EstadoCombate([inimigo], 1, grupo)
 
     for _ in range(50):
-        motor.atacar_monstro(grupo[0], estado)
-        assert estado.monstro_hp >= 0
-    assert estado.monstro_derrotado
+        motor.atacar_inimigo(grupo[0], inimigo)
+        assert inimigo.hp_atual >= 0
+    assert estado.inimigos_derrotados
 
+    inimigo.hp_atual = inimigo.hp_max  # de pe de novo, para revidar
     grupo[0].hp_atual = 1
     for _ in range(50):
         alvo = motor.sortear_alvo(estado)
         if alvo is None:
             break
-        motor.contra_atacar(estado, alvo)
+        motor.contra_atacar(inimigo, alvo)
         assert grupo[0].hp_atual >= 0
     assert estado.grupo_caido and motor.sortear_alvo(estado) is None
     print("  motor: HP não passa dos limites: ok")

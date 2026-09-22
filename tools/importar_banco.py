@@ -24,9 +24,10 @@ from src.rules import chave_comparacao  # noqa: E402
 
 COLUNAS = (
     "sala_id", "nome", "tipo", "dificuldade", "cd", "alvo_progresso", "pericias",
-    "descricao", "imagem", "monstro_nome", "monstro_ca", "monstro_ataque",
-    "monstro_dano", "monstro_hp", "recompensa", "pontos_organizacao",
+    "descricao", "imagem", "monstro_nome", "monstro_quantidade", "monstro_ca",
+    "monstro_ataque", "monstro_dano", "monstro_hp", "recompensa", "pontos_organizacao",
 )
+COLUNAS_MONSTROS = ("sala_id", "nome", "quantidade", "ca", "ataque", "dano", "hp")
 
 
 class ErroDePlanilha(Exception):
@@ -122,16 +123,61 @@ def ler_salas(wb, dificuldades) -> list[dict[str, Any]]:
             "recompensa": _texto(valor("recompensa")) or None,
             "pontos_organizacao": valor("pontos_organizacao"),
         }
+        sala["monstros"] = []
         if _texto(valor("monstro_nome")):
-            sala["monstro"] = {
-                "nome": _texto(valor("monstro_nome")),
-                "ca": valor("monstro_ca"),
-                "ataque": valor("monstro_ataque"),
-                "dano": _texto(valor("monstro_dano")),
-                "hp": valor("monstro_hp"),
-            }
+            sala["monstros"].append(
+                {
+                    "nome": _texto(valor("monstro_nome")),
+                    "quantidade": valor("monstro_quantidade"),
+                    "ca": valor("monstro_ca"),
+                    "ataque": valor("monstro_ataque"),
+                    "dano": _texto(valor("monstro_dano")),
+                    "hp": valor("monstro_hp"),
+                }
+            )
         salas.append(sala)
     return salas
+
+
+def _monstros_extras(wb) -> dict[str, list[dict[str, Any]]]:
+    """A aba 'Monstros': criaturas a mais de uma sala, para bandos mistos.
+
+    A aba e opcional; sem ela, cada sala tem so a criatura da propria linha.
+    """
+    try:
+        ws = _aba(wb, "Monstros")
+    except ErroDePlanilha:
+        return {}
+    cabecalho = [_texto(c.value) for c in ws[1]]
+    indices = {nome: cabecalho.index(nome) for nome in COLUNAS_MONSTROS if nome in cabecalho}
+    faltando = [c for c in COLUNAS_MONSTROS if c not in indices]
+    if faltando:
+        raise ErroDePlanilha(
+            f"A aba 'Monstros' esta sem a(s) coluna(s): {', '.join(faltando)}."
+        )
+    por_sala: dict[str, list[dict[str, Any]]] = {}
+    for linha in ws.iter_rows(min_row=2):
+        def valor(nome: str):
+            celula = linha[indices[nome]]
+            return celula.value
+
+        sala_id = _texto(valor("sala_id"))
+        nome = _texto(valor("nome"))
+        if not sala_id and not nome:
+            continue
+        if not sala_id:
+            raise ErroDePlanilha(f"A aba 'Monstros' tem a criatura '{nome}' sem sala_id.")
+        por_sala.setdefault(sala_id, []).append(
+            {
+                "nome": nome,
+                "quantidade": valor("quantidade"),
+                "ca": valor("ca"),
+                "ataque": valor("ataque"),
+                "dano": _texto(valor("dano")),
+                "hp": valor("hp"),
+            }
+        )
+    return por_sala
 
 
 def importar(planilha: Path, saida: Path) -> Path:
@@ -140,10 +186,18 @@ def importar(planilha: Path, saida: Path) -> Path:
 
     wb = load_workbook(planilha, data_only=True)
     dificuldades = ler_dificuldades(wb)
-    dados = {
-        "organizacao": ler_organizacao(wb),
-        "salas": ler_salas(wb, dificuldades),
-    }
+    salas = ler_salas(wb, dificuldades)
+    extras = _monstros_extras(wb)
+    conhecidas = {s["id"] for s in salas}
+    for sala_id, criaturas in extras.items():
+        if sala_id not in conhecidas:
+            raise ErroDePlanilha(
+                f"A aba 'Monstros' cita a sala '{sala_id}', que nao existe na aba 'Salas'."
+            )
+        for sala in salas:
+            if sala["id"] == sala_id:
+                sala["monstros"].extend(criaturas)
+    dados = {"organizacao": ler_organizacao(wb), "salas": salas}
     banco = banco_de_dict(dados)
 
     saida.mkdir(parents=True, exist_ok=True)
