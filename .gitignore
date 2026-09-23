@@ -6,3 +6,6 @@ __pycache__/
 data/*.db
 data/*.db-journal
 tests/*.db
+
+# Arquivo de trava que o Excel cria enquanto a planilha esta aberta
+~$*
