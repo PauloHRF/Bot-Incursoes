@@ -105,6 +105,8 @@ async def main() -> None:
 
         # --- testes de pericia ---
         msg_sala = await canal.fetch_message(run["mensagem_id"])
+        # a sala que pede rolagem marca o grupo
+        assert all(f"<@{u}>" in (msg_sala.content or "") for u in JOGADORES), msg_sala.content
         rolaram = 0
         for user_id in JOGADORES:
             atual = await db.buscar_run(conn, run["id"])

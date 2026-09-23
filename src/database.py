@@ -157,6 +157,18 @@ CREATE TABLE IF NOT EXISTS run_ataques (
     PRIMARY KEY (run_id, passo, rodada, user_id, indice)
 );
 
+-- Quem ja gastou o turno em cada rodada, e com o que. O personagem age uma vez
+-- por rodada: ou ataca, ou usa uma habilidade. Reacoes nao entram aqui, porque
+-- disparam sozinhas e nao ocupam o turno de ninguem.
+CREATE TABLE IF NOT EXISTS run_turnos (
+    run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo   INTEGER NOT NULL,
+    rodada  INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    acao    TEXT    NOT NULL DEFAULT 'ataque',
+    PRIMARY KEY (run_id, passo, rodada, user_id)
+);
+
 -- Efeitos com duracao dentro de um combate: Rage, Marca do Cacador e afins.
 -- alvo_tipo diz se cai num personagem ("personagem", alvo_id = user_id) ou numa
 -- criatura ("inimigo", alvo_id = indice). `dono` e quem ganha o beneficio de um
@@ -991,10 +1003,7 @@ async def registrar_ataque(
 async def ja_atacou(
     conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
 ) -> bool:
-    """Se o personagem já gastou o turno nesta rodada.
-
-    Golpe de habilidade não conta: ele é extra, não é o turno.
-    """
+    """Se o personagem já deu o golpe do turno nesta rodada."""
     async with conn.execute(
         "SELECT 1 FROM run_ataques"
         " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?"
@@ -1002,6 +1011,58 @@ async def ja_atacou(
         (run_id, passo, rodada, user_id),
     ) as cur:
         return await cur.fetchone() is not None
+
+
+async def marcar_turno(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    rodada: int,
+    user_id: int,
+    acao: str = "ataque",
+) -> None:
+    """Gasta o turno do personagem nesta rodada. Repetir não sobrescreve."""
+    await conn.execute(
+        "INSERT OR IGNORE INTO run_turnos (run_id, passo, rodada, user_id, acao)"
+        " VALUES (?, ?, ?, ?, ?)",
+        (run_id, passo, rodada, user_id, acao),
+    )
+    await conn.commit()
+
+
+async def acao_do_turno(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
+) -> Optional[str]:
+    """Com o que o personagem gastou o turno, ou None se ainda não gastou.
+
+    Runs abertas antes de existir a marca de turno só têm o golpe gravado —
+    por isso o ataque do turno também conta aqui.
+    """
+    async with conn.execute(
+        "SELECT acao FROM run_turnos"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?",
+        (run_id, passo, rodada, user_id),
+    ) as cur:
+        linha = await cur.fetchone()
+    if linha:
+        return linha["acao"]
+    if await ja_atacou(conn, run_id, passo, rodada, user_id):
+        return "ataque"
+    return None
+
+
+async def quem_agiu(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
+) -> set[int]:
+    """Quem já gastou o turno nesta rodada, atacando ou usando habilidade."""
+    async with conn.execute(
+        "SELECT user_id FROM run_turnos WHERE run_id = ? AND passo = ? AND rodada = ?"
+        " UNION"
+        " SELECT user_id FROM run_ataques"
+        "  WHERE run_id = ? AND passo = ? AND rodada = ? AND origem = 'turno'",
+        (run_id, passo, rodada, run_id, passo, rodada),
+    ) as cur:
+        return {r["user_id"] for r in await cur.fetchall()}
 
 
 async def proximo_indice_de_ataque(

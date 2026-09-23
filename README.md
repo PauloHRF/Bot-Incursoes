@@ -115,6 +115,14 @@ próprio, e a sala só é superada quando a última cai — derrubar uma não en
 em quem já caiu não gasta o turno: o bot avisa e você escolhe outro alvo. É aqui que um
 bando pesa de verdade: cinco lobos batem cinco vezes por rodada.
 
+Cada personagem age **uma vez por rodada: ou ataca, ou usa uma habilidade**, nunca os dois.
+Quem já agiu recebe o aviso dizendo com o que gastou o turno, e o menu ✨ Habilidade nem
+abre. Reações (*Relentless*, *Uncanny Dodge*) não contam: disparam sozinhas, fora do turno.
+
+O bot **marca os jogadores** na hora de agir — quando a votação abre, quando a sala pede
+rolagem, quando o combate começa e a cada rodada nova. A chamada da rodada vai numa linha
+de texto própria, porque o painel é editado no lugar e edição não notifica ninguém.
+
 O combate inteiro acontece **numa mensagem só**: o painel mostra o HP de cada inimigo, o HP
 de cada personagem, o log da rodada que acabou e o botão (ou menu) de atacar, e é reescrito
 a cada rodada em vez de empilhar mensagens novas. Sala de combate também não posta descrição
@@ -183,12 +191,13 @@ substitui o do tier 1, não soma.
 **As ativas prontas** têm botão: no painel de combate aparece **✨ Habilidade** ao lado de
 Atacar, e fora do combate existe `/incursao habilidade`. O menu mostra só o que o personagem
 pode usar naquele momento, com quantos usos restam; quem precisa de alvo (um inimigo, três
-inimigos, um aliado) recebe um segundo menu antes de gastar o uso. São treze:
+inimigos, um aliado) recebe um segundo menu antes de gastar o uso. Usar uma delas em
+combate **é o turno** daquela rodada, no lugar do ataque. São treze:
 
 | Efeito | Habilidades |
 | --- | --- |
 | cura | *Second Wind*, *Cura pelas Mãos* |
-| golpe extra | *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*, *Rajada do Caçador*, *Golpe Divino* |
+| golpe no lugar do ataque | *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*, *Rajada do Caçador*, *Golpe Divino* |
 | efeito com prazo | *Rage*, *Reckless Attack*, *Marca do Caçador*, *Caçador Supremo*, *Avatar da Luz* |
 | vida temporária | *Tradição xamânica* (dois caminhos), *Dança totêmica*, *Brutal Strike* |
 | reação | *Relentless*, *Uncanny Dodge* |

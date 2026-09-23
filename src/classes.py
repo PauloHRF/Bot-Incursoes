@@ -18,6 +18,7 @@ from .habilidades import (
     ESCOLHA,
     HABILIDADES,
     PASSIVA,
+    POR_ID,
     Habilidade,
     juntar,
     juntar_efeito,
@@ -113,7 +114,7 @@ class Classe:
 
 __all__ = [
     "ATIVA", "CLASSES", "CLASSES_PENDENTES", "CLASSES_PREVISTAS", "Classe",
-    "ESCOLHA", "Habilidade", "NumerosDoTier", "PASSIVA", "SAVES_FORTES",
+    "ESCOLHA", "Habilidade", "NumerosDoTier", "PASSIVA", "POR_ID", "SAVES_FORTES",
     "classe", "efeitos", "habilidades", "numeros", "saves", "saves_fortes",
     "tier_maximo_com_tabela",
 ]

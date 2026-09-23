@@ -230,10 +230,19 @@ async def caso_combate_nao_polui_o_canal():
     assert (await db.buscar_run(conn, run["id"]))["status"] == "sucesso"
     assert rodadas >= 3, f"o combate precisa durar algumas rodadas para o teste valer ({rodadas})"
 
-    novas = len(canal.mensagens) - antes
-    # O combate nao posta nada: o painel e editado. As mensagens novas sao so o
-    # desfecho (conclusao + epilogo), independentemente de quantas rodadas durou.
-    assert novas <= 3, f"{novas} mensagens novas em {rodadas} rodadas — o combate voltou a poluir"
+    novas = canal.mensagens[antes:]
+    # O painel e editado no lugar: nenhum embed novo de combate. O que o combate
+    # posta e a chamada de cada rodada, uma linha de texto marcando quem joga.
+    chamadas = [m for m in novas if not m.embeds and "Rodada" in (m.content or "")]
+    assert len(chamadas) == rodadas - 1, (
+        f"{len(chamadas)} chamadas em {rodadas} rodadas — uma por rodada nova"
+    )
+    assert all("<@" in (m.content or "") for m in chamadas), "a chamada marca o grupo"
+    sem_chamada = len(novas) - len(chamadas)
+    assert sem_chamada <= 3, (
+        f"{sem_chamada} mensagens novas fora as chamadas — o combate voltou a poluir"
+    )
+    novas = len(novas)
 
     # o painel continua sendo o mesmo, atualizado
     painel = await canal.fetch_message(painel_id)
@@ -264,6 +273,8 @@ async def caso_sala_de_combate_nao_duplica_entrada():
     assert len(com_embed) == 1, f"esperava só o painel, vieram {len(com_embed)} embeds"
 
     painel = com_embed[0]
+    # a abertura do combate marca quem esta de pe
+    assert all(f"<@{u}>" in (painel.content or "") for u in JOGADORES), painel.content
     # o painel ja traz descricao, monstro e HP: nada se perdeu ao tirar a entrada
     assert painel.embeds[0].description == alvo.descricao
     campos = {f.name: f.value for f in painel.embeds[0].fields}

@@ -598,7 +598,7 @@ def combate(
 
     if not encerrado:
         e.add_field(
-            name="Atacaram nesta rodada",
+            name="Agiram nesta rodada",
             value=f"{ja_atacaram}/{len(estado.ativos)}",
             inline=True,
         )

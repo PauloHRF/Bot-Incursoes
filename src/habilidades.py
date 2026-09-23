@@ -284,6 +284,16 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
 }
 
 
+# Toda habilidade pelo id, para quem so tem o id na mao (o turno gravado, por
+# exemplo) e precisa do nome.
+POR_ID: dict[str, Habilidade] = {
+    h.id: h
+    for tabela in HABILIDADES.values()
+    for lista in tabela.values()
+    for h in lista
+}
+
+
 # O que o motor entende, e o valor neutro de cada coisa.
 NEUTRO: dict = {
     "totem": {},

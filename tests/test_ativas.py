@@ -152,10 +152,11 @@ async def caso_uso_volta_no_proximo_combate():
     print("  usos zeram por combate e por descanso: ok")
 
 
-async def caso_golpes_extras_nao_gastam_o_turno():
+async def caso_habilidade_gasta_o_turno():
+    """Na rodada, o personagem ou ataca ou usa uma habilidade — nunca os dois."""
     conn, canal, cog, incursao = await preparar(classe="guerreiro", nivel=8)
     run = await abrir_combate(conn, canal, cog, incursao)
-    dono = JOGADORES[0]
+    dono, outro = JOGADORES[0], JOGADORES[1]
     passo = cog._passo(run)
     msg = await canal.fetch_message(run["mensagem_id"])
 
@@ -164,16 +165,24 @@ async def caso_golpes_extras_nao_gastam_o_turno():
 
     ataques = await db.ataques_da_rodada(conn, run["id"], passo, 1)
     assert len(ataques) == 1 and ataques[0]["origem"] == "habilidade"
-    # a habilidade nao consumiu o turno: da para atacar normalmente
-    assert not await db.ja_atacou(conn, run["id"], passo, 1, dono)
+    # o turno foi gasto na habilidade, entao o ataque e recusado
+    assert await db.acao_do_turno(conn, run["id"], passo, 1, dono) == "action_surge"
+    assert dono in await db.quem_agiu(conn, run["id"], passo, 1)
 
     ataque = FakeInteraction(canal, dono, msg)
     await cog.atacar(ataque, run["id"], "OBJ")
-    assert "já atacou" not in (ataque.resposta or "")
-    depois = await db.ataques_da_rodada(conn, run["id"], passo, 1)
-    assert len(depois) == 3, depois  # 1 da habilidade + 2 do multiataque
-    assert await db.ja_atacou(conn, run["id"], passo, 1, dono)
-    print("  golpe de habilidade e extra, nao gasta o turno: ok")
+    assert "Action Surge" in ataque.resposta, ataque.resposta
+    assert len(await db.ataques_da_rodada(conn, run["id"], passo, 1)) == 1
+
+    # nem outra habilidade entra no mesmo turno
+    outra = await usar(cog, canal, run, dono, "second_wind", msg=msg)
+    assert "Action Surge" in outra.resposta, outra.resposta
+
+    # e quem atacou gasta o turno do mesmo jeito
+    normal = FakeInteraction(canal, outro, msg)
+    await cog.atacar(normal, run["id"], "OBJ")
+    assert await db.acao_do_turno(conn, run["id"], passo, 1, outro) == "ataque"
+    print("  a rodada tem uma acao: ataque ou habilidade: ok")
 
 
 async def caso_perfect_strike_acerta_sempre():
@@ -244,9 +253,19 @@ async def caso_menu_so_mostra_o_que_da_para_usar():
     # Fighting Style (escolha) e Improved Critical (passiva) nao entram
     assert "fighting_style" not in ids and "improved_critical" not in ids
 
-    # gastando os dois, o menu some
+    # usada a primeira, o menu nem abre: o turno acabou
     await usar(cog, canal, run, dono, "second_wind")
+    fechado = FakeInteraction(canal, dono)
+    await cog.abrir_habilidades(fechado, run["id"], "OBJ")
+    assert fechado.view_enviada is None
+    assert "Second Wind" in fechado.resposta, fechado.resposta
+
+    # na rodada seguinte da para usar a outra
+    await cog.atacar(FakeInteraction(canal, JOGADORES[1]), run["id"], "OBJ")
     await usar(cog, canal, run, dono, "action_surge")
+
+    # gastos os dois usos, o menu some de vez
+    await cog.atacar(FakeInteraction(canal, JOGADORES[1]), run["id"], "OBJ")
     vazio = FakeInteraction(canal, dono)
     await cog.abrir_habilidades(vazio, run["id"], "OBJ")
     assert vazio.view_enviada is None
@@ -276,7 +295,7 @@ async def main():
         caso_catalogo_das_ativas()
         await caso_cura_em_si_mesmo()
         await caso_uso_volta_no_proximo_combate()
-        await caso_golpes_extras_nao_gastam_o_turno()
+        await caso_habilidade_gasta_o_turno()
         await caso_perfect_strike_acerta_sempre()
         await caso_golpe_divino_soma_dados()
         await caso_cura_em_aliado_pede_alvo()

@@ -59,6 +59,8 @@ async def caso_maioria_fecha_sem_esperar():
     run = await montar_run_em_votacao(conn, canal, cog)
     opcoes = await cog._opcoes(run, 1)
     msg = await canal.fetch_message(run["mensagem_id"])
+    # a votacao marca o grupo: sem mencao ninguem e avisado da vez
+    assert all(f"<@{u}>" in (msg.content or "") for u in JOGADORES[:5]), msg.content
 
     # dois votos ainda nao decidem nada
     for user_id in JOGADORES[:2]:

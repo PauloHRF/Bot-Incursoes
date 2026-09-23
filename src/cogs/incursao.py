@@ -14,7 +14,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import config, database as db, embeds as E, motor
+from .. import classes as cl, config, database as db, embeds as E, motor
 from ..incursoes import (
     BancoDeSalas,
     Incursao,
@@ -820,7 +820,9 @@ class Incursoes(commands.Cog):
         votos = await db.votos_da_linha(self.bot.db, run["id"], linha)
         view = ViewVotacao(self, run["id"], linha, opcoes)
         mensagem = await canal.send(
-            embed=E.votacao(incursao, linha, opcoes, votos, total, incursao.passos), view=view
+            f"🗳️ {await self._chamar(run)} — escolham por onde seguir.",
+            embed=E.votacao(incursao, linha, opcoes, votos, total, incursao.passos),
+            view=view,
         )
         await db.atualizar_run(
             self.bot.db,
@@ -960,7 +962,12 @@ class Incursoes(commands.Cog):
             sala, run["linha_atual"], 0, total, incursao.passos if incursao else None
         )
         view = ViewSala(self, run["id"], sala.id) if sala.tem_teste else None
-        mensagem = await canal.send(embed=embed, view=view, file=arquivo or discord.utils.MISSING)
+        chamada = (
+            f"🎲 {await self._chamar(run)} — hora de rolar." if sala.tem_teste else None
+        )
+        mensagem = await canal.send(
+            chamada, embed=embed, view=view, file=arquivo or discord.utils.MISSING
+        )
         await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
 
     async def _creditar(
@@ -1151,7 +1158,10 @@ class Incursoes(commands.Cog):
             e_objetivo=e_objetivo,
             recompensa=sala.recompensa if e_objetivo else None,
         )
+        de_pe = [c.user_id for c in estado.ativos] if estado else None
         mensagem = await canal.send(
+            f"⚔️ {await self._chamar(run, de_pe)} — combate! Ataque **ou** habilidade, "
+            f"uma coisa por rodada.",
             embed=embed,
             view=ViewCombate(self, run["id"], sala.id, estado.inimigos if estado else None),
             file=arquivo or discord.utils.MISSING,
@@ -1240,13 +1250,17 @@ class Incursoes(commands.Cog):
             return
 
         passo = self._passo(run)
-        if await db.ja_atacou(
+        gasto = await db.acao_do_turno(
             self.bot.db, run_id, passo, estado.rodada, interaction.user.id
-        ):
+        )
+        if gasto:
             await interaction.response.send_message(
-                "Você já atacou nesta rodada.", ephemeral=True
+                self._turno_gasto(gasto), ephemeral=True
             )
             return
+        await db.marcar_turno(
+            self.bot.db, run_id, passo, estado.rodada, interaction.user.id, "ataque"
+        )
 
         # Multiataque gasta o turno inteiro num clique so: se o alvo cair no
         # meio, o golpe seguinte vai para o proximo inimigo de pe.
@@ -1304,11 +1318,33 @@ class Incursoes(commands.Cog):
         )
 
         ataques = await db.ataques_da_rodada(self.bot.db, run_id, passo, estado.rodada)
-        agiram = {a["user_id"] for a in ataques}
+        agiram = await db.quem_agiu(self.bot.db, run_id, passo, estado.rodada)
         if estado.inimigos_derrotados or len(agiram) >= len(estado.ativos):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
             await self._atualizar_painel(run, sala, estado, len(agiram))
+
+    async def _chamar(
+        self, run: dict[str, Any], user_ids: Optional[list[int]] = None
+    ) -> str:
+        """Marca quem precisa agir agora. Sem lista, marca o grupo inteiro.
+
+        Vai no `content` da mensagem, e nao no embed: e o texto solto que faz o
+        Discord notificar.
+        """
+        if user_ids is None:
+            user_ids = await db.participantes(self.bot.db, run["id"])
+        return " ".join(f"<@{user_id}>" for user_id in user_ids)
+
+    def _turno_gasto(self, acao: str) -> str:
+        """O aviso de quem ja agiu, dizendo com o que gastou o turno."""
+        if acao == "ataque":
+            return "Você já atacou nesta rodada — é um ataque **ou** uma habilidade."
+        habilidade = cl.POR_ID.get(acao)
+        nome = habilidade.nome if habilidade else acao
+        return (
+            f"Você já usou **{nome}** nesta rodada — é uma habilidade **ou** um ataque."
+        )
 
     # ------------------------------------------------------ habilidades
 
@@ -1360,6 +1396,22 @@ class Incursoes(commands.Cog):
                 "Voce nao faz parte desta run.", ephemeral=True
             )
             return
+
+        # Em combate, quem ja agiu nao abre o menu: o turno e um so.
+        incursao = self._incursao_da_run(run)
+        sala = self._sala(incursao, sala_id)
+        if sala is not None and sala.e_combate:
+            estado = await self._estado_combate(run, sala)
+            if estado is not None:
+                gasto = await db.acao_do_turno(
+                    self.bot.db, run_id, self._passo(run), estado.rodada,
+                    interaction.user.id,
+                )
+                if gasto:
+                    await interaction.response.send_message(
+                        self._turno_gasto(gasto), ephemeral=True
+                    )
+                    return
 
         disponiveis = await self._habilidades_disponiveis(
             run, personagem, self._passo(run)
@@ -1447,6 +1499,18 @@ class Incursoes(commands.Cog):
             )
             return
 
+        # Em combate o personagem age uma vez por rodada: ou ataca, ou usa uma
+        # habilidade. Reacao nao passa por aqui — dispara sozinha.
+        if estado is not None and acao.get("tipo") != "reacao":
+            gasto = await db.acao_do_turno(
+                self.bot.db, run_id, passo, estado.rodada, interaction.user.id
+            )
+            if gasto:
+                await interaction.response.send_message(
+                    self._turno_gasto(gasto), ephemeral=True
+                )
+                return
+
         # Falta escolher em quem: abre o segundo menu antes de gastar o uso.
         if alvos is None:
             pedido = await self._pedir_alvo(interaction, run, sala_id, habilidade, estado)
@@ -1466,6 +1530,12 @@ class Incursoes(commands.Cog):
                 "Os usos desta habilidade ja acabaram.", ephemeral=True
             )
             return
+
+        if estado is not None and acao.get("tipo") != "reacao":
+            await db.marcar_turno(
+                self.bot.db, run_id, passo, estado.rodada,
+                interaction.user.id, habilidade.id,
+            )
 
         if acao.get("tipo") == "cura":
             await self._resolver_cura(interaction, run, habilidade, acao, alvos, estado)
@@ -1767,7 +1837,7 @@ class Incursoes(commands.Cog):
         )
 
         ataques = await db.ataques_da_rodada(self.bot.db, run["id"], passo, estado.rodada)
-        agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
+        agiram = await db.quem_agiu(self.bot.db, run["id"], passo, estado.rodada)
         if estado.inimigos_derrotados or len(agiram) >= len(estado.ativos):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
@@ -1977,6 +2047,13 @@ class Incursoes(commands.Cog):
         await db.atualizar_rodada(self.bot.db, run["id"], self._passo(run), estado.rodada)
         await self._virar_efeitos(run, estado)
         await self._atualizar_painel(run, sala, estado, 0, rodada_anterior=log)
+        # O painel e editado no lugar, e edicao nao notifica ninguem: a chamada
+        # da rodada vai numa mensagem propria, so para quem ainda pode agir.
+        if estado.ativos:
+            await canal.send(
+                f"⚔️ **Rodada {estado.rodada}** — "
+                f"{await self._chamar(run, [c.user_id for c in estado.ativos])}"
+            )
 
         # Rodada em que o grupo inteiro esta atordoado: ninguem tem clique para
         # dar, entao ela corre sozinha em vez de travar o combate. Como ninguem

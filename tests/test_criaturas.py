@@ -285,7 +285,7 @@ async def caso_atordoamento_no_combate():
     embed, _ = E.combate(incursao.objetivo, estado, 0)
     campos = {f.name: f.value for f in embed.fields}
     assert "atordoado" in campos["Grupo"]
-    assert campos["Atacaram nesta rodada"] == "0/1"
+    assert campos["Agiram nesta rodada"] == "0/1"
 
     # o golpe de quem sobrou fecha a rodada sozinho
     inter = FakeInteraction(canal, livre.user_id)
