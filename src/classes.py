@@ -50,9 +50,9 @@ CLASSES_PREVISTAS = (
 # bônus que a classe já tem para perícia — o save forte usa o bônus de
 # proficiência e o fraco usa o de perícia sem proficiência. Então a única coisa
 # que muda por classe é quais dois atributos são fortes, e é só isso que fica
-# aqui. Classes ainda sem tabela de números entram na lista porque o documento
-# já as traz; Bardo, Bruxo e Xamã ainda não têm save definido — quem não está
-# aqui fica fraco em tudo até o documento dizer o contrário.
+# aqui. As 14 classes previstas já estão definidas, mesmo as que ainda não têm
+# tabela de números; se um dia entrar uma classe sem save aqui, ela fica fraca
+# em tudo em vez de quebrar.
 SAVES_FORTES: dict[str, tuple[str, str]] = {
     "ladino": ("DES", "INT"),
     "barbaro": ("FOR", "CON"),
@@ -60,12 +60,15 @@ SAVES_FORTES: dict[str, tuple[str, str]] = {
     "monge": ("FOR", "DES"),
     "patrulheiro": ("DES", "CON"),
     "paladino": ("FOR", "SAB"),
-    # Ainda sem tabela de números, mas já com os saves do documento:
+    "xama": ("SAB", "CAR"),
+    # Ainda sem tabela de números, mas já com os saves definidos:
     "mago": ("CON", "INT"),
     "clerigo": ("CON", "SAB"),
     "druida": ("CON", "SAB"),
     "feiticeiro": ("DES", "CON"),
     "artifice": ("FOR", "CON"),
+    "bardo": ("DES", "CAR"),
+    "bruxo": ("SAB", "CAR"),
 }
 
 

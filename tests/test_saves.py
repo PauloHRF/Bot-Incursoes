@@ -52,12 +52,13 @@ def caso_catalogo_dos_saves():
         assert len(set(fortes)) == 2, f"{identificador} repetiu um atributo"
         for atributo in fortes:
             assert atributo in ATRIBUTOS, (identificador, atributo)
-    # o documento tambem traz classes que ainda nao tem tabela de numeros
+    # as 14 previstas estao todas definidas, mesmo as sem tabela de numeros
     assert "mago" in cl.SAVES_FORTES and "mago" not in cl.CLASSES
-    # e deixa tres sem definir
-    sem_save = [c.id for c in cl.CLASSES.values() if not c.saves]
-    assert sem_save == ["xama"], sem_save
-    print(f"  as {len(cl.SAVES_FORTES)} classes do documento estao no catalogo: ok")
+    for nome in cl.CLASSES_PREVISTAS:
+        assert cl.saves_fortes(nome), f"{nome} sem save definido"
+    # e toda classe jogavel carrega os dela
+    assert all(c.saves for c in cl.CLASSES.values())
+    print(f"  as {len(cl.SAVES_FORTES)} classes estao no catalogo de saves: ok")
 
 
 def caso_modificador_por_classe():
@@ -77,12 +78,22 @@ def caso_modificador_por_classe():
     print("  cada classe resiste melhor nos dois atributos do documento: ok")
 
 
-def caso_classe_sem_save_definido():
-    """O Xama nao esta no documento: fica fraco em tudo, sem quebrar nada."""
-    assert cl.saves_fortes("xama") == ()
-    valores = cl.saves("xama", 1)
-    assert set(valores.values()) == {FRACO[1]}
-    print("  classe ainda sem save definido resiste como fraca: ok")
+def caso_classe_sem_tabela_e_sem_save():
+    """Classe sem numeros ainda responde pelos saves; sem save, fica fraca."""
+    # Mago ainda nao tem tabela de numeros, mas ja tem os saves
+    assert cl.saves_fortes("Mago") == ("CON", "INT")
+    assert cl.saves("mago", 1) == {}, "sem tabela de numeros nao ha modificador"
+    # Xama, Bardo e Bruxo entraram depois do documento
+    assert cl.saves_fortes("xama") == ("SAB", "CAR")
+    assert cl.saves_fortes("Bardo") == ("DES", "CAR")
+    assert cl.saves_fortes("bruxo") == ("SAB", "CAR")
+    assert cl.saves("xama", 1)["SAB"] == FORTE[1]
+    # e uma classe que nao existe nao quebra nada
+    assert cl.saves_fortes("necromante") == ()
+    assert cl.saves("necromante", 1) == {}
+    numeros = cl.CLASSES["ladino"].numeros(1)
+    assert mod_save("FOR", numeros, ()) == FRACO[1]
+    print("  classe sem tabela ou sem save nao quebra a conta: ok")
 
 
 def caso_efeito_soma_no_save():
@@ -176,7 +187,7 @@ async def main():
         caso_tabela_do_documento()
         caso_catalogo_dos_saves()
         caso_modificador_por_classe()
-        caso_classe_sem_save_definido()
+        caso_classe_sem_tabela_e_sem_save()
         caso_efeito_soma_no_save()
         caso_rolagem()
         caso_save_da_criatura()
