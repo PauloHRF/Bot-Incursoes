@@ -54,14 +54,16 @@
           "ca": 14,
           "ataque": 5,
           "dano": "1d10+3",
-          "hp": 26
+          "hp": 26,
+          "ataques": 1
         },
         {
           "nome": "Sentinela de Basalto 2",
           "ca": 14,
           "ataque": 5,
           "dano": "1d10+3",
-          "hp": 26
+          "hp": 26,
+          "ataques": 1
         }
       ]
     },
@@ -132,7 +134,8 @@
           "ca": 15,
           "ataque": 6,
           "dano": "2d6+2",
-          "hp": 34
+          "hp": 34,
+          "ataques": 1
         }
       ]
     },
@@ -208,28 +211,32 @@
           "ca": 16,
           "ataque": 6,
           "dano": "2d8+3",
-          "hp": 40
+          "hp": 40,
+          "ataques": 1
         },
         {
           "nome": "Larva do Umbral 1",
           "ca": 12,
           "ataque": 3,
           "dano": "1d6",
-          "hp": 9
+          "hp": 9,
+          "ataques": 1
         },
         {
           "nome": "Larva do Umbral 2",
           "ca": 12,
           "ataque": 3,
           "dano": "1d6",
-          "hp": 9
+          "hp": 9,
+          "ataques": 1
         },
         {
           "nome": "Larva do Umbral 3",
           "ca": 12,
           "ataque": 3,
           "dano": "1d6",
-          "hp": 9
+          "hp": 9,
+          "ataques": 1
         }
       ]
     },
@@ -249,6 +256,120 @@
       "recompensa": "Um item mágico menor, a critério do GM.",
       "pontos_organizacao": 3,
       "monstros": []
+    },
+    {
+      "id": "VO13",
+      "nome": "Oficina de Âmbar",
+      "tipo": "Combate",
+      "descricao": "Resina antiga escorre das paredes e endurece antes de chegar ao chão. No meio da sala, três formas de pedra e âmbar esperam de pé — e a maior delas abre os olhos quando a porta range.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": "Um naco de âmbar ainda morno, que guarda alguma coisa dentro.",
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Golem Menor 1",
+          "ca": 14,
+          "ataque": 5,
+          "dano": "1d8+3",
+          "hp": 36,
+          "ataques": 1,
+          "saves_vantagem": [
+            "FOR",
+            "CON"
+          ]
+        },
+        {
+          "nome": "Golem Menor 2",
+          "ca": 14,
+          "ataque": 5,
+          "dano": "1d8+3",
+          "hp": 36,
+          "ataques": 1,
+          "saves_vantagem": [
+            "FOR",
+            "CON"
+          ]
+        },
+        {
+          "nome": "Golem de Âmbar",
+          "ca": 15,
+          "ataque": 6,
+          "dano": "1d8+4",
+          "hp": 75,
+          "ataques": 2,
+          "habilidade": {
+            "nome": "Prisão de Âmbar",
+            "save": "CON",
+            "cd": 13,
+            "texto": "Uma explosão de âmbar prende quem não resistir.",
+            "dano": null,
+            "alvos": 1,
+            "atordoa": 1,
+            "cada": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "VO14",
+      "nome": "Necrotério do Selo",
+      "tipo": "Combate",
+      "descricao": "Alguém chegou ao selo antes do grupo e não veio sozinho: trouxe os mortos da própria escavação. O necromante nem se vira — continua trabalhando enquanto o que sobrou deles caminha na direção da porta.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": "As anotações do necromante sobre o selo.",
+      "pontos_organizacao": 3,
+      "monstros": [
+        {
+          "nome": "Zumbi Putrefato 1",
+          "ca": 10,
+          "ataque": 3,
+          "dano": "1d6+1",
+          "hp": 22,
+          "ataques": 1
+        },
+        {
+          "nome": "Zumbi Putrefato 2",
+          "ca": 10,
+          "ataque": 3,
+          "dano": "1d6+1",
+          "hp": 22,
+          "ataques": 1
+        },
+        {
+          "nome": "Zumbi Putrefato 3",
+          "ca": 10,
+          "ataque": 3,
+          "dano": "1d6+1",
+          "hp": 22,
+          "ataques": 1
+        },
+        {
+          "nome": "Necromante Mestre",
+          "ca": 13,
+          "ataque": 6,
+          "dano": "1d8+3",
+          "hp": 55,
+          "ataques": 2,
+          "habilidade": {
+            "nome": "Explosão de Agonia",
+            "save": "DES",
+            "cd": 14,
+            "texto": "Uma onda de energia sombria varre dois alvos de uma vez.",
+            "dano": "3d6",
+            "alvos": 2,
+            "atordoa": 1,
+            "cada": 2
+          }
+        }
+      ]
     }
   ]
 }

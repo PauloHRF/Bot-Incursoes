@@ -10,6 +10,7 @@ grupos de 5, 4, 3 e 2. Não toca no banco nem no bot.
 from __future__ import annotations
 
 import argparse
+import json
 import random
 import statistics
 import sys
@@ -19,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src import classes, motor  # noqa: E402
 from src.rules import tier  # noqa: E402
-from src.incursoes import Monstro, carregar  # noqa: E402
+from src.incursoes import Monstro, carregar, carregar_banco  # noqa: E402
 
 LIMITE_RODADAS = 50
 
@@ -95,7 +96,9 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Simula combates de uma incursão.")
-    parser.add_argument("incursao", type=Path, help="JSON da incursão")
+    parser.add_argument(
+        "incursao", type=Path, help="JSON da incursão, ou o do banco de uma Organização"
+    )
     parser.add_argument("--sala", help="ID da sala de combate (padrão: o objetivo)")
     parser.add_argument("--repeticoes", type=int, default=2000)
     parser.add_argument(
@@ -112,10 +115,26 @@ def main() -> int:
     grupo_monstro.add_argument("--dano-monstro")
     args = parser.parse_args()
 
-    incursao = carregar(args.incursao)
-    sala = incursao.sala(args.sala) if args.sala else incursao.objetivo
+    # Aceita tanto o JSON de uma incursao quanto o banco de salas de uma
+    # Organizacao — as salas de combate do meio do caminho moram no banco.
+    bruto = json.loads(args.incursao.read_text(encoding="utf-8"))
+    if "objetivo" in bruto:
+        conteudo = carregar(args.incursao)
+        titulo = conteudo.nome
+        sala = conteudo.sala(args.sala) if args.sala else conteudo.objetivo
+    else:
+        conteudo = carregar_banco(args.incursao)
+        titulo = f"Banco: {conteudo.organizacao}"
+        if not args.sala:
+            print(
+                "Este JSON e um banco de salas: diga qual com --sala. Salas de combate: "
+                + ", ".join(s.id for s in conteudo.salas if s.e_combate),
+                file=sys.stderr,
+            )
+            return 1
+        sala = conteudo.sala(args.sala)
     if sala is None:
-        print(f"Sala '{args.sala}' não existe nesta incursão.", file=sys.stderr)
+        print(f"Sala '{args.sala}' não existe neste arquivo.", file=sys.stderr)
         return 1
     if not sala.e_combate:
         print(f"A sala '{sala.id}' é do tipo {sala.tipo}, não Combate.", file=sys.stderr)
@@ -129,13 +148,31 @@ def main() -> int:
             ataque=args.ataque_monstro if args.ataque_monstro is not None else base.ataque,
             dano=args.dano_monstro or base.dano,
             hp=args.hp_monstro if args.hp_monstro is not None else base.hp,
+            ataques=base.ataques,
+            saves=dict(base.saves),
+            saves_vantagem=list(base.saves_vantagem),
+            habilidade=base.habilidade,
         )
         for base in sala.monstros
     ]
     rng = random.Random(args.semente)
-    print(f"{incursao.nome} — {sala.nome}")
+    print(f"{titulo} — {sala.nome}")
     for m in monstros:
-        print(f"{m.nome}: CA {m.ca}, ataque {m.ataque:+d}, dano {m.dano}, {m.hp} HP")
+        extras = ""
+        if m.ataques > 1:
+            extras += f", {m.ataques}x por rodada"
+        if m.habilidade:
+            h = m.habilidade
+            alvo = "1 alvo" if h.alvos == 1 else f"{h.alvos} alvos"
+            extras += (
+                f" | {h.nome}: {alvo}, save {h.save} CD {h.cd}"
+                + (f", {h.dano}" if h.dano else "")
+                + (f", atordoa {h.atordoa}" if h.atordoa else "")
+                + f", a cada {h.cada} rodadas"
+            )
+        print(
+            f"{m.nome}: CA {m.ca}, ataque {m.ataque:+d}, dano {m.dano}, {m.hp} HP{extras}"
+        )
     do_grupo = classes.classe(args.classe)
     if do_grupo is None:
         print(f"Classe '{args.classe}' nao existe.", file=sys.stderr)
