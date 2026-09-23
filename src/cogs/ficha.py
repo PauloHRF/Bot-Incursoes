@@ -13,7 +13,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import classes as cl, database as db
+from .. import classes as cl, database as db, retratos
 from ..embeds import url_de_imagem
 from ..rules import (
     ATRIBUTOS,
@@ -842,6 +842,18 @@ class Ficha(commands.Cog):
             aviso = f"🖼️ {interaction.user.mention} deu um rosto a **{escolhido['nome']}**."
         else:
             aviso = f"🖼️ {interaction.user.mention} tirou o retrato de **{escolhido['nome']}**."
+
+        # A ficha mostra o que o Discord consegue buscar; a faixa da incursao
+        # mostra o que ESTE bot consegue baixar. Sao coisas diferentes, entao o
+        # link e testado aqui para ninguem descobrir a diferenca no meio da run.
+        if retrato:
+            deu, motivo = await retratos.diagnosticar(retrato)
+            if not deu:
+                aviso += (
+                    f"\n⚠️ A ficha mostra, mas o bot nao conseguiu baixar a imagem "
+                    f"({motivo}) — na incursao vai aparecer a inicial no lugar. "
+                    f"Um link direto que termine em .png ou .jpg costuma resolver."
+                )
         await interaction.response.send_message(
             aviso, embed=embed_ficha(atualizado, interaction.user)
         )

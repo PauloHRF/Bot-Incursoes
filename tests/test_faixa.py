@@ -206,10 +206,146 @@ async def caso_run_abre_com_o_anexo():
     print("  a run abre com lore, grupo e faixa numa mensagem: ok")
 
 
+class RespostaFalsa:
+    """Uma resposta HTTP de mentira, para testar o download sem rede."""
+
+    def __init__(self, status=200, tipo="image/png", corpo=b"", local=None):
+        self.status = status
+        self.headers = {}
+        if tipo is not None:
+            self.headers["Content-Type"] = tipo
+        if local:
+            self.headers["Location"] = local
+        self.content = self
+        self._corpo = corpo
+
+    async def iter_chunked(self, tamanho):
+        # Em pedacos, como a rede entrega de verdade: e assim que se pega o bug
+        # de montar a imagem com o corpo pela metade.
+        for i in range(0, len(self._corpo), max(1, tamanho)):
+            yield self._corpo[i:i + max(1, tamanho)]
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *erro):
+        return False
+
+
+class SessaoFalsa:
+    """Devolve uma resposta por URL e anota os cabecalhos que o bot mandou."""
+
+    def __init__(self, por_url):
+        self.por_url = por_url
+        self.pedidos = []
+
+    def get(self, url, headers=None, allow_redirects=True):
+        self.pedidos.append((url, headers or {}))
+        return self.por_url[url]
+
+
+async def buscar(por_url, url, pedaco=7):
+    loop = asyncio.get_running_loop()
+    retratos.PEDACO = pedaco  # pedacos minusculos: o corpo chega picado
+    sessao = SessaoFalsa(por_url)
+    dados, motivo = await retratos._buscar(sessao, loop, url)
+    return dados, motivo, sessao
+
+
+async def caso_download_aceita_o_que_o_discord_aceita():
+    """A ficha mostra o que o Discord baixa; a faixa, o que o bot baixa."""
+    publico = retratos.endereco_publico
+    retratos.endereco_publico = lambda url: True  # a rede nao entra no teste
+    try:
+        imagem = png()
+
+        # caminho feliz, e com o User-Agent de navegador
+        dados, motivo, sessao = await buscar(
+            {LINK: RespostaFalsa(corpo=imagem)}, LINK
+        )
+        assert dados == imagem and motivo == "ok"
+        assert "Mozilla" in sessao.pedidos[0][1]["User-Agent"], "sem UA muito site da 403"
+
+        # Content-Type generico: quem decide e a Pillow, nao o cabecalho
+        dados, motivo, _ = await buscar(
+            {LINK: RespostaFalsa(tipo="application/octet-stream", corpo=imagem)}, LINK
+        )
+        assert dados == imagem, motivo
+        dados, motivo, _ = await buscar({LINK: RespostaFalsa(tipo=None, corpo=imagem)}, LINK)
+        assert dados == imagem, motivo
+
+        # pagina HTML (o caso do link de galeria) e recusada, com motivo
+        dados, motivo, _ = await buscar(
+            {LINK: RespostaFalsa(tipo="text/html", corpo=b"<html>")}, LINK
+        )
+        assert dados is None and "text/html" in motivo, motivo
+
+        # bytes que nao sao imagem, mesmo com Content-Type mentindo
+        dados, motivo, _ = await buscar(
+            {LINK: RespostaFalsa(corpo=b"nem de longe um png")}, LINK
+        )
+        assert dados is None and "abre como imagem" in motivo, motivo
+
+        # bloqueio do site, o caso mais comum de "aparece na ficha e nao na run"
+        dados, motivo, _ = await buscar({LINK: RespostaFalsa(status=403)}, LINK)
+        assert dados is None and "403" in motivo, motivo
+
+        # grande demais
+        dados, motivo, _ = await buscar(
+            {LINK: RespostaFalsa(corpo=b"x" * (retratos.MAX_BYTES + 1))}, LINK
+        )
+        assert dados is None and "MB" in motivo, motivo
+        print("  o download aceita octet-stream e explica cada recusa: ok")
+    finally:
+        retratos.endereco_publico = publico
+
+
+async def caso_redirecionamento_passa_pela_mesma_checagem():
+    """Seguir redirect na mao e o que impede um link publico de cair na rede interna."""
+    imagem = png()
+    destino = "https://outro.invalid/retrato.png"
+    interno = "http://169.254.169.254/x.png"
+
+    publico = retratos.endereco_publico
+    retratos.endereco_publico = lambda url: not url.startswith("http://169.254")
+    try:
+        # redirect normal chega na imagem
+        dados, motivo, sessao = await buscar(
+            {
+                LINK: RespostaFalsa(status=302, tipo=None, local=destino),
+                destino: RespostaFalsa(corpo=imagem),
+            },
+            LINK,
+        )
+        assert dados == imagem, motivo
+        assert [u for u, _ in sessao.pedidos] == [LINK, destino]
+
+        # redirect para a rede interna morre na checagem
+        dados, motivo, _ = await buscar(
+            {
+                LINK: RespostaFalsa(status=302, tipo=None, local=interno),
+                interno: RespostaFalsa(corpo=b"segredo"),
+            },
+            LINK,
+        )
+        assert dados is None and "público" in motivo, motivo
+
+        # e um la-e-ca infinito para em algum momento
+        dados, motivo, _ = await buscar(
+            {LINK: RespostaFalsa(status=302, tipo=None, local=LINK)}, LINK
+        )
+        assert dados is None and "redirecionamento" in motivo, motivo
+        print("  cada salto do redirect passa pela checagem de endereco: ok")
+    finally:
+        retratos.endereco_publico = publico
+
+
 async def main():
     try:
         caso_montagem_lado_a_lado()
         caso_link_para_rede_interna_e_recusado()
+        await caso_download_aceita_o_que_o_discord_aceita()
+        await caso_redirecionamento_passa_pela_mesma_checagem()
         await caso_abertura_com_um_embed_e_uma_imagem()
         await caso_sem_retrato_e_sem_pillow()
         await caso_run_abre_com_o_anexo()

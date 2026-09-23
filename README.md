@@ -273,6 +273,14 @@ A faixa é montada pelo bot com Pillow (`pip install -r requirements.txt`): ele 
 retratos na hora de começar, recorta cada um em quadrado e escreve o nome embaixo. Quem não
 tem retrato entra com a inicial. Sem Pillow instalada, ou se nenhum link carregar, a run abre
 igual — só sem a faixa.
+
+**A ficha e a faixa buscam a imagem por caminhos diferentes**, e é por isso que um link pode
+funcionar numa e não na outra: em `/ficha ver` quem busca é o Discord, e na faixa é o próprio
+bot. Por isso o download manda User-Agent de navegador (sem ele muito site responde 403),
+aceita `application/octet-stream` (quem valida de verdade é a Pillow, abrindo os bytes) e
+segue redirecionamento na mão, checando cada salto — um link público não pode saltar para a
+rede interna de quem hospeda. `/ficha imagem` testa o link na hora e avisa, com o motivo, se
+o bot não conseguir baixá-lo.
 Os comandos de ficha aceitam o nome no campo `personagem`, com autocompletar; quem só tem
 um personagem pode omitir. Dois personagens do mesmo jogador não podem ter o mesmo nome.
 
