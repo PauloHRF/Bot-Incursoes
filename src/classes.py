@@ -22,7 +22,7 @@ from .habilidades import (
     juntar,
     juntar_efeito,
 )
-from .rules import TIER_MAXIMO, chave_comparacao, tier
+from .rules import ATRIBUTOS, TIER_MAXIMO, chave_comparacao, mod_save, tier
 
 # As 14 classes do grupo. Só as que têm tabela aqui podem ser escolhidas; as
 # outras aparecem como "ainda não disponível" em vez de sumirem da lista.
@@ -42,6 +42,31 @@ CLASSES_PREVISTAS = (
     "Xamã",
     "Ladino",
 )
+
+
+# Os dois saves fortes de cada classe (documento "Saves").
+#
+# O documento não pede tabela nova: os valores dele são, tier a tier, os mesmos
+# bônus que a classe já tem para perícia — o save forte usa o bônus de
+# proficiência e o fraco usa o de perícia sem proficiência. Então a única coisa
+# que muda por classe é quais dois atributos são fortes, e é só isso que fica
+# aqui. Classes ainda sem tabela de números entram na lista porque o documento
+# já as traz; Bardo, Bruxo e Xamã ainda não têm save definido — quem não está
+# aqui fica fraco em tudo até o documento dizer o contrário.
+SAVES_FORTES: dict[str, tuple[str, str]] = {
+    "ladino": ("DES", "INT"),
+    "barbaro": ("FOR", "CON"),
+    "guerreiro": ("FOR", "CON"),
+    "monge": ("FOR", "DES"),
+    "patrulheiro": ("DES", "CON"),
+    "paladino": ("FOR", "SAB"),
+    # Ainda sem tabela de números, mas já com os saves do documento:
+    "mago": ("CON", "INT"),
+    "clerigo": ("CON", "SAB"),
+    "druida": ("CON", "SAB"),
+    "feiticeiro": ("DES", "CON"),
+    "artifice": ("FOR", "CON"),
+}
 
 
 @dataclass(frozen=True)
@@ -64,6 +89,8 @@ class Classe:
     resumo: str
     tiers: dict[int, NumerosDoTier]
     habilidades: dict[int, list[Habilidade]] = field(default_factory=dict)
+    # Os dois atributos em que a classe resiste melhor; vazio = fraca em tudo.
+    saves: tuple[str, ...] = ()
 
     def numeros(self, nivel: int) -> NumerosDoTier:
         """Os números da classe no nível pedido, pelo tier correspondente."""
@@ -83,8 +110,9 @@ class Classe:
 
 __all__ = [
     "ATIVA", "CLASSES", "CLASSES_PENDENTES", "CLASSES_PREVISTAS", "Classe",
-    "ESCOLHA", "Habilidade", "NumerosDoTier", "PASSIVA", "classe", "efeitos",
-    "habilidades", "numeros", "tier_maximo_com_tabela",
+    "ESCOLHA", "Habilidade", "NumerosDoTier", "PASSIVA", "SAVES_FORTES",
+    "classe", "efeitos", "habilidades", "numeros", "saves", "saves_fortes",
+    "tier_maximo_com_tabela",
 ]
 
 
@@ -187,6 +215,10 @@ CLASSES: dict[str, Classe] = {
 for _id, _tabela_hab in HABILIDADES.items():
     object.__setattr__(CLASSES[_id], "habilidades", _tabela_hab)
 
+for _id, _fortes in SAVES_FORTES.items():
+    if _id in CLASSES:
+        object.__setattr__(CLASSES[_id], "saves", tuple(_fortes))
+
 CLASSES_PENDENTES = tuple(
     nome
     for nome in CLASSES_PREVISTAS
@@ -215,6 +247,28 @@ def habilidades(identificador: Optional[str], nivel: int) -> list[tuple[int, Hab
     """As habilidades que o personagem já tem, com o tier de cada uma."""
     alvo = classe(identificador)
     return alvo.habilidades_ate(nivel) if alvo else []
+
+
+def saves_fortes(identificador: Optional[str]) -> tuple[str, ...]:
+    """Os dois atributos em que a classe resiste melhor. Vazio = fraca em tudo."""
+    alvo = classe(identificador)
+    if alvo is not None:
+        return alvo.saves
+    return tuple(SAVES_FORTES.get(chave_comparacao(str(identificador or "")), ()))
+
+
+def saves(
+    identificador: Optional[str], nivel: int, efeitos_ligados: Optional[dict] = None
+) -> dict[str, int]:
+    """O modificador de cada save do personagem naquele nível."""
+    tabela = numeros(identificador, nivel)
+    if tabela is None:
+        return {}
+    fortes = saves_fortes(identificador)
+    return {
+        atributo: mod_save(atributo, tabela, fortes, efeitos_ligados)
+        for atributo in ATRIBUTOS
+    }
 
 
 def efeitos(

@@ -414,6 +414,9 @@ def _desserializar(row: aiosqlite.Row) -> dict[str, Any]:
         p["dano_arma"] = numeros.dano
         p["hp_max"] = numeros.hp
         p["pericias_permitidas"] = numeros.pericias
+        # Saves: derivados como o resto, para nao envelhecerem no banco.
+        p["saves_fortes"] = classes.saves_fortes(p["classe"])
+        p["saves"] = classes.saves(p["classe"], p["nivel"], efeitos)
     return p
 
 

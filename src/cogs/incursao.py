@@ -1019,6 +1019,7 @@ class Incursoes(commands.Cog):
                     critico_em=efeitos.get("critico_em", 20),
                     dano_extra=efeitos.get("dano_extra", 0),
                     dano_ferido=efeitos.get("dano_ferido", 0),
+                    saves=p.get("saves") or {},
                 )
             )
         for ligado in efeitos_ligados or []:

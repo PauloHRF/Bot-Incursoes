@@ -4,6 +4,8 @@
 
     bonus_teste    soma em todo teste de perícia
     bonus_pericia  soma nas perícias listadas
+    bonus_save     soma em todo teste de resistência
+    bonus_save_atributo  soma nos saves dos atributos listados
     dano_extra     soma no dano de cada golpe
     dano_ferido    soma só contra alvo com metade ou menos do HP
     critico_em     o menor d20 que já é crítico
@@ -292,6 +294,8 @@ NEUTRO: dict = {
     "sequencia": {},
     "bonus_teste": 0,
     "bonus_pericia": {},
+    "bonus_save": 0,
+    "bonus_save_atributo": {},
     "dano_extra": 0,
     "dano_ferido": 0,
     "critico_em": 20,
@@ -302,10 +306,10 @@ NEUTRO: dict = {
 def juntar_efeito(juntos: dict, efeito: dict) -> None:
     """Soma um efeito no acumulado, respeitando a regra de cada chave."""
     for chave, valor in (efeito or {}).items():
-        if chave == "bonus_pericia":
-            for pericia, bonus in valor.items():
-                atual = juntos["bonus_pericia"].get(pericia, 0)
-                juntos["bonus_pericia"][pericia] = max(atual, bonus)
+        if chave in ("bonus_pericia", "bonus_save_atributo"):
+            for nome, bonus in valor.items():
+                atual = juntos[chave].get(nome, 0)
+                juntos[chave][nome] = max(atual, bonus)
         elif chave == "expertise":
             juntos["expertise"] = sorted(set(juntos["expertise"]) | set(valor))
         elif chave == "sequencia":

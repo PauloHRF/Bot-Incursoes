@@ -122,6 +122,26 @@ def mod_pericia(
     return total
 
 
+def mod_save(
+    atributo: str,
+    numeros,
+    fortes: tuple[str, ...] | list[str] | None,
+    efeitos: dict | None = None,
+) -> int:
+    """Modificador de um teste de resistência (saving throw).
+
+    Não há tabela nova: um save forte usa o mesmo bônus de uma perícia com
+    proficiência e um save fraco usa o de uma perícia sem — são exatamente os
+    números do documento. O que muda por classe é só quais dois são fortes.
+    """
+    forte = atributo in (fortes or ())
+    total = numeros.bonus_proficiencia if forte else numeros.bonus_pericia
+    if efeitos:
+        total += efeitos.get("bonus_save", 0)
+        total += (efeitos.get("bonus_save_atributo") or {}).get(atributo, 0)
+    return total
+
+
 def melhor_pericia(
     opcoes: list[str],
     numeros,

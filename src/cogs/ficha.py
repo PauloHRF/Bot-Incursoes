@@ -15,7 +15,7 @@ from discord.ext import commands
 
 from .. import classes as cl, database as db
 from ..embeds import url_de_imagem
-from ..rules import NIVEL_MAXIMO, PERICIAS, fmt, mod_pericia, tier
+from ..rules import ATRIBUTOS, NIVEL_MAXIMO, PERICIAS, fmt, mod_pericia, tier
 
 LIMITE_PERSONAGENS = 25  # o seletor do Discord nao mostra mais que isso
 
@@ -165,6 +165,8 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         ),
         inline=False,
     )
+    _campo_saves(e, personagem)
+
     if treinadas:
         efeitos = personagem.get("efeitos")
         linhas = [
@@ -199,6 +201,22 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
     if retrato:
         e.set_thumbnail(url=retrato)
     return _rodape_da_ficha(e, numeros, nivel)
+
+
+def _campo_saves(e: discord.Embed, personagem: dict[str, Any]) -> None:
+    """As resistencias, com os dois fortes da classe em negrito."""
+    saves = personagem.get("saves") or {}
+    if not saves:
+        return
+    fortes = set(personagem.get("saves_fortes") or ())
+    linhas = []
+    for atributo in ATRIBUTOS:
+        valor = fmt(saves[atributo])
+        linhas.append(
+            f"{atributo} **{valor}**" if atributo in fortes else f"{atributo} {valor}"
+        )
+    nome = "Resistencias" if fortes else "Resistencias (fortes a definir)"
+    e.add_field(name=nome, value=" | ".join(linhas), inline=False)
 
 
 ICONE_HABILIDADE = {cl.PASSIVA: "⚙️", cl.ATIVA: "⚡", cl.ESCOLHA: "❓"}

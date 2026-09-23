@@ -243,6 +243,8 @@ class Combatente:
     # Marca do Cacador e afins: valem so contra aquele inimigo.
     dano_por_alvo: dict = field(default_factory=dict)
     vantagem_contra: set = field(default_factory=set)
+    # Resistencias: {atributo: modificador}, ja com os saves fortes da classe.
+    saves: dict = field(default_factory=dict)
 
     @property
     def ca_efetiva(self) -> int:
@@ -370,10 +372,24 @@ class Inimigo:
     hp_atual: int
     # Perde a vez na proxima rodada: Stunning Strike e afins.
     atordoado: bool = False
+    # Resistencias da criatura: {atributo: modificador}. O que nao vier aqui
+    # cai no padrao de DEFASAGEM_DE_SAVE.
+    saves: dict = field(default_factory=dict)
 
     @property
     def caido(self) -> bool:
         return self.hp_atual <= 0
+
+    def save(self, atributo: str) -> int:
+        """O modificador de resistência desta criatura naquele atributo.
+
+        Enquanto o banco de criaturas não trouxer os saves, a criatura resiste
+        com o próprio bônus de ataque menos uma defasagem — é um número
+        provisório, que some assim que a planilha tiver a coluna.
+        """
+        if atributo in self.saves:
+            return self.saves[atributo]
+        return self.ataque - DEFASAGEM_DE_SAVE
 
 
 @dataclass
@@ -436,6 +452,68 @@ class EstadoCombate:
 def esta_ferido(inimigo: Inimigo) -> bool:
     """Metade ou menos do HP — o gatilho do Predador."""
     return inimigo.hp_atual * 2 <= inimigo.hp_max
+
+
+# Quanto uma criatura sem save na planilha fica abaixo do próprio bônus de ataque.
+DEFASAGEM_DE_SAVE = 3
+
+
+@dataclass
+class ResultadoSave:
+    """Um teste de resistência: d20 + modificador contra a CD de quem forçou."""
+
+    quem: str
+    atributo: str
+    d20: int
+    modificador: int
+    cd: int
+
+    @property
+    def total(self) -> int:
+        return self.d20 + self.modificador
+
+    @property
+    def passou(self) -> bool:
+        # Diferente do ataque, um 1 ou um 20 natural não decidem nada sozinhos:
+        # o save é só o total contra a CD.
+        return self.total >= self.cd
+
+
+def salvar(
+    quem: str,
+    atributo: str,
+    modificador: int,
+    cd: int,
+    rng: Optional[random.Random] = None,
+    vantagem: bool = False,
+) -> ResultadoSave:
+    """A rolagem crua, para quem já sabe o modificador."""
+    return ResultadoSave(quem, atributo, rolar_d20(rng, vantagem), modificador, cd)
+
+
+def salvar_combatente(
+    combatente: Combatente,
+    atributo: str,
+    cd: int,
+    rng: Optional[random.Random] = None,
+    vantagem: bool = False,
+) -> ResultadoSave:
+    """O save de um personagem. Quem não tem o atributo na ficha resiste com 0."""
+    modificador = (combatente.saves or {}).get(atributo, 0)
+    return salvar(
+        combatente.nome, atributo, modificador, cd, rng, vantagem or combatente.vantagem
+    )
+
+
+def salvar_inimigo(
+    inimigo: Inimigo,
+    atributo: str,
+    cd: int,
+    rng: Optional[random.Random] = None,
+    vantagem: bool = False,
+) -> ResultadoSave:
+    """O save de uma criatura, pela planilha dela ou pelo padrão provisório."""
+    return salvar(inimigo.nome, atributo, inimigo.save(atributo), cd, rng, vantagem)
 
 
 def atacar_inimigo(
