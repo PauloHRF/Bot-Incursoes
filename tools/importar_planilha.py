@@ -21,7 +21,12 @@ from typing import Any
 from openpyxl import load_workbook
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.incursoes import ErroDeValidacao, de_dict  # noqa: E402
+from src.incursoes import (  # noqa: E402
+    CAMPOS_DE_CRIATURA,
+    ErroDeValidacao,
+    criatura_de_colunas,
+    de_dict,
+)
 from src.rules import chave_comparacao  # noqa: E402
 
 CAMPOS_META = (
@@ -32,7 +37,7 @@ CAMPOS_OBJETIVO = (
     "sala_id", "nome", "tipo", "descricao", "imagem", "monstro_nome",
     "monstro_quantidade", "monstro_ca", "monstro_ataque", "monstro_dano", "monstro_hp",
     "recompensa", "pontos_organizacao",
-)
+) + tuple(f"monstro_{campo}" for campo in CAMPOS_DE_CRIATURA)
 COLUNAS_MONSTROS = ("nome", "quantidade", "ca", "ataque", "dano", "hp")
 
 
@@ -77,22 +82,19 @@ def _escolta(wb) -> list[dict[str, Any]]:
         raise ErroDePlanilha(
             f"A aba 'Monstros' esta sem a(s) coluna(s): {', '.join(faltando)}."
         )
-    indices = {nome: cabecalho.index(nome) for nome in COLUNAS_MONSTROS}
+    nomes = COLUNAS_MONSTROS + CAMPOS_DE_CRIATURA
+    indices = {nome: cabecalho.index(nome) for nome in nomes if nome in cabecalho}
     criaturas = []
     for linha in ws.iter_rows(min_row=2):
-        nome = _texto(linha[indices["nome"]].value)
-        if not nome:
+        def valor(nome: str):
+            indice = indices.get(nome)
+            if indice is None or indice >= len(linha):
+                return None  # coluna nova que esta planilha ainda nao tem
+            return linha[indice].value
+
+        if not _texto(valor("nome")):
             continue
-        criaturas.append(
-            {
-                "nome": nome,
-                "quantidade": linha[indices["quantidade"]].value,
-                "ca": linha[indices["ca"]].value,
-                "ataque": linha[indices["ataque"]].value,
-                "dano": _texto(linha[indices["dano"]].value),
-                "hp": linha[indices["hp"]].value,
-            }
-        )
+        criaturas.append(criatura_de_colunas(valor))
     return criaturas
 
 
@@ -124,16 +126,7 @@ def importar(planilha: Path, saida: Path) -> Path:
     }
     objetivo["monstros"] = []
     if _texto(bruto.get("monstro_nome")):
-        objetivo["monstros"].append(
-            {
-                "nome": _texto(bruto.get("monstro_nome")),
-                "quantidade": bruto.get("monstro_quantidade"),
-                "ca": bruto.get("monstro_ca"),
-                "ataque": bruto.get("monstro_ataque"),
-                "dano": _texto(bruto.get("monstro_dano")),
-                "hp": bruto.get("monstro_hp"),
-            }
-        )
+        objetivo["monstros"].append(criatura_de_colunas(bruto.get, "monstro_"))
     objetivo["monstros"].extend(_escolta(wb))
 
     dados = {

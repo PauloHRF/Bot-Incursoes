@@ -92,10 +92,10 @@ def caso_atordoado_perde_a_vez():
         motor.Inimigo(1, "Dois", 10, 40, "1d1", 50, 50),
     ]
     estado = motor.EstadoCombate(inimigos, 1, grupo)
-    assert len(motor.rodada_dos_inimigos(estado, None)) == 2
+    assert len(motor.rodada_dos_inimigos(estado, None).golpes) == 2
 
     inimigos[0].atordoado = True
-    golpes = motor.rodada_dos_inimigos(estado, None)
+    golpes = motor.rodada_dos_inimigos(estado, None).golpes
     assert len(golpes) == 1 and golpes[0][0].atacante == "Dois"
     print("  inimigo atordoado perde a vez: ok")
 

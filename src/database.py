@@ -8,6 +8,7 @@ from typing import Any, Optional
 import aiosqlite
 
 from . import config
+from .incursoes import HabilidadeDoMonstro
 from .rules import normalizar_lista_pericias, normalizar_pericia
 
 # sigla do atributo -> coluna no banco
@@ -132,6 +133,11 @@ CREATE TABLE IF NOT EXISTS run_inimigos (
     dano     TEXT    NOT NULL,
     hp_max   INTEGER NOT NULL,
     hp_atual INTEGER NOT NULL,
+    ataques  INTEGER NOT NULL DEFAULT 1,
+    -- Resistencias e acao especial da criatura, como vieram do conteudo.
+    saves    TEXT    NOT NULL DEFAULT '{}',
+    saves_vantagem TEXT NOT NULL DEFAULT '[]',
+    habilidade     TEXT,
     PRIMARY KEY (run_id, passo, indice)
 );
 
@@ -351,6 +357,21 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
             " FROM run_ataques_v1"
         )
         await conn.execute("DROP TABLE run_ataques_v1")
+
+    # Criaturas ganharam multiataque, saves e acao especial. Combate em
+    # andamento continua: o que falta entra com o valor neutro.
+    if await _tabela_existe(conn, "run_inimigos"):
+        colunas_inimigos = await _colunas(conn, "run_inimigos")
+        for coluna, definicao in (
+            ("ataques", "INTEGER NOT NULL DEFAULT 1"),
+            ("saves", "TEXT NOT NULL DEFAULT '{}'"),
+            ("saves_vantagem", "TEXT NOT NULL DEFAULT '[]'"),
+            ("habilidade", "TEXT"),
+        ):
+            if coluna not in colunas_inimigos:
+                await conn.execute(
+                    f"ALTER TABLE run_inimigos ADD COLUMN {coluna} {definicao}"
+                )
 
     if faltava_run_salas:
         # Runs em andamento nao guardavam por onde o grupo passou. Reconstroi o
@@ -875,10 +896,19 @@ async def iniciar_combate(
         )
     await conn.executemany(
         "INSERT OR IGNORE INTO run_inimigos"
-        " (run_id, passo, indice, nome, ca, ataque, dano, hp_max, hp_atual)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " (run_id, passo, indice, nome, ca, ataque, dano, hp_max, hp_atual,"
+        "  ataques, saves, saves_vantagem, habilidade)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
-            (run_id, passo, i, m.nome, m.ca, m.ataque, m.dano, m.hp, m.hp)
+            (
+                run_id, passo, i, m.nome, m.ca, m.ataque, m.dano, m.hp, m.hp,
+                getattr(m, "ataques", 1),
+                json.dumps(getattr(m, "saves", None) or {}, ensure_ascii=False),
+                json.dumps(getattr(m, "saves_vantagem", None) or [], ensure_ascii=False),
+                json.dumps(m.habilidade.para_dict(), ensure_ascii=False)
+                if getattr(m, "habilidade", None)
+                else None,
+            )
             for i, m in enumerate(inimigos)
         ],
     )
@@ -892,7 +922,15 @@ async def inimigos_do_combate(
         "SELECT * FROM run_inimigos WHERE run_id = ? AND passo = ? ORDER BY indice",
         (run_id, passo),
     ) as cur:
-        return [dict(r) for r in await cur.fetchall()]
+        linhas = [dict(r) for r in await cur.fetchall()]
+    for linha in linhas:
+        linha["saves"] = json.loads(linha.get("saves") or "{}")
+        linha["saves_vantagem"] = json.loads(linha.get("saves_vantagem") or "[]")
+        bruto = linha.get("habilidade")
+        linha["habilidade"] = (
+            HabilidadeDoMonstro(**json.loads(bruto)) if bruto else None
+        )
+    return linhas
 
 
 async def definir_hp_inimigos(

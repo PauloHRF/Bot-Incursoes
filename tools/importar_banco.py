@@ -17,8 +17,10 @@ from openpyxl import load_workbook
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.incursoes import (  # noqa: E402
     ErroDeValidacao,
+    CAMPOS_DE_CRIATURA,
     arquivo_da_organizacao,
     banco_de_dict,
+    criatura_de_colunas,
 )
 from src.rules import chave_comparacao  # noqa: E402
 
@@ -28,6 +30,10 @@ COLUNAS = (
     "monstro_ataque", "monstro_dano", "monstro_hp", "recompensa", "pontos_organizacao",
 )
 COLUNAS_MONSTROS = ("sala_id", "nome", "quantidade", "ca", "ataque", "dano", "hp")
+
+# As colunas novas das criaturas (multiataque, resistencias, acao especial) sao
+# opcionais de proposito: uma planilha feita antes delas continua importando.
+CAMPOS_EXTRA_MONSTRO = CAMPOS_DE_CRIATURA
 
 
 class ErroDePlanilha(Exception):
@@ -83,11 +89,17 @@ def ler_salas(wb, dificuldades) -> list[dict[str, Any]]:
             f"A aba 'Salas' esta sem uma coluna obrigatoria ({exc}). "
             "Regenere o modelo com tools/gerar_modelo_banco.py e compare os cabecalhos."
         ) from exc
+    for extra in CAMPOS_EXTRA_MONSTRO:
+        nome = f"monstro_{extra}"
+        if chave_comparacao(nome) in cabecalho:
+            col[nome] = cabecalho.index(chave_comparacao(nome))
 
     salas = []
     for numero, celulas in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         def valor(nome):
-            indice = col[nome]
+            indice = col.get(nome)
+            if indice is None:
+                return None  # coluna nova que esta planilha ainda nao tem
             return celulas[indice] if indice < len(celulas) else None
 
         sala_id = _texto(valor("sala_id"))
@@ -125,16 +137,7 @@ def ler_salas(wb, dificuldades) -> list[dict[str, Any]]:
         }
         sala["monstros"] = []
         if _texto(valor("monstro_nome")):
-            sala["monstros"].append(
-                {
-                    "nome": _texto(valor("monstro_nome")),
-                    "quantidade": valor("monstro_quantidade"),
-                    "ca": valor("monstro_ca"),
-                    "ataque": valor("monstro_ataque"),
-                    "dano": _texto(valor("monstro_dano")),
-                    "hp": valor("monstro_hp"),
-                }
-            )
+            sala["monstros"].append(criatura_de_colunas(valor, "monstro_"))
         salas.append(sala)
     return salas
 
@@ -149,7 +152,8 @@ def _monstros_extras(wb) -> dict[str, list[dict[str, Any]]]:
     except ErroDePlanilha:
         return {}
     cabecalho = [_texto(c.value) for c in ws[1]]
-    indices = {nome: cabecalho.index(nome) for nome in COLUNAS_MONSTROS if nome in cabecalho}
+    nomes = COLUNAS_MONSTROS + CAMPOS_EXTRA_MONSTRO
+    indices = {nome: cabecalho.index(nome) for nome in nomes if nome in cabecalho}
     faltando = [c for c in COLUNAS_MONSTROS if c not in indices]
     if faltando:
         raise ErroDePlanilha(
@@ -158,8 +162,10 @@ def _monstros_extras(wb) -> dict[str, list[dict[str, Any]]]:
     por_sala: dict[str, list[dict[str, Any]]] = {}
     for linha in ws.iter_rows(min_row=2):
         def valor(nome: str):
-            celula = linha[indices[nome]]
-            return celula.value
+            indice = indices.get(nome)
+            if indice is None or indice >= len(linha):
+                return None  # coluna nova que esta planilha ainda nao tem
+            return linha[indice].value
 
         sala_id = _texto(valor("sala_id"))
         nome = _texto(valor("nome"))
@@ -167,16 +173,7 @@ def _monstros_extras(wb) -> dict[str, list[dict[str, Any]]]:
             continue
         if not sala_id:
             raise ErroDePlanilha(f"A aba 'Monstros' tem a criatura '{nome}' sem sala_id.")
-        por_sala.setdefault(sala_id, []).append(
-            {
-                "nome": nome,
-                "quantidade": valor("quantidade"),
-                "ca": valor("ca"),
-                "ataque": valor("ataque"),
-                "dano": _texto(valor("dano")),
-                "hp": valor("hp"),
-            }
-        )
+        por_sala.setdefault(sala_id, []).append(criatura_de_colunas(valor))
     return por_sala
 
 

@@ -133,20 +133,20 @@ def caso_dano_vai_so_para_o_alvo():
 def caso_vez_dos_inimigos():
     """Cada inimigo de pé bate uma vez por rodada — é isso que faz um bando pesar."""
     estado = motor.EstadoCombate(inimigos(4, ataque=40, dano="1d4"), 1, grupo(3, hp=200))
-    golpes = motor.rodada_dos_inimigos(estado, random.Random(3))
+    golpes = motor.rodada_dos_inimigos(estado, random.Random(3)).golpes
     assert len(golpes) == 4, "quatro criaturas, quatro ataques"
     assert all(alvo in estado.combatentes for _, alvo in golpes)
 
     # quem já caiu não ataca
     estado.inimigos[0].hp_atual = 0
     estado.inimigos[3].hp_atual = 0
-    assert len(motor.rodada_dos_inimigos(estado, random.Random(3))) == 2
+    assert len(motor.rodada_dos_inimigos(estado, random.Random(3)).golpes) == 2
 
     # e ninguém bate no grupo inteiro caído
     forte = motor.EstadoCombate(
         inimigos(5, ataque=40, dano="1d4+900"), 1, grupo(1, hp=5)
     )
-    golpes = motor.rodada_dos_inimigos(forte, random.Random(1))
+    golpes = motor.rodada_dos_inimigos(forte, random.Random(1)).golpes
     assert forte.grupo_caido
     assert len(golpes) < 5, "para de bater quando não sobra ninguém de pé"
     print("  cada inimigo de pé revida uma vez: ok")

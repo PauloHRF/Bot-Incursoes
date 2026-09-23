@@ -67,6 +67,18 @@ CABECALHO_MONSTROS = (
     ("ataque", 10, "Bonus de ataque (ex.: 5)."),
     ("dano", 12, "Dado de dano (ex.: 1d8+2)."),
     ("hp", 8, "Pontos de vida de cada uma."),
+    ("ataques", 9, "Golpes por rodada (multiataque). Vazio ou 1 = um."),
+    ("saves", 22, "Resistencias: 'FOR +5, CON +5'. O que faltar o bot deduz do ataque."),
+    ("saves_vantagem", 16, "Atributos em que ela resiste com vantagem: 'FOR, CON'."),
+    ("habilidade", 20, "Nome da acao especial. Vazio = a criatura so ataca."),
+    ("habilidade_texto", 40, "Descricao mostrada ao grupo. Opcional."),
+    ("habilidade_save", 14, "Atributo que os alvos rolam: FOR, DES, CON, INT, SAB ou CAR."),
+    ("habilidade_cd", 13, "CD do teste de resistencia (ex.: 13)."),
+    ("habilidade_dano", 14, "Dano de quem falhar (ex.: 3d6). Vazio = so o efeito."),
+    ("habilidade_alvos", 15, "Quantos personagens ela pega de uma vez. Vazio = 1."),
+    ("habilidade_atordoa", 17, "Rodadas de atordoamento em quem falhar. Vazio ou 0 = nenhuma."),
+    ("habilidade_cada", 14, "De quantas em quantas rodadas ela usa. Vazio = 2"
+     " (rodadas 2, 4, 6...). Na rodada que usa, ela nao ataca."),
 )
 
 # A escolta do chefe, na aba 'Monstros'.
@@ -88,6 +100,19 @@ OBJETIVO = [
     ("monstro_ataque", 7, "Bônus de ataque do chefe."),
     ("monstro_dano", "2d8+4", "Dado de dano do chefe (ex.: 2d8+4)."),
     ("monstro_hp", 58, "HP do chefe. Calibre com tools/simular_combate.py."),
+    ("monstro_ataques", 1, "Golpes por rodada do chefe (multiataque). Vazio ou 1 = um."),
+    ("monstro_saves", "", "Resistencias do chefe: 'FOR +5, CON +5'. Vazio = o bot deduz "
+     "do bonus de ataque dele."),
+    ("monstro_saves_vantagem", "", "Atributos em que o chefe resiste com vantagem: 'FOR, CON'."),
+    ("monstro_habilidade", "", "Nome da acao especial do chefe. Vazio = ele so ataca."),
+    ("monstro_habilidade_texto", "", "Descricao da acao, mostrada ao grupo. Opcional."),
+    ("monstro_habilidade_save", "", "Atributo que os alvos rolam: FOR, DES, CON, INT, SAB ou CAR."),
+    ("monstro_habilidade_cd", "", "CD do teste de resistencia (ex.: 14)."),
+    ("monstro_habilidade_dano", "", "Dano de quem falhar (ex.: 3d6). Vazio = so o efeito."),
+    ("monstro_habilidade_alvos", "", "Quantos personagens a acao pega de uma vez. Vazio = 1."),
+    ("monstro_habilidade_atordoa", "", "Rodadas de atordoamento em quem falhar. Vazio = nenhuma."),
+    ("monstro_habilidade_cada", "", "De quantas em quantas rodadas o chefe usa. Vazio = 2 "
+     "(rodadas 2, 4, 6...). Na rodada que usa, ele nao ataca."),
     ("recompensa", "10 MEs por participante + pontos com o Vórtice Oculto", "Texto da recompensa."),
     ("pontos_organizacao", 0, "Pontos extras da sala final, além de pontos_conclusao."),
 ]

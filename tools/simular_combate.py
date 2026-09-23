@@ -28,14 +28,20 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
     """Uma sala inteira: o grupo foca o primeiro de pé, e cada inimigo revida."""
     estado = motor.EstadoCombate(
         [
-            motor.Inimigo(i, m.nome, m.ca, m.ataque, m.dano, m.hp, m.hp)
+            motor.Inimigo(
+                i, m.nome, m.ca, m.ataque, m.dano, m.hp, m.hp,
+                ataques=m.ataques,
+                saves=dict(m.saves),
+                saves_vantagem=list(m.saves_vantagem),
+                habilidade=m.habilidade,
+            )
             for i, m in enumerate(monstros)
         ],
         1,
         grupo,
     )
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
-        for c in list(estado.vivos):
+        for c in list(estado.ativos):
             for _ in range(max(1, c.ataques)):
                 alvo = estado.alvo_preferido()
                 if alvo is None:
@@ -43,8 +49,13 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
                 motor.atacar_inimigo(c, alvo, rng)
         if estado.inimigos_derrotados:
             break
-        motor.rodada_dos_inimigos(estado, rng)
+        vez = motor.rodada_dos_inimigos(estado, rng)
         estado.rodada += 1
+        # O atordoamento dura uma rodada: quem acabou de ser preso perde a
+        # proxima, e quem ja tinha perdido volta a agir.
+        presos = {i.alvo.user_id for i in vez.investidas if i.atordoou}
+        for c in estado.combatentes:
+            c.atordoado = c.user_id in presos
     return estado
 
 
@@ -66,6 +77,7 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
                 critico_em=efeitos["critico_em"],
                 dano_extra=efeitos["dano_extra"],
                 dano_ferido=efeitos["dano_ferido"],
+                saves=classes.saves(args.classe, args.nivel, efeitos),
             )
             for i in range(tamanho)
         ]

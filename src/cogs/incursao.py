@@ -1102,6 +1102,10 @@ class Incursoes(commands.Cog):
                 dano=r["dano"],
                 hp_max=r["hp_max"],
                 hp_atual=r["hp_atual"],
+                ataques=r.get("ataques") or 1,
+                saves=r.get("saves") or {},
+                saves_vantagem=r.get("saves_vantagem") or [],
+                habilidade=r.get("habilidade"),
             )
             for r in await db.inimigos_do_combate(self.bot.db, run["id"], passo)
         ]
@@ -1115,10 +1119,18 @@ class Incursoes(commands.Cog):
                 alvo = next((i for i in inimigos if i.indice == ligado["alvo_id"]), None)
                 if alvo:
                     alvo.atordoado = True
+        combatentes = await self._combatentes(run, ligados)
+        for ligado in ligados:
+            if ligado["alvo_tipo"] == "personagem" and ligado["efeito"] == "atordoado":
+                quem = next(
+                    (c for c in combatentes if c.user_id == ligado["alvo_id"]), None
+                )
+                if quem:
+                    quem.atordoado = True
         return EstadoCombate(
             inimigos=inimigos,
             rodada=linha["rodada"],
-            combatentes=await self._combatentes(run, ligados),
+            combatentes=combatentes,
         )
 
     async def _abrir_combate(self, run: dict[str, Any], sala: Sala) -> None:
@@ -1214,6 +1226,11 @@ class Incursoes(commands.Cog):
                 "Você está caído — fica fora do resto deste combate.", ephemeral=True
             )
             return
+        if atacante.atordoado:
+            await interaction.response.send_message(
+                "Você está atordoado e perde esta rodada.", ephemeral=True
+            )
+            return
 
         alvo = estado.alvo_preferido(alvo_indice)
         if alvo is None:
@@ -1288,7 +1305,7 @@ class Incursoes(commands.Cog):
 
         ataques = await db.ataques_da_rodada(self.bot.db, run_id, passo, estado.rodada)
         agiram = {a["user_id"] for a in ataques}
-        if estado.inimigos_derrotados or len(agiram) >= len(estado.vivos):
+        if estado.inimigos_derrotados or len(agiram) >= len(estado.ativos):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
             await self._atualizar_painel(run, sala, estado, len(agiram))
@@ -1751,7 +1768,7 @@ class Incursoes(commands.Cog):
 
         ataques = await db.ataques_da_rodada(self.bot.db, run["id"], passo, estado.rodada)
         agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
-        if estado.inimigos_derrotados or len(agiram) >= len(estado.vivos):
+        if estado.inimigos_derrotados or len(agiram) >= len(estado.ativos):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
             await self._atualizar_painel(run, sala, estado, len(agiram))
@@ -1839,6 +1856,30 @@ class Incursoes(commands.Cog):
                 f"— fica com {atingido.hp_atual} HP e {atingido.thp} de THP.",
             )
 
+    async def _guardar_atordoamentos(
+        self, run: dict[str, Any], estado, investidas: list
+    ) -> None:
+        """Grava quem ficou atordoado, para a rodada seguinte saber.
+
+        O prazo conta a partir da proxima rodada: a criatura age no fim da
+        rodada, e quem ela atordoa perde a vez da rodada que vem — por isso o
+        "+ 1" antes da duracao da habilidade.
+        """
+        passo = self._passo(run)
+        for investida in investidas:
+            if not investida.atordoou:
+                continue
+            await db.aplicar_efeito(
+                self.bot.db,
+                run["id"],
+                passo,
+                "personagem",
+                investida.alvo.user_id,
+                "atordoado",
+                {"por": investida.habilidade},
+                estado.rodada + 1 + max(1, investida.atordoa_por),
+            )
+
     async def _virar_efeitos(self, run: dict[str, Any], estado) -> None:
         """No fim da rodada: cura de quem tem cura por turno, e prazos vencidos."""
         passo = self._passo(run)
@@ -1867,6 +1908,7 @@ class Incursoes(commands.Cog):
         sala: Sala,
         estado: EstadoCombate,
         ataques: list[dict[str, Any]],
+        encadeadas: int = 0,
     ) -> None:
         canal = await self._canal(run)
         if not canal:
@@ -1891,20 +1933,23 @@ class Incursoes(commands.Cog):
                 )
             )
 
-        # A vez dos inimigos: cada um de pe bate uma vez.
+        # A vez dos inimigos: quem tem habilidade pronta conjura, o resto bate.
         revides: list[tuple[motor.GolpeAtaque, Any]] = []
+        investidas: list[motor.Investida] = []
         if not estado.inimigos_derrotados:
-            revides = motor.rodada_dos_inimigos(estado, None)
-            for _, atingido in revides:
+            vez = motor.rodada_dos_inimigos(estado, None)
+            revides, investidas = vez.golpes, vez.investidas
+            for atingido in vez.atingidos:
                 await db.definir_hp(
                     self.bot.db, run["id"], atingido.user_id, atingido.hp_atual
                 )
                 await db.definir_thp(
                     self.bot.db, run["id"], atingido.user_id, atingido.thp
                 )
+            await self._guardar_atordoamentos(run, estado, investidas)
             await self._reacoes_do_revide(run, estado, revides)
 
-        log = (estado.rodada, golpes, revides)
+        log = (estado.rodada, golpes, revides, investidas)
 
         if estado.inimigos_derrotados:
             await self._atualizar_painel(
@@ -1932,6 +1977,15 @@ class Incursoes(commands.Cog):
         await db.atualizar_rodada(self.bot.db, run["id"], self._passo(run), estado.rodada)
         await self._virar_efeitos(run, estado)
         await self._atualizar_painel(run, sala, estado, 0, rodada_anterior=log)
+
+        # Rodada em que o grupo inteiro esta atordoado: ninguem tem clique para
+        # dar, entao ela corre sozinha em vez de travar o combate. Como ninguem
+        # e atordoado duas vezes seguidas, isso nao vira uma fila sem fim.
+        if encadeadas < 3:
+            atual = await db.buscar_run(self.bot.db, run["id"])
+            seguinte = await self._estado_combate(atual, sala) if atual else None
+            if seguinte is not None and not seguinte.encerrado and not seguinte.ativos:
+                await self._fechar_rodada(atual, sala, seguinte, [], encadeadas + 1)
 
     async def _apos_combate_vencido(
         self, run: dict[str, Any], sala: Sala, estado=None

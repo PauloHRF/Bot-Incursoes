@@ -463,6 +463,7 @@ def _linha_inimigo(i, marcado: bool = False) -> str:
     return (
         f"👹 {alvo}**{i.nome}** {barra(i.hp_atual, i.hp_max, 8)} "
         f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca} · {fmt(i.ataque)} · {i.dano}"
+        + (" 💫 *atordoado*" if getattr(i, "atordoado", False) else "")
     )
 
 
@@ -481,11 +482,15 @@ def _marcas_do_combatente(c) -> str:
 def _linha_hp(c) -> str:
     if c.hp_atual <= 0:
         return f"💀 ~~{c.nome}~~ — caído"
+    if getattr(c, "atordoado", False):
+        atordoado = " 💫 *atordoado*"
+    else:
+        atordoado = ""
     # A vida temporaria entra antes do HP, entao aparece separada.
     temporaria = f" +{c.thp} THP" if getattr(c, "thp", 0) else ""
     return (
         f"❤️ {c.nome} — {barra(c.hp_atual, c.hp_max, 6)} "
-        f"{c.hp_atual}/{c.hp_max}{temporaria}{_marcas_do_combatente(c)}"
+        f"{c.hp_atual}/{c.hp_max}{temporaria}{_marcas_do_combatente(c)}{atordoado}"
     )
 
 
@@ -502,6 +507,26 @@ def texto_do_contra_ataque(contra, alvo_nome: str) -> str:
     if contra.acertou:
         return f"{rolagem} → **{contra.dano}** de dano em {alvo_nome}"
     return f"{rolagem} → errou {alvo_nome}"
+
+
+def texto_da_investida(investida) -> str:
+    """A linha da habilidade de uma criatura, com o save de quem foi mirado."""
+    save = investida.save
+    rolagem = (
+        f"🎲 {save.d20} {fmt(save.modificador)} = **{save.total}** "
+        f"vs CD {save.cd}"
+    )
+    quem = investida.alvo.nome if hasattr(investida.alvo, "nome") else investida.alvo
+    cabeca = f"✴️ **{investida.inimigo}** · {investida.habilidade}"
+    if investida.escapou:
+        return f"{cabeca} em {quem} · {rolagem} → resistiu"
+    consequencias = []
+    if investida.dano:
+        consequencias.append(f"**{investida.dano}** de dano")
+    if investida.atordoou:
+        consequencias.append("**atordoado**")
+    pancada = ", ".join(consequencias) or "nada"
+    return f"{cabeca} em {quem} · {rolagem} → falhou: {pancada}"
 
 
 def combate(
@@ -554,8 +579,11 @@ def combate(
     )
 
     if rodada_anterior:
-        numero, golpes, revides = rodada_anterior
+        numero, golpes, revides = rodada_anterior[0], rodada_anterior[1], rodada_anterior[2]
+        investidas = rodada_anterior[3] if len(rodada_anterior) > 3 else []
         linhas = [linha_golpe(g) for g in golpes] or ["*ninguém atacou*"]
+        for investida in investidas:
+            linhas.append(texto_da_investida(investida))
         for contra, atingido in revides:
             linhas.append(
                 f"↩️ **{contra.atacante}** · {texto_do_contra_ataque(contra, atingido.nome)}"
@@ -571,7 +599,7 @@ def combate(
     if not encerrado:
         e.add_field(
             name="Atacaram nesta rodada",
-            value=f"{ja_atacaram}/{len(estado.vivos)}",
+            value=f"{ja_atacaram}/{len(estado.ativos)}",
             inline=True,
         )
 

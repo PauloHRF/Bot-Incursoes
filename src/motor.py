@@ -245,6 +245,8 @@ class Combatente:
     vantagem_contra: set = field(default_factory=set)
     # Resistencias: {atributo: modificador}, ja com os saves fortes da classe.
     saves: dict = field(default_factory=dict)
+    # Perde a proxima vez: habilidade de criatura que atordoa.
+    atordoado: bool = False
 
     @property
     def ca_efetiva(self) -> int:
@@ -375,10 +377,19 @@ class Inimigo:
     # Resistencias da criatura: {atributo: modificador}. O que nao vier aqui
     # cai no padrao de DEFASAGEM_DE_SAVE.
     saves: dict = field(default_factory=dict)
+    # Quantos golpes por rodada, e em que resiste com vantagem.
+    ataques: int = 1
+    saves_vantagem: list = field(default_factory=list)
+    # A acao especial da criatura (HabilidadeDoMonstro), se tiver uma.
+    habilidade: Optional[Any] = None
 
     @property
     def caido(self) -> bool:
         return self.hp_atual <= 0
+
+    def usa_habilidade(self, rodada: int) -> bool:
+        """Se a criatura vai usar a habilidade nesta rodada, em vez de atacar."""
+        return self.habilidade is not None and self.habilidade.disponivel(rodada)
 
     def save(self, atributo: str) -> int:
         """O modificador de resistência desta criatura naquele atributo.
@@ -405,6 +416,15 @@ class EstadoCombate:
     @property
     def caidos(self) -> list[Combatente]:
         return [c for c in self.combatentes if c.caido]
+
+    @property
+    def ativos(self) -> list[Combatente]:
+        """Quem ainda age nesta rodada: de pé e sem atordoamento.
+
+        A rodada fecha quando todos estes já agiram — quem está atordoado não
+        segura o combate esperando um clique que não vai vir.
+        """
+        return [c for c in self.vivos if not c.atordoado]
 
     @property
     def inimigos_vivos(self) -> list[Inimigo]:
@@ -513,7 +533,8 @@ def salvar_inimigo(
     vantagem: bool = False,
 ) -> ResultadoSave:
     """O save de uma criatura, pela planilha dela ou pelo padrão provisório."""
-    return salvar(inimigo.nome, atributo, inimigo.save(atributo), cd, rng, vantagem)
+    com_vantagem = vantagem or atributo in (inimigo.saves_vantagem or ())
+    return salvar(inimigo.nome, atributo, inimigo.save(atributo), cd, rng, com_vantagem)
 
 
 def atacar_inimigo(
@@ -561,6 +582,26 @@ def sortear_alvo(
     return _rng(rng).choice(vivos) if vivos else None
 
 
+def sortear_alvos(
+    estado: EstadoCombate, quantos: int, rng: Optional[random.Random] = None
+) -> list[Combatente]:
+    """Vários alvos diferentes, para habilidades que pegam mais de um.
+
+    Quem já está atordoado não é sorteado enquanto houver alguém de pé sem
+    atordoamento — atordoar duas vezes a mesma pessoa não faz nada.
+    """
+    vivos = estado.vivos
+    if not vivos:
+        return []
+    preferidos = [c for c in vivos if not c.atordoado] or vivos
+    gerador = _rng(rng)
+    if quantos >= len(preferidos):
+        escolhidos = list(preferidos)
+        gerador.shuffle(escolhidos)
+        return escolhidos
+    return gerador.sample(preferidos, quantos)
+
+
 def contra_atacar(
     inimigo: Inimigo, alvo: Combatente, rng: Optional[random.Random] = None
 ) -> GolpeAtaque:
@@ -578,23 +619,104 @@ def contra_atacar(
     return golpe
 
 
+@dataclass
+class Investida:
+    """Uma habilidade de criatura resolvida contra um personagem."""
+
+    inimigo: str
+    habilidade: str
+    alvo: Combatente
+    save: ResultadoSave
+    dano: int = 0
+    absorvido: int = 0
+    atordoou: bool = False
+    # Por quantas rodadas o alvo fica atordoado, quando fica.
+    atordoa_por: int = 0
+
+    @property
+    def escapou(self) -> bool:
+        return self.save.passou
+
+
+def usar_habilidade_do_inimigo(
+    inimigo: Inimigo, estado: EstadoCombate, rng: Optional[random.Random] = None
+) -> list[Investida]:
+    """A criatura conjura em vez de atacar: cada alvo rola a resistência dela.
+
+    Quem passa escapa inteiro; quem falha leva o dano (pela vida temporária
+    primeiro, como qualquer golpe) e fica atordoado, se for o caso. Quem cai
+    com o dano não fica atordoado — já está fora do combate.
+    """
+    habilidade = inimigo.habilidade
+    if habilidade is None:
+        return []
+    investidas = []
+    for alvo in sortear_alvos(estado, habilidade.alvos, rng):
+        resultado = salvar_combatente(alvo, habilidade.save, habilidade.cd, rng)
+        investida = Investida(inimigo.nome, habilidade.nome, alvo, resultado)
+        if not resultado.passou:
+            if habilidade.dano:
+                sofrido = rolar_dano(habilidade.dano, rng)
+                if alvo.reducao_dano:
+                    sofrido = max(1, int(round(sofrido * (1 - alvo.reducao_dano))))
+                investida.dano = sofrido
+                investida.absorvido, _ = absorver(alvo, sofrido)
+            # Atordoar quem ja esta atordoado nao renova nada: o alvo perde
+            # uma rodada, nao uma sequencia infinita delas.
+            if habilidade.atordoa and not alvo.caido and not alvo.atordoado:
+                alvo.atordoado = True
+                investida.atordoou = True
+                investida.atordoa_por = habilidade.atordoa
+        investidas.append(investida)
+    return investidas
+
+
+@dataclass
+class RodadaInimiga:
+    """O que as criaturas fizeram na vez delas."""
+
+    golpes: list[tuple[GolpeAtaque, Combatente]] = field(default_factory=list)
+    investidas: list[Investida] = field(default_factory=list)
+
+    @property
+    def atingidos(self) -> list[Combatente]:
+        """Quem teve HP ou THP mexido, sem repetir."""
+        saida = []
+        for _golpe, alvo in self.golpes:
+            if alvo not in saida:
+                saida.append(alvo)
+        for investida in self.investidas:
+            if investida.alvo not in saida:
+                saida.append(investida.alvo)
+        return saida
+
+
 def rodada_dos_inimigos(
     estado: EstadoCombate, rng: Optional[random.Random] = None
-) -> list[tuple[GolpeAtaque, Combatente]]:
-    """A vez dos inimigos: cada um de pé bate uma vez, num alvo sorteado.
+) -> RodadaInimiga:
+    """A vez dos inimigos: cada um de pé age uma vez.
 
-    É aqui que um grupo de criaturas pesa — cinco lobos batem cinco vezes por
+    Quem tem habilidade pronta nesta rodada conjura em vez de atacar; o resto
+    bate, tantas vezes quanto o multiataque permitir, cada golpe num alvo
+    sorteado — o bot não faz tática, então não concentra tudo numa pessoa.
+    É aqui que um grupo de criaturas pesa: cinco lobos batem cinco vezes por
     rodada. Para quando o grupo inteiro cai: não se ataca quem já está no chão.
     """
-    golpes = []
+    rodada = RodadaInimiga()
     for inimigo in estado.inimigos_vivos:
         if inimigo.atordoado:
             continue  # perdeu a vez
-        alvo = sortear_alvo(estado, rng)
-        if alvo is None:
+        if not estado.vivos:
             break
-        golpes.append((contra_atacar(inimigo, alvo, rng), alvo))
-    return golpes
+        if inimigo.usa_habilidade(estado.rodada):
+            rodada.investidas.extend(usar_habilidade_do_inimigo(inimigo, estado, rng))
+            continue
+        for _ in range(max(1, inimigo.ataques)):
+            alvo = sortear_alvo(estado, rng)
+            if alvo is None:
+                break
+            rodada.golpes.append((contra_atacar(inimigo, alvo, rng), alvo))
+    return rodada
 
 
 def ganhar_thp(combatente: Combatente, quantidade: int) -> int:

@@ -13,7 +13,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-from .rules import TIER_MAXIMO, chave_comparacao, nivel_maximo_do_tier, normalizar_pericia
+from .rules import (
+    ATRIBUTOS,
+    TIER_MAXIMO,
+    chave_comparacao,
+    nivel_maximo_do_tier,
+    normalizar_pericia,
+)
 
 TIPOS_SALA = ("Combate", "Descanso", "Armadilha", "Evento", "Tesouro")
 ORGANIZACOES = (
@@ -32,6 +38,11 @@ OPCOES_POR_PASSO = 3
 
 # Quantas criaturas uma sala de combate pode ter.
 MAX_INIMIGOS = 6
+
+# Quantos golpes uma criatura pode dar por rodada, e quantos alvos a habilidade
+# dela pode pegar de uma vez.
+MAX_ATAQUES_DO_MONSTRO = 4
+MAX_ALVOS = 6
 
 # Tipos que resolvem a sala por teste de perícia (margem vs CD).
 TIPOS_COM_TESTE = ("Armadilha", "Evento", "Tesouro")
@@ -61,21 +72,69 @@ class ErroDeValidacao(Exception):
 
 
 @dataclass
+class HabilidadeDoMonstro:
+    """A ação especial de uma criatura: força um teste de resistência.
+
+    Ela toma a ação do turno — a criatura usa a habilidade *em vez* de atacar.
+    `cada` é o ritmo: com 2, ela sai nas rodadas 2, 4, 6..., o que dá ao grupo
+    uma rodada de respiro entre uma e outra.
+    """
+
+    nome: str
+    save: str  # o atributo que o alvo rola: FOR, DES, CON, INT, SAB, CAR
+    cd: int
+    texto: str = ""
+    dano: Optional[str] = None  # o que quem falha sofre, se houver
+    alvos: int = 1
+    atordoa: int = 0  # rodadas de atordoamento em quem falhar
+    cada: int = 2
+
+    def disponivel(self, rodada: int) -> bool:
+        return self.cada > 0 and rodada % self.cada == 0
+
+    def para_dict(self) -> dict[str, Any]:
+        return {
+            "nome": self.nome,
+            "save": self.save,
+            "cd": self.cd,
+            "texto": self.texto,
+            "dano": self.dano,
+            "alvos": self.alvos,
+            "atordoa": self.atordoa,
+            "cada": self.cada,
+        }
+
+
+@dataclass
 class Monstro:
     nome: str
     ca: int
     ataque: int
     dano: str
     hp: int
+    ataques: int = 1
+    # Resistências da criatura: {atributo: modificador}. O que faltar aqui o
+    # motor deduz do bônus de ataque dela.
+    saves: dict[str, int] = field(default_factory=dict)
+    saves_vantagem: list[str] = field(default_factory=list)
+    habilidade: Optional[HabilidadeDoMonstro] = None
 
     def para_dict(self) -> dict[str, Any]:
-        return {
+        dados: dict[str, Any] = {
             "nome": self.nome,
             "ca": self.ca,
             "ataque": self.ataque,
             "dano": self.dano,
             "hp": self.hp,
+            "ataques": self.ataques,
         }
+        if self.saves:
+            dados["saves"] = dict(self.saves)
+        if self.saves_vantagem:
+            dados["saves_vantagem"] = list(self.saves_vantagem)
+        if self.habilidade:
+            dados["habilidade"] = self.habilidade.para_dict()
+        return dados
 
 
 @dataclass
@@ -198,6 +257,163 @@ def _inteiro(valor: Any) -> Optional[int]:
         return None
 
 
+# Os campos de uma criatura nas planilhas, alem dos basicos. Ficam aqui para os
+# tres lugares que leem criatura (linha da sala, aba Monstros e o chefe da
+# incursao) enxergarem exatamente as mesmas colunas.
+CAMPOS_DE_CRIATURA = (
+    "ataques", "saves", "saves_vantagem",
+    "habilidade", "habilidade_texto", "habilidade_save", "habilidade_cd",
+    "habilidade_dano", "habilidade_alvos", "habilidade_atordoa", "habilidade_cada",
+)
+
+
+def criatura_de_colunas(ler, prefixo: str = "") -> dict[str, Any]:
+    """Junta as colunas de uma criatura num dicionario que `_monstros_de_dict` lê.
+
+    `ler` é como a ferramenta busca uma coluna pelo nome; `prefixo` é o que vem
+    antes dela na linha da sala ('monstro_'). Coluna que a planilha não tem
+    devolve None e simplesmente não entra.
+    """
+    def campo(nome: str):
+        valor = ler(f"{prefixo}{nome}")
+        return valor.strip() if isinstance(valor, str) else valor
+
+    bruta: dict[str, Any] = {
+        "nome": campo("nome") or "",
+        "quantidade": campo("quantidade"),
+        "ca": campo("ca"),
+        "ataque": campo("ataque"),
+        "dano": campo("dano") or "",
+        "hp": campo("hp"),
+    }
+    if campo("ataques") is not None:
+        bruta["ataques"] = campo("ataques")
+    if campo("saves"):
+        bruta["saves"] = campo("saves")
+    if campo("saves_vantagem"):
+        bruta["saves_vantagem"] = campo("saves_vantagem")
+    if campo("habilidade"):
+        bruta["habilidade"] = {
+            "nome": campo("habilidade"),
+            "texto": campo("habilidade_texto") or "",
+            "save": campo("habilidade_save") or "",
+            "cd": campo("habilidade_cd"),
+            "dano": campo("habilidade_dano") or "",
+            "alvos": campo("habilidade_alvos"),
+            "atordoa": campo("habilidade_atordoa"),
+            "cada": campo("habilidade_cada"),
+        }
+    return bruta
+
+
+def _atributos(valor: Any, onde: str, campo: str, problemas: list[str]) -> list[str]:
+    """Lê 'FOR, CON' (ou uma lista) e devolve os atributos válidos."""
+    if valor is None or valor == "":
+        return []
+    bruto = valor if isinstance(valor, (list, tuple)) else str(valor).split(",")
+    saida = []
+    for pedaco in bruto:
+        nome = str(pedaco).strip().upper()[:3]
+        if not nome:
+            continue
+        if nome not in ATRIBUTOS:
+            problemas.append(
+                f"{onde}: '{pedaco}' em {campo} não é atributo. "
+                f"Use um de: {', '.join(ATRIBUTOS)}."
+            )
+            continue
+        if nome not in saida:
+            saida.append(nome)
+    return saida
+
+
+def _saves_do_monstro(valor: Any, onde: str, problemas: list[str]) -> dict[str, int]:
+    """Lê os saves da criatura: 'FOR +5, CON +5' ou {'FOR': 5, 'CON': 5}."""
+    if valor is None or valor == "":
+        return {}
+    if isinstance(valor, dict):
+        itens = list(valor.items())
+    else:
+        itens = []
+        for pedaco in str(valor).split(","):
+            pedaco = pedaco.strip()
+            if not pedaco:
+                continue
+            partes = pedaco.replace("+", " +").split()
+            if len(partes) < 2:
+                problemas.append(
+                    f"{onde}: '{pedaco}' fora do formato de save (ex.: 'CON +5')."
+                )
+                continue
+            itens.append((partes[0], partes[-1]))
+    saves = {}
+    for atributo, modificador in itens:
+        nome = str(atributo).strip().upper()[:3]
+        if nome not in ATRIBUTOS:
+            problemas.append(
+                f"{onde}: '{atributo}' não é atributo. Use um de: {', '.join(ATRIBUTOS)}."
+            )
+            continue
+        numero = _inteiro(modificador)
+        if numero is None:
+            problemas.append(f"{onde}: o save de {nome} ('{modificador}') não é um número.")
+            continue
+        saves[nome] = numero
+    return saves
+
+
+def _habilidade_do_monstro(
+    bruto: Any, onde: str, problemas: list[str]
+) -> Optional[HabilidadeDoMonstro]:
+    """A ação especial da criatura. Sem nome, a criatura simplesmente não tem uma."""
+    if not bruto:
+        return None
+    if not isinstance(bruto, dict):
+        problemas.append(f"{onde}: a habilidade da criatura precisa ser um objeto.")
+        return None
+    nome = str(bruto.get("nome") or "").strip()
+    if not nome:
+        return None
+
+    onde = f"{onde} (habilidade '{nome}')"
+    save = _atributos(bruto.get("save"), onde, "save", problemas)
+    cd = _inteiro(bruto.get("cd"))
+    if len(save) != 1:
+        problemas.append(f"{onde}: diga um atributo de resistência (ex.: CON).")
+    if cd is None or cd <= 0:
+        problemas.append(f"{onde}: falta a CD do teste de resistência.")
+
+    dano = str(bruto.get("dano") or "").strip() or None
+    if dano and not EXPR_DANO.match(dano):
+        problemas.append(f"{onde}: dano '{dano}' fora do formato esperado (ex.: 3d6).")
+        dano = None
+
+    alvos = _inteiro(bruto.get("alvos"))
+    alvos = 1 if alvos is None else alvos
+    atordoa = _inteiro(bruto.get("atordoa")) or 0
+    cada = _inteiro(bruto.get("cada"))
+    cada = 2 if cada is None else cada
+    if not 1 <= alvos <= MAX_ALVOS:
+        problemas.append(f"{onde}: a habilidade precisa mirar de 1 a {MAX_ALVOS} alvos.")
+    if cada < 1:
+        problemas.append(f"{onde}: 'cada' é de quantas em quantas rodadas (1 ou mais).")
+    if not dano and not atordoa:
+        problemas.append(f"{onde}: a habilidade não faz nada — falta dano ou atordoamento.")
+
+    if len(save) != 1 or cd is None or cd <= 0:
+        return None
+    return HabilidadeDoMonstro(
+        nome=nome,
+        save=save[0],
+        cd=cd,
+        texto=str(bruto.get("texto") or "").strip(),
+        dano=dano,
+        alvos=max(1, min(alvos, MAX_ALVOS)),
+        atordoa=max(0, atordoa),
+        cada=max(1, cada),
+    )
+
+
 def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) -> list[Monstro]:
     """Uma entrada de criatura vira N monstros, conforme a quantidade.
 
@@ -214,6 +430,24 @@ def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) ->
     quantidade = _inteiro(bruto.get("quantidade"))
     if quantidade is None:
         quantidade = 1
+    ataques = _inteiro(bruto.get("ataques"))
+    ataques = 1 if ataques is None else ataques
+    saves = _saves_do_monstro(bruto.get("saves"), f"{onde}: criatura '{nome or '?'}'", problemas)
+    vantagem = _atributos(
+        bruto.get("saves_vantagem"),
+        f"{onde}: criatura '{nome or '?'}'",
+        "saves_vantagem",
+        problemas,
+    )
+    habilidade = _habilidade_do_monstro(
+        bruto.get("habilidade"), f"{onde}: criatura '{nome or '?'}'", problemas
+    )
+    if not 1 <= ataques <= MAX_ATAQUES_DO_MONSTRO:
+        problemas.append(
+            f"{onde}: '{nome or '?'}' precisa ter de 1 a "
+            f"{MAX_ATAQUES_DO_MONSTRO} ataques por rodada."
+        )
+        return []
 
     if not nome:
         problemas.append(f"{onde}: a criatura precisa de um nome.")
@@ -231,9 +465,19 @@ def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) ->
         return []
     if not nome or None in (ca, ataque, hp) or not EXPR_DANO.match(dano):
         return []
+
+    def criatura(como_se_chama: str) -> Monstro:
+        return Monstro(
+            como_se_chama, ca, ataque, dano, hp,
+            ataques=ataques,
+            saves=dict(saves),
+            saves_vantagem=list(vantagem),
+            habilidade=habilidade,
+        )
+
     if quantidade == 1:
-        return [Monstro(nome, ca, ataque, dano, hp)]
-    return [Monstro(f"{nome} {n}", ca, ataque, dano, hp) for n in range(1, quantidade + 1)]
+        return [criatura(nome)]
+    return [criatura(f"{nome} {n}") for n in range(1, quantidade + 1)]
 
 
 def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Optional[Sala]:

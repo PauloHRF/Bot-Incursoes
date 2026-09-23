@@ -46,7 +46,8 @@ CABECALHOS = [
     ("pericias", 30, "Perícias aceitas, separadas por ';'. Vazio em Descanso e Combate."),
     ("descricao", 62, "Texto do embed da sala."),
     ("imagem", 26, "Caminho em assets/ ou URL da imagem da sala."),
-    ("monstro_nome", 22, "Só em salas de Combate."),
+    ("monstro_nome", 22, "Só em salas de Combate. Criatura com multiataque, saves ou "
+     "habilidade vai na aba 'Monstros', que tem todas as colunas."),
     ("monstro_quantidade", 12, "Quantas criaturas iguais. Vazio ou 1 = uma. Máximo 6 por sala, "
      "contando as da aba 'Monstros'."),
     ("monstro_ca", 11, "Classe de Armadura do monstro."),
@@ -226,6 +227,19 @@ def gerar(organizacao: str, destino: Path) -> Path:
         ("ataque", 10, "Bonus de ataque (ex.: 4)."),
         ("dano", 12, "Dado de dano (ex.: 1d6+2)."),
         ("hp", 8, "Pontos de vida de cada uma."),
+        ("ataques", 9, "Golpes por rodada (multiataque). Vazio ou 1 = um."),
+        ("saves", 22, "Resistencias da criatura: 'FOR +5, CON +5'. O que faltar o bot"
+         " deduz do bonus de ataque."),
+        ("saves_vantagem", 16, "Atributos em que ela resiste com vantagem: 'FOR, CON'."),
+        ("habilidade", 20, "Nome da acao especial. Vazio = a criatura so ataca."),
+        ("habilidade_texto", 40, "Descricao mostrada ao grupo. Opcional."),
+        ("habilidade_save", 14, "Atributo que os alvos rolam: FOR, DES, CON, INT, SAB ou CAR."),
+        ("habilidade_cd", 13, "CD do teste de resistencia (ex.: 13)."),
+        ("habilidade_dano", 14, "Dano de quem falhar (ex.: 3d6). Vazio = so o efeito."),
+        ("habilidade_alvos", 15, "Quantos personagens ela pega de uma vez. Vazio = 1."),
+        ("habilidade_atordoa", 17, "Rodadas de atordoamento em quem falhar. Vazio ou 0 = nenhuma."),
+        ("habilidade_cada", 14, "De quantas em quantas rodadas ela usa. Vazio = 2"
+         " (rodadas 2, 4, 6...). Na rodada que usa, ela nao ataca."),
     )
     for i, (titulo, largura, ajuda) in enumerate(cabecalho_monstros, start=1):
         c = ws.cell(row=1, column=i, value=titulo)
@@ -237,7 +251,9 @@ def gerar(organizacao: str, destino: Path) -> Path:
     ws.cell(row=1, column=1).comment = Comment(
         "Criaturas EXTRAS de uma sala, para um bando misto. O que estiver aqui se soma"
         " ao monstro_* da linha da sala, ate 6 criaturas por sala."
-        " Deixe a aba vazia se cada sala tiver so um tipo de criatura.",
+        " Deixe a aba vazia se cada sala tiver so um tipo de criatura."
+        " Criatura com multiataque, resistencias ou acao especial vem sempre por"
+        " aqui: a linha da sala so tem as colunas basicas.",
         "Incursoes 2.0",
         height=120,
         width=300,
