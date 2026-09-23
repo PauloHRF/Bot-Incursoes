@@ -14,6 +14,7 @@ import aiosqlite  # noqa: E402
 from src import classes, config, database as db  # noqa: E402
 from src.cogs.ficha import Ficha  # noqa: E402
 from src.cogs.incursao import Incursoes, SeletorPersonagemEntrada  # noqa: E402
+from src.rules import tier  # noqa: E402
 from fakes import (  # noqa: E402
     CLASSE_PADRAO,
     CANAL,
@@ -292,8 +293,10 @@ async def caso_comandos_de_ficha():
     # upar um nao mexe no outro
     alvo = FakeInteraction(canal, dono)
     await ficha_cog.upar.callback(ficha_cog, alvo, personagem="Kaelen")
-    assert (await db.personagem_por_nome(conn, GUILD, dono, "Kaelen"))["nivel"] == 4
-    assert (await db.personagem_por_nome(conn, GUILD, dono, "Vhalor"))["nivel"] == 5
+    kaelen = await db.personagem_por_nome(conn, GUILD, dono, "Kaelen")
+    vhalor = await db.personagem_por_nome(conn, GUILD, dono, "Vhalor")
+    assert tier(kaelen["nivel"]) == 3, "Kaelen subiu um tier"
+    assert vhalor["nivel"] == 5, "o outro personagem nao se mexeu"
     print("  comandos de ficha resolvem o personagem: ok")
 
 

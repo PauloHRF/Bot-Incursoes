@@ -10,7 +10,7 @@ sys.path.insert(0, str(RAIZ))
 
 from src import classes as cl, config, database as db  # noqa: E402
 from src.cogs.ficha import LIMITE_PERSONAGENS, Ficha, SeletorPericias  # noqa: E402
-from src.rules import NIVEL_MAXIMO, tier  # noqa: E402
+from src.rules import NIVEL_MAXIMO, TIER_MAXIMO, tier  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     CLASSE_PADRAO,
@@ -181,22 +181,41 @@ async def caso_upar_sobe_um_nivel():
     dono = JOGADORES[0]
     pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
 
-    # nivel 1 -> 2: mesmo tier, os numeros nao mudam
+    # o upar anda de tier em tier: dentro de um tier nada muda, entao nao ha meio passo
     inter = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, inter)
-    assert (await db.buscar_personagem(conn, pid))["nivel"] == 2
-    assert "nivel 2" in inter.resposta and "nivel 3" in inter.resposta, inter.resposta
-
-    # nivel 2 -> 3: vira o tier e os numeros sobem
-    virada = FakeInteraction(canal, dono)
-    await ficha.upar.callback(ficha, virada)
     atualizado = await db.buscar_personagem(conn, pid)
-    assert atualizado["nivel"] == 3 and tier(3) == 2
-    assert "Subiu de tier" in virada.resposta, virada.resposta
-    t1, t2 = cl.CLASSES["ladino"].numeros(2), cl.CLASSES["ladino"].numeros(3)
+    assert tier(atualizado["nivel"]) == 2
+    # o Ladino decide a Expertise no tier 2: o menu vem junto com o upar
+    assert "Decida agora" in inter.resposta and "Expertise" in inter.resposta
+    assert inter.view_enviada is not None
+    assert any("tier 2" in (m.content or "") for m in canal.mensagens), "o canal soube"
+
+    # e a decisao vale na hora
+    inter.view_enviada.menu._values = ["Furtividade"]
+    gravando = FakeInteraction(canal, dono)
+    await inter.view_enviada._escolher(gravando)
+    decidido = await db.buscar_personagem(conn, pid)
+    assert decidido["escolhas"] == {"expertise_1": ["Furtividade"]}
+    assert decidido["pendencias"] == []
+
+    t1, t2 = cl.CLASSES["ladino"].numeros(1), cl.CLASSES["ladino"].numeros(3)
     assert atualizado["hp_max"] == t2.hp != t1.hp
     assert atualizado["dano_arma"] == t2.dano
-    print("  upar sobe um nivel e os numeros acompanham o tier: ok")
+
+    # e o voltar desfaz, para quem upou sem querer
+    volta = FakeInteraction(canal, dono)
+    await ficha.voltar.callback(ficha, volta)
+    de_volta = await db.buscar_personagem(conn, pid)
+    assert tier(de_volta["nivel"]) == 1
+    assert de_volta["hp_max"] == t1.hp
+    assert "tier 1" in volta.resposta, volta.resposta
+
+    # no tier 1 nao da para descer mais
+    fundo = FakeInteraction(canal, dono)
+    await ficha.voltar.callback(ficha, fundo)
+    assert "nao da para descer" in fundo.resposta, fundo.resposta
+    print("  upar sobe um tier e voltar desfaz: ok")
 
 
 async def caso_upar_avisa_pericia_nova_e_para_no_teto():
@@ -214,9 +233,9 @@ async def caso_upar_avisa_pericia_nova_e_para_no_teto():
     await db.atualizar_personagem(conn, pid, "nivel", NIVEL_MAXIMO)
     teto = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, teto)
-    assert "nivel maximo" in teto.resposta
-    assert (await db.buscar_personagem(conn, pid))["nivel"] == NIVEL_MAXIMO
-    print(f"  upar avisa a pericia nova e para no nivel {NIVEL_MAXIMO}: ok")
+    assert "tier maximo" in teto.resposta, teto.resposta
+    assert tier((await db.buscar_personagem(conn, pid))["nivel"]) == TIER_MAXIMO
+    print(f"  upar avisa a pericia nova e para no tier {TIER_MAXIMO}: ok")
 
 
 async def main():

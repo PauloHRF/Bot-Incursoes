@@ -76,8 +76,8 @@ def cartao_personagem(personagem: dict, membro) -> discord.Embed:
     e = discord.Embed(
         title=personagem["nome"],
         description=(
-            f"{membro.mention} · {_classe_de(personagem)} · nível "
-            f"{personagem['nivel']} (tier {tier(personagem['nivel'])})"
+            f"{membro.mention} · {_classe_de(personagem)} · "
+            f"tier {tier(personagem['nivel'])}"
         ),
         color=COR_INCURSAO,
     )
@@ -99,7 +99,7 @@ def grupo(personagens: list[dict], membros: list, com_faixa: bool) -> discord.Em
     """O grupo inteiro num embed só, para acompanhar a faixa de retratos."""
     e = discord.Embed(title="🎒 O grupo", color=COR_INCURSAO)
     e.description = "\n".join(
-        f"**{p['nome']}** — {m.mention} · {_classe_de(p)} nv {p['nivel']} · "
+        f"**{p['nome']}** — {m.mention} · {_classe_de(p)} T{tier(p['nivel'])} · "
         f"CA {p['ca']} · ⚔️ {fmt(p['bonus_ataque'])} · ❤️ {p['hp_max']}"
         for p, m in zip(personagens, membros)
     )
@@ -141,8 +141,7 @@ def exigencia_de_tier(incursao: Incursao) -> str:
     if incursao.aberta_a_todos:
         return "🎚️ Tier livre — qualquer personagem entra"
     return (
-        f"🎚️ Tier {incursao.tier} — entra quem for tier {incursao.tier} ou menos "
-        f"(até o nível {incursao.nivel_maximo})"
+        f"🎚️ Tier {incursao.tier} — entra quem for tier {incursao.tier} ou menos"
     )
 
 

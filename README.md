@@ -8,7 +8,7 @@ Design completo: `Incursões 2.0 — Bot de Discord (design).md`.
 
 ## Estado atual
 
-- [x] **Fase 1** — fichas digitais (vários personagens por jogador, nível, ASI, perícias)
+- [x] **Fase 1** — fichas digitais (vários personagens por jogador, classe, tier, perícias)
 - [x] **Fase 2a** — conteúdo: banco de salas por Organização, incursões com lore, importadores
 - [x] **Fase 2b** — runs, salas, votação por botões, testes de perícia
 - [x] **Fase 3** — combate por rodadas (CA / ataque / HP)
@@ -50,13 +50,12 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | Comando | Função |
 | --- | --- |
 | `/help [comando]` | Lista todos os comandos, com descrição; 🔒 marca os de admin |
-| `/ficha registrar <nome> <classe> [imagem]` | Cria um personagem no nível 1; as proficiências vêm num menu depois |
+| `/ficha registrar <nome> <classe> [imagem]` | Cria um personagem no tier 1; as proficiências vêm num menu depois |
 | `/ficha listar [membro]` | Lista todos os personagens de um jogador |
 | `/ficha ver [personagem] [membro]` | Mostra a ficha com todos os modificadores calculados |
-| `/ficha upar [personagem]` | Sobe um nível (os números acompanham o tier) |
+| `/ficha upar [personagem]` | Sobe um tier, e conduz na hora a decisão que o tier trouxer |
 | `/ficha pericias [personagem]` | Reabre o menu de proficiências da classe |
-| `/ficha escolhas [personagem]` | Decide as escolhas de tier pendentes |
-| `/ficha expertise <perícia> <bônus> [personagem]` | Soma um bônus avulso a uma perícia (0 remove) |
+| `/ficha voltar [personagem]` | Desce um tier e esquece a decisão daquele tier, para refazer |
 | `/ficha imagem [link] [personagem]` | Associa um retrato ao personagem (sem link, remove) |
 | `/ficha remover <personagem>` | Apaga um personagem seu |
 | `/incursao listar` | Mostra as incursões carregadas |
@@ -84,7 +83,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    leva dano.
 3. Ao chegar a 5 jogadores a run começa sozinha; quem abriu pode começar antes com **Começar**.
    Aí o bot posta a **lore de abertura** junto com o grupo — uma linha por personagem com
-   nível, CA, ataque e HP, e os retratos lado a lado numa faixa só.
+   tier, CA, ataque e HP, e os retratos lado a lado numa faixa só.
 4. Cada passo sorteia 3 salas do banco da Organização na hora em que abre, deixando de fora
    as que o grupo já atravessou. Todos votam pelos botões, e a votação fecha
    assim que uma sala junta a **maioria do grupo** (3 de 5) — quem ainda não votou não
@@ -146,7 +145,7 @@ atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/
 ## Avisos no canal
 
 Mexer numa ficha aparece para o grupo: registrar um personagem posta a ficha no canal, e
-subir de nível, trocar as proficiências ou mexer numa expertise posta uma linha dizendo o
+subir de tier, voltar de tier ou trocar as proficiências posta uma linha dizendo o
 que mudou. Apagar um personagem também avisa. Só a consulta é privada — `/ficha ver` e
 `/ficha listar` continuam visíveis apenas para quem pediu.
 
@@ -156,12 +155,16 @@ desatualizada. `/help ficha` filtra por grupo ou por comando.
 ## Personagens
 
 O personagem é **a classe**: ninguém digita atributo nem número de combate. `/ficha registrar
-<nome> <classe>` cria no **nível 1**, abre o menu de proficiências que aquela classe concede
+<nome> <classe>` cria no **tier 1**, abre o menu de proficiências que aquela classe concede
 e pronto — HP, CA, acerto, dano e os bônus de perícia saem da tabela da classe no tier atual
-(`src/classes.py`). Subir é `/ficha upar`, um nível por vez até o **10**; quando o nível vira
-o tier, os números sobem juntos e o bot diz o que mudou.
+(`src/classes.py`).
 
-Por isso nada disso fica gravado na ficha: o bot guarda classe, nível, proficiências,
+A ficha anda **de tier em tier**: dentro de um tier nada muda, então não existe meio passo.
+`/ficha upar` sobe um tier, até o **5**, dizendo o que mudou e abrindo na hora a decisão que
+o tier novo trouxer. `/ficha voltar` desce um, para quem upou sem querer — e esquece as
+decisões do tier perdido, que o jogador refaz ao subir de novo.
+
+Por isso nada disso fica gravado na ficha: o bot guarda classe, tier, proficiências,
 expertises e retrato, e deriva o resto na leitura. Uma ficha nunca fica desatualizada em
 relação à tabela — mudar um número em `classes.py` muda todo mundo daquela classe.
 
@@ -248,8 +251,9 @@ com o bônus de proficiência dobrado), **Primal Knowledge** (2 proficiências a
 cota da classe) e a do **Xamã** no tier 3 (Multiattack ou Cântico Benevolente, que soma 4 de
 THP quando ele cura).
 
-`/ficha upar` avisa quando uma decisão fica pendente, e `/ficha escolhas` resolve — menu da
-decisão, menu das opções, pronto. A ficha mostra o que já foi decidido e o que falta, e o
+A decisão é tomada **no próprio `/ficha upar`**: ele anuncia a subida no canal e abre, só
+para o dono, o menu da escolha. Se houver mais de uma pendente, uma puxa a próxima até
+acabarem. A ficha mostra o que já foi decidido e o que falta, e o
 efeito vale na hora: escolher Defensivo muda a CA que aparece no `/ficha ver` e a que o
 monstro enfrenta. Expertise só oferece perícias em que o personagem tem proficiência; Primal
 Knowledge só oferece as que ele ainda não tem.
@@ -269,17 +273,18 @@ um personagem pode omitir. Dois personagens do mesmo jogador não podem ter o me
 
 ### Tier
 
-O tier sai do nível, **um a cada 2 níveis**: nível 1-2 é tier 1, 3-4 é tier 2, até 9-10, que
-é tier 5. O nível máximo é **10** porque é até onde vão as tabelas de classe; para subir o
-teto basta acrescentar tiers em `src/classes.py`. Cada incursão declara o tier dela na
+O tier é o degrau do personagem, de **1 a 5** — é o que a ficha mostra e o que `/ficha upar`
+sobe. Por baixo o bot ainda guarda um nível (1, 3, 5, 7, 9), porque as tabelas de classe são
+indexadas por ele, mas ninguém precisa pensar nisso. O teto é o tier 5 porque é até onde vão
+as tabelas de classe; para subir o teto basta acrescentar tiers em `src/classes.py`. Cada incursão declara o tier dela na
 planilha, e a regra de entrada é de mão única: **quem está no tier da incursão ou abaixo
-entra; quem está acima, não**. Um personagem de nível 3 pode encarar uma incursão de tier 5 a
-reboque do grupo, mas um de nível 9 não volta para varrer uma de tier 2. Incursão sem tier na
-planilha fica aberta a qualquer nível.
+entra; quem está acima, não**. Um personagem de tier 2 pode encarar uma incursão de tier 5 a
+reboque do grupo, mas um de tier 5 não volta para varrer uma de tier 2. Incursão sem tier na
+planilha fica aberta a qualquer personagem.
 
 A regra vale nos três caminhos de entrada: `/incursao entrar`, o botão **Entrar** e o menu de
 escolha de personagem — que passa a oferecer só quem cabe. Quem não tem nenhum personagem
-elegível recebe o teto de nível da incursão na recusa, e o recrutamento mostra a exigência
+elegível recebe o tier da incursão na recusa, e o recrutamento mostra a exigência
 antes de alguém clicar.
 
 **Os limites continuam sendo do jogador, não do personagem**: o intervalo entre incursões
@@ -300,9 +305,10 @@ convertidos sozinhos na primeira subida — 7 dias viram 1 semana.
 O modificador de uma perícia sai da **classe**: um bônus fixo do tier, dobrado quando o
 personagem tem proficiência naquela perícia (o Ladino no tier 1 tem +3, ou +5 com
 proficiência), mais o bônus avulso.
-O bônus avulso é o que `/ficha expertise` define, para cobrir item mágico, talento ou
-qualquer outra fonte: `/ficha expertise Furtividade 2` soma +2, e `0` remove. Aceita
-negativo, serve para perícia não treinada e vale por personagem, não por jogador.
+**Expertise** não é mais comando: é a escolha de tier de quem a tem (Ladino nos tiers 2 e
+4), e dobra o bônus de proficiência das perícias escolhidas. O bônus avulso por perícia
+continua no banco (`definir_bonus_pericia`), para quando houver item mágico — hoje nenhum
+comando o define.
 
 Esse bônus entra em tudo que usa a perícia, inclusive na escolha automática de qual perícia
 o personagem usa no teste da sala — um bônus alto pode fazer outra perícia virar a melhor.
@@ -372,7 +378,7 @@ Os importadores validam antes de gravar e, se algo estiver errado, listam **todo
 problemas sem escrever nada. Eles exigem:
 
 - incursão com lore de abertura, tamanho válido (Curta/Média/Longa) e Organização conhecida
-- `tier` de 1 a 10, ou em branco para deixar a incursão aberta a qualquer nível
+- `tier` de 1 a 5, ou em branco para deixar a incursão aberta a qualquer personagem
 - Objetivo sempre do tipo **Combate**, com nome, CA, ataque, dano e HP de cada criatura
 - banco com ao menos 3 salas e `sala_id` único
 - salas de Armadilha / Evento / Tesouro com dificuldade, CD, alvo e ao menos uma perícia
@@ -428,7 +434,7 @@ tests/
   test_geracao.py  tamanhos, sorteio do caminho e as duas lores
   test_faixa.py    a faixa com os retratos do grupo na abertura
   test_semana.py   a virada do intervalo na segunda-feira
-  test_registro.py cadastro por classe, proficiências e /ficha upar
+  test_registro.py cadastro por classe, proficiências, /ficha upar e /ficha voltar
   test_tier.py     quem pode entrar em cada incursão
   fakes.py      dublês do Discord usados pelos testes
 ```

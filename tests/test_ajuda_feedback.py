@@ -71,7 +71,7 @@ async def caso_help_lista_tudo():
 
     achatado = " ".join(c[0] for c in todos)
     for esperado in (
-        "/ficha registrar", "/ficha expertise", "/ficha imagem", "/ficha upar",
+        "/ficha registrar", "/ficha voltar", "/ficha imagem", "/ficha upar",
         "/incursao entrar", "/incursao atacar",
         "/organizacao placar", "/config intervalo", "/help",
     ):
@@ -163,7 +163,7 @@ async def caso_registrar_avisa_o_canal():
 
 
 async def caso_atualizacoes_sao_publicas():
-    """Upar, expertise e remover respondem no canal, sem ephemeral."""
+    """Upar, voltar e remover respondem no canal, sem ephemeral."""
     conn, canal, ficha = await preparar()
     dono = JOGADORES[0]
     await db.criar_personagem(
@@ -174,14 +174,21 @@ async def caso_atualizacoes_sao_publicas():
         # o dublê registra a mensagem no canal quando nao e ephemeral
         return interacao._mensagem_resposta is not None and interacao._mensagem_resposta.id != -1
 
+    # O Guerreiro tem o Fighting Style pendente, entao o upar responde com o
+    # menu da decisao (so para o dono) e anuncia a subida no canal.
     upou = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, upou)
-    assert publica(upou), "o aviso de nivel deveria ser publico"
-    assert "nivel 6" in upou.resposta and "Vhalor" in upou.resposta
+    assert not publica(upou), "a decisao e do dono, nao do canal"
+    assert "Decida agora" in upou.resposta and upou.view_enviada is not None
+    assert any(
+        "tier 4" in (m.content or "") and "Vhalor" in (m.content or "")
+        for m in canal.mensagens
+    ), "o canal precisa saber da subida"
 
-    expertise = FakeInteraction(canal, dono)
-    await ficha.expertise.callback(ficha, expertise, Escolha("Atletismo"), 3)
-    assert publica(expertise) and "Atletismo" in expertise.resposta
+    # sem decisao pendente, o aviso e publico
+    desceu = FakeInteraction(canal, dono)
+    await ficha.voltar.callback(ficha, desceu)
+    assert publica(desceu) and "tier 3" in desceu.resposta
 
     # ver continua privado
     ver = FakeInteraction(canal, dono)

@@ -164,14 +164,10 @@ async def caso_expertise_persistida():
         conn, GUILD, dono, "Vhalor", CLASSE_PADRAO, ["Furtividade"], nivel=8
     )
 
-    class Escolha:
-        def __init__(self, value):
-            self.value = value
-            self.name = value
-
+    # O comando /ficha expertise nao existe mais — a Expertise e da classe. O
+    # bonus avulso por pericia segue no banco, para item magico e afins.
     inter = FakeInteraction(canal, dono)
-    await ficha_cog.expertise.callback(ficha_cog, inter, Escolha("Furtividade"), 3)
-    assert "Furtividade" in inter.resposta
+    await db.definir_bonus_pericia(conn, pid, "Furtividade", 3)
 
     p = await db.buscar_personagem(conn, pid)
     assert p["bonus_pericias"] == {"Furtividade": 3}, p["bonus_pericias"]
@@ -184,23 +180,20 @@ async def caso_expertise_persistida():
     assert "Expertises" in campos and "+3" in campos["Expertises"]
 
     # um segundo bonus convive com o primeiro
-    await ficha_cog.expertise.callback(
-        ficha_cog, FakeInteraction(canal, dono), Escolha("Arcanismo"), 2
-    )
+    await db.definir_bonus_pericia(conn, pid, "Arcanismo", 2)
     p = await db.buscar_personagem(conn, pid)
     assert p["bonus_pericias"] == {"Furtividade": 3, "Arcanismo": 2}
 
     # zero remove
-    await ficha_cog.expertise.callback(
-        ficha_cog, FakeInteraction(canal, dono), Escolha("Furtividade"), 0
-    )
+    await db.definir_bonus_pericia(conn, pid, "Furtividade", 0)
     p = await db.buscar_personagem(conn, pid)
     assert p["bonus_pericias"] == {"Arcanismo": 2}
 
     # o bonus e de um personagem so
     outro = await db.criar_personagem(conn, GUILD, dono, "Kaelen", CLASSE_PADRAO, [], nivel=3)
     assert (await db.buscar_personagem(conn, outro))["bonus_pericias"] == {}
-    print("  expertise gravada, somada e removida com 0: ok")
+    assert not hasattr(ficha_cog, "expertise"), "o comando saiu de cena"
+    print("  bonus avulso por pericia gravado, somado e removido com 0: ok")
 
 
 async def caso_expertise_vale_na_run():

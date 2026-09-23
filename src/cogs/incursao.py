@@ -241,7 +241,7 @@ class SeletorPersonagemEntrada(discord.ui.View):
                     label=p["nome"],
                     value=str(p["id"]),
                     description=(
-                        f"Nivel {p['nivel']} (tier {tier(p['nivel'])}) · "
+                        f"Tier {tier(p['nivel'])} · "
                         f"CA {p['ca']} · HP {p['hp_max']}"
                     ),
                 )
@@ -501,7 +501,7 @@ class Incursoes(commands.Cog):
         )
         termo = atual.lower()
         return [
-            app_commands.Choice(name=f"{p['nome']} (nivel {p['nivel']})", value=p["nome"])
+            app_commands.Choice(name=f"{p['nome']} (tier {tier(p['nivel'])})", value=p["nome"])
             for p in personagens
             if termo in p["nome"].lower()
         ][:25]
@@ -596,11 +596,11 @@ class Incursoes(commands.Cog):
     def _fora_do_tier(incursao: Incursao, personagens: list[dict[str, Any]]) -> str:
         """Explica por que nenhum daqueles personagens pode entrar."""
         quem = ", ".join(
-            f"**{p['nome']}** (nível {p['nivel']}, tier {tier(p['nivel'])})" for p in personagens
+            f"**{p['nome']}** (tier {tier(p['nivel'])})" for p in personagens
         )
         return (
             f"**{incursao.nome}** é de tier {incursao.tier}: entra quem for tier "
-            f"{incursao.tier} ou menos, ou seja, até o nível {incursao.nivel_maximo}. "
+            f"{incursao.tier} ou menos. "
             f"Seus personagens estão acima disso: {quem}."
         )
 
@@ -675,7 +675,7 @@ class Incursoes(commands.Cog):
 
         await db.adicionar_participante(self.bot.db, run_id, interaction.user.id, personagem_id)
         await interaction.response.send_message(
-            f"Voce entrou com **{personagem['nome']}** (nivel {personagem['nivel']}).",
+            f"Voce entrou com **{personagem['nome']}** (tier {tier(personagem['nivel'])}).",
             ephemeral=True,
         )
 

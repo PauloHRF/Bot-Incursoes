@@ -90,6 +90,16 @@ def nivel_maximo_do_tier(tier_alvo: int) -> int:
     return tier_alvo * NIVEIS_POR_TIER
 
 
+def nivel_do_tier(tier_alvo: int) -> int:
+    """O nível com que a ficha representa aquele tier: tier 3 -> 5.
+
+    A ficha anda de tier em tier — dentro de um tier nada muda —, então o nível
+    gravado é sempre o de entrada do tier do personagem.
+    """
+    limpo = max(1, min(TIER_MAXIMO, tier_alvo))
+    return (limpo - 1) * NIVEIS_POR_TIER + 1
+
+
 def faixa_do_tier(tier_alvo: int) -> tuple[int, int]:
     """Os níveis daquele tier: tier 3 -> (5, 6)."""
     teto = nivel_maximo_do_tier(tier_alvo)

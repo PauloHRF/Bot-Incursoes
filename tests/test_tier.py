@@ -81,7 +81,7 @@ async def caso_entrar_recusa_quem_esta_acima():
 
     inter = FakeInteraction(canal, dono)
     await cog.entrar.callback(cog, inter, "t")
-    assert "tier 3" in inter.resposta and "nível 6" in inter.resposta, inter.resposta
+    assert "tier 3" in inter.resposta and "tier 5" in inter.resposta, inter.resposta
     assert "Veterano" in inter.resposta
     assert await db.run_do_canal(conn, CANAL) is None, "não podia ter aberto a run"
     print("  /incursao entrar barra o personagem acima do tier: ok")
@@ -188,7 +188,7 @@ async def caso_recrutamento_mostra_o_tier():
     campos = {f.name: f.value for f in msg.embeds[0].fields}
     assert "Quem pode entrar" in campos, campos
     assert "Tier 4" in campos["Quem pode entrar"]
-    assert "nível 8" in campos["Quem pode entrar"]
+    assert "tier 4 ou menos" in campos["Quem pode entrar"]
 
     # e a listagem tambem, para escolher antes de abrir
     listagem = FakeInteraction(canal, dono)

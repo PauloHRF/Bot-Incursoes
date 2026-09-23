@@ -559,6 +559,18 @@ async def definir_escolha(
     await conn.commit()
 
 
+async def definir_escolhas(
+    conn: aiosqlite.Connection, personagem_id: int, escolhas: dict[str, Any]
+) -> None:
+    """Regrava o conjunto inteiro de decisões — usado ao voltar de tier."""
+    await conn.execute(
+        "UPDATE personagens SET escolhas = ?, atualizado_em = datetime('now')"
+        " WHERE id = ?",
+        (json.dumps(escolhas, ensure_ascii=False), personagem_id),
+    )
+    await conn.commit()
+
+
 async def definir_bonus_pericia(
     conn: aiosqlite.Connection, personagem_id: int, pericia: str, valor: int
 ) -> Optional[dict[str, int]]:

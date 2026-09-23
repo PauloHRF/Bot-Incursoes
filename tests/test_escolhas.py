@@ -221,30 +221,84 @@ async def caso_escolha_do_xama_liga_o_multiataque():
     print("  a escolha do Xama liga multiataque ou cantico: ok")
 
 
-async def caso_upar_avisa_e_o_menu_lista():
+async def caso_upar_conduz_a_escolha():
+    """O upar nao avisa e espera: ele ja abre a decisao do tier novo."""
     conn, canal, cog = await preparar()
     dono = JOGADORES[0]
     pid = await db.criar_personagem(
-        conn, GUILD, dono, "Grom", "guerreiro", ["Atletismo"], nivel=2
+        conn, GUILD, dono, "Grom", "guerreiro", ["Atletismo"], nivel=1
     )
     inter = FakeInteraction(canal, dono)
     await cog.upar.callback(cog, inter)
-    assert "Decisao pendente" in inter.resposta, inter.resposta
-    assert "Fighting Style" in inter.resposta
-    assert "/ficha escolhas" in inter.resposta
+    assert "Decida agora" in inter.resposta and "Fighting Style" in inter.resposta
+    assert isinstance(inter.view_enviada, SeletorOpcao)
 
-    # o comando lista a pendencia
-    lista = FakeInteraction(canal, dono)
-    await cog.escolhas.callback(cog, lista)
-    assert isinstance(lista.view_enviada, SeletorEscolha)
-    assert {o.value for o in lista.view_enviada.menu.options} == {"fighting_style"}
+    # decidindo ali mesmo, a ficha ja sai com o efeito valendo
+    inter.view_enviada.menu._values = ["defensivo"]
+    gravando = FakeInteraction(canal, dono)
+    await inter.view_enviada._escolher(gravando)
+    decidido = await db.buscar_personagem(conn, pid)
+    assert decidido["escolhas"] == {"fighting_style": "defensivo"}
+    assert decidido["pendencias"] == []
+    print("  o upar abre a decisao do tier na hora: ok")
 
-    # decidido, o comando diz que nao ha mais nada
-    await escolher(cog, canal, dono, pid, "fighting_style", ["pesado"])
-    vazio = FakeInteraction(canal, dono)
-    await cog.escolhas.callback(cog, vazio)
-    assert "nenhuma decisao pendente" in vazio.resposta
-    print("  upar avisa a decisao e /ficha escolhas resolve: ok")
+
+async def caso_decisoes_em_fila():
+    """Com mais de uma pendencia, uma puxa a outra sem comando no meio."""
+    conn, canal, cog = await preparar()
+    dono = JOGADORES[0]
+    # Ladino no tier 3 devendo a Expertise do tier 2; ao subir para o 4, deve duas
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Sombra", "ladino",
+        ["Furtividade", "Acrobacia", "Percepção"], nivel=5,
+    )
+    inter = FakeInteraction(canal, dono)
+    await cog.upar.callback(cog, inter)
+    assert "Decida agora" in inter.resposta
+    assert "ainda faltam 1" in inter.resposta, inter.resposta
+
+    # gravando a primeira, a segunda abre sozinha
+    inter.view_enviada.menu._values = ["Furtividade", "Acrobacia"]
+    segunda = FakeInteraction(canal, dono)
+    await inter.view_enviada._escolher(segunda)
+    assert "Decida agora" in segunda.resposta, segunda.resposta
+    assert isinstance(segunda.view_enviada, SeletorPericiasDaEscolha)
+
+    segunda.view_enviada.menu._values = ["Percepção"]
+    fim = FakeInteraction(canal, dono)
+    await segunda.view_enviada._escolher(fim)
+    pronto = await db.buscar_personagem(conn, pid)
+    assert pronto["pendencias"] == []
+    assert set(pronto["efeitos"]["expertise"]) == {"Furtividade", "Acrobacia", "Percepção"}
+    print("  uma decisao puxa a proxima ate acabarem: ok")
+
+
+async def caso_voltar_esquece_a_escolha_do_tier():
+    conn, canal, cog = await preparar()
+    dono = JOGADORES[0]
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Grom", "guerreiro", ["Atletismo"], nivel=3
+    )
+    await escolher(cog, canal, dono, pid, "fighting_style", ["defensivo"])
+    assert (await db.buscar_personagem(conn, pid))["escolhas"]
+
+    # voltando para o tier 1, a decisao do tier 2 e esquecida
+    volta = FakeInteraction(canal, dono)
+    await cog.voltar.callback(cog, volta)
+    depois = await db.buscar_personagem(conn, pid)
+    assert depois["escolhas"] == {}, depois["escolhas"]
+    assert "Fighting Style" in volta.resposta, volta.resposta
+
+    # e subindo de novo ele escolhe outra coisa
+    de_novo = FakeInteraction(canal, dono)
+    await cog.upar.callback(cog, de_novo)
+    assert isinstance(de_novo.view_enviada, SeletorOpcao)
+    de_novo.view_enviada.menu._values = ["ofensivo"]
+    await de_novo.view_enviada._escolher(FakeInteraction(canal, dono))
+    assert (await db.buscar_personagem(conn, pid))["escolhas"] == {
+        "fighting_style": "ofensivo"
+    }
+    print("  voltar de tier esquece a decisao daquele tier: ok")
 
 
 async def caso_escolha_de_outro_e_recusada():
@@ -269,7 +323,9 @@ async def main():
         await caso_expertise_so_oferece_o_que_tem_proficiencia()
         await caso_primal_knowledge_da_proficiencia_extra()
         await caso_escolha_do_xama_liga_o_multiataque()
-        await caso_upar_avisa_e_o_menu_lista()
+        await caso_upar_conduz_a_escolha()
+        await caso_decisoes_em_fila()
+        await caso_voltar_esquece_a_escolha_do_tier()
         await caso_escolha_de_outro_e_recusada()
     finally:
         for conn in _ABERTAS:
