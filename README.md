@@ -118,6 +118,11 @@ Cada personagem age **uma vez por rodada: ou ataca, ou usa uma habilidade**, nun
 Quem já agiu recebe o aviso dizendo com o que gastou o turno, e o menu ✨ Habilidade nem
 abre. Reações (*Relentless*, *Uncanny Dodge*) não contam: disparam sozinhas, fora do turno.
 
+O canal fica com **um cartão só, o do momento**: a votação some quando o grupo entra na
+sala, a sala some quando a próxima votação abre, e o resumo privado de cada golpe e a
+marcação da rodada somem quando a rodada seguinte começa. O caminho inteiro volta no fim,
+no campo **Caminho** do desfecho — é lá que se vê por onde o grupo passou.
+
 O bot **marca os jogadores** na hora de agir — quando a votação abre, quando a sala pede
 rolagem, quando o combate começa e a cada rodada nova. A chamada da rodada vai numa linha
 de texto própria, porque o painel é editado no lugar e edição não notifica ninguém.

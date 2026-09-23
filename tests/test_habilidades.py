@@ -119,19 +119,22 @@ def caso_bonus_de_pericia():
     print("  as passivas de pericia entram no modificador: ok")
 
 
+class Dado:
+    """Dado de teste: devolve os valores na ordem, depois o maximo da face."""
+
+    def __init__(self, valores):
+        self.valores = list(valores)
+
+    def randint(self, a, b):
+        return self.valores.pop(0) if self.valores else b
+
+    def choice(self, seq):
+        return seq[0]
+
+
 def caso_critico_em_dezenove():
     guerreiro = motor.Combatente(1, "G", 20, 40, "1d1", 50, 50, critico_em=19)
     alvo = inimigo()
-
-    class Dado:
-        def __init__(self, valores):
-            self.valores = list(valores)
-
-        def randint(self, a, b):
-            return self.valores.pop(0) if self.valores else b
-
-        def choice(self, seq):
-            return seq[0]
 
     golpe = motor.atacar_inimigo(guerreiro, alvo, Dado([19, 1]))
     assert golpe.d20 == 19 and golpe.critico and golpe.acertou
@@ -160,10 +163,12 @@ def caso_dano_extra_e_condicional():
     ferido.hp_atual = 50
     assert motor.esta_ferido(ferido)
 
-    sadio = motor.atacar_inimigo(patrulheiro, inteiro, None)
-    machucado = motor.atacar_inimigo(patrulheiro, ferido, None)
-    if sadio.acertou and machucado.acertou:
-        assert machucado.dano == sadio.dano + 2, (sadio.dano, machucado.dano)
+    # d20 fixo em 10: acerta os dois sem esbarrar no 20 natural, que dobraria
+    # os dados de um dos golpes e tiraria a comparacao do lugar.
+    sadio = motor.atacar_inimigo(patrulheiro, inteiro, Dado([10]))
+    machucado = motor.atacar_inimigo(patrulheiro, ferido, Dado([10]))
+    assert sadio.acertou and machucado.acertou
+    assert machucado.dano == sadio.dano + 2, (sadio.dano, machucado.dano)
     print("  dano extra do Paladino e o condicional do Patrulheiro: ok")
 
 

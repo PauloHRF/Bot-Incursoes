@@ -118,7 +118,17 @@ async def caso_vitoria_no_objetivo():
 
     run = await db.buscar_run(conn, run["id"])
     assert run["status"] == "sucesso", f"esperava sucesso, veio {run['status']}"
-    assert any("objetivo cumprido" in (m.embeds[0].title or "") for m in canal.mensagens if m.embeds)
+    desfecho = next(
+        m.embeds[0] for m in canal.mensagens
+        if m.embeds and "objetivo cumprido" in (m.embeds[0].title or "")
+    )
+    # o caminho inteiro so reaparece no fim, ja que cada passo apagou o anterior
+    campos = {f.name: f.value for f in desfecho.fields}
+    caminho = next(v for k, v in campos.items() if k.startswith("Caminho"))
+    visitadas = await db.salas_visitadas(conn, run["id"])
+    assert len(visitadas) == incursao.passos
+    for sala_id in visitadas:
+        assert cog._sala(incursao, sala_id).nome in caminho, (sala_id, caminho)
 
     # combate encerrado não aceita mais ataque
     tarde = FakeInteraction(canal, JOGADORES[1], msg)
@@ -211,8 +221,9 @@ async def caso_combate_nao_polui_o_canal():
     run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
     assert run["status"] == "objetivo"
 
-    antes = len(canal.mensagens)
+    antes = len(canal.enviadas)
     painel_id = run["mensagem_id"]
+    privadas = []
     rodadas = 0
     for _ in range(40):
         atual = await db.buscar_run(conn, run["id"])
@@ -225,12 +236,14 @@ async def caso_combate_nao_polui_o_canal():
             agora = await db.buscar_run(conn, run["id"])
             if agora["status"] != "objetivo":
                 break
-            await cog.atacar(FakeInteraction(canal, c.user_id, msg), run["id"], incursao.objetivo.id)
+            inter = FakeInteraction(canal, c.user_id, msg)
+            privadas.append(inter)
+            await cog.atacar(inter, run["id"], incursao.objetivo.id)
 
     assert (await db.buscar_run(conn, run["id"]))["status"] == "sucesso"
     assert rodadas >= 3, f"o combate precisa durar algumas rodadas para o teste valer ({rodadas})"
 
-    novas = canal.mensagens[antes:]
+    novas = canal.enviadas[antes:]
     # O painel e editado no lugar: nenhum embed novo de combate. O que o combate
     # posta e a chamada de cada rodada, uma linha de texto marcando quem joga.
     chamadas = [m for m in novas if not m.embeds and "Rodada" in (m.content or "")]
@@ -238,6 +251,10 @@ async def caso_combate_nao_polui_o_canal():
         f"{len(chamadas)} chamadas em {rodadas} rodadas — uma por rodada nova"
     )
     assert all("<@" in (m.content or "") for m in chamadas), "a chamada marca o grupo"
+    # e cada chamada sai do canal quando a proxima rodada abre
+    assert all(m.apagada for m in chamadas), "a chamada da rodada anterior deve sumir"
+    assert all(i.efemera_apagada for i in privadas), "o resumo privado devia sumir tambem"
+    assert not [m for m in canal.mensagens if "Rodada" in (m.content or "")]
     sem_chamada = len(novas) - len(chamadas)
     assert sem_chamada <= 3, (
         f"{sem_chamada} mensagens novas fora as chamadas — o combate voltou a poluir"

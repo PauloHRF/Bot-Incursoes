@@ -652,11 +652,31 @@ def _campo_pontos(e: discord.Embed, lancamentos: list[dict], total: int, organiz
     e.add_field(name=f"Pontos de Organização (+{ganho})", value="\n".join(linhas), inline=False)
 
 
+def campo_caminho(e: discord.Embed, caminho: Optional[list[Sala]]) -> None:
+    """O histórico da run: por onde o grupo passou, na ordem.
+
+    É o que sobra no canal — as mensagens de cada passo somem quando o passo
+    seguinte abre, e o caminho inteiro reaparece aqui, no fim.
+    """
+    if not caminho:
+        return
+    linhas = [
+        f"{i}. {EMOJI_TIPO.get(s.tipo, '•')} **{s.nome}**"
+        + (f" — {s.dificuldade}" if s.dificuldade else "")
+        for i, s in enumerate(caminho, start=1)
+    ]
+    bloco = "\n".join(linhas)
+    if len(bloco) > 1024:
+        bloco = bloco[:1000].rsplit("\n", 1)[0] + "\n…"
+    e.add_field(name=f"Caminho ({len(caminho)} sala(s))", value=bloco, inline=False)
+
+
 def run_fracassada(
     incursao: Incursao,
     estado,
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
+    caminho: Optional[list[Sala]] = None,
 ) -> discord.Embed:
     e = discord.Embed(
         title="☠️ Incursão fracassada",
@@ -667,6 +687,7 @@ def run_fracassada(
         ),
         color=COR_FALHA,
     )
+    campo_caminho(e, caminho)
     _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
     return e
 
@@ -677,6 +698,7 @@ def run_concluida(
     estado=None,
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
+    caminho: Optional[list[Sala]] = None,
 ) -> discord.Embed:
     """O desfecho da run: vitória, como o grupo saiu, recompensa e pontos."""
     e = discord.Embed(
@@ -691,6 +713,7 @@ def run_concluida(
             value="\n".join(_linha_hp(c) for c in estado.combatentes),
             inline=False,
         )
+    campo_caminho(e, caminho)
     e.add_field(
         name=f"Recompensa ({incursao.recompensa_mes} MEs por participante)",
         value="\n".join(f"{m.mention} — {incursao.recompensa_mes} MEs" for m in membros),

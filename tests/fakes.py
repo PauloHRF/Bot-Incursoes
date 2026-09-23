@@ -47,6 +47,7 @@ class FakeMensagem:
         self.view = kw.get("view")
         self.content = kw.get("content")
         self.arquivo = kw.get("arquivo")
+        self.apagada = False
 
     async def edit(self, **kw):
         if "embed" in kw:
@@ -55,11 +56,19 @@ class FakeMensagem:
             self.view = kw["view"]
         return self
 
+    async def delete(self):
+        self.apagada = True  # fica em canal.enviadas, sai de canal.mensagens
+        if self in self.canal.mensagens:
+            self.canal.mensagens.remove(self)
+
 
 class FakeCanal:
     def __init__(self, canal_id: int):
         self.id = canal_id
+        # `mensagens` e o canal como esta agora; `enviadas` guarda tudo que ja
+        # foi postado, inclusive o que o bot apagou depois.
         self.mensagens: list[FakeMensagem] = []
+        self.enviadas: list[FakeMensagem] = []
         self._proximo_id = 1000
 
     async def send(self, content=None, *, embed=None, embeds=None, view=None,
@@ -76,6 +85,7 @@ class FakeCanal:
         if embeds:
             msg.embeds = list(embeds)
         self.mensagens.append(msg)
+        self.enviadas.append(msg)
         return msg
 
     async def fetch_message(self, mensagem_id: int):
@@ -133,10 +143,17 @@ class FakeInteraction:
         self.view_enviada = None
         self.modal_enviado = None
         self.adiado = False
+        self.efemera_apagada = False
         self._mensagem_resposta = None
 
     async def original_response(self):
         return self._mensagem_resposta
+
+    async def delete_original_response(self):
+        alvo = self._mensagem_resposta
+        if alvo is not None:
+            await alvo.delete()
+            self.efemera_apagada = True
 
     async def edit_original_response(self, **kw):
         alvo = self.message or self._mensagem_resposta

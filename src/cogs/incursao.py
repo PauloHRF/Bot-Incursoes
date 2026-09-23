@@ -285,6 +285,11 @@ class Incursoes(commands.Cog):
         self.bot = bot
         self.incursoes: dict[str, Incursao] = {}
         self.bancos: dict[str, BancoDeSalas] = {}
+        # Limpeza do canal, tudo em memoria: um restart perde as referencias e
+        # deixa a mensagem antiga no lugar, o que e melhor que gravar no banco
+        # coisa que so vale por 15 minutos (o prazo do token de interacao).
+        self._efemeras: dict[int, list[discord.Interaction]] = {}
+        self._chamadas: dict[int, Any] = {}
 
     async def cog_load(self) -> None:
         self._carregar_tolerante()
@@ -803,6 +808,10 @@ class Incursoes(commands.Cog):
         canal = await self._canal(run)
         if not (incursao and canal):
             return
+        # A sala que o grupo acabou de atravessar sai do canal. No primeiro
+        # passo nao ha sala anterior: o que esta la e o recrutamento, que fica.
+        if linha > 1:
+            await self._apagar_passo_anterior(run)
         opcoes = await self._opcoes(run, linha)
         if not opcoes:
             try:
@@ -924,6 +933,8 @@ class Incursoes(commands.Cog):
     # -------------------------------------------------------------- salas
 
     async def _entrar_na_sala(self, run: dict[str, Any], sala: Sala) -> None:
+        # A votacao cumpriu o papel dela: o grupo ja escolheu.
+        await self._apagar_passo_anterior(run)
         canal = await self._canal(run)
         if not canal:
             return
@@ -940,7 +951,9 @@ class Incursoes(commands.Cog):
             await db.definir_hp_varios(
                 self.bot.db, run["id"], {c.user_id: c.hp_atual for c in combatentes}
             )
-            await canal.send(embed=E.descanso(sala, mudancas))
+            mensagem = await canal.send(embed=E.descanso(sala, mudancas))
+            # O descanso tambem e a sala do passo: sai do canal na proxima escolha.
+            await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
             await self._concluir_sala(await db.buscar_run(self.bot.db, run["id"]), sala, None)
             return
 
@@ -1210,6 +1223,7 @@ class Incursoes(commands.Cog):
         sala_id: str,
         alvo_indice: Optional[int] = None,
     ) -> None:
+        self._guardar_efemera(run_id, interaction)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo") or run["sala_atual"] != sala_id:
             await interaction.response.send_message("Este combate já terminou.", ephemeral=True)
@@ -1324,6 +1338,60 @@ class Incursoes(commands.Cog):
         else:
             await self._atualizar_painel(run, sala, estado, len(agiram))
 
+    def _guardar_efemera(self, run_id: int, interaction: discord.Interaction) -> None:
+        """Marca uma resposta privada para sumir quando a rodada virar."""
+        self._efemeras.setdefault(run_id, []).append(interaction)
+
+    async def _limpar_efemeras(self, run_id: int) -> None:
+        """Apaga as respostas privadas da rodada que acabou.
+
+        Cada uma so pode ser apagada pela propria interacao, e o token dela
+        vale 15 minutos — o que passou disso simplesmente fica.
+        """
+        for interaction in self._efemeras.pop(run_id, []):
+            try:
+                await interaction.delete_original_response()
+            except (discord.HTTPException, discord.NotFound, AttributeError):
+                pass
+
+    async def _apagar_chamada(self, run_id: int) -> None:
+        """Tira do canal a marcacao da rodada anterior."""
+        mensagem = self._chamadas.pop(run_id, None)
+        if mensagem is None:
+            return
+        try:
+            await mensagem.delete()
+        except (discord.HTTPException, discord.NotFound, AttributeError):
+            pass
+
+    async def _apagar_passo_anterior(self, run: dict[str, Any]) -> None:
+        """Apaga a mensagem do passo que acabou: a votacao, ou a sala.
+
+        O canal fica com um cartao so — o do momento. O caminho inteiro volta
+        no fim da run, no resumo.
+        """
+        atual = await db.buscar_run(self.bot.db, run["id"]) or run
+        if not atual.get("mensagem_id"):
+            return
+        canal = await self._canal(atual)
+        if canal is None:
+            return
+        try:
+            mensagem = await canal.fetch_message(atual["mensagem_id"])
+            await mensagem.delete()
+        except (discord.HTTPException, discord.NotFound, AttributeError):
+            pass
+        await db.atualizar_run(self.bot.db, run["id"], mensagem_id=None)
+
+    async def _caminho(self, run: dict[str, Any]) -> list[Sala]:
+        """As salas por onde o grupo passou, na ordem, para o resumo do fim."""
+        incursao = self._incursao_da_run(run)
+        if not incursao:
+            return []
+        visitadas = await db.salas_visitadas(self.bot.db, run["id"])
+        salas = [self._sala(incursao, sala_id) for sala_id in visitadas]
+        return [s for s in salas if s is not None]
+
     async def _chamar(
         self, run: dict[str, Any], user_ids: Optional[list[int]] = None
     ) -> str:
@@ -1386,6 +1454,7 @@ class Incursoes(commands.Cog):
         self, interaction: discord.Interaction, run_id: int, sala_id: str
     ) -> None:
         """Mostra, so para quem clicou, o que ele pode usar agora."""
+        self._guardar_efemera(run_id, interaction)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo"):
             await interaction.response.send_message("Esta sala ja terminou.", ephemeral=True)
@@ -1444,6 +1513,7 @@ class Incursoes(commands.Cog):
         alvos: Optional[list[int]] = None,
     ) -> None:
         """Gasta um uso e resolve a habilidade, pedindo alvo se precisar."""
+        self._guardar_efemera(run_id, interaction)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo"):
             await interaction.response.send_message("Esta sala ja terminou.", ephemeral=True)
@@ -2025,6 +2095,8 @@ class Incursoes(commands.Cog):
             await self._atualizar_painel(
                 run, sala, estado, len(ataques), rodada_anterior=log, encerrado=True
             )
+            await self._limpar_efemeras(run["id"])
+            await self._apagar_chamada(run["id"])
             await self._apos_combate_vencido(run, sala, estado)
             return
 
@@ -2032,6 +2104,8 @@ class Incursoes(commands.Cog):
             await self._atualizar_painel(
                 run, sala, estado, len(ataques), rodada_anterior=log, encerrado=True
             )
+            await self._limpar_efemeras(run["id"])
+            await self._apagar_chamada(run["id"])
             await self._encerrar_run(run, "fracasso")
             incursao = self._incursao_da_run(run)
             # Mesmo derrotado, o grupo levou a run ate o fim: a participacao conta.
@@ -2039,7 +2113,11 @@ class Incursoes(commands.Cog):
                 run, config.PONTOS_PARTICIPACAO, "Participação na incursão", "participacao"
             )
             lancamentos, total = await self._balanco(run)
-            await canal.send(embed=E.run_fracassada(incursao, estado, lancamentos, total))
+            await canal.send(
+                embed=E.run_fracassada(
+                    incursao, estado, lancamentos, total, await self._caminho(run)
+                )
+            )
             return
 
         # Proxima rodada no mesmo painel, com o log da que acabou.
@@ -2049,8 +2127,10 @@ class Incursoes(commands.Cog):
         await self._atualizar_painel(run, sala, estado, 0, rodada_anterior=log)
         # O painel e editado no lugar, e edicao nao notifica ninguem: a chamada
         # da rodada vai numa mensagem propria, so para quem ainda pode agir.
+        await self._limpar_efemeras(run["id"])
+        await self._apagar_chamada(run["id"])
         if estado.ativos:
-            await canal.send(
+            self._chamadas[run["id"]] = await canal.send(
                 f"⚔️ **Rodada {estado.rodada}** — "
                 f"{await self._chamar(run, [c.user_id for c in estado.ativos])}"
             )
@@ -2090,7 +2170,8 @@ class Incursoes(commands.Cog):
                 lancamentos, total = await self._balanco(run)
                 await canal.send(
                     embed=E.run_concluida(
-                        incursao, await self._membros(run), estado, lancamentos, total
+                        incursao, await self._membros(run), estado, lancamentos, total,
+                        await self._caminho(run),
                     )
                 )
                 if incursao.lore_final:
@@ -2201,6 +2282,8 @@ class Incursoes(commands.Cog):
         if not (incursao and canal):
             return
 
+        # A ultima sala do caminho sai do canal quando o objetivo abre.
+        await self._apagar_passo_anterior(run)
         await db.atualizar_run(
             self.bot.db,
             run["id"],

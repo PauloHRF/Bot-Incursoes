@@ -193,33 +193,33 @@ async def caso_intervalo_entre_incursoes():
     print("  intervalo entre incursões: ok")
 
 
-async def caso_botoes_somem_ao_encerrar():
-    """Encerrar a run tira os botões da etapa que estava aberta."""
+async def caso_canal_fica_com_um_cartao_so():
+    """Cada passo apaga o anterior: o canal mostra so o momento atual."""
     conn, canal, cog = await preparar()
     run = await montar_run_em_votacao(conn, canal, cog)
-    
-    # o recrutamento ja perdeu os botoes ao comecar a run
-    id_votacao = run["mensagem_id"]
-    assert (await canal.fetch_message(id_votacao)).view is not None, "a votação deve abrir com botões"
 
-    # resolver a votacao normalmente tira os botoes dela
+    id_votacao = run["mensagem_id"]
+    assert (await canal.fetch_message(id_votacao)).view is not None, "a votacao abre com botoes"
+
+    # votada, a mensagem da votacao sai do canal
     alvo = next(s for s in await cog._opcoes(run, 1) if s.tem_teste)
     msg = await canal.fetch_message(id_votacao)
     for user_id in JOGADORES:
         await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
-    assert (await canal.fetch_message(id_votacao)).view is None, "votação resolvida não pode manter botões"
+    assert not [m for m in canal.mensagens if m.id == id_votacao], "a votacao devia sumir"
 
-    # a sala aberta tem botao; resolver a sala tira
+    # a sala aberta tem botao, e fica ate a proxima votacao
     atual = await db.buscar_run(conn, run["id"])
     id_sala = atual["mensagem_id"]
-    assert (await canal.fetch_message(id_sala)).view is not None
     msg_sala = await canal.fetch_message(id_sala)
+    assert msg_sala.view is not None
+
     for user_id in JOGADORES:
         agora = await db.buscar_run(conn, run["id"])
         if agora["status"] != "em_sala" or agora["sala_atual"] != alvo.id:
             break
         await cog.rolar(FakeInteraction(canal, user_id, msg_sala), run["id"], alvo.id)
-    assert (await canal.fetch_message(id_sala)).view is None, "sala resolvida não pode manter botões"
+    assert not [m for m in canal.mensagens if m.id == id_sala], "a sala devia sumir"
 
     # agora a votacao da linha 2 esta aberta; desistir precisa fecha-la
     atual = await db.buscar_run(conn, run["id"])
@@ -231,11 +231,11 @@ async def caso_botoes_somem_ao_encerrar():
     assert (await db.buscar_run(conn, run["id"]))["status"] == "desistiu"
     assert (
         await canal.fetch_message(id_votacao2)
-    ).view is None, "a votação aberta ficou clicável depois da run encerrada"
+    ).view is None, "a votacao aberta ficou clicavel depois da run encerrada"
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
-    print("  botões somem em cada etapa resolvida: ok")
+    print("  cada passo apaga o anterior e os botoes somem ao encerrar: ok")
 
 
 async def main():
@@ -245,7 +245,7 @@ async def main():
     await caso_sem_prazo()
     await caso_restart()
     await caso_intervalo_entre_incursoes()
-    await caso_botoes_somem_ao_encerrar()
+    await caso_canal_fica_com_um_cartao_so()
 
 
 async def _com_limpeza():
