@@ -11,7 +11,6 @@ sys.path.insert(0, str(RAIZ))
 from src import classes as cl, config, database as db  # noqa: E402
 from src.cogs.ficha import (  # noqa: E402
     Ficha,
-    SeletorEscolha,
     SeletorOpcao,
     SeletorPericiasDaEscolha,
     embed_ficha,

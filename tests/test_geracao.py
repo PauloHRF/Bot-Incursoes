@@ -14,8 +14,6 @@ from src.cogs.incursao import Incursoes  # noqa: E402
 from src.incursoes import OPCOES_POR_PASSO, TAMANHOS, Sala  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
-    GUILD,
-    INDEFESO,
     JOGADORES,
     FakeBot,
     FakeCanal,

@@ -1294,12 +1294,6 @@ async def definir_thp_varios(
     await conn.commit()
 
 
-async def zerar_thp(conn: aiosqlite.Connection, run_id: int) -> None:
-    """A vida temporária não atravessa combates."""
-    await conn.execute("UPDATE run_participantes SET thp = 0 WHERE run_id = ?", (run_id,))
-    await conn.commit()
-
-
 async def definir_hp_varios(
     conn: aiosqlite.Connection, run_id: int, hps: dict[int, int]
 ) -> None:

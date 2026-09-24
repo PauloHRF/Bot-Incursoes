@@ -11,7 +11,7 @@ sys.path.insert(0, str(RAIZ))
 
 from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.ficha import embed_ficha  # noqa: E402
-from src.habilidades import ATIVA, PASSIVA, Habilidade, juntar  # noqa: E402
+from src.habilidades import PASSIVA, Habilidade, juntar  # noqa: E402
 from src.rules import ATRIBUTOS, TIER_MAXIMO, mod_save  # noqa: E402
 from fakes import CANAL, GUILD, JOGADORES, FakeCanal, FakeInteraction  # noqa: E402
 

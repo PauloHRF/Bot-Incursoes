@@ -216,7 +216,7 @@ class ResolucaoSala:
         return [r for r in self.resultados if r.passou]
 
 
-def escalar_monstro(monstro: Monstro, tiers_do_grupo: list[int]) -> Monstro:
+def escalar_monstro(monstro: Monstro, niveis: list[int]) -> Monstro:
     """Ajusta o monstro à composição do grupo.
 
     Hoje devolve o monstro como está: a regra de escala do chefe ainda não foi
@@ -650,12 +650,8 @@ def contra_atacar(
         inimigo.nome, inimigo.ataque, inimigo.dano, alvo.nome, alvo.ca_efetiva, rng
     )
     if golpe.acertou:
-        # Rage e companhia cortam o dano recebido antes de ele entrar no HP.
-        sofrido = golpe.dano
-        if alvo.reducao_dano:
-            sofrido = max(1, int(round(sofrido * (1 - alvo.reducao_dano))))
-            golpe.dano = sofrido
-        golpe.absorvido, _ = absorver(alvo, sofrido)
+        golpe.dano = reduzido(alvo, golpe.dano)
+        golpe.absorvido, _ = absorver(alvo, golpe.dano)
     return golpe
 
 
@@ -698,9 +694,7 @@ def usar_habilidade_do_inimigo(
         investida = Investida(inimigo.nome, habilidade.nome, alvo, resultado)
         if not resultado.passou:
             if habilidade.dano:
-                sofrido = rolar_dano(habilidade.dano, rng)
-                if alvo.reducao_dano:
-                    sofrido = max(1, int(round(sofrido * (1 - alvo.reducao_dano))))
+                sofrido = reduzido(alvo, rolar_dano(habilidade.dano, rng))
                 investida.dano = sofrido
                 investida.absorvido, _ = absorver(alvo, sofrido)
             # Atordoar quem ja esta atordoado nao renova nada: o alvo perde
@@ -771,6 +765,13 @@ def ganhar_thp(combatente: Combatente, quantidade: int) -> int:
         return combatente.thp
     combatente.thp = max(combatente.thp, quantidade)
     return combatente.thp
+
+
+def reduzido(combatente: Combatente, dano: int) -> int:
+    """O dano depois da reducao do alvo: Rage e companhia cortam antes do HP."""
+    if not combatente.reducao_dano:
+        return dano
+    return max(1, int(round(dano * (1 - combatente.reducao_dano))))
 
 
 def absorver(combatente: Combatente, dano: int) -> tuple[int, int]:

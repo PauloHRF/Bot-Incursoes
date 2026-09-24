@@ -274,7 +274,6 @@ async def caso_bando_inteiro_encerra_a_sala():
         estado = await cog._estado_combate(atual, incursao.objetivo)
         if estado is None:
             break
-        alvo = estado.alvo_preferido()
         for c in list(estado.vivos):
             agora = await db.buscar_run(conn, run["id"])
             if agora["status"] != "objetivo":

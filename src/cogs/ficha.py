@@ -28,38 +28,6 @@ from ..rules import (
 LIMITE_PERSONAGENS = 25  # o seletor do Discord nao mostra mais que isso
 
 
-class SeletorPericias(discord.ui.View):
-    """Menu das pericias com proficiencia, limitado ao que a classe concede."""
-
-    def __init__(self, dono_id: int, marcadas: list[str], limite: int):
-        super().__init__(timeout=300)
-        self.dono_id = dono_id
-        self.limite = limite
-        self.escolhidas: Optional[list[str]] = None
-        opcoes = [
-            discord.SelectOption(label=p, default=p in marcadas) for p in PERICIAS
-        ]
-        self.menu = discord.ui.Select(
-            placeholder=f"Escolha ate {limite} pericia(s) com proficiencia",
-            min_values=0,
-            max_values=min(limite, len(opcoes)),
-            options=opcoes,
-        )
-        self.menu.callback = self._escolher
-        self.add_item(self.menu)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.dono_id:
-            await interaction.response.send_message("Essa ficha nao e sua.", ephemeral=True)
-            return False
-        return True
-
-    async def _escolher(self, interaction: discord.Interaction) -> None:
-        self.escolhidas = list(self.menu.values)
-        self.stop()
-        await interaction.response.defer()
-
-
 class DonoDaFicha(discord.ui.View):
     """Base das views de ficha: so o dono mexe."""
 
@@ -74,29 +42,29 @@ class DonoDaFicha(discord.ui.View):
         return True
 
 
-class SeletorEscolha(DonoDaFicha):
-    """As decisoes de tier que o personagem ainda nao tomou."""
+class SeletorPericias(DonoDaFicha):
+    """Menu das pericias com proficiencia, limitado ao que a classe concede."""
 
-    def __init__(self, cog: "Ficha", personagem_id: int, pendencias: list, dono_id: int = 0):
+    def __init__(self, dono_id: int, marcadas: list[str], limite: int):
         super().__init__(dono_id)
-        self.cog = cog
-        self.personagem_id = personagem_id
-        menu = discord.ui.Select(
-            placeholder="Qual decisao?",
-            options=[
-                discord.SelectOption(
-                    label=f"T{tier_da}: {h.nome}"[:100], value=h.id, description=h.texto[:100]
-                )
-                for tier_da, h in pendencias[:25]
-            ],
+        self.limite = limite
+        self.escolhidas: Optional[list[str]] = None
+        opcoes = [
+            discord.SelectOption(label=p, default=p in marcadas) for p in PERICIAS
+        ]
+        self.menu = discord.ui.Select(
+            placeholder=f"Escolha ate {limite} pericia(s) com proficiencia",
+            min_values=0,
+            max_values=min(limite, len(opcoes)),
+            options=opcoes,
         )
-        menu.callback = self._escolher
-        self.menu = menu
-        self.add_item(menu)
+        self.menu.callback = self._escolher
+        self.add_item(self.menu)
 
     async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.escolhidas = list(self.menu.values)
         self.stop()
-        await self.cog.abrir_escolha(interaction, self.personagem_id, self.menu.values[0])
+        await interaction.response.defer()
 
 
 class SeletorOpcao(DonoDaFicha):
@@ -153,6 +121,19 @@ class SeletorPericiasDaEscolha(DonoDaFicha):
         await self.cog.gravar_escolha(
             interaction, self.personagem_id, self.habilidade, list(self.menu.values)
         )
+
+
+async def sugerir_personagens(
+    conn, interaction: discord.Interaction, atual: str
+) -> list[app_commands.Choice[str]]:
+    """Autocomplete dos personagens de quem esta digitando."""
+    personagens = await db.listar_personagens(conn, interaction.guild_id, interaction.user.id)
+    termo = atual.lower()
+    return [
+        app_commands.Choice(name=f"{p['nome']} (tier {tier(p['nivel'])})", value=p["nome"])
+        for p in personagens
+        if termo in p["nome"].lower()
+    ][:25]
 
 
 def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.Embed:
@@ -333,15 +314,7 @@ class Ficha(commands.Cog):
     async def _sugerir_personagens(
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
-        personagens = await db.listar_personagens(
-            self.bot.db, interaction.guild_id, interaction.user.id
-        )
-        termo = atual.lower()
-        return [
-            app_commands.Choice(name=f"{p['nome']} (tier {tier(p['nivel'])})", value=p["nome"])
-            for p in personagens
-            if termo in p["nome"].lower()
-        ][:25]
+        return await sugerir_personagens(self.bot.db, interaction, atual)
 
     async def _resolver(
         self, interaction: discord.Interaction, nome: Optional[str]
