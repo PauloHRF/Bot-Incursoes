@@ -380,6 +380,24 @@ planilha da incursão ela é a escolta do chefe. O limite é 6 criaturas por sal
 duas fontes. Os dois modelos já vêm com exemplos: as Sentinelas de Basalto são duas, o
 Guardião Adormecido vem com três Larvas, e o Olho do Vórtice tem dois Acólitos.
 
+**O que uma criatura pode ter** (colunas da aba Monstros, todas opcionais): `ataques` para
+multiataque, `saves` (`FOR +5, CON +5`) e `saves_vantagem` para as resistências dela, e um
+bloco `habilidade_*` para a ação especial — nome, texto, `save`, `cd`, `dano`, `alvos` e
+`atordoa`. A ação toma o turno: na rodada em que a criatura usa, ela não ataca.
+
+Quando ela sai é `habilidade_cada` (2 = rodadas 2, 4, 6…) **ou** `habilidade_recarga`, que é
+o *Recharge* da 5e: `5` significa "Recharge 5–6" — sai na primeira rodada e, depois de
+gasta, volta quando o d6 da criatura tirar 5 ou mais. A carga fica gravada, então um restart
+no meio do combate não devolve a habilidade de graça.
+
+`habilidade_save_repete` marcado com `x` é o "e refaz o save no fim do turno": em vez de
+durar um número fixo de rodadas, o atordoamento só acaba quando o alvo passar no teste — e
+ele sempre perde ao menos uma vez antes da primeira chance. Ninguém é atordoado duas vezes
+seguidas, e se o grupo inteiro estiver preso a rodada corre sozinha em vez de travar.
+
+O dano aceita **soma de parcelas**: `3d8+3+2d6` é o golpe que corta e envenena no mesmo
+ataque. Num crítico todos os dados dobram, e os números soltos entram uma vez só.
+
 **Quantas salas escrever no banco**: o caminho é sorteado passo a passo, quando o passo
 abre, e **nenhuma sala que o grupo já atravessou volta a ser oferecida**. Uma sala recusada
 na votação pode reaparecer mais à frente; a que o grupo entrou, não. Por isso o banco precisa

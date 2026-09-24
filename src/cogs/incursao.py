@@ -28,6 +28,10 @@ from ..rules import tier
 
 log = logging.getLogger("incursoes.run")
 
+# Teto de um efeito que so acaba quando o alvo passa no save: nao e para chegar
+# la — e so uma trava para nada ficar preso o combate inteiro.
+PRAZO_ATE_PASSAR = 20
+
 
 def _agora() -> datetime:
     return datetime.now(timezone.utc)
@@ -1123,6 +1127,7 @@ class Incursoes(commands.Cog):
                 hp_max=r["hp_max"],
                 hp_atual=r["hp_atual"],
                 ataques=r.get("ataques") or 1,
+                carregada=bool(r.get("carregada", 1)),
                 saves=r.get("saves") or {},
                 saves_vantagem=r.get("saves_vantagem") or [],
                 habilidade=r.get("habilidade"),
@@ -2009,6 +2014,14 @@ class Incursoes(commands.Cog):
         for investida in investidas:
             if not investida.atordoou:
                 continue
+            valor = {"por": investida.habilidade, "desde": estado.rodada}
+            prazo = estado.rodada + 1 + max(1, investida.atordoa_por)
+            if investida.repete_save:
+                # "refaz o save no final do turno": o prazo e so um teto, quem
+                # decide e o proprio alvo, rodada a rodada, em _virar_efeitos.
+                valor["save"] = investida.save.atributo
+                valor["cd"] = investida.save.cd
+                prazo = estado.rodada + PRAZO_ATE_PASSAR
             await db.aplicar_efeito(
                 self.bot.db,
                 run["id"],
@@ -2016,8 +2029,8 @@ class Incursoes(commands.Cog):
                 "personagem",
                 investida.alvo.user_id,
                 "atordoado",
-                {"por": investida.habilidade},
-                estado.rodada + 1 + max(1, investida.atordoa_por),
+                valor,
+                prazo,
             )
 
     async def _virar_efeitos(self, run: dict[str, Any], estado) -> None:
@@ -2031,7 +2044,40 @@ class Incursoes(commands.Cog):
                     curas[c.user_id] = c.hp_atual
         if curas:
             await db.definir_hp_varios(self.bot.db, run["id"], curas)
+        await self._refazer_saves(run, estado)
         await db.limpar_efeitos_vencidos(self.bot.db, run["id"], passo, estado.rodada)
+
+    async def _refazer_saves(self, run: dict[str, Any], estado) -> None:
+        """Quem esta preso por um efeito de 'save no fim do turno' rola de novo.
+
+        So depois de perder uma vez: o efeito posto no fim da rodada N custa a
+        rodada N+1, e a chance de escapar vem no fim dela.
+        """
+        passo = self._passo(run)
+        ligados = await db.efeitos_ativos(self.bot.db, run["id"], passo, estado.rodada - 1)
+        for ligado in ligados:
+            valor = ligado.get("valor") or {}
+            if ligado["alvo_tipo"] != "personagem" or not valor.get("save"):
+                continue
+            if estado.rodada - 1 <= valor.get("desde", 0):
+                continue  # ainda nao perdeu a vez que o efeito custa
+            alvo = estado.combatente(ligado["alvo_id"])
+            if alvo is None or alvo.caido:
+                continue
+            resultado = motor.salvar_combatente(alvo, valor["save"], valor["cd"])
+            if not resultado.passou:
+                continue
+            await db.remover_efeito(
+                self.bot.db, run["id"], passo, "personagem", ligado["alvo_id"],
+                ligado["efeito"],
+            )
+            alvo.atordoado = False
+            await self._anunciar_habilidade(
+                run,
+                f"🧿 **{alvo.nome}** se livra de "
+                f"**{valor.get('por', 'efeito')}** "
+                f"({valor['save']} {resultado.total} vs CD {valor['cd']}).",
+            )
 
     async def _anunciar_habilidade(self, run: dict[str, Any], texto: str) -> None:
         """O grupo ve que alguem usou uma habilidade, sem detalhe de rolagem."""
@@ -2086,6 +2132,12 @@ class Incursoes(commands.Cog):
                 await db.definir_thp(
                     self.bot.db, run["id"], atingido.user_id, atingido.thp
                 )
+            await db.definir_carga_inimigos(
+                self.bot.db,
+                run["id"],
+                self._passo(run),
+                {i.indice: i.carregada for i in estado.inimigos if i.habilidade},
+            )
             await self._guardar_atordoamentos(run, estado, investidas)
             await self._reacoes_do_revide(run, estado, revides)
 

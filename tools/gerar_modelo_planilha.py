@@ -79,6 +79,10 @@ CABECALHO_MONSTROS = (
     ("habilidade_atordoa", 17, "Rodadas de atordoamento em quem falhar. Vazio ou 0 = nenhuma."),
     ("habilidade_cada", 14, "De quantas em quantas rodadas ela usa. Vazio = 2"
      " (rodadas 2, 4, 6...). Na rodada que usa, ela nao ataca."),
+    ("habilidade_recarga", 16, "Recharge da 5e: a menor face do d6 que recarrega."
+     " 'Recharge 5-6' = 5. Com isto, 'cada' nao vale."),
+    ("habilidade_save_repete", 18, "x = o alvo refaz o save no fim de cada turno e se"
+     " livra quando passar."),
 )
 
 # A escolta do chefe, na aba 'Monstros'.
@@ -113,6 +117,10 @@ OBJETIVO = [
     ("monstro_habilidade_atordoa", "", "Rodadas de atordoamento em quem falhar. Vazio = nenhuma."),
     ("monstro_habilidade_cada", "", "De quantas em quantas rodadas o chefe usa. Vazio = 2 "
      "(rodadas 2, 4, 6...). Na rodada que usa, ele nao ataca."),
+    ("monstro_habilidade_recarga", "", "Recharge da 5e: a menor face do d6 que recarrega. "
+     "'Recharge 5-6' = 5. Com isto, 'cada' nao vale."),
+    ("monstro_habilidade_save_repete", "", "x = o alvo refaz o save no fim de cada turno "
+     "e se livra quando passar."),
     ("recompensa", "10 MEs por participante + pontos com o Vórtice Oculto", "Texto da recompensa."),
     ("pontos_organizacao", 0, "Pontos extras da sala final, além de pontos_conclusao."),
 ]

@@ -14,7 +14,12 @@ from typing import Any, Iterable, Optional
 from .incursoes import OPCOES_POR_PASSO, Monstro, Sala
 from .rules import PESO_TIER, melhor_pericia, tier
 
-EXPR_DANO = re.compile(r"^\s*(\d+)d(\d+)\s*(?:([+-])\s*(\d+))?\s*$", re.IGNORECASE)
+# Uma expressao de dano e uma soma de termos: "3d8+3", "1d6", "3d8+3+2d6".
+# Cada termo e NdM ou um numero solto, com sinal opcional.
+TERMO_DANO = re.compile(r"([+-]?)(?:(\d*)d(\d+)|(\d+))", re.IGNORECASE)
+EXPR_DANO = re.compile(
+    r"^[+-]?(?:\d*d\d+|\d+)(?:[+-](?:\d*d\d+|\d+))*$", re.IGNORECASE
+)
 
 
 def _rng(rng: Optional[random.Random]) -> random.Random:
@@ -29,23 +34,41 @@ def rolar_d20(rng: Optional[random.Random] = None, vantagem: bool = False) -> in
     return gerador.randint(1, 20)
 
 
+def termos_de_dano(expressao: str) -> list[tuple[int, int, int]]:
+    """Quebra '3d8+2d6+3' em termos (sinal, quantidade, faces).
+
+    Faces 0 é um número solto: ('+3' vira (1, 3, 0)). Uma criatura que bate de
+    corte e de veneno no mesmo golpe cabe numa expressão só.
+    """
+    limpa = str(expressao).replace(" ", "")
+    if not limpa or not EXPR_DANO.match(limpa):
+        raise ValueError(f"expressão de dano inválida: {expressao!r}")
+    termos = []
+    for sinal, quantidade, faces, constante in TERMO_DANO.findall(limpa):
+        peso = -1 if sinal == "-" else 1
+        if faces:
+            termos.append((peso, int(quantidade or 1), int(faces)))
+        else:
+            termos.append((peso, int(constante), 0))
+    return termos
+
+
 def rolar_dano(
     expressao: str, rng: Optional[random.Random] = None, critico: bool = False
 ) -> int:
-    """Rola uma expressão como '2d6+3'. Nunca devolve menos que 1.
+    """Rola uma expressão como '2d6+3' ou '3d8+3+2d6'. Nunca devolve menos que 1.
 
-    Num crítico, os dados são rolados em dobro e o modificador entra uma vez só,
-    como manda a regra de 5e: 2d6+3 vira 4d6+3.
+    Num crítico, os dados são rolados em dobro e os números soltos entram uma
+    vez só, como manda a regra de 5e: 2d6+3 vira 4d6+3.
     """
-    m = EXPR_DANO.match(expressao)
-    if not m:
-        raise ValueError(f"expressão de dano inválida: {expressao!r}")
-    quantidade, faces, sinal, bonus = m.group(1), m.group(2), m.group(3), m.group(4)
     gerador = _rng(rng)
-    dados = int(quantidade) * (2 if critico else 1)
-    total = sum(gerador.randint(1, int(faces)) for _ in range(dados))
-    if bonus:
-        total += int(bonus) if sinal == "+" else -int(bonus)
+    total = 0
+    for peso, quantidade, faces in termos_de_dano(expressao):
+        if faces:
+            dados = quantidade * (2 if critico else 1)
+            total += peso * sum(gerador.randint(1, faces) for _ in range(dados))
+        else:
+            total += peso * quantidade
     return max(1, total)
 
 
@@ -377,6 +400,8 @@ class Inimigo:
     # Resistencias da criatura: {atributo: modificador}. O que nao vier aqui
     # cai no padrao de DEFASAGEM_DE_SAVE.
     saves: dict = field(default_factory=dict)
+    # Recharge: comeca carregada e so volta quando o d6 deixar.
+    carregada: bool = True
     # Quantos golpes por rodada, e em que resiste com vantagem.
     ataques: int = 1
     saves_vantagem: list = field(default_factory=list)
@@ -387,9 +412,24 @@ class Inimigo:
     def caido(self) -> bool:
         return self.hp_atual <= 0
 
-    def usa_habilidade(self, rodada: int) -> bool:
-        """Se a criatura vai usar a habilidade nesta rodada, em vez de atacar."""
-        return self.habilidade is not None and self.habilidade.disponivel(rodada)
+    def usa_habilidade(self, rodada: int, rng: Optional[random.Random] = None) -> bool:
+        """Se a criatura usa a habilidade nesta rodada, em vez de atacar.
+
+        Com ritmo fixo (`cada`) a conta e do numero da rodada. Com recarga
+        (Recharge 5-6), ela sai carregada, e depois de usada so volta quando o
+        d6 da criatura tirar o numero da recarga ou mais — por isso este metodo
+        mexe no estado dela.
+        """
+        if self.habilidade is None:
+            return False
+        if not self.habilidade.recarga:
+            return self.habilidade.disponivel(rodada)
+        if not self.carregada:
+            self.carregada = self.habilidade.recarregou(rng)
+        if self.carregada:
+            self.carregada = False  # gasta a carga ao usar
+            return True
+        return False
 
     def save(self, atributo: str) -> int:
         """O modificador de resistência desta criatura naquele atributo.
@@ -632,6 +672,8 @@ class Investida:
     atordoou: bool = False
     # Por quantas rodadas o alvo fica atordoado, quando fica.
     atordoa_por: int = 0
+    # Se o alvo refaz o save no fim do turno para se livrar.
+    repete_save: bool = False
 
     @property
     def escapou(self) -> bool:
@@ -667,6 +709,7 @@ def usar_habilidade_do_inimigo(
                 alvo.atordoado = True
                 investida.atordoou = True
                 investida.atordoa_por = habilidade.atordoa
+                investida.repete_save = bool(habilidade.save_repete)
         investidas.append(investida)
     return investidas
 
@@ -708,7 +751,7 @@ def rodada_dos_inimigos(
             continue  # perdeu a vez
         if not estado.vivos:
             break
-        if inimigo.usa_habilidade(estado.rodada):
+        if inimigo.usa_habilidade(estado.rodada, rng):
             rodada.investidas.extend(usar_habilidade_do_inimigo(inimigo, estado, rng))
             continue
         for _ in range(max(1, inimigo.ataques)):

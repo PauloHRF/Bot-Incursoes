@@ -134,6 +134,9 @@ CREATE TABLE IF NOT EXISTS run_inimigos (
     hp_max   INTEGER NOT NULL,
     hp_atual INTEGER NOT NULL,
     ataques  INTEGER NOT NULL DEFAULT 1,
+    -- Recharge: 1 = pronta para usar. Sem isso, um restart no meio do combate
+    -- devolveria a habilidade carregada de graca.
+    carregada INTEGER NOT NULL DEFAULT 1,
     -- Resistencias e acao especial da criatura, como vieram do conteudo.
     saves    TEXT    NOT NULL DEFAULT '{}',
     saves_vantagem TEXT NOT NULL DEFAULT '[]',
@@ -376,6 +379,7 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
         colunas_inimigos = await _colunas(conn, "run_inimigos")
         for coluna, definicao in (
             ("ataques", "INTEGER NOT NULL DEFAULT 1"),
+            ("carregada", "INTEGER NOT NULL DEFAULT 1"),
             ("saves", "TEXT NOT NULL DEFAULT '{}'"),
             ("saves_vantagem", "TEXT NOT NULL DEFAULT '[]'"),
             ("habilidade", "TEXT"),
@@ -957,6 +961,17 @@ async def inimigos_do_combate(
     return linhas
 
 
+async def definir_carga_inimigos(
+    conn: aiosqlite.Connection, run_id: int, passo: int, por_indice: dict[int, bool]
+) -> None:
+    """Grava quais criaturas estao com a habilidade carregada."""
+    await conn.executemany(
+        "UPDATE run_inimigos SET carregada = ? WHERE run_id = ? AND passo = ? AND indice = ?",
+        [(1 if carga else 0, run_id, passo, indice) for indice, carga in por_indice.items()],
+    )
+    await conn.commit()
+
+
 async def definir_hp_inimigos(
     conn: aiosqlite.Connection, run_id: int, passo: int, por_indice: dict[int, int]
 ) -> None:
@@ -1136,6 +1151,23 @@ async def efeitos_ativos(
     for linha in linhas:
         linha["valor"] = json.loads(linha["valor"] or "{}")
     return linhas
+
+
+async def remover_efeito(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    alvo_tipo: str,
+    alvo_id: int,
+    efeito: str,
+) -> None:
+    """Desliga um efeito antes do prazo — o save que o alvo refez e passou."""
+    await conn.execute(
+        "DELETE FROM run_efeitos WHERE run_id = ? AND passo = ?"
+        " AND alvo_tipo = ? AND alvo_id = ? AND efeito = ?",
+        (run_id, passo, alvo_tipo, alvo_id, efeito),
+    )
+    await conn.commit()
 
 
 async def limpar_efeitos_vencidos(

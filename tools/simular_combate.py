@@ -41,6 +41,7 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
         1,
         grupo,
     )
+    repetem: dict[int, tuple[str, int]] = {}
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
         for c in list(estado.ativos):
             for _ in range(max(1, c.ataques)):
@@ -52,11 +53,27 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
             break
         vez = motor.rodada_dos_inimigos(estado, rng)
         estado.rodada += 1
-        # O atordoamento dura uma rodada: quem acabou de ser preso perde a
-        # proxima, e quem ja tinha perdido volta a agir.
-        presos = {i.alvo.user_id for i in vez.investidas if i.atordoou}
+        # Fim da rodada: quem ja estava preso sai — ou, se o efeito e do tipo
+        # "refaz o save no fim do turno", so sai quando passar no teste.
         for c in estado.combatentes:
-            c.atordoado = c.user_id in presos
+            if not c.atordoado:
+                continue
+            if c.user_id in repetem:
+                atributo, cd = repetem[c.user_id]
+                if motor.salvar_combatente(c, atributo, cd, rng).passou:
+                    c.atordoado = False
+                    repetem.pop(c.user_id)
+            else:
+                c.atordoado = False
+        # e quem foi pego agora perde a proxima
+        for investida in vez.investidas:
+            if not investida.atordoou:
+                continue
+            investida.alvo.atordoado = True
+            if investida.repete_save:
+                repetem[investida.alvo.user_id] = (
+                    investida.save.atributo, investida.save.cd
+                )
     return estado
 
 
@@ -164,11 +181,15 @@ def main() -> int:
         if m.habilidade:
             h = m.habilidade
             alvo = "1 alvo" if h.alvos == 1 else f"{h.alvos} alvos"
+            quando = (
+                f"recharge {h.recarga}-6" if h.recarga else f"a cada {h.cada} rodadas"
+            )
             extras += (
                 f" | {h.nome}: {alvo}, save {h.save} CD {h.cd}"
                 + (f", {h.dano}" if h.dano else "")
                 + (f", atordoa {h.atordoa}" if h.atordoa else "")
-                + f", a cada {h.cada} rodadas"
+                + (" (save no fim do turno)" if h.save_repete else "")
+                + f", {quando}"
             )
         print(
             f"{m.nome}: CA {m.ca}, ataque {m.ataque:+d}, dano {m.dano}, {m.hp} HP{extras}"

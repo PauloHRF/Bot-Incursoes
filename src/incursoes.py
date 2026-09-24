@@ -47,7 +47,10 @@ MAX_ALVOS = 6
 # Tipos que resolvem a sala por teste de perícia (margem vs CD).
 TIPOS_COM_TESTE = ("Armadilha", "Evento", "Tesouro")
 
-EXPR_DANO = re.compile(r"^\s*(\d+)d(\d+)\s*([+-]\s*\d+)?\s*$", re.IGNORECASE)
+# Soma de termos: "2d6+3", "1d10", "3d8+3+2d6" (corte mais veneno no mesmo golpe).
+EXPR_DANO = re.compile(
+    r"^\s*[+-]?(?:\d*d\d+|\d+)(?:\s*[+-]\s*(?:\d*d\d+|\d+))*\s*$", re.IGNORECASE
+)
 
 _INDICE_TIPOS = {chave_comparacao(t): t for t in TIPOS_SALA}
 _INDICE_ORGS = {chave_comparacao(o): o for o in ORGANIZACOES}
@@ -88,9 +91,27 @@ class HabilidadeDoMonstro:
     alvos: int = 1
     atordoa: int = 0  # rodadas de atordoamento em quem falhar
     cada: int = 2
+    # Recharge 5–6 da 5e: sai na primeira rodada e, depois de usada, volta
+    # quando um d6 tira este número ou mais. Com recarga, `cada` não vale.
+    recarga: Optional[int] = None
+    # "e refazem o save no final do turno": em vez de durar um número fixo de
+    # rodadas, o efeito acaba quando o alvo passa no teste.
+    save_repete: bool = False
 
     def disponivel(self, rodada: int) -> bool:
+        """Só para o ritmo fixo; a recarga é decidida pela criatura, com dado."""
+        if self.recarga:
+            return True
         return self.cada > 0 and rodada % self.cada == 0
+
+    def recarregou(self, rng=None) -> bool:
+        """Rola o d6 da recarga. Sem recarga declarada, está sempre pronta."""
+        if not self.recarga:
+            return True
+        import random as _random
+
+        gerador = rng or _random.SystemRandom()
+        return gerador.randint(1, 6) >= self.recarga
 
     def para_dict(self) -> dict[str, Any]:
         return {
@@ -102,6 +123,8 @@ class HabilidadeDoMonstro:
             "alvos": self.alvos,
             "atordoa": self.atordoa,
             "cada": self.cada,
+            "recarga": self.recarga,
+            "save_repete": self.save_repete,
         }
 
 
@@ -264,6 +287,7 @@ CAMPOS_DE_CRIATURA = (
     "ataques", "saves", "saves_vantagem",
     "habilidade", "habilidade_texto", "habilidade_save", "habilidade_cd",
     "habilidade_dano", "habilidade_alvos", "habilidade_atordoa", "habilidade_cada",
+    "habilidade_recarga", "habilidade_save_repete",
 )
 
 
@@ -302,6 +326,8 @@ def criatura_de_colunas(ler, prefixo: str = "") -> dict[str, Any]:
             "alvos": campo("habilidade_alvos"),
             "atordoa": campo("habilidade_atordoa"),
             "cada": campo("habilidade_cada"),
+            "recarga": campo("habilidade_recarga"),
+            "save_repete": campo("habilidade_save_repete"),
         }
     return bruta
 
@@ -393,6 +419,15 @@ def _habilidade_do_monstro(
     atordoa = _inteiro(bruto.get("atordoa")) or 0
     cada = _inteiro(bruto.get("cada"))
     cada = 2 if cada is None else cada
+    recarga = _inteiro(bruto.get("recarga"))
+    repete = bruto.get("save_repete")
+    repete = str(repete).strip().lower() in ("1", "sim", "true", "x", "v") if repete else False
+    if recarga is not None and not 2 <= recarga <= 6:
+        problemas.append(
+            f"{onde}: a recarga e a menor face do d6 que recarrega (de 2 a 6);"
+            f" 'Recharge 5-6' e 5."
+        )
+        recarga = None
     if not 1 <= alvos <= MAX_ALVOS:
         problemas.append(f"{onde}: a habilidade precisa mirar de 1 a {MAX_ALVOS} alvos.")
     if cada < 1:
@@ -411,6 +446,8 @@ def _habilidade_do_monstro(
         alvos=max(1, min(alvos, MAX_ALVOS)),
         atordoa=max(0, atordoa),
         cada=max(1, cada),
+        recarga=recarga,
+        save_repete=bool(repete),
     )
 
 

@@ -309,7 +309,9 @@
             "dano": null,
             "alvos": 1,
             "atordoa": 1,
-            "cada": 2
+            "cada": 2,
+            "recarga": null,
+            "save_repete": false
           }
         }
       ]
@@ -366,7 +368,68 @@
             "dano": "3d6",
             "alvos": 2,
             "atordoa": 1,
-            "cada": 2
+            "cada": 2,
+            "recarga": null,
+            "save_repete": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "VO15",
+      "nome": "Jardim de Estátuas",
+      "tipo": "Combate",
+      "descricao": "As figuras de pedra no corredor estão em posições erradas: uma protege o rosto, outra corre. No fundo, algo se arrasta sobre a própria cauda e três vultos magros se levantam das sombras, farejando.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": "O que a última estátua ainda segurava na mão.",
+      "pontos_organizacao": 3,
+      "monstros": [
+        {
+          "nome": "Nothic 1",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "1d10+3",
+          "hp": 45,
+          "ataques": 1
+        },
+        {
+          "nome": "Nothic 2",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "1d10+3",
+          "hp": 45,
+          "ataques": 1
+        },
+        {
+          "nome": "Nothic 3",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "1d10+3",
+          "hp": 45,
+          "ataques": 1
+        },
+        {
+          "nome": "Medusa",
+          "ca": 17,
+          "ataque": 7,
+          "dano": "3d8+3+2d6",
+          "hp": 172,
+          "ataques": 1,
+          "habilidade": {
+            "nome": "Petrifying Gaze",
+            "save": "CON",
+            "cd": 13,
+            "texto": "O olhar endurece quem cruzar com ele.",
+            "dano": null,
+            "alvos": 2,
+            "atordoa": 1,
+            "cada": 2,
+            "recarga": 5,
+            "save_repete": true
           }
         }
       ]
