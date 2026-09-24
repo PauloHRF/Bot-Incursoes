@@ -1340,8 +1340,21 @@ class Incursoes(commands.Cog):
             E.resumo_do_golpe([(g, i.nome) for g, i in golpes]), ephemeral=True
         )
 
-        ataques = await db.ataques_da_rodada(self.bot.db, run_id, passo, estado.rodada)
-        agiram = await db.quem_agiu(self.bot.db, run_id, passo, estado.rodada)
+        await self._talvez_fechar(run, sala, estado)
+
+    async def _talvez_fechar(self, run: dict[str, Any], sala, estado) -> None:
+        """Fecha a rodada se todos que ainda podiam agir ja agiram.
+
+        Vale para qualquer acao do turno — ataque ou habilidade. Enquanto isto
+        vivia so no caminho do ataque, uma habilidade que nao rola golpe (Rage,
+        Second Wind, Danca totemica) gastava o turno sem nunca fechar a rodada,
+        e o combate ficava esperando um clique que ja tinha acontecido.
+        """
+        if sala is None or estado is None or not sala.e_combate:
+            return
+        passo = self._passo(run)
+        ataques = await db.ataques_da_rodada(self.bot.db, run["id"], passo, estado.rodada)
+        agiram = await db.quem_agiu(self.bot.db, run["id"], passo, estado.rodada)
         if estado.inimigos_derrotados or len(agiram) >= len(estado.ativos):
             await self._fechar_rodada(run, sala, estado, ataques)
         else:
@@ -1618,26 +1631,29 @@ class Incursoes(commands.Cog):
 
         if acao.get("tipo") == "cura":
             await self._resolver_cura(interaction, run, habilidade, acao, alvos, estado)
-            return
-        if acao.get("tipo") == "grupo":
-            await self._resolver_grupo(
-                interaction, run, sala, estado, habilidade, acao
-            )
-            return
-        if acao.get("tipo") == "duracao":
+        elif acao.get("tipo") == "grupo":
+            await self._resolver_grupo(interaction, run, sala, estado, habilidade, acao)
+        elif acao.get("tipo") == "duracao":
             await self._resolver_duracao(
                 interaction, run, sala, estado, habilidade, acao, alvos
             )
-            return
-        await self._resolver_golpes(
-            interaction, run, sala, estado, atacante, habilidade, acao, alvos
-        )
+        else:
+            await self._resolver_golpes(
+                interaction, run, sala, estado, atacante, habilidade, acao, alvos
+            )
+        # Seja qual for a habilidade, o turno acabou: a rodada pode ter fechado.
+        await self._talvez_fechar(run, sala, estado)
 
     async def _pedir_alvo(
         self, interaction: discord.Interaction, run, sala_id, habilidade, estado
     ):
         """Abre o menu de alvo se a habilidade precisa de um. False = nao precisa."""
         acao = habilidade.acao or {}
+        # Quem so mexe em si mesmo (Rage, Reckless Attack, Avatar da Luz) ou no
+        # grupo inteiro nao tem alvo a escolher — perguntar num combate de
+        # quatro criaturas so atrapalha.
+        if acao.get("tipo") == "grupo" or acao.get("alvo") == "proprio":
+            return False
         if acao.get("tipo") == "cura":
             if acao.get("alvo") != "aliado":
                 return False
@@ -1915,12 +1931,7 @@ class Incursoes(commands.Cog):
             run, f"\u2728 {atacante.nome} usa **{habilidade.nome}**."
         )
 
-        ataques = await db.ataques_da_rodada(self.bot.db, run["id"], passo, estado.rodada)
-        agiram = await db.quem_agiu(self.bot.db, run["id"], passo, estado.rodada)
-        if estado.inimigos_derrotados or len(agiram) >= len(estado.ativos):
-            await self._fechar_rodada(run, sala, estado, ataques)
-        else:
-            await self._atualizar_painel(run, sala, estado, len(agiram))
+
 
     async def _reacao_de(self, personagem: dict[str, Any], quando: str):
         """A reacao daquele gatilho, se o personagem tiver alguma."""

@@ -185,6 +185,31 @@ async def caso_habilidade_gasta_o_turno():
     print("  a rodada tem uma acao: ataque ou habilidade: ok")
 
 
+async def caso_habilidade_sem_golpe_fecha_a_rodada():
+    """Rage nao rola golpe nenhum — mas gasta o turno, e a rodada precisa virar."""
+    conn, canal, cog, incursao = await preparar(classe="barbaro", nivel=8, inimigos=3)
+    run = await abrir_combate(conn, canal, cog, incursao)
+    dono, outro = JOGADORES[0], JOGADORES[1]
+    passo = cog._passo(run)
+    msg = await canal.fetch_message(run["mensagem_id"])
+
+    await cog.atacar(FakeInteraction(canal, dono, msg), run["id"], "OBJ")
+    estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
+    assert estado.rodada == 1, "com dois de pe, um golpe nao fecha a rodada"
+
+    # Rage e "duracao" com alvo proprio: nao pede alvo, mesmo com tres criaturas
+    inter = await usar(cog, canal, run, outro, "rage", msg=msg)
+    assert inter.view_enviada is None, "habilidade em si mesmo nao pergunta o alvo"
+    assert "Rage" in inter.resposta, inter.resposta
+
+    assert await db.acao_do_turno(conn, run["id"], passo, 1, outro) == "rage"
+    assert await db.quem_agiu(conn, run["id"], passo, 1) == {dono, outro}
+
+    depois = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
+    assert depois.rodada == 2, "a rodada travou: a habilidade nao fechou o turno"
+    print("  habilidade sem golpe tambem fecha a rodada: ok")
+
+
 async def caso_perfect_strike_acerta_sempre():
     conn, canal, cog, incursao = await preparar(classe="monge", nivel=10)
     run = await abrir_combate(conn, canal, cog, incursao)
@@ -296,6 +321,7 @@ async def main():
         await caso_cura_em_si_mesmo()
         await caso_uso_volta_no_proximo_combate()
         await caso_habilidade_gasta_o_turno()
+        await caso_habilidade_sem_golpe_fecha_a_rodada()
         await caso_perfect_strike_acerta_sempre()
         await caso_golpe_divino_soma_dados()
         await caso_cura_em_aliado_pede_alvo()
