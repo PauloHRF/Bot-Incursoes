@@ -104,7 +104,6 @@ async def caso_uncanny_dodge_corta_o_golpe():
     conn, canal, cog, incursao, run = await preparar(
         classe="ladino", nivel=8, monstro=MARRETA
     )
-    dono = JOGADORES[0]
     passo = cog._passo(run)
     maximo = cl.classe("ladino").numeros(8).hp
 
@@ -151,7 +150,7 @@ async def caso_stunning_strike_atordoa_ou_devolve():
             await db.buscar_run(conn, run["id"]), incursao.objetivo
         )
         assert estado.inimigos[0].atordoado
-        assert gastos.get(("stunning_strike", f"descanso:0")) == 1
+        assert gastos.get(("stunning_strike", "descanso:0")) == 1
     else:
         # errou: o uso volta, porque so gasta quando acerta
         assert gastos.get(("stunning_strike", "descanso:0"), 0) == 0, gastos

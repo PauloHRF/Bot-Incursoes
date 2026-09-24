@@ -12,13 +12,12 @@ sys.path.insert(0, str(RAIZ))
 from src import classes, config, database as db, embeds as E, motor  # noqa: E402
 from src.cogs.ficha import Ficha, embed_ficha  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
-from src.incursoes import Monstro, Sala  # noqa: E402
+from src.incursoes import Sala  # noqa: E402
 from src.rules import melhor_pericia, mod_pericia  # noqa: E402
 from fakes import (  # noqa: E402
     CLASSE_PADRAO,
     CANAL,
     GUILD,
-    INDEFESO,
     JOGADORES,
     FakeBot,
     FakeCanal,

@@ -222,12 +222,31 @@ async def caso_avatar_cura_por_turno():
     print("  Avatar da Luz da CA, dano e cura a cada virada de rodada: ok")
 
 
+async def caso_rage_vale_na_rodada_que_ela_fecha():
+    """A Rage como ultima acao da rodada ja corta o revide que vem em seguida."""
+    conn, canal, cog, incursao, run = await preparar(
+        classe="barbaro", nivel=8, monstro=PESADO, quantos=1
+    )
+    dono = JOGADORES[0]
+    antes = (await db.hp_dos_participantes(conn, run["id"]))[dono]
+
+    await cog.usar_habilidade(FakeInteraction(canal, dono), run["id"], "OBJ", "rage")
+
+    # a rodada fechou sozinha (grupo de um) e o Britador bateu 20 cortado ao meio
+    combate = await db.estado_combate(conn, run["id"], cog._passo(run))
+    assert combate["rodada"] == 2, combate
+    depois = (await db.hp_dos_participantes(conn, run["id"]))[dono]
+    assert antes - depois == 10, (antes, depois)
+    print("  a Rage ja vale no revide da rodada que ela fecha: ok")
+
+
 async def main():
     try:
         caso_vantagem_pega_o_melhor_dado()
         caso_reducao_de_dano()
         caso_marca_soma_so_no_alvo_marcado()
         await caso_rage_dura_tres_turnos()
+        await caso_rage_vale_na_rodada_que_ela_fecha()
         await caso_efeito_vence_com_a_rodada()
         await caso_marca_pede_alvo_e_dura()
         await caso_avatar_cura_por_turno()

@@ -9,7 +9,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from src import config, database as db  # noqa: E402
-from src.cogs.ajuda import Ajuda, coletar  # noqa: E402
+from src.cogs.ajuda import coletar  # noqa: E402
 from src.cogs.ficha import Ficha  # noqa: E402
 from fakes import (  # noqa: E402
     CLASSE_PADRAO,
@@ -62,7 +62,6 @@ async def caso_help_lista_tudo():
 
     grupos = coletar(bot.tree)
     todos = [c for lista in grupos.values() for c in lista]
-    nomes = {c[0].split(" ")[0] + " " + c[0].split(" ")[1] if " " in c[0] else c[0] for c in todos}
 
     # os grupos todos aparecem
     assert set(grupos) >= {"ficha", "incursao", "organizacao", "config", "help"}, set(grupos)
@@ -78,7 +77,6 @@ async def caso_help_lista_tudo():
         assert esperado in achatado, esperado
 
     # os de admin vem marcados, e os comuns nao
-    por_nome = {c[0]: c for c in todos}
     admins = {c[0] for c in todos if c[2]}
     assert any("config intervalo" in a for a in admins), admins
     assert any("organizacao ajustar" in a for a in admins), admins

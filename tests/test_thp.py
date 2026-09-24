@@ -166,7 +166,6 @@ async def caso_relentless_segura_a_queda():
     conn, canal, cog, incursao, run = await preparar(
         classe="barbaro", nivel=8, monstro=CERTEIRO
     )
-    dono = JOGADORES[0]
     passo = cog._passo(run)
     # deixa os dois na beira da morte: o revide derruba
     for user_id in JOGADORES[:2]:

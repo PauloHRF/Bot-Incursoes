@@ -16,13 +16,10 @@ from src.cogs.incursao import Incursoes  # noqa: E402
 from src.cogs.organizacao import Organizacao  # noqa: E402
 from src.incursoes import ORGANIZACOES  # noqa: E402
 from fakes import (  # noqa: E402
-    CLASSE_PADRAO,
     CANAL,
     GUILD,
     IMBATIVEL,
-    INDEFESO,
     JOGADORES,
-    TREINADAS,
     FakeBot,
     FakeCanal,
     FakeInteraction,

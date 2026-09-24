@@ -19,9 +19,7 @@ from fakes import (  # noqa: E402
     CLASSE_PADRAO,
     CANAL,
     GUILD,
-    INDEFESO,
     JOGADORES,
-    TREINADAS,
     FakeBot,
     FakeCanal,
     FakeInteraction,
@@ -209,7 +207,7 @@ async def caso_personagem_escolhido_e_o_que_joga():
     conn, canal, cog = await preparar()
     await criar_grupo(conn)
     dono = JOGADORES[0]
-    frangote = await db.criar_personagem(conn, GUILD, dono, "Frangote", "monge", [])
+    await db.criar_personagem(conn, GUILD, dono, "Frangote", "monge", [])
     fraco = classes.classe("monge").numeros(1)
     forte = classes.classe(CLASSE_PADRAO).numeros(8)
 

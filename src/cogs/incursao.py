@@ -6,8 +6,7 @@ possa avançar ao longo de dias e o bot possa reiniciar sem perder nada.
 from __future__ import annotations
 
 import logging
-import random
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Optional
 
 import discord
@@ -25,6 +24,7 @@ from ..incursoes import (
 )
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
 from ..rules import tier
+from .ficha import sugerir_personagens
 
 log = logging.getLogger("incursoes.run")
 
@@ -35,10 +35,6 @@ PRAZO_ATE_PASSAR = 20
 # Quantas rodadas seguidas o combate pode correr sozinho quando ninguem
 # pode agir (grupo inteiro atordoado) antes de o bot avisar.
 MAX_RODADAS_SOZINHAS = 10
-
-
-def _agora() -> datetime:
-    return datetime.now(timezone.utc)
 
 
 def maioria_de(total: int) -> int:
@@ -235,6 +231,7 @@ class SeletorAlvoHabilidade(discord.ui.View):
             [int(v) for v in self.menu.values],
         )
 
+
 class SeletorPersonagemEntrada(discord.ui.View):
     """Escolha de qual personagem levar para a run, mostrada só a quem clicou."""
 
@@ -394,25 +391,17 @@ class Incursoes(commands.Cog):
         await db.atualizar_run(self.bot.db, run["id"], status=status, votacao_expira_em=None)
 
     async def _membros(self, run: dict[str, Any]) -> list[discord.abc.User]:
-        ids = await db.participantes(self.bot.db, run["id"])
-        guilda = self.bot.get_guild(run["guild_id"])
-        membros = []
-        for user_id in ids:
-            membro = guilda.get_member(user_id) if guilda else None
-            if membro is None and guilda is not None:
-                # Sem o intent de membros o cache vem vazio; buscar traz o apelido do servidor.
-                try:
-                    membro = await guilda.fetch_member(user_id)
-                except discord.HTTPException:
-                    membro = None
-            membros.append(membro or await self.bot.fetch_user(user_id))
-        return membros
+        return [
+            await self._membro(run, user_id)
+            for user_id in await db.participantes(self.bot.db, run["id"])
+        ]
 
     async def _membro(self, run: dict[str, Any], user_id: int):
         """O membro do servidor, ou o usuário, para menção e apelido."""
         guilda = self.bot.get_guild(run["guild_id"])
         membro = guilda.get_member(user_id) if guilda else None
         if membro is None and guilda is not None:
+            # Sem o intent de membros o cache vem vazio; buscar traz o apelido do servidor.
             try:
                 membro = await guilda.fetch_member(user_id)
             except discord.HTTPException:
@@ -509,15 +498,7 @@ class Incursoes(commands.Cog):
     async def _sugerir_personagens(
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
-        personagens = await db.listar_personagens(
-            self.bot.db, interaction.guild_id, interaction.user.id
-        )
-        termo = atual.lower()
-        return [
-            app_commands.Choice(name=f"{p['nome']} (tier {tier(p['nivel'])})", value=p["nome"])
-            for p in personagens
-            if termo in p["nome"].lower()
-        ][:25]
+        return await sugerir_personagens(self.bot.db, interaction, atual)
 
     @grupo.command(name="entrar", description="Abre o recrutamento de uma incursão neste canal")
     @app_commands.describe(
@@ -1028,8 +1009,9 @@ class Incursoes(commands.Cog):
         self, run: dict[str, Any], efeitos_ligados: Optional[list[dict]] = None
     ) -> list[Combatente]:
         """Monta os combatentes juntando a ficha de cada um com o HP atual da run."""
+        personagens = await db.personagens_da_run(self.bot.db, run["id"])
         combatentes = []
-        for p in await db.personagens_da_run(self.bot.db, run["id"]):
+        for p in personagens:
             # As passivas da classe entram como numero: multiataque, critico
             # mais facil e dano extra saem daqui.
             efeitos = p.get("efeitos") or {}
@@ -1052,9 +1034,7 @@ class Incursoes(commands.Cog):
             )
         for ligado in efeitos_ligados or []:
             self._aplicar_ligado(combatentes, ligado)
-        self._aplicar_aura_totemica(
-            combatentes, await db.personagens_da_run(self.bot.db, run["id"])
-        )
+        self._aplicar_aura_totemica(combatentes, personagens)
         return combatentes
 
     @staticmethod
@@ -1352,6 +1332,12 @@ class Incursoes(commands.Cog):
         """
         if sala is None or estado is None or not sala.e_combate:
             return
+        # O estado de quem chamou e de antes da acao: um efeito recem-ligado
+        # (a reducao da Rage, a CA do Avatar) so existe no banco. Sem reler,
+        # a rodada que esta acao fecha revidaria contra o personagem sem ele.
+        estado = await self._estado_combate(run, sala)
+        if estado is None:
+            return
         passo = self._passo(run)
         ataques = await db.ataques_da_rodada(self.bot.db, run["id"], passo, estado.rodada)
         agiram = await db.quem_agiu(self.bot.db, run["id"], passo, estado.rodada)
@@ -1373,7 +1359,7 @@ class Incursoes(commands.Cog):
         for interaction in self._efemeras.pop(run_id, []):
             try:
                 await interaction.delete_original_response()
-            except (discord.HTTPException, discord.NotFound, AttributeError):
+            except (discord.HTTPException, AttributeError):
                 pass
 
     async def _apagar_chamada(self, run_id: int) -> None:
@@ -1383,7 +1369,7 @@ class Incursoes(commands.Cog):
             return
         try:
             await mensagem.delete()
-        except (discord.HTTPException, discord.NotFound, AttributeError):
+        except (discord.HTTPException, AttributeError):
             pass
 
     async def _apagar_passo_anterior(self, run: dict[str, Any]) -> None:
@@ -1401,7 +1387,7 @@ class Incursoes(commands.Cog):
         try:
             mensagem = await canal.fetch_message(atual["mensagem_id"])
             await mensagem.delete()
-        except (discord.HTTPException, discord.NotFound, AttributeError):
+        except (discord.HTTPException, AttributeError):
             pass
         await db.atualizar_run(self.bot.db, run["id"], mensagem_id=None)
 
@@ -1632,16 +1618,15 @@ class Incursoes(commands.Cog):
         if acao.get("tipo") == "cura":
             await self._resolver_cura(interaction, run, habilidade, acao, alvos, estado)
         elif acao.get("tipo") == "grupo":
-            await self._resolver_grupo(interaction, run, sala, estado, habilidade, acao)
+            await self._resolver_grupo(interaction, run, estado, habilidade, acao)
         elif acao.get("tipo") == "duracao":
-            await self._resolver_duracao(
-                interaction, run, sala, estado, habilidade, acao, alvos
-            )
+            await self._resolver_duracao(interaction, run, estado, habilidade, acao, alvos)
         else:
             await self._resolver_golpes(
-                interaction, run, sala, estado, atacante, habilidade, acao, alvos
+                interaction, run, estado, atacante, habilidade, acao, alvos
             )
-        # Seja qual for a habilidade, o turno acabou: a rodada pode ter fechado.
+        # Seja qual for a habilidade, o turno acabou: a rodada pode ter fechado,
+        # e o painel mostra o efeito recem-ligado.
         await self._talvez_fechar(run, sala, estado)
 
     async def _pedir_alvo(
@@ -1719,16 +1704,9 @@ class Incursoes(commands.Cog):
             )
         await interaction.response.send_message(texto, ephemeral=True)
         await self._anunciar_habilidade(run, texto)
-        if estado is not None:
-            sala = self._sala(self._incursao_da_run(run), run["sala_atual"])
-            ataques = await db.ataques_da_rodada(
-                self.bot.db, run["id"], self._passo(run), estado.rodada
-            )
-            agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
-            await self._atualizar_painel(run, sala, estado, len(agiram))
 
     async def _resolver_grupo(
-        self, interaction, run, sala, estado, habilidade, acao
+        self, interaction, run, estado, habilidade, acao
     ) -> None:
         """Habilidade que cai no grupo inteiro: THP para todos e um buff curto."""
         passo = self._passo(run)
@@ -1757,16 +1735,9 @@ class Incursoes(commands.Cog):
             texto = f"\u2728 **{habilidade.nome}**: o grupo inteiro leva o bonus."
         await interaction.response.send_message(texto, ephemeral=True)
         await self._anunciar_habilidade(run, texto)
-        atualizado = await self._estado_combate(run, sala)
-        if atualizado is not None:
-            ataques = await db.ataques_da_rodada(
-                self.bot.db, run["id"], passo, atualizado.rodada
-            )
-            agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
-            await self._atualizar_painel(run, sala, atualizado, len(agiram))
 
     async def _resolver_duracao(
-        self, interaction, run, sala, estado, habilidade, acao, alvos
+        self, interaction, run, estado, habilidade, acao, alvos
     ) -> None:
         """Liga um efeito com prazo em quem usou, ou no inimigo escolhido."""
         passo = self._passo(run)
@@ -1801,14 +1772,6 @@ class Incursoes(commands.Cog):
         await self._anunciar_habilidade(
             run, f"✨ {quem.nome if quem else 'Alguem'} usa **{habilidade.nome}**{alvo_texto}."
         )
-
-        atualizado = await self._estado_combate(run, sala)
-        if atualizado is not None:
-            ataques = await db.ataques_da_rodada(
-                self.bot.db, run["id"], passo, atualizado.rodada
-            )
-            agiram = {a["user_id"] for a in ataques if a["origem"] == "turno"}
-            await self._atualizar_painel(run, sala, atualizado, len(agiram))
 
     async def _pilha_de_sequencia(
         self, run: dict[str, Any], user_id: int, passo: int
@@ -1845,7 +1808,7 @@ class Incursoes(commands.Cog):
         await db.definir_thp(self.bot.db, run["id"], combatente.user_id, combatente.thp)
 
     async def _resolver_golpes(
-        self, interaction, run, sala, estado, atacante, habilidade, acao, alvos
+        self, interaction, run, estado, atacante, habilidade, acao, alvos
     ) -> None:
         """Os golpes extras de uma ativa: fora do turno, sem gastar o ataque."""
         passo = self._passo(run)
@@ -1931,9 +1894,8 @@ class Incursoes(commands.Cog):
             run, f"\u2728 {atacante.nome} usa **{habilidade.nome}**."
         )
 
-
-
-    async def _reacao_de(self, personagem: dict[str, Any], quando: str):
+    @staticmethod
+    def _reacao_de(personagem: dict[str, Any], quando: str):
         """A reacao daquele gatilho, se o personagem tiver alguma."""
         for _tier, habilidade in personagem.get("habilidades") or []:
             acao = habilidade.acao or {}
@@ -1959,7 +1921,7 @@ class Incursoes(commands.Cog):
             personagem = await self._personagem_na_run(run, atingido.user_id)
             if not personagem:
                 continue
-            habilidade, acao = await self._reacao_de(personagem, "sofreu_golpe")
+            habilidade, acao = self._reacao_de(personagem, "sofreu_golpe")
             if habilidade is None:
                 continue
             # O golpe ja entrou no HP: a conta e feita sobre como estava antes.
@@ -1996,7 +1958,7 @@ class Incursoes(commands.Cog):
             personagem = await self._personagem_na_run(run, atingido.user_id)
             if not personagem:
                 continue
-            habilidade, acao = await self._reacao_de(personagem, "caiu")
+            habilidade, acao = self._reacao_de(personagem, "caiu")
             if habilidade is None:
                 continue
             if not await db.gastar_uso(
@@ -2156,11 +2118,11 @@ class Incursoes(commands.Cog):
             await self._guardar_atordoamentos(run, estado, investidas)
             await self._reacoes_do_revide(run, estado, revides)
 
-        log = (estado.rodada, golpes, revides, investidas)
+        registro = (estado.rodada, golpes, revides, investidas)
 
         if estado.inimigos_derrotados:
             await self._atualizar_painel(
-                run, sala, estado, len(ataques), rodada_anterior=log, encerrado=True
+                run, sala, estado, len(ataques), rodada_anterior=registro, encerrado=True
             )
             await self._limpar_efemeras(run["id"])
             await self._apagar_chamada(run["id"])
@@ -2169,7 +2131,7 @@ class Incursoes(commands.Cog):
 
         if estado.grupo_caido:
             await self._atualizar_painel(
-                run, sala, estado, len(ataques), rodada_anterior=log, encerrado=True
+                run, sala, estado, len(ataques), rodada_anterior=registro, encerrado=True
             )
             await self._limpar_efemeras(run["id"])
             await self._apagar_chamada(run["id"])
@@ -2191,7 +2153,7 @@ class Incursoes(commands.Cog):
         estado.rodada += 1
         await db.atualizar_rodada(self.bot.db, run["id"], self._passo(run), estado.rodada)
         await self._virar_efeitos(run, estado)
-        await self._atualizar_painel(run, sala, estado, 0, rodada_anterior=log)
+        await self._atualizar_painel(run, sala, estado, 0, rodada_anterior=registro)
         # O painel e editado no lugar, e edicao nao notifica ninguem: a chamada
         # da rodada vai numa mensagem propria, so para quem ainda pode agir.
         await self._limpar_efemeras(run["id"])
@@ -2395,18 +2357,18 @@ class Incursoes(commands.Cog):
                     "Este combate já terminou.", ephemeral=True
                 )
                 return
-            ataques = await db.ataques_da_rodada(
+            agiram = await db.quem_agiu(
                 self.bot.db, run["id"], self._passo(run), estado.rodada
             )
             embed, arquivo = E.combate(
                 sala,
                 estado,
-                len(ataques),
+                len(agiram),
                 e_objetivo=sala.id == incursao.objetivo.id,
             )
             await interaction.response.send_message(
                 embed=embed,
-                view=ViewCombate(self, run["id"], sala.id),
+                view=ViewCombate(self, run["id"], sala.id, estado.inimigos),
                 file=arquivo or discord.utils.MISSING,
             )
             mensagem = await interaction.original_response()
@@ -2518,7 +2480,7 @@ class Incursoes(commands.Cog):
         await db.registrar_voto(self.bot.db, run["id"], -1, interaction.user.id, "desistir")
         votos = await db.votos_da_linha(self.bot.db, run["id"], -1)
         total = len(await db.participantes(self.bot.db, run["id"]))
-        necessarios = total // 2 + 1
+        necessarios = maioria_de(total)
 
         if len(votos) >= necessarios:
             await self._encerrar_run(run, "desistiu")

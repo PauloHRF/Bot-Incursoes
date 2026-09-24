@@ -11,7 +11,6 @@ sys.path.insert(0, str(RAIZ))
 from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.ficha import Ficha, embed_ficha  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
-from src.incursoes import de_dict  # noqa: E402
 from src.rules import TIER_MAXIMO, mod_pericia  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,

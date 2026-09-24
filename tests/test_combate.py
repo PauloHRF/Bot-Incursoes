@@ -18,11 +18,9 @@ from fakes import (  # noqa: E402
     CLASSE_PADRAO,
     CANAL,
     DURAO,
-    GUILD,
     IMBATIVEL,
     INDEFESO,
     JOGADORES,
-    TREINADAS,
     FakeBot,
     FakeCanal,
     FakeInteraction,
@@ -390,7 +388,6 @@ async def caso_restart_no_combate():
 
 async def caso_motor_puro():
     """O dano nunca fica negativo e o HP nunca passa do máximo nem do zero."""
-    from src.incursoes import Monstro
 
     inimigo = motor.Inimigo(0, "Teste", ca=10, ataque=5, dano="1d4", hp_max=10, hp_atual=2)
     grupo = [motor.Combatente(1, "A", ca=10, bonus_ataque=5, dano_arma="1d4", hp_max=10, hp_atual=3)]

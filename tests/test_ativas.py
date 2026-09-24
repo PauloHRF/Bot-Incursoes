@@ -300,7 +300,7 @@ async def caso_menu_so_mostra_o_que_da_para_usar():
 
 async def caso_painel_tem_o_botao():
     conn, canal, cog, incursao = await preparar(classe="guerreiro", nivel=8)
-    run = await abrir_combate(conn, canal, cog, incursao)
+    await abrir_combate(conn, canal, cog, incursao)
     view = canal.mensagens[-1].view
     assert isinstance(view, ViewCombate)
     rotulos = [getattr(i, "label", None) for i in view.children]
@@ -308,7 +308,7 @@ async def caso_painel_tem_o_botao():
 
     # com varios inimigos, o menu de alvo convive com o botao de habilidade
     conn, canal, cog, incursao = await preparar(inimigos=3)
-    run = await abrir_combate(conn, canal, cog, incursao)
+    await abrir_combate(conn, canal, cog, incursao)
     view = canal.mensagens[-1].view
     assert any(getattr(i, "label", None) == "Habilidade" for i in view.children)
     assert getattr(view, "menu", None) is not None
