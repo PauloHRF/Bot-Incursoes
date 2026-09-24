@@ -62,7 +62,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/incursao entrar <id> [personagem]` | Abre o recrutamento de uma incursão no canal |
 | `/incursao sala` | Reenvia a mensagem da sala atual |
 | `/incursao teste` | Rola o teste da sala (mesmo efeito do botão) |
-| `/incursao atacar` | Ataca o primeiro inimigo de pé (mesmo efeito do botão) |
+| `/incursao atacar` | Ataca o primeiro inimigo de pé, na sua vez da iniciativa (mesmo efeito do botão) |
 | `/incursao habilidade` | Abre o menu das suas habilidades ativas |
 | `/incursao votar <1-3>` | Vota por comando, se os botões falharem |
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
@@ -100,9 +100,24 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    existe se o grupo voltar vivo.
 
 Em sala de **Combate**, cada personagem de pé ataca uma vez por rodada (d20 + bônus de
-ataque contra a CA do alvo; acertou, rola o dano da arma). Quando todos atacam, **cada
-inimigo de pé** revida contra um alvo sorteado entre os personagens em pé. Quem chega a
-0 HP fica fora do resto daquele combate.
+ataque contra a CA do alvo; acertou, rola o dano da arma), e **cada inimigo de pé** ataca
+um alvo sorteado entre os personagens em pé. Quem chega a 0 HP fica fora do resto daquele
+combate.
+
+**Iniciativa.** Quando o combate começa, todo mundo rola **1d20 + modificador de Destreza**
+— personagens e criaturas. Como a ficha não tem atributos, o modificador de Destreza é o
+**save de DES**: o do personagem sai da classe (maior se DES for um dos saves fortes dela),
+o da criatura vem da coluna `saves` da planilha (sem ele, o padrão provisório de ataque − 3).
+Empate vai para o maior modificador, e depois para a sorte. A ordem vale o combate inteiro e
+fica gravada: um restart não rola de novo.
+
+As ações saem **uma de cada vez, na ordem da iniciativa**. O painel chama todo mundo, e cada
+um escolhe ataque ou habilidade quando quiser: se ainda não é a vez dele, a ação **fica
+guardada** e sai sozinha quando a vez chegar (se o alvo escolhido tiver caído até lá, vai no
+próximo inimigo de pé). A criatura age sozinha quando chega a vez dela. A fila só para em
+quem ainda não escolheu nada; passando do último, a rodada vira e recomeça do topo — então
+uma criatura com iniciativa maior que a do grupo age antes de alguém clicar. O painel mostra
+a ordem com ▶️ na vez atual, ✅ em quem já passou e ⏳ em quem já deixou a ação guardada.
 
 Quem tem **Multiattack** (tier 3 de Bárbaro, Guerreiro, Monge e Patrulheiro) bate duas
 vezes por clique: o turno inteiro sai de uma vez, e se o alvo cair no meio o segundo golpe
@@ -115,8 +130,10 @@ em quem já caiu não gasta o turno: o bot avisa e você escolhe outro alvo. É 
 bando pesa de verdade: cinco lobos batem cinco vezes por rodada.
 
 Cada personagem age **uma vez por rodada: ou ataca, ou usa uma habilidade**, nunca os dois.
-Quem já agiu recebe o aviso dizendo com o que gastou o turno, e o menu ✨ Habilidade nem
+Quem já escolheu recebe o aviso dizendo com o que gastou o turno, e o menu ✨ Habilidade nem
 abre. Reações (*Relentless*, *Uncanny Dodge*) não contam: disparam sozinhas, fora do turno.
+Quem está caído ou atordoado quando a vez chega perde a vez; se tinha guardado uma
+habilidade, ela não sai e **o uso volta**.
 
 O canal fica com **um cartão só, o do momento**: a votação some quando o grupo entra na
 sala, a sala some quando a próxima votação abre, e o resumo privado de cada golpe e a
@@ -128,8 +145,9 @@ rolagem, quando o combate começa e a cada rodada nova. A chamada da rodada vai 
 de texto própria, porque o painel é editado no lugar e edição não notifica ninguém.
 
 O combate inteiro acontece **numa mensagem só**: o painel mostra o HP de cada inimigo, o HP
-de cada personagem, o log da rodada que acabou e o botão (ou menu) de atacar, e é reescrito
-a cada rodada em vez de empilhar mensagens novas. Sala de combate também não posta descrição
+de cada personagem, a ordem da iniciativa, o log da rodada em andamento e o da que acabou, e
+o botão (ou menu) de atacar, e é reescrito a cada ação em vez de empilhar mensagens novas.
+O log fica em memória: um restart no meio do combate perde o log, não o combate. Sala de combate também não posta descrição
 antes do painel — ele já traz tudo. Um confronto de dez rodadas ocupa o mesmo espaço no
 canal que um de duas.
 
@@ -225,7 +243,8 @@ THP): não faz sentido queimar o uso do combate inteiro num arranhão. O limiar 
 catálogo, fácil de mexer se o grupo achar cedo ou tarde demais.
 
 *Stunning Strike* é a primeira **condição**: o Monge escolhe a habilidade na hora de bater e,
-se acertar, o inimigo perde a vez na rodada seguinte. Se errar, **o uso volta** — o documento
+se acertar, o inimigo perde a próxima vez dele — ainda nesta rodada, se ele vem depois na
+iniciativa, ou na seguinte, se já agiu. Se errar, **o uso volta** — o documento
 pede exatamente isso. E *Martial Arts* soma +1 de acerto a cada golpe certeiro, até +2, já
 valendo dentro do próprio turno: com multiataque, o segundo golpe usa o bônus que o primeiro
 acabou de render. Errar zera a sequência.
@@ -237,8 +256,8 @@ marcar **um inimigo específico** para levar dano extra só dele (Marca do Caça
 Supremo). No painel, quem está sob efeito aparece com 🛡️ (dano reduzido), 🎯 (vantagem) ou
 ✨ (abençoado), e o inimigo marcado leva 🎯 no nome.
 
-Golpe de habilidade é **extra**: não gasta o ataque do turno, então dá para usar e atacar na
-mesma rodada. Cura não levanta quem já caiu — isso é assunto do descanso.
+Golpe de habilidade toma o turno, no lugar do ataque. Cura não levanta quem já caiu — isso
+é assunto do descanso.
 
 **Os usos recarregam** conforme o escopo declarado: *por combate* zera a cada sala de
 combate, *por descanso* zera quando o grupo passa por uma sala de Descanso, e *por incursão*
@@ -392,8 +411,10 @@ no meio do combate não devolve a habilidade de graça.
 
 `habilidade_save_repete` marcado com `x` é o "e refaz o save no fim do turno": em vez de
 durar um número fixo de rodadas, o atordoamento só acaba quando o alvo passar no teste — e
-ele sempre perde ao menos uma vez antes da primeira chance. Ninguém é atordoado duas vezes
-seguidas, e se o grupo inteiro estiver preso a rodada corre sozinha em vez de travar.
+ele sempre perde ao menos uma vez antes da primeira chance. Quem é preso **perde a próxima
+vez que teria**: a desta rodada, se ainda não agiu, ou a da seguinte. Quem já está preso não
+é preso de novo por cima, e se o grupo inteiro estiver preso a rodada corre sozinha em vez de
+travar.
 
 O dano aceita **soma de parcelas**: `3d8+3+2d6` é o golpe que corta e envenena no mesmo
 ataque. Num crítico todos os dados dobram, e os números soltos entram uma vez só.

@@ -26,7 +26,7 @@ LIMITE_RODADAS = 50
 
 
 def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: random.Random):
-    """Uma sala inteira: o grupo foca o primeiro de pé, e cada inimigo revida."""
+    """Uma sala inteira na ordem da iniciativa: o grupo foca o primeiro de pé."""
     estado = motor.EstadoCombate(
         [
             motor.Inimigo(
@@ -41,39 +41,52 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
         1,
         grupo,
     )
-    repetem: dict[int, tuple[str, int]] = {}
+    ordem = motor.rolar_iniciativas(estado, rng)
+    # Quem esta atordoado: perde a proxima vez; se o efeito e do tipo "refaz o
+    # save no fim do turno", so sai quando passar no teste depois de perder uma.
+    presos: dict[int, dict] = {}
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
-        for c in list(estado.ativos):
+        for vez in ordem:
+            if estado.encerrado:
+                break
+            if vez.tipo == motor.INIMIGO:
+                inimigo = estado.inimigo(vez.ident)
+                feito = motor.turno_do_inimigo(inimigo, estado, rng)
+                for investida in feito.investidas:
+                    if investida.atordoou:
+                        presos[investida.alvo.user_id] = {
+                            "repete": (investida.save.atributo, investida.save.cd)
+                            if investida.repete_save
+                            else None,
+                            "perdeu": False,
+                        }
+                continue
+            c = estado.combatente(vez.ident)
+            if c.caido:
+                continue
+            if c.user_id in presos:
+                preso = presos[c.user_id]
+                preso["perdeu"] = True
+                if preso["repete"] is None:
+                    presos.pop(c.user_id)
+                    c.atordoado = False
+                continue
             for _ in range(max(1, c.ataques)):
                 alvo = estado.alvo_preferido()
                 if alvo is None:
                     break
                 motor.atacar_inimigo(c, alvo, rng)
-        if estado.inimigos_derrotados:
+        if estado.encerrado:
             break
-        vez = motor.rodada_dos_inimigos(estado, rng)
         estado.rodada += 1
-        # Fim da rodada: quem ja estava preso sai — ou, se o efeito e do tipo
-        # "refaz o save no fim do turno", so sai quando passar no teste.
-        for c in estado.combatentes:
-            if not c.atordoado:
+        for user_id, preso in list(presos.items()):
+            if preso["repete"] is None or not preso["perdeu"]:
                 continue
-            if c.user_id in repetem:
-                atributo, cd = repetem[c.user_id]
-                if motor.salvar_combatente(c, atributo, cd, rng).passou:
-                    c.atordoado = False
-                    repetem.pop(c.user_id)
-            else:
+            c = estado.combatente(user_id)
+            atributo, cd = preso["repete"]
+            if motor.salvar_combatente(c, atributo, cd, rng).passou:
                 c.atordoado = False
-        # e quem foi pego agora perde a proxima
-        for investida in vez.investidas:
-            if not investida.atordoou:
-                continue
-            investida.alvo.atordoado = True
-            if investida.repete_save:
-                repetem[investida.alvo.user_id] = (
-                    investida.save.atributo, investida.save.cd
-                )
+                presos.pop(user_id)
     return estado
 
 

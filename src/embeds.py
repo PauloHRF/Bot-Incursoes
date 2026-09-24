@@ -527,23 +527,69 @@ def texto_da_investida(investida) -> str:
     return f"{cabeca} em {quem} · {rolagem} → falhou: {pancada}"
 
 
+def _linha_iniciativa(
+    posicao: int, entrada: dict, estado, vez: int, turnos: dict, encerrado: bool
+) -> str:
+    """Uma linha da ordem: quem é, o que rolou e em que pé está nesta rodada."""
+    rolagem = f"`{entrada['d20'] + entrada['modificador']:>2}`"
+    if entrada["tipo"] == "inimigo":
+        quem = estado.inimigo(entrada["alvo_id"])
+        emoji = "👹"
+    else:
+        quem = estado.combatente(entrada["alvo_id"])
+        emoji = "🧝"
+    nome = entrada["nome"]
+    if quem is not None and quem.caido:
+        return f"💀 {rolagem} ~~{nome}~~"
+    if encerrado:
+        return f"{emoji} {rolagem} {nome}"
+    if posicao < vez:
+        marca = "✅"
+    elif posicao == vez:
+        marca = "▶️"
+    else:
+        marca = "▫️"
+    extra = ""
+    if getattr(quem, "atordoado", False):
+        extra = " — 💫 perdeu a vez" if posicao < vez else " — 💫 perde a vez"
+    elif entrada["tipo"] != "inimigo" and posicao >= vez:
+        turno = (turnos or {}).get(entrada["alvo_id"])
+        if turno is not None:
+            extra = " — ação guardada ⏳"
+        elif posicao == vez:
+            extra = " — **sua vez de escolher**"
+    return f"{marca} {rolagem} {emoji} {nome}{extra}"
+
+
+def _bloco(linhas: list[str], vazio: str) -> str:
+    bloco = "\n".join(linhas) or vazio
+    if len(bloco) > 1024:
+        # O fim da rodada importa mais que o começo: corta por cima.
+        bloco = "…\n" + bloco[-1000:].split("\n", 1)[-1]
+    return bloco
+
+
 def combate(
     sala: Sala,
     estado,
-    ja_atacaram: int,
     *,
+    ordem: Optional[list[dict]] = None,
+    vez: int = 0,
+    turnos: Optional[dict] = None,
+    registro: Optional[list[str]] = None,
+    anterior: Optional[tuple] = None,
     e_objetivo: bool = False,
     recompensa: Optional[str] = None,
-    rodada_anterior: Optional[tuple] = None,
     encerrado: bool = False,
 ) -> tuple[discord.Embed, Optional[discord.File]]:
     """O painel do combate.
 
     É a única mensagem do confronto: em vez de postar uma mensagem por rodada,
-    o bot edita este painel, guardando dentro dele o log da rodada que acabou.
-    `rodada_anterior` é (numero, golpes, contra, alvo_nome).
+    o bot edita este painel. Ele mostra a ordem da iniciativa com a vez atual,
+    o log da rodada em andamento (`registro`) e o da que acabou (`anterior`,
+    como (numero, linhas)).
     """
-    primeira = estado.rodada == 1 and rodada_anterior is None
+    primeira = estado.rodada == 1 and not registro and not anterior
     titulo = "🏁" if e_objetivo else "⚔️"
     e = discord.Embed(
         title=f"{titulo} {sala.nome} — rodada {estado.rodada}",
@@ -576,44 +622,42 @@ def combate(
         inline=False,
     )
 
-    if rodada_anterior:
-        numero, golpes, revides = rodada_anterior[0], rodada_anterior[1], rodada_anterior[2]
-        investidas = rodada_anterior[3] if len(rodada_anterior) > 3 else []
-        linhas = [linha_golpe(g) for g in golpes] or ["*ninguém atacou*"]
-        for investida in investidas:
-            linhas.append(texto_da_investida(investida))
-        for contra, atingido in revides:
-            linhas.append(
-                f"↩️ **{contra.atacante}** · {texto_do_contra_ataque(contra, atingido.nome)}"
-            )
-        bloco = "\n".join(linhas)
-        if len(bloco) > 1024:
-            bloco = bloco[:1000].rsplit("\n", 1)[0] + "\n…"
-        e.add_field(name=f"Rodada {numero}", value=bloco, inline=False)
+    if ordem:
+        e.add_field(
+            name="Iniciativa",
+            value=_bloco(
+                [
+                    _linha_iniciativa(p, entrada, estado, vez, turnos, encerrado)
+                    for p, entrada in enumerate(ordem)
+                ],
+                "*sem ordem*",
+            ),
+            inline=False,
+        )
+
+    if anterior:
+        numero, linhas = anterior
+        e.add_field(
+            name=f"Rodada {numero}", value=_bloco(linhas, "*ninguém agiu*"), inline=False
+        )
+    if registro:
+        rotulo_rodada = (
+            f"Rodada {estado.rodada}" if encerrado else f"Rodada {estado.rodada} (em andamento)"
+        )
+        e.add_field(name=rotulo_rodada, value=_bloco(registro, "—"), inline=False)
 
     if recompensa and primeira:
         e.add_field(name="Recompensa", value=recompensa, inline=False)
-
-    if not encerrado:
-        e.add_field(
-            name="Agiram nesta rodada",
-            value=f"{ja_atacaram}/{len(estado.ativos)}",
-            inline=True,
-        )
 
     arquivo, url = anexo_da_imagem(sala.imagem) if primeira else (None, None)
     if url:
         e.set_image(url=url)
     if encerrado:
         rodape = "Combate encerrado."
-    elif len(estado.inimigos) > 1:
-        rodape = (
-            "Cada personagem de pé ataca um alvo. Quando todos atacarem, "
-            "cada inimigo de pé revida."
-        )
     else:
         rodape = (
-            "Cada personagem de pé ataca uma vez. Quando todos atacarem, o monstro revida."
+            "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada "
+            "vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
         )
     return _rodape(e, rodape), arquivo
 

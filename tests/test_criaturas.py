@@ -9,7 +9,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db, embeds as E, motor  # noqa: E402
+from src import config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.incursoes import ErroDeValidacao, de_dict  # noqa: E402
 from fakes import (  # noqa: E402
@@ -288,11 +288,16 @@ async def caso_atordoamento_no_combate():
     await cog.atacar(inter, run["id"], "OBJ")
     assert "atordoado" in inter.resposta, inter.resposta
 
-    # e o painel conta so quem ainda pode agir
-    embed, _ = E.combate(incursao.objetivo, estado, 0)
+    # e o painel mostra que ele perde a vez
+    embed, _ = await cog._embed_do_painel(
+        await db.buscar_run(conn, run["id"]), incursao.objetivo, estado
+    )
     campos = {f.name: f.value for f in embed.fields}
     assert "atordoado" in campos["Grupo"]
-    assert campos["Agiram nesta rodada"] == "0/1"
+    linha_do_preso = next(
+        linha for linha in campos["Iniciativa"].split("\n") if preso.nome in linha
+    )
+    assert "💫" in linha_do_preso, campos["Iniciativa"]
 
     # o golpe de quem sobrou fecha a rodada sozinho
     inter = FakeInteraction(canal, livre.user_id)

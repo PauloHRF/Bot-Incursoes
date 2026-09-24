@@ -119,7 +119,23 @@ CREATE TABLE IF NOT EXISTS run_combate (
     passo   INTEGER NOT NULL,
     sala_id TEXT    NOT NULL,
     rodada  INTEGER NOT NULL DEFAULT 1,
+    -- Posicao na ordem de iniciativa de quem age agora nesta rodada.
+    vez     INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (run_id, passo)
+);
+
+-- A ordem do combate, rolada uma vez quando ele comeca: 1d20 + save de DES.
+-- tipo e "personagem" (alvo_id = user_id) ou "inimigo" (alvo_id = indice).
+CREATE TABLE IF NOT EXISTS run_iniciativa (
+    run_id      INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo       INTEGER NOT NULL,
+    posicao     INTEGER NOT NULL,
+    tipo        TEXT    NOT NULL,
+    alvo_id     INTEGER NOT NULL,
+    nome        TEXT    NOT NULL,
+    d20         INTEGER NOT NULL,
+    modificador INTEGER NOT NULL,
+    PRIMARY KEY (run_id, passo, posicao)
 );
 
 -- Uma sala de combate pode ter varias criaturas, cada uma com o proprio HP.
@@ -162,13 +178,16 @@ CREATE TABLE IF NOT EXISTS run_ataques (
 
 -- Quem ja gastou o turno em cada rodada, e com o que. O personagem age uma vez
 -- por rodada: ou ataca, ou usa uma habilidade. Reacoes nao entram aqui, porque
--- disparam sozinhas e nao ocupam o turno de ninguem.
+-- disparam sozinhas e nao ocupam o turno de ninguem. A acao escolhida antes da
+-- vez fica guardada (resolvida = 0) ate a iniciativa chegar no personagem.
 CREATE TABLE IF NOT EXISTS run_turnos (
-    run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
-    passo   INTEGER NOT NULL,
-    rodada  INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    acao    TEXT    NOT NULL DEFAULT 'ataque',
+    run_id    INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo     INTEGER NOT NULL,
+    rodada    INTEGER NOT NULL,
+    user_id   INTEGER NOT NULL,
+    acao      TEXT    NOT NULL DEFAULT 'ataque',
+    alvos     TEXT    NOT NULL DEFAULT '[]',
+    resolvida INTEGER NOT NULL DEFAULT 1,
     PRIMARY KEY (run_id, passo, rodada, user_id)
 );
 
@@ -388,6 +407,22 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
                 await conn.execute(
                     f"ALTER TABLE run_inimigos ADD COLUMN {coluna} {definicao}"
                 )
+
+    # A iniciativa: a vez dentro da rodada e a acao guardada ate ela chegar.
+    # Turno gravado antes disso ja tinha sido resolvido na hora.
+    if "vez" not in await _colunas(conn, "run_combate"):
+        await conn.execute(
+            "ALTER TABLE run_combate ADD COLUMN vez INTEGER NOT NULL DEFAULT 0"
+        )
+    colunas_turnos = await _colunas(conn, "run_turnos")
+    if "alvos" not in colunas_turnos:
+        await conn.execute(
+            "ALTER TABLE run_turnos ADD COLUMN alvos TEXT NOT NULL DEFAULT '[]'"
+        )
+    if "resolvida" not in colunas_turnos:
+        await conn.execute(
+            "ALTER TABLE run_turnos ADD COLUMN resolvida INTEGER NOT NULL DEFAULT 1"
+        )
 
     if faltava_run_salas:
         # Runs em andamento nao guardavam por onde o grupo passou. Reconstroi o
@@ -995,11 +1030,49 @@ async def estado_combate(
 async def atualizar_rodada(
     conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
 ) -> None:
+    """Vira a rodada: a vez volta para o topo da iniciativa."""
     await conn.execute(
-        "UPDATE run_combate SET rodada = ? WHERE run_id = ? AND passo = ?",
+        "UPDATE run_combate SET rodada = ?, vez = 0 WHERE run_id = ? AND passo = ?",
         (rodada, run_id, passo),
     )
     await conn.commit()
+
+
+async def definir_vez(
+    conn: aiosqlite.Connection, run_id: int, passo: int, vez: int
+) -> None:
+    await conn.execute(
+        "UPDATE run_combate SET vez = ? WHERE run_id = ? AND passo = ?",
+        (vez, run_id, passo),
+    )
+    await conn.commit()
+
+
+async def gravar_iniciativa(
+    conn: aiosqlite.Connection, run_id: int, passo: int, ordem: list[Any]
+) -> None:
+    """Fixa a ordem do combate. Já rolada, não rola de novo (restart, reenvio)."""
+    await conn.executemany(
+        "INSERT OR IGNORE INTO run_iniciativa"
+        " (run_id, passo, posicao, tipo, alvo_id, nome, d20, modificador)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            (run_id, passo, posicao, r.tipo, r.ident, r.nome, r.d20, r.modificador)
+            for posicao, r in enumerate(ordem)
+        ],
+    )
+    await conn.commit()
+
+
+async def iniciativa(
+    conn: aiosqlite.Connection, run_id: int, passo: int
+) -> list[dict[str, Any]]:
+    """A ordem do combate, do primeiro ao último."""
+    async with conn.execute(
+        "SELECT * FROM run_iniciativa WHERE run_id = ? AND passo = ? ORDER BY posicao",
+        (run_id, passo),
+    ) as cur:
+        return [dict(r) for r in await cur.fetchall()]
 
 
 async def registrar_ataque(
@@ -1047,12 +1120,68 @@ async def marcar_turno(
     rodada: int,
     user_id: int,
     acao: str = "ataque",
+    alvos: Optional[list[int]] = None,
+    resolvida: bool = True,
+) -> bool:
+    """Gasta o turno do personagem nesta rodada. Repetir não sobrescreve.
+
+    Com `resolvida=False` a ação fica guardada até a iniciativa chegar nele.
+    False se o turno já estava gasto (dois cliques ao mesmo tempo).
+    """
+    cur = await conn.execute(
+        "INSERT OR IGNORE INTO run_turnos"
+        " (run_id, passo, rodada, user_id, acao, alvos, resolvida)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            run_id, passo, rodada, user_id, acao,
+            json.dumps(list(alvos or [])), 1 if resolvida else 0,
+        ),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
+async def turno_de(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
+) -> Optional[dict[str, Any]]:
+    """A ação que o personagem escolheu nesta rodada, guardada ou já resolvida."""
+    async with conn.execute(
+        "SELECT * FROM run_turnos"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?",
+        (run_id, passo, rodada, user_id),
+    ) as cur:
+        linha = await cur.fetchone()
+    if not linha:
+        return None
+    turno = dict(linha)
+    turno["alvos"] = json.loads(turno.get("alvos") or "[]")
+    turno["resolvida"] = bool(turno["resolvida"])
+    return turno
+
+
+async def turnos_da_rodada(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
+) -> dict[int, dict[str, Any]]:
+    """As ações da rodada por jogador — para o painel mostrar quem já escolheu."""
+    async with conn.execute(
+        "SELECT * FROM run_turnos WHERE run_id = ? AND passo = ? AND rodada = ?",
+        (run_id, passo, rodada),
+    ) as cur:
+        linhas = [dict(r) for r in await cur.fetchall()]
+    for linha in linhas:
+        linha["alvos"] = json.loads(linha.get("alvos") or "[]")
+        linha["resolvida"] = bool(linha["resolvida"])
+    return {linha["user_id"]: linha for linha in linhas}
+
+
+async def resolver_turno(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
 ) -> None:
-    """Gasta o turno do personagem nesta rodada. Repetir não sobrescreve."""
+    """Marca a ação guardada como feita."""
     await conn.execute(
-        "INSERT OR IGNORE INTO run_turnos (run_id, passo, rodada, user_id, acao)"
-        " VALUES (?, ?, ?, ?, ?)",
-        (run_id, passo, rodada, user_id, acao),
+        "UPDATE run_turnos SET resolvida = 1"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?",
+        (run_id, passo, rodada, user_id),
     )
     await conn.commit()
 

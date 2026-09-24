@@ -11,7 +11,7 @@ import copy  # noqa: E402
 
 import discord  # noqa: E402
 
-from src import database as db  # noqa: E402
+from src import database as db, motor  # noqa: E402
 from src.incursoes import banco_de_dict, de_dict  # noqa: E402
 
 GUILD = 1
@@ -22,6 +22,33 @@ JOGADORES = [101, 102, 103, 104, 105]
 # escolhe as pericias com proficiencia.
 CLASSE_PADRAO = "guerreiro"
 TREINADAS = ["Atletismo", "Percepção", "Intuição"]
+
+
+# ------------------------------------------------------------- iniciativa
+
+_ROLAR_DE_VERDADE = motor.rolar_iniciativas
+
+
+def _ordem_de_antes(estado, rng=None):
+    """Jogadores na ordem em que entraram, depois as criaturas.
+
+    E a ordem do combate de antes da iniciativa: os testes que nao sao sobre
+    ela continuam previsiveis. Os de iniciativa ligam a rolagem de verdade.
+    """
+    quem = [(motor.PERSONAGEM, c.user_id, c.nome) for c in estado.combatentes]
+    quem += [(motor.INIMIGO, i.indice, i.nome) for i in estado.inimigos]
+    return [
+        motor.Iniciativa(tipo, ident, nome, len(quem) - posicao, 0)
+        for posicao, (tipo, ident, nome) in enumerate(quem)
+    ]
+
+
+def iniciativa_de_verdade(ligada: bool = True) -> None:
+    """Liga (ou desliga) a rolagem de iniciativa de verdade nos testes."""
+    motor.rolar_iniciativas = _ROLAR_DE_VERDADE if ligada else _ordem_de_antes
+
+
+iniciativa_de_verdade(False)
 
 
 # ----------------------------------------------------------------- dublês

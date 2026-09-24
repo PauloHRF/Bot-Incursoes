@@ -728,32 +728,113 @@ class RodadaInimiga:
         return saida
 
 
+def turno_do_inimigo(
+    inimigo: Inimigo, estado: EstadoCombate, rng: Optional[random.Random] = None
+) -> RodadaInimiga:
+    """A vez de uma criatura, quando a iniciativa chega nela.
+
+    Se tem habilidade pronta nesta rodada, conjura em vez de atacar; senão
+    bate, tantas vezes quanto o multiataque permitir, cada golpe num alvo
+    sorteado — o bot não faz tática, então não concentra tudo numa pessoa.
+    Caída ou atordoada, perde a vez; e não se ataca quem já está no chão.
+    """
+    vez = RodadaInimiga()
+    if inimigo.caido or inimigo.atordoado or not estado.vivos:
+        return vez
+    if inimigo.usa_habilidade(estado.rodada, rng):
+        vez.investidas.extend(usar_habilidade_do_inimigo(inimigo, estado, rng))
+        return vez
+    for _ in range(max(1, inimigo.ataques)):
+        alvo = sortear_alvo(estado, rng)
+        if alvo is None:
+            break
+        vez.golpes.append((contra_atacar(inimigo, alvo, rng), alvo))
+    return vez
+
+
 def rodada_dos_inimigos(
     estado: EstadoCombate, rng: Optional[random.Random] = None
 ) -> RodadaInimiga:
-    """A vez dos inimigos: cada um de pé age uma vez.
+    """Todas as criaturas de pé, uma depois da outra, na ordem da sala.
 
-    Quem tem habilidade pronta nesta rodada conjura em vez de atacar; o resto
-    bate, tantas vezes quanto o multiataque permitir, cada golpe num alvo
-    sorteado — o bot não faz tática, então não concentra tudo numa pessoa.
     É aqui que um grupo de criaturas pesa: cinco lobos batem cinco vezes por
-    rodada. Para quando o grupo inteiro cai: não se ataca quem já está no chão.
+    rodada.
     """
     rodada = RodadaInimiga()
     for inimigo in estado.inimigos_vivos:
-        if inimigo.atordoado:
-            continue  # perdeu a vez
-        if not estado.vivos:
-            break
-        if inimigo.usa_habilidade(estado.rodada, rng):
-            rodada.investidas.extend(usar_habilidade_do_inimigo(inimigo, estado, rng))
-            continue
-        for _ in range(max(1, inimigo.ataques)):
-            alvo = sortear_alvo(estado, rng)
-            if alvo is None:
-                break
-            rodada.golpes.append((contra_atacar(inimigo, alvo, rng), alvo))
+        vez = turno_do_inimigo(inimigo, estado, rng)
+        rodada.golpes.extend(vez.golpes)
+        rodada.investidas.extend(vez.investidas)
     return rodada
+
+
+# ---------------------------------------------------------- iniciativa
+
+PERSONAGEM = "personagem"
+INIMIGO = "inimigo"
+
+
+@dataclass
+class Iniciativa:
+    """A rolagem de iniciativa de quem está no combate: 1d20 + mod. de Destreza.
+
+    As fichas não têm atributos, então o modificador de Destreza é o save de
+    DES — o do personagem sai da classe, o da criatura da planilha (ou do
+    padrão provisório de `Inimigo.save`).
+    """
+
+    tipo: str  # PERSONAGEM ou INIMIGO
+    ident: int  # user_id do jogador, ou o índice da criatura na sala
+    nome: str
+    d20: int
+    modificador: int
+    # Sorteado junto: decide o empate de total e modificador sem preferir ninguém.
+    desempate: int = 0
+
+    @property
+    def total(self) -> int:
+        return self.d20 + self.modificador
+
+    @property
+    def chave(self) -> tuple[str, int]:
+        return self.tipo, self.ident
+
+
+def mod_iniciativa(quem: Any) -> int:
+    """O modificador de Destreza de um personagem ou de uma criatura."""
+    if isinstance(quem, Inimigo):
+        return quem.save("DES")
+    return (quem.saves or {}).get("DES", 0)
+
+
+def rolar_iniciativa(
+    tipo: str, ident: int, nome: str, modificador: int, rng: Optional[random.Random] = None
+) -> Iniciativa:
+    gerador = _rng(rng)
+    return Iniciativa(
+        tipo, ident, nome, gerador.randint(1, 20), modificador, gerador.randint(1, 10**6)
+    )
+
+
+def ordenar_iniciativa(rolagens: Iterable[Iniciativa]) -> list[Iniciativa]:
+    """Maior total primeiro; no empate, o maior modificador; depois, a sorte."""
+    return sorted(
+        rolagens, key=lambda r: (r.total, r.modificador, r.desempate), reverse=True
+    )
+
+
+def rolar_iniciativas(
+    estado: EstadoCombate, rng: Optional[random.Random] = None
+) -> list[Iniciativa]:
+    """A ordem do combate inteiro, rolada uma vez quando ele começa."""
+    rolagens = [
+        rolar_iniciativa(PERSONAGEM, c.user_id, c.nome, mod_iniciativa(c), rng)
+        for c in estado.combatentes
+    ] + [
+        rolar_iniciativa(INIMIGO, i.indice, i.nome, mod_iniciativa(i), rng)
+        for i in estado.inimigos
+    ]
+    return ordenar_iniciativa(rolagens)
 
 
 def ganhar_thp(combatente: Combatente, quantidade: int) -> int:
