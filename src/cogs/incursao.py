@@ -32,6 +32,10 @@ log = logging.getLogger("incursoes.run")
 # la — e so uma trava para nada ficar preso o combate inteiro.
 PRAZO_ATE_PASSAR = 20
 
+# Quantas rodadas seguidas o combate pode correr sozinho quando ninguem
+# pode agir (grupo inteiro atordoado) antes de o bot avisar.
+MAX_RODADAS_SOZINHAS = 10
+
 
 def _agora() -> datetime:
     return datetime.now(timezone.utc)
@@ -2188,13 +2192,22 @@ class Incursoes(commands.Cog):
             )
 
         # Rodada em que o grupo inteiro esta atordoado: ninguem tem clique para
-        # dar, entao ela corre sozinha em vez de travar o combate. Como ninguem
-        # e atordoado duas vezes seguidas, isso nao vira uma fila sem fim.
-        if encadeadas < 3:
-            atual = await db.buscar_run(self.bot.db, run["id"])
-            seguinte = await self._estado_combate(atual, sala) if atual else None
-            if seguinte is not None and not seguinte.encerrado and not seguinte.ativos:
+        # dar, entao ela corre sozinha em vez de travar o combate. Ninguem e
+        # atordoado duas vezes seguidas, e quem esta preso por um efeito de
+        # "save no fim do turno" rola de novo a cada volta — entao isso acaba.
+        atual = await db.buscar_run(self.bot.db, run["id"])
+        seguinte = await self._estado_combate(atual, sala) if atual else None
+        if seguinte is not None and not seguinte.encerrado and not seguinte.ativos:
+            if encadeadas < MAX_RODADAS_SOZINHAS:
                 await self._fechar_rodada(atual, sala, seguinte, [], encadeadas + 1)
+            else:
+                # Nunca deve acontecer; se acontecer, o grupo precisa saber por
+                # que o painel parou em vez de ficar clicando em Atacar.
+                await canal.send(
+                    f"⏳ O grupo inteiro segue preso depois de "
+                    f"{MAX_RODADAS_SOZINHAS} rodadas. O combate espera alguem se "
+                    f"soltar — se travar de vez, `/incursao desistir` encerra a run."
+                )
 
     async def _apos_combate_vencido(
         self, run: dict[str, Any], sala: Sala, estado=None

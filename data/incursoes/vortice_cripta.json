@@ -13,7 +13,7 @@
     "id": "OBJ",
     "nome": "O Olho do Vórtice",
     "tipo": "Combate",
-    "descricao": "A câmara é uma esfera perfeita e o Olho flutua no centro dela, aberto. O que o guarda não tem nome porque nada que o viu voltou para dar um.",
+    "descricao": "A câmara é uma esfera perfeita e o Olho flutua no centro dela, aberto. O que o guarda não tem nome porque nada que o viu voltou para dar um — e o chão ao redor está cheio de gente de pedra com a mão levantada, como quem tentou explicar alguma coisa.",
     "dificuldade": null,
     "cd": null,
     "alvo_progresso": null,
@@ -23,25 +23,48 @@
     "pontos_organizacao": 0,
     "monstros": [
       {
-        "nome": "Guardião do Selo",
-        "ca": 16,
+        "nome": "Medusa",
+        "ca": 17,
         "ataque": 7,
-        "dano": "2d8+4",
-        "hp": 58
+        "dano": "3d8+3+2d6",
+        "hp": 172,
+        "ataques": 1,
+        "habilidade": {
+          "nome": "Petrifying Gaze",
+          "save": "CON",
+          "cd": 13,
+          "texto": "O olhar dela percorre a câmara inteira; ninguém escapa de ser olhado.",
+          "dano": null,
+          "alvos": 6,
+          "atordoa": 1,
+          "cada": 2,
+          "recarga": 5,
+          "save_repete": true
+        }
       },
       {
-        "nome": "Acólito do Selo 1",
-        "ca": 13,
-        "ataque": 4,
-        "dano": "1d8+2",
-        "hp": 18
+        "nome": "Nothic 1",
+        "ca": 15,
+        "ataque": 5,
+        "dano": "1d10+3",
+        "hp": 45,
+        "ataques": 1
       },
       {
-        "nome": "Acólito do Selo 2",
-        "ca": 13,
-        "ataque": 4,
-        "dano": "1d8+2",
-        "hp": 18
+        "nome": "Nothic 2",
+        "ca": 15,
+        "ataque": 5,
+        "dano": "1d10+3",
+        "hp": 45,
+        "ataques": 1
+      },
+      {
+        "nome": "Nothic 3",
+        "ca": 15,
+        "ataque": 5,
+        "dano": "1d10+3",
+        "hp": 45,
+        "ataques": 1
       }
     ]
   }
