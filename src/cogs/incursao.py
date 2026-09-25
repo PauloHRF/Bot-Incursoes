@@ -855,6 +855,8 @@ class Incursoes(commands.Cog):
         await interaction.response.send_message(
             f"Voto registrado: **{sala.nome if sala else sala_id}**.", ephemeral=True
         )
+        # O aviso so vale enquanto a votacao esta aberta: some quando o grupo entra.
+        self._guardar_efemera(run_id, interaction)
 
         votos = await db.votos_da_linha(self.bot.db, run_id, linha)
         total = len(await db.participantes(self.bot.db, run_id))
@@ -928,8 +930,10 @@ class Incursoes(commands.Cog):
     # -------------------------------------------------------------- salas
 
     async def _entrar_na_sala(self, run: dict[str, Any], sala: Sala) -> None:
-        # A votacao cumpriu o papel dela: o grupo ja escolheu.
+        # A votacao cumpriu o papel dela: o grupo ja escolheu. Sai do canal, e
+        # somem com ela os "voto registrado" de cada um.
         await self._apagar_passo_anterior(run)
+        await self._limpar_efemeras(run["id"])
         canal = await self._canal(run)
         if not canal:
             return

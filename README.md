@@ -136,8 +136,9 @@ Quem está caído ou atordoado quando a vez chega perde a vez; se tinha guardado
 habilidade, ela não sai e **o uso volta**.
 
 O canal fica com **um cartão só, o do momento**: a votação some quando o grupo entra na
-sala, a sala some quando a próxima votação abre, e o resumo privado de cada golpe e a
-marcação da rodada somem quando a rodada seguinte começa. O caminho inteiro volta no fim,
+sala — junto com o "voto registrado" que cada um recebeu —, a sala some quando a próxima
+votação abre, e o resumo privado de cada golpe e a marcação da rodada somem quando a rodada
+seguinte começa. O caminho inteiro volta no fim,
 no campo **Caminho** do desfecho — é lá que se vê por onde o grupo passou.
 
 O bot **marca os jogadores** na hora de agir — quando a votação abre, quando a sala pede

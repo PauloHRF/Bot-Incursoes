@@ -60,15 +60,22 @@ async def caso_maioria_fecha_sem_esperar():
     # a votacao marca o grupo: sem mencao ninguem e avisado da vez
     assert all(f"<@{u}>" in (msg.content or "") for u in JOGADORES[:5]), msg.content
 
-    # dois votos ainda nao decidem nada
+    # dois votos ainda nao decidem nada, e o "voto registrado" fica na tela
+    votos = []
     for user_id in JOGADORES[:2]:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, opcoes[0].id)
+        votos.append(FakeInteraction(canal, user_id, msg))
+        await cog.votar(votos[-1], run["id"], 1, opcoes[0].id)
     assert (await db.buscar_run(conn, run["id"]))["status"] == "escolhendo"
+    assert "Voto registrado" in votos[0].resposta
+    assert not any(getattr(v, "efemera_apagada", False) for v in votos)
 
     # o terceiro fecha a maioria de 5, sem esperar os outros dois
-    await cog.votar(FakeInteraction(canal, JOGADORES[2], msg), run["id"], 1, opcoes[0].id)
+    votos.append(FakeInteraction(canal, JOGADORES[2], msg))
+    await cog.votar(votos[-1], run["id"], 1, opcoes[0].id)
     depois = await db.buscar_run(conn, run["id"])
     assert depois["status"] == "em_sala", depois["status"]
+    # chegando na sala, os avisos de voto de todo mundo somem
+    assert all(getattr(v, "efemera_apagada", False) for v in votos)
     assert depois["sala_atual"] == opcoes[0].id
     assert len(await db.votos_da_linha(conn, run["id"], 1)) == 3, "avançou com 3 de 5"
     assert any("não espera" in (m.content or "") for m in canal.mensagens)
