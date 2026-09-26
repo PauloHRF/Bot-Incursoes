@@ -35,6 +35,9 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
                 saves=dict(m.saves),
                 saves_vantagem=list(m.saves_vantagem),
                 habilidade=m.habilidade,
+                golpes=list(m.golpes),
+                matilha=m.matilha,
+                regeneracao=m.regeneracao,
             )
             for i, m in enumerate(monstros)
         ],
@@ -182,6 +185,12 @@ def main() -> int:
             saves=dict(base.saves),
             saves_vantagem=list(base.saves_vantagem),
             habilidade=base.habilidade,
+            # Sobrescrever ataque ou dano vale para o golpe basico: a lista sai.
+            golpes=[]
+            if args.ataque_monstro is not None or args.dano_monstro
+            else list(base.golpes),
+            matilha=base.matilha,
+            regeneracao=base.regeneracao,
         )
         for base in sala.monstros
     ]
@@ -189,8 +198,16 @@ def main() -> int:
     print(f"{titulo} — {sala.nome}")
     for m in monstros:
         extras = ""
-        if m.ataques > 1:
+        if m.golpes:
+            extras += ", golpes: " + ", ".join(
+                f"{g.nome} {g.ataque:+d} {g.dano}" for g in m.golpes
+            )
+        elif m.ataques > 1:
             extras += f", {m.ataques}x por rodada"
+        if m.matilha:
+            extras += ", matilha"
+        if m.regeneracao:
+            extras += f", regenera {m.regeneracao}"
         if m.habilidade:
             h = m.habilidade
             alvo = "1 alvo" if h.alvos == 1 else f"{h.alvos} alvos"
@@ -202,6 +219,7 @@ def main() -> int:
                 + (f", {h.dano}" if h.dano else "")
                 + (f", atordoa {h.atordoa}" if h.atordoa else "")
                 + (" (save no fim do turno)" if h.save_repete else "")
+                + (" (metade no sucesso)" if h.metade else "")
                 + f", {quando}"
             )
         print(

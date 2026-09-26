@@ -41,7 +41,7 @@ MAX_INIMIGOS = 6
 
 # Quantos golpes uma criatura pode dar por rodada, e quantos alvos a habilidade
 # dela pode pegar de uma vez.
-MAX_ATAQUES_DO_MONSTRO = 4
+MAX_ATAQUES_DO_MONSTRO = 8
 MAX_ALVOS = 6
 
 # Tipos que resolvem a sala por teste de perícia (margem vs CD).
@@ -97,6 +97,8 @@ class HabilidadeDoMonstro:
     # "e refazem o save no final do turno": em vez de durar um número fixo de
     # rodadas, o efeito acaba quando o alvo passa no teste.
     save_repete: bool = False
+    # "ou metade do dano num sucesso": quem resiste nao escapa inteiro.
+    metade: bool = False
 
     def disponivel(self, rodada: int) -> bool:
         """Só para o ritmo fixo; a recarga é decidida pela criatura, com dado."""
@@ -125,7 +127,39 @@ class HabilidadeDoMonstro:
             "cada": self.cada,
             "recarga": self.recarga,
             "save_repete": self.save_repete,
+            "metade": self.metade,
         }
+
+
+@dataclass
+class GolpeDoMonstro:
+    """Um golpe da sequencia de ataques de uma criatura.
+
+    O dragao morde e arranha duas vezes: tres golpes, cada um com acerto e dano
+    proprios. `efeito` e o teste que o golpe impoe quando acerta (a garra do
+    carnical que paralisa, a picada da aranha que envenena).
+    """
+
+    nome: str
+    ataque: int
+    dano: str
+    efeito: Optional[HabilidadeDoMonstro] = None
+
+    def para_dict(self) -> dict[str, Any]:
+        dados: dict[str, Any] = {"nome": self.nome, "ataque": self.ataque, "dano": self.dano}
+        if self.efeito:
+            dados["efeito"] = self.efeito.para_dict()
+        return dados
+
+    @classmethod
+    def de_dict(cls, dados: dict[str, Any]) -> "GolpeDoMonstro":
+        efeito = dados.get("efeito")
+        return cls(
+            nome=dados["nome"],
+            ataque=dados["ataque"],
+            dano=dados["dano"],
+            efeito=HabilidadeDoMonstro(**efeito) if efeito else None,
+        )
 
 
 @dataclass
@@ -141,6 +175,13 @@ class Monstro:
     saves: dict[str, int] = field(default_factory=dict)
     saves_vantagem: list[str] = field(default_factory=list)
     habilidade: Optional[HabilidadeDoMonstro] = None
+    # Golpes diferentes por rodada. Vazio = `ataques` vezes o golpe de
+    # `ataque`/`dano`, que e o que a planilha escreve a mao.
+    golpes: list[GolpeDoMonstro] = field(default_factory=list)
+    # Taticas de Matilha: vantagem enquanto outra criatura estiver de pe.
+    matilha: bool = False
+    # Regeneracao: HP que recupera no comeco da vez, se estiver de pe.
+    regeneracao: int = 0
 
     def para_dict(self) -> dict[str, Any]:
         dados: dict[str, Any] = {
@@ -157,6 +198,12 @@ class Monstro:
             dados["saves_vantagem"] = list(self.saves_vantagem)
         if self.habilidade:
             dados["habilidade"] = self.habilidade.para_dict()
+        if self.golpes:
+            dados["golpes"] = [g.para_dict() for g in self.golpes]
+        if self.matilha:
+            dados["matilha"] = True
+        if self.regeneracao:
+            dados["regeneracao"] = self.regeneracao
         return dados
 
 
@@ -287,7 +334,7 @@ CAMPOS_DE_CRIATURA = (
     "ataques", "saves", "saves_vantagem",
     "habilidade", "habilidade_texto", "habilidade_save", "habilidade_cd",
     "habilidade_dano", "habilidade_alvos", "habilidade_atordoa", "habilidade_cada",
-    "habilidade_recarga", "habilidade_save_repete",
+    "habilidade_recarga", "habilidade_save_repete", "habilidade_metade",
 )
 
 
@@ -328,6 +375,7 @@ def criatura_de_colunas(ler, prefixo: str = "") -> dict[str, Any]:
             "cada": campo("habilidade_cada"),
             "recarga": campo("habilidade_recarga"),
             "save_repete": campo("habilidade_save_repete"),
+            "metade": campo("habilidade_metade"),
         }
     return bruta
 
@@ -420,8 +468,8 @@ def _habilidade_do_monstro(
     cada = _inteiro(bruto.get("cada"))
     cada = 2 if cada is None else cada
     recarga = _inteiro(bruto.get("recarga"))
-    repete = bruto.get("save_repete")
-    repete = str(repete).strip().lower() in ("1", "sim", "true", "x", "v") if repete else False
+    repete = _marcado(bruto.get("save_repete"))
+    metade = _marcado(bruto.get("metade"))
     if recarga is not None and not 2 <= recarga <= 6:
         problemas.append(
             f"{onde}: a recarga e a menor face do d6 que recarrega (de 2 a 6);"
@@ -447,8 +495,47 @@ def _habilidade_do_monstro(
         atordoa=max(0, atordoa),
         cada=max(1, cada),
         recarga=recarga,
-        save_repete=bool(repete),
+        save_repete=repete,
+        metade=metade,
     )
+
+
+def _marcado(valor: Any) -> bool:
+    """Uma coluna de 'x': marcada com x, sim, 1 ou verdadeiro."""
+    if isinstance(valor, bool):
+        return valor
+    return str(valor).strip().lower() in ("1", "sim", "true", "x", "v") if valor else False
+
+
+def _golpes_do_monstro(bruto: Any, onde: str, problemas: list[str]) -> list[GolpeDoMonstro]:
+    """A sequencia de golpes da criatura, cada um com acerto e dano proprios."""
+    if not bruto:
+        return []
+    if not isinstance(bruto, list):
+        problemas.append(f"{onde}: 'golpes' precisa ser uma lista.")
+        return []
+    golpes = []
+    for posicao, item in enumerate(bruto, start=1):
+        if not isinstance(item, dict):
+            problemas.append(f"{onde}: o golpe {posicao} precisa ser um objeto.")
+            continue
+        nome = str(item.get("nome") or "").strip() or f"Golpe {posicao}"
+        ataque = _inteiro(item.get("ataque"))
+        dano = str(item.get("dano") or "").strip()
+        if ataque is None:
+            problemas.append(f"{onde}: o golpe '{nome}' não tem 'ataque'.")
+            continue
+        if not EXPR_DANO.match(dano):
+            problemas.append(f"{onde}: dano '{dano}' do golpe '{nome}' fora do formato.")
+            continue
+        efeito = None
+        if item.get("efeito"):
+            # O teste do golpe e uma habilidade sem ritmo: sai quando o golpe acerta.
+            efeito = _habilidade_do_monstro(
+                {"nome": nome, **item["efeito"]}, f"{onde} (golpe '{nome}')", problemas
+            )
+        golpes.append(GolpeDoMonstro(nome, ataque, dano, efeito))
+    return golpes
 
 
 def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) -> list[Monstro]:
@@ -458,6 +545,19 @@ def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) ->
     para o grupo saber em qual está batendo.
     """
     nome = str(bruto.get("nome") or "").strip()
+    if nome and all(bruto.get(c) in (None, "") for c in ("ca", "ataque", "hp", "dano")):
+        # So o nome: a criatura vem do bestiario, com os numeros do livro.
+        from .bestiario import buscar
+
+        do_livro = buscar(nome)
+        if do_livro is None:
+            problemas.append(
+                f"{onde}: '{nome}' não está no bestiário, e a linha não traz os números "
+                f"da criatura (ca, ataque, dano, hp)."
+            )
+            return []
+        bruto = {**do_livro, "quantidade": bruto.get("quantidade")}
+        nome = do_livro["nome"]
     ca, ataque, hp = (
         _inteiro(bruto.get("ca")),
         _inteiro(bruto.get("ataque")),
@@ -479,6 +579,13 @@ def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) ->
     habilidade = _habilidade_do_monstro(
         bruto.get("habilidade"), f"{onde}: criatura '{nome or '?'}'", problemas
     )
+    golpes = _golpes_do_monstro(
+        bruto.get("golpes"), f"{onde}: criatura '{nome or '?'}'", problemas
+    )
+    if golpes:
+        # A lista manda: o golpe de 'ataque'/'dano' vira o primeiro dela.
+        ataque, dano, ataques = golpes[0].ataque, golpes[0].dano, len(golpes)
+    regeneracao = _inteiro(bruto.get("regeneracao")) or 0
     if not 1 <= ataques <= MAX_ATAQUES_DO_MONSTRO:
         problemas.append(
             f"{onde}: '{nome or '?'}' precisa ter de 1 a "
@@ -510,6 +617,9 @@ def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) ->
             saves=dict(saves),
             saves_vantagem=list(vantagem),
             habilidade=habilidade,
+            golpes=list(golpes),
+            matilha=_marcado(bruto.get("matilha")),
+            regeneracao=max(0, regeneracao),
         )
 
     if quantidade == 1:

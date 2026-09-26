@@ -46,7 +46,8 @@ CABECALHOS = [
     ("pericias", 30, "Perícias aceitas, separadas por ';'. Vazio em Descanso e Combate."),
     ("descricao", 62, "Texto do embed da sala."),
     ("imagem", 26, "Caminho em assets/ ou URL da imagem da sala."),
-    ("monstro_nome", 22, "Só em salas de Combate. Criatura com multiataque, saves ou "
+    ("monstro_nome", 22, "Só em salas de Combate. Nome do bestiário (ex.: Lobo, Wolf) com as "
+     "colunas de número vazias = a criatura do livro. Feita à mão com multiataque, saves ou "
      "habilidade vai na aba 'Monstros', que tem todas as colunas."),
     ("monstro_quantidade", 12, "Quantas criaturas iguais. Vazio ou 1 = uma. Máximo 6 por sala, "
      "contando as da aba 'Monstros'."),
@@ -221,7 +222,7 @@ def gerar(organizacao: str, destino: Path) -> Path:
     ws = wb.create_sheet("Monstros")
     cabecalho_monstros = (
         ("sala_id", 10, "De qual sala desta planilha esta criatura e."),
-        ("nome", 22, "Nome da criatura."),
+        ("nome", 22, "Nome da criatura. Com os números vazios, vem do bestiário."),
         ("quantidade", 12, "Quantas iguais. Vazio ou 1 = uma."),
         ("ca", 8, "Classe de Armadura."),
         ("ataque", 10, "Bonus de ataque (ex.: 4)."),
@@ -245,6 +246,8 @@ def gerar(organizacao: str, destino: Path) -> Path:
          " depois volta quando o dado deixar."),
         ("habilidade_save_repete", 18, "x = o alvo refaz o save no fim de cada turno e"
          " se livra quando passar. Vazio = dura as rodadas de 'atordoa'."),
+        ("habilidade_metade", 16, "x = quem passa no save leva metade do dano"
+         " (sopro de dragao). Vazio = quem passa escapa inteiro."),
     )
     for i, (titulo, largura, ajuda) in enumerate(cabecalho_monstros, start=1):
         c = ws.cell(row=1, column=i, value=titulo)

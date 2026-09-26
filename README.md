@@ -419,6 +419,50 @@ travar.
 
 O dano aceita **soma de parcelas**: `3d8+3+2d6` é o golpe que corta e envenena no mesmo
 ataque. Num crítico todos os dados dobram, e os números soltos entram uma vez só.
+`habilidade_metade` marcado com `x` é o "ou metade do dano num sucesso": quem resiste ao
+sopro do dragão ainda leva metade.
+
+### Bestiário
+
+Uma sala não precisa escrever os números da criatura: **com só o nome e as colunas de
+número vazias** (`ca`, `ataque`, `dano`, `hp`), o importador busca a criatura em
+`data/bestiario.json` — `Lobo` e quantidade 3 viram três lobos do livro. O nome vale em
+português ou em inglês, com ou sem acento, e a criatura entra com o nome em português.
+Preenchendo os números, a criatura é a da planilha, feita à mão, mesmo que o nome coincida.
+
+O bestiário tem **444 criaturas do Monster Manual**, de CR 0 a 30 (o CR fica registrado
+em cada uma), geradas a partir do arquivo do 5etools:
+
+```bash
+.venv/Scripts/python.exe tools/importar_bestiario.py bestiary-mm.json
+```
+
+O livro tem mais regra do que o bot joga, então a conversão padroniza:
+
+| No livro | No bot |
+| --- | --- |
+| CA com várias formas | a primeira (a forma base) |
+| HP em dados | a média |
+| Saves | os declarados; os que faltam saem do modificador do atributo — inclusive o de DES, que é a iniciativa |
+| Multiattack com armas diferentes | uma **lista de golpes**, cada um com acerto e dano próprios (o dragão morde e arranha duas vezes) |
+| Multiattack com alternativas | a primeira sequência descrita |
+| Sem Multiattack | um golpe: o que mais pesa, contando o teste que ele impõe |
+| Golpe que exige alvo caído ou agarrado | fica de fora, se a criatura tiver outro |
+| "Mais 1d6 de fogo" | soma no dano do golpe |
+| Golpe que força save ao acertar | o teste sai só quando o golpe acerta: dano e/ou "perde a vez" |
+| Várias ações especiais | só a principal: a de recarga, senão a de mais dano |
+| Ação em área (cone, linha, raio) | atinge até 3 personagens |
+| 1/Dia | Recharge 6: sai na primeira rodada e quase nunca volta |
+| "Metade do dano num sucesso" | metade para quem resiste |
+| Paralisado, petrificado, inconsciente, incapacitado, atordoado | perde a vez |
+| Outras condições (caído, agarrado, envenenado, amedrontado…) | sem efeito |
+| Táticas de Matilha | vantagem enquanto outra criatura da sala estiver de pé |
+| Regeneração | recupera o valor no começo da vez, se estiver de pé e não atordoada |
+| Conjuração, ações lendárias, reações e os outros traits | ficam de fora, anotados no campo `fora` da criatura |
+
+Seis criaturas não entram por não terem nenhum ataque que o bot jogue (Demilich, Sapo,
+Pixie, Tapete Sufocante, Cavalo-Marinho e Guinchador). Os nomes em português seguem a edição
+brasileira da 5e e ficam em `tools/bestiario_traducao.py`; o texto das regras não entra.
 
 **Quantas salas escrever no banco**: o caminho é sorteado passo a passo, quando o passo
 abre, e **nenhuma sala que o grupo já atravessou volta a ser oferecida**. Uma sala recusada
@@ -453,6 +497,7 @@ src/
   database.py   SQLite (aiosqlite) — schema e acesso
   cogs/ficha.py comandos de ficha
   incursoes.py  schema das incursões: salas, monstros, validação, carregamento
+  bestiario.py  busca das criaturas prontas pelo nome
   motor.py      regras da run (rolagens, margem, progresso) sem nada de Discord
   embeds.py     montagem das mensagens da run
   cogs/incursao.py  runs: recrutamento, votação, salas, testes, combate
@@ -463,10 +508,13 @@ tools/
   gerar_modelo_planilha.py   cria a planilha modelo da incursão
   importar_planilha.py       incursão -> JSON, com validação
   simular_combate.py         calibra os números de um combate fora do Discord
+  importar_bestiario.py      bestiário do 5etools -> data/bestiario.json
+  bestiario_traducao.py      os nomes das criaturas e dos golpes em português
 data/
   planilhas/    planilhas de autoria das incursões (.xlsx)
   incursoes/    incursões convertidas em JSON — lore, tamanho, tier e sala final
   bancos/       bancos de salas por Organização — o que alimenta o sorteio
+  bestiario.json  as criaturas prontas do Monster Manual, já no formato do bot
 assets/         imagens das salas
 tests/
   todos.py      roda todas as suítes
@@ -489,6 +537,7 @@ tests/
   test_semana.py   a virada do intervalo na segunda-feira
   test_registro.py cadastro por classe, proficiências, /ficha upar e /ficha voltar
   test_tier.py     quem pode entrar em cada incursão
+  test_bestiario.py  criatura pelo nome, golpes, teste no golpe, matilha e regeneração
   fakes.py      dublês do Discord usados pelos testes
 ```
 

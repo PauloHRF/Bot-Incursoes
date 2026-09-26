@@ -14,7 +14,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import classes as cl, config, database as db, embeds as E, motor
+from .. import bestiario, classes as cl, config, database as db, embeds as E, motor
 from ..incursoes import (
     BancoDeSalas,
     Incursao,
@@ -309,6 +309,8 @@ class Incursoes(commands.Cog):
     def recarregar_incursoes(self) -> None:
         pasta = config.RAIZ / "data" / "incursoes"
         bancos = config.RAIZ / "data" / "bancos"
+        # Sala que chama criatura pelo nome le o bestiario: ele relê junto.
+        bestiario.recarregar()
         self.incursoes = carregar_todas(pasta) if pasta.is_dir() else {}
         self.bancos = carregar_bancos(bancos) if bancos.is_dir() else {}
         log.info(
@@ -1125,6 +1127,9 @@ class Incursoes(commands.Cog):
                 saves=r.get("saves") or {},
                 saves_vantagem=r.get("saves_vantagem") or [],
                 habilidade=r.get("habilidade"),
+                golpes=r.get("golpes") or [],
+                matilha=bool(r.get("matilha")),
+                regeneracao=r.get("regeneracao") or 0,
             )
             for r in await db.inimigos_do_combate(self.bot.db, run["id"], passo)
         ]
@@ -1559,6 +1564,10 @@ class Incursoes(commands.Cog):
             self._registrar(run, estado.rodada, [f"💫 {inimigo.nome} está atordoado e perde a vez"])
             return
         feito = motor.turno_do_inimigo(inimigo, estado, None)
+        if feito.regenerou:
+            await db.definir_hp_inimigos(
+                self.bot.db, run["id"], self._passo(run), {inimigo.indice: inimigo.hp_atual}
+            )
         for atingido in feito.atingidos:
             await db.definir_hp(self.bot.db, run["id"], atingido.user_id, atingido.hp_atual)
             await db.definir_thp(self.bot.db, run["id"], atingido.user_id, atingido.thp)
@@ -1571,11 +1580,23 @@ class Incursoes(commands.Cog):
         ja_agiram = {a["alvo_id"] for a in antes if a["tipo"] == motor.PERSONAGEM}
         await self._guardar_atordoamentos(run, estado, feito.investidas, ja_agiram)
         await self._reacoes_do_revide(run, estado, feito.golpes)
-        linhas = [E.texto_da_investida(investida) for investida in feito.investidas]
+        linhas = []
+        if feito.regenerou:
+            linhas.append(f"🩹 **{inimigo.nome}** regenera **{feito.regenerou}** HP")
         linhas += [
-            f"↩️ **{golpe.atacante}** · {E.texto_do_contra_ataque(golpe, atingido.nome)}"
-            for golpe, atingido in feito.golpes
+            E.texto_da_investida(investida)
+            for investida in feito.investidas
+            if not investida.do_golpe
         ]
+        for posicao, (golpe, atingido) in enumerate(feito.golpes):
+            arma = f" · {golpe.arma}" if golpe.arma else ""
+            linhas.append(
+                f"↩️ **{golpe.atacante}**{arma} · "
+                f"{E.texto_do_contra_ataque(golpe, atingido.nome)}"
+            )
+            # O teste que o golpe impos sai logo abaixo dele.
+            if posicao in feito.efeitos_dos_golpes:
+                linhas.append(E.texto_da_investida(feito.efeitos_dos_golpes[posicao]))
         self._registrar(run, estado.rodada, linhas)
 
     async def _virar_rodada(self, run: dict[str, Any], sala: Sala, estado) -> None:

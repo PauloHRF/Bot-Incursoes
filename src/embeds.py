@@ -288,8 +288,7 @@ def sala_aberta(
                 else f"{len(sala.monstros)} criaturas"
             ),
             value="\n".join(
-                f"**{m.nome}** — CA **{m.ca}** · Ataque **{fmt(m.ataque)}** · "
-                f"Dano **{m.dano}** · HP **{m.hp}**"
+                f"**{m.nome}** — CA **{m.ca}** · {golpes_da_criatura(m)} · HP **{m.hp}**"
                 for m in sala.monstros
             ) or "*sem criatura*",
             inline=False,
@@ -453,6 +452,25 @@ MARCA_PROTEGIDO = "🛡️"
 MARCA_ABENCOADO = "✨"
 
 
+def golpes_da_criatura(m) -> str:
+    """O que a criatura faz na vez dela: 'Mordida +10 2d10+6, 2× Garra +10 2d6+6'."""
+    golpes = getattr(m, "golpes", None) or []
+    if not golpes:
+        vezes = f"{m.ataques}× " if getattr(m, "ataques", 1) > 1 else ""
+        return f"{vezes}Ataque **{fmt(m.ataque)}** · Dano **{m.dano}**"
+    grupos: list[list] = []
+    for g in golpes:
+        chave = (g.nome, g.ataque, g.dano)
+        if grupos and grupos[-1][0] == chave:
+            grupos[-1][1] += 1
+        else:
+            grupos.append([chave, 1])
+    return ", ".join(
+        f"{f'{n}× ' if n > 1 else ''}{nome} **{fmt(ataque)}** {dano}"
+        for (nome, ataque, dano), n in grupos
+    )
+
+
 def _linha_inimigo(i, marcado: bool = False) -> str:
     """Uma criatura no painel: barra de HP enquanto está de pé."""
     if i.caido:
@@ -460,7 +478,12 @@ def _linha_inimigo(i, marcado: bool = False) -> str:
     alvo = f"{MARCA_ALVO} " if marcado else ""
     return (
         f"👹 {alvo}**{i.nome}** {barra(i.hp_atual, i.hp_max, 8)} "
-        f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca} · {fmt(i.ataque)} · {i.dano}"
+        f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca} · "
+        + (
+            f"{len(i.golpes)} golpes"
+            if getattr(i, "golpes", None)
+            else f"{fmt(i.ataque)} · {i.dano}"
+        )
         + (" 💫 *atordoado*" if getattr(i, "atordoado", False) else "")
     )
 
@@ -517,6 +540,8 @@ def texto_da_investida(investida) -> str:
     quem = investida.alvo.nome if hasattr(investida.alvo, "nome") else investida.alvo
     cabeca = f"✴️ **{investida.inimigo}** · {investida.habilidade}"
     if investida.escapou:
+        if investida.dano:
+            return f"{cabeca} em {quem} · {rolagem} → resistiu: **{investida.dano}** de dano (metade)"
         return f"{cabeca} em {quem} · {rolagem} → resistiu"
     consequencias = []
     if investida.dano:
