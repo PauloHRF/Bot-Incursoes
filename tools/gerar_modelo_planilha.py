@@ -61,7 +61,7 @@ META = [
 ]
 
 CABECALHO_MONSTROS = (
-    ("nome", 24, "Nome da criatura."),
+    ("nome", 24, "Nome da criatura. Com os números vazios, vem do bestiário."),
     ("quantidade", 12, "Quantas iguais. Vazio ou 1 = uma."),
     ("ca", 8, "Classe de Armadura."),
     ("ataque", 10, "Bonus de ataque (ex.: 5)."),
@@ -83,6 +83,7 @@ CABECALHO_MONSTROS = (
      " 'Recharge 5-6' = 5. Com isto, 'cada' nao vale."),
     ("habilidade_save_repete", 18, "x = o alvo refaz o save no fim de cada turno e se"
      " livra quando passar."),
+    ("habilidade_metade", 16, "x = quem passa no save leva metade do dano."),
 )
 
 # A escolta do chefe, na aba 'Monstros'.
@@ -97,7 +98,8 @@ OBJETIVO = [
     ("descricao", "A câmara é uma esfera perfeita e o Olho flutua no centro dela, aberto. O que o "
      "guarda não tem nome porque nada que o viu voltou para dar um.", "Texto do embed da sala final."),
     ("imagem", "", "Caminho em assets/ ou URL. Opcional."),
-    ("monstro_nome", "Guardião do Selo", "Nome do chefe."),
+    ("monstro_nome", "Guardião do Selo", "Nome do chefe. Com os números vazios, vem do "
+     "bestiário (ex.: Dragão Vermelho Jovem)."),
     ("monstro_quantidade", 1, "Quantos chefes iguais. Vazio ou 1 = um. O total da sala, "
      "contando a aba 'Monstros', nao passa de 6."),
     ("monstro_ca", 16, "Classe de Armadura do chefe."),
@@ -121,6 +123,7 @@ OBJETIVO = [
      "'Recharge 5-6' = 5. Com isto, 'cada' nao vale."),
     ("monstro_habilidade_save_repete", "", "x = o alvo refaz o save no fim de cada turno "
      "e se livra quando passar."),
+    ("monstro_habilidade_metade", "", "x = quem passa no save leva metade do dano."),
     ("recompensa", "10 MEs por participante + pontos com o Vórtice Oculto", "Texto da recompensa."),
     ("pontos_organizacao", 0, "Pontos extras da sala final, além de pontos_conclusao."),
 ]

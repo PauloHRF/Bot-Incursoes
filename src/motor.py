@@ -297,6 +297,8 @@ class GolpeAtaque:
     # Ativas que dispensam a rolagem: o golpe acerta, ou ja sai critico.
     garantido: bool = False
     critico_forcado: bool = False
+    # O nome do golpe, quando a criatura tem mais de um (Mordida, Garra).
+    arma: str = ""
     # Quanto do dano a vida temporaria do alvo segurou.
     absorvido: int = 0
 
@@ -407,6 +409,11 @@ class Inimigo:
     saves_vantagem: list = field(default_factory=list)
     # A acao especial da criatura (HabilidadeDoMonstro), se tiver uma.
     habilidade: Optional[Any] = None
+    # A sequencia de golpes (GolpeDoMonstro), quando cada um e diferente.
+    golpes: list = field(default_factory=list)
+    # Taticas de Matilha e Regeneracao, os traits que o bot sabe jogar.
+    matilha: bool = False
+    regeneracao: int = 0
 
     @property
     def caido(self) -> bool:
@@ -643,12 +650,23 @@ def sortear_alvos(
 
 
 def contra_atacar(
-    inimigo: Inimigo, alvo: Combatente, rng: Optional[random.Random] = None
+    inimigo: Inimigo,
+    alvo: Combatente,
+    rng: Optional[random.Random] = None,
+    golpe_do_monstro: Optional[Any] = None,
+    vantagem: bool = False,
 ) -> GolpeAtaque:
-    """Um inimigo revida contra um personagem. O dano já sai descontado do HP dele."""
+    """Um inimigo revida contra um personagem. O dano já sai descontado do HP dele.
+
+    Sem `golpe_do_monstro`, bate com o ataque e o dano da criatura.
+    """
+    bonus = golpe_do_monstro.ataque if golpe_do_monstro else inimigo.ataque
+    dano = golpe_do_monstro.dano if golpe_do_monstro else inimigo.dano
     golpe = atacar(
-        inimigo.nome, inimigo.ataque, inimigo.dano, alvo.nome, alvo.ca_efetiva, rng
+        inimigo.nome, bonus, dano, alvo.nome, alvo.ca_efetiva, rng, vantagem=vantagem
     )
+    if golpe_do_monstro:
+        golpe.arma = golpe_do_monstro.nome
     if golpe.acertou:
         golpe.dano = reduzido(alvo, golpe.dano)
         golpe.absorvido, _ = absorver(alvo, golpe.dano)
@@ -670,6 +688,8 @@ class Investida:
     atordoa_por: int = 0
     # Se o alvo refaz o save no fim do turno para se livrar.
     repete_save: bool = False
+    # Veio do acerto de um golpe (a garra que paralisa), nao de acao propria.
+    do_golpe: bool = False
 
     @property
     def escapou(self) -> bool:
@@ -688,24 +708,39 @@ def usar_habilidade_do_inimigo(
     habilidade = inimigo.habilidade
     if habilidade is None:
         return []
-    investidas = []
-    for alvo in sortear_alvos(estado, habilidade.alvos, rng):
-        resultado = salvar_combatente(alvo, habilidade.save, habilidade.cd, rng)
-        investida = Investida(inimigo.nome, habilidade.nome, alvo, resultado)
-        if not resultado.passou:
-            if habilidade.dano:
-                sofrido = reduzido(alvo, rolar_dano(habilidade.dano, rng))
-                investida.dano = sofrido
-                investida.absorvido, _ = absorver(alvo, sofrido)
-            # Atordoar quem ja esta atordoado nao renova nada: o alvo perde
-            # uma rodada, nao uma sequencia infinita delas.
-            if habilidade.atordoa and not alvo.caido and not alvo.atordoado:
-                alvo.atordoado = True
-                investida.atordoou = True
-                investida.atordoa_por = habilidade.atordoa
-                investida.repete_save = bool(habilidade.save_repete)
-        investidas.append(investida)
-    return investidas
+    return [
+        impor_save(inimigo, habilidade, alvo, rng)
+        for alvo in sortear_alvos(estado, habilidade.alvos, rng)
+    ]
+
+
+def impor_save(
+    inimigo: Inimigo, efeito: Any, alvo: Combatente, rng: Optional[random.Random] = None
+) -> Investida:
+    """Um alvo rola o save de um efeito da criatura e sofre o que falhar.
+
+    Quem passa escapa inteiro, ou leva metade do dano se o efeito disser.
+    """
+    resultado = salvar_combatente(alvo, efeito.save, efeito.cd, rng)
+    investida = Investida(inimigo.nome, efeito.nome, alvo, resultado)
+    if efeito.dano and (not resultado.passou or getattr(efeito, "metade", False)):
+        cheio = rolar_dano(efeito.dano, rng)
+        sofrido = reduzido(alvo, cheio if not resultado.passou else cheio // 2)
+        investida.dano = sofrido
+        investida.absorvido, _ = absorver(alvo, sofrido)
+    # Atordoar quem ja esta atordoado nao renova nada: o alvo perde uma rodada,
+    # nao uma sequencia infinita delas.
+    if (
+        not resultado.passou
+        and efeito.atordoa
+        and not alvo.caido
+        and not alvo.atordoado
+    ):
+        alvo.atordoado = True
+        investida.atordoou = True
+        investida.atordoa_por = efeito.atordoa
+        investida.repete_save = bool(efeito.save_repete)
+    return investida
 
 
 @dataclass
@@ -714,6 +749,10 @@ class RodadaInimiga:
 
     golpes: list[tuple[GolpeAtaque, Combatente]] = field(default_factory=list)
     investidas: list[Investida] = field(default_factory=list)
+    # O teste que cada golpe impos ao acertar, pela posicao dele em `golpes`.
+    efeitos_dos_golpes: dict[int, Investida] = field(default_factory=dict)
+    # Quanto a criatura regenerou no comeco da vez.
+    regenerou: int = 0
 
     @property
     def atingidos(self) -> list[Combatente]:
@@ -741,15 +780,37 @@ def turno_do_inimigo(
     vez = RodadaInimiga()
     if inimigo.caido or inimigo.atordoado or not estado.vivos:
         return vez
+    if inimigo.regeneracao and inimigo.hp_atual < inimigo.hp_max:
+        antes = inimigo.hp_atual
+        inimigo.hp_atual = min(inimigo.hp_max, inimigo.hp_atual + inimigo.regeneracao)
+        vez.regenerou = inimigo.hp_atual - antes
     if inimigo.usa_habilidade(estado.rodada, rng):
         vez.investidas.extend(usar_habilidade_do_inimigo(inimigo, estado, rng))
         return vez
-    for _ in range(max(1, inimigo.ataques)):
+    for golpe_do_monstro in sequencia_de_golpes(inimigo):
         alvo = sortear_alvo(estado, rng)
         if alvo is None:
             break
-        vez.golpes.append((contra_atacar(inimigo, alvo, rng), alvo))
+        # Matilha: vantagem enquanto outra criatura da sala estiver de pe.
+        vantagem = inimigo.matilha and any(
+            i is not inimigo for i in estado.inimigos_vivos
+        )
+        golpe = contra_atacar(inimigo, alvo, rng, golpe_do_monstro, vantagem)
+        vez.golpes.append((golpe, alvo))
+        efeito = getattr(golpe_do_monstro, "efeito", None)
+        if efeito and golpe.acertou and not alvo.caido:
+            investida = impor_save(inimigo, efeito, alvo, rng)
+            investida.do_golpe = True
+            vez.investidas.append(investida)
+            vez.efeitos_dos_golpes[len(vez.golpes) - 1] = investida
     return vez
+
+
+def sequencia_de_golpes(inimigo: Inimigo) -> list[Any]:
+    """Os golpes da vez: a lista da criatura, ou N vezes o golpe basico (None)."""
+    if inimigo.golpes:
+        return list(inimigo.golpes)
+    return [None] * max(1, inimigo.ataques)
 
 
 def rodada_dos_inimigos(

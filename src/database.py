@@ -8,7 +8,7 @@ from typing import Any, Optional
 import aiosqlite
 
 from . import config
-from .incursoes import HabilidadeDoMonstro
+from .incursoes import GolpeDoMonstro, HabilidadeDoMonstro
 from .rules import normalizar_lista_pericias, normalizar_pericia
 
 # sigla do atributo -> coluna no banco
@@ -157,6 +157,10 @@ CREATE TABLE IF NOT EXISTS run_inimigos (
     saves    TEXT    NOT NULL DEFAULT '{}',
     saves_vantagem TEXT NOT NULL DEFAULT '[]',
     habilidade     TEXT,
+    -- Golpes diferentes por rodada, Taticas de Matilha e Regeneracao.
+    golpes         TEXT NOT NULL DEFAULT '[]',
+    matilha        INTEGER NOT NULL DEFAULT 0,
+    regeneracao    INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (run_id, passo, indice)
 );
 
@@ -402,6 +406,9 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
             ("saves", "TEXT NOT NULL DEFAULT '{}'"),
             ("saves_vantagem", "TEXT NOT NULL DEFAULT '[]'"),
             ("habilidade", "TEXT"),
+            ("golpes", "TEXT NOT NULL DEFAULT '[]'"),
+            ("matilha", "INTEGER NOT NULL DEFAULT 0"),
+            ("regeneracao", "INTEGER NOT NULL DEFAULT 0"),
         ):
             if coluna not in colunas_inimigos:
                 await conn.execute(
@@ -960,8 +967,8 @@ async def iniciar_combate(
     await conn.executemany(
         "INSERT OR IGNORE INTO run_inimigos"
         " (run_id, passo, indice, nome, ca, ataque, dano, hp_max, hp_atual,"
-        "  ataques, saves, saves_vantagem, habilidade)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "  ataques, saves, saves_vantagem, habilidade, golpes, matilha, regeneracao)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
             (
                 run_id, passo, i, m.nome, m.ca, m.ataque, m.dano, m.hp, m.hp,
@@ -971,6 +978,12 @@ async def iniciar_combate(
                 json.dumps(m.habilidade.para_dict(), ensure_ascii=False)
                 if getattr(m, "habilidade", None)
                 else None,
+                json.dumps(
+                    [g.para_dict() for g in getattr(m, "golpes", None) or []],
+                    ensure_ascii=False,
+                ),
+                int(bool(getattr(m, "matilha", False))),
+                getattr(m, "regeneracao", 0) or 0,
             )
             for i, m in enumerate(inimigos)
         ],
@@ -993,6 +1006,9 @@ async def inimigos_do_combate(
         linha["habilidade"] = (
             HabilidadeDoMonstro(**json.loads(bruto)) if bruto else None
         )
+        linha["golpes"] = [
+            GolpeDoMonstro.de_dict(g) for g in json.loads(linha.get("golpes") or "[]")
+        ]
     return linhas
 
 
