@@ -92,7 +92,8 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    até alguém trocar o voto.
 5. Na sala, cada jogador rola uma vez pelo botão **Rolar teste**, com a melhor perícia que
    tiver entre as listadas. Quem passa contribui a margem (rolagem + mod − CD) como
-   progresso; quem falha contribui 0 e sofre a consequência do tipo da sala.
+   progresso; quem falha contribui 0 e sofre a consequência do tipo da sala
+   (dano, debuff ou Exaustão — ver *O que a sala deixa no grupo*).
    A sala encerra quando o alvo é atingido ou quando todos rolaram.
 6. Depois de 3, 5 ou 7 salas (conforme o tamanho da incursão), o grupo enfrenta o Objetivo,
    que é sempre um combate. O desfecho vem em dois embeds: um com a vitória, como o grupo
@@ -138,7 +139,8 @@ habilidade, ela não sai e **o uso volta**.
 O canal fica com **um cartão só, o do momento**: a votação some quando o grupo entra na
 sala — junto com o "voto registrado" que cada um recebeu —, a sala some quando a próxima
 votação abre, e o resumo privado de cada golpe e a marcação da rodada somem quando a rodada
-seguinte começa. O caminho inteiro volta no fim,
+seguinte começa. O resumo privado da **rolagem de sala** — o que diz quanto você tirou e,
+na armadilha, quanto de dano custou — sai junto com a sala, quando o grupo anda. O caminho inteiro volta no fim,
 no campo **Caminho** do desfecho — é lá que se vê por onde o grupo passou.
 
 O bot **marca os jogadores** na hora de agir — quando a votação abre, quando a sala pede
@@ -156,8 +158,9 @@ O **20 natural** acerta por mais alta que seja a CA e é crítico: os dados de d
 rolados em dobro, com o modificador entrando uma vez só (2d6+3 vira 4d6+3). O **1 natural**
 erra por maior que seja o bônus. Os dois aparecem marcados no log da rodada — 💥 no crítico
 e 💢 no erro crítico — e valem tanto para o grupo quanto para os inimigos. A última criatura
-cair supera a sala; o grupo inteiro cair encerra a run em fracasso. A sala de **Descanso** completa o HP de quem
-está machucado e devolve os caídos com metade do HP máximo.
+cair supera a sala; o grupo inteiro cair encerra a run em fracasso. A sala de **Descanso** cura
+metade do HP máximo de quem está machucado, devolve os caídos com metade e deixa o grupo
+limpar uma condição.
 
 A run é assíncrona: o estado vive no banco, então o grupo pode levar dias e o bot pode
 reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinhos.
@@ -165,6 +168,150 @@ reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinh
 **Para testar à vontade**, rode `/config intervalo 0` uma vez: sem isso, quem entra numa run
 fica bloqueado até a virada da semana assim que ela começa. Para recomeçar, encerre a run
 atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/incursao entrar`.
+
+## O que a sala deixa no grupo
+
+Passar ou falhar num teste não muda só o progresso: cada tipo de sala cobra e paga de um
+jeito diferente. O catálogo é transcrição direta da planilha *Incursões — Buffs/Debuffs*:
+cada linha dela é um **par espelhado** (Benção/Perdição, Coragem/Medo, Vigor/Debilidade…).
+Ele vive em `src/condicoes.py`, e quem decide o que cada sala faz é
+`src/consequencias.py` — os dois são módulos puros, sem Discord nem banco. A planilha de
+origem está em `data/planilhas/buffs_debuffs.xlsx`: ela não é importada (o catálogo é
+código), mas é a referência contra a qual `test_condicoes.py` confere os números.
+
+| Sala | Passando | Falhando |
+| --- | --- | --- |
+| **Armadilha** | atravessa e pronto | **Dano** (-20% do HP) + um debuff de Armadilha |
+| **Evento** | um **prêmio** para o grupo | um debuff de Evento ou um ponto de **Exaustão** |
+| **Tesouro** | o texto de recompensa da sala | nada — e chance de acordar **Mímicos** |
+| **Descanso** | cura metade do HP e cada um tira **uma** condição | — |
+
+Armadilha e Evento batem em **quem falhou**, não no grupo: é a mesma regra do progresso,
+em que cada um responde pela própria rolagem. O prêmio do Evento é do grupo.
+
+**A CD da Armadilha sai 3 mais fácil** do que a escrita na planilha. Passar nela não dá
+nada — só evita o dano e o debuff —, então sem desconto ela nunca competiria na votação.
+A planilha de conteúdo continua guardando a CD como foi escrita; o desconto é regra do bot.
+
+### Os debuffs
+
+Os valores são **o que um stack faz**, e são fixos: não escalam por tier.
+
+| Debuff | O que faz | Vem de |
+| --- | --- | --- |
+| 🩸 **Deterioração** | -10% do HP máximo | Armadilha |
+| 💀 **Perdição** | -1 em ataques e saves | Armadilha |
+| 💫 **Perturbação** | -1 nos testes de perícia | Armadilha |
+| 😨 **Medo** | -2 em todo save | Armadilha |
+| 🤢 **Envenenado** | -1 nos ataques e nos testes | Armadilha |
+| 💔 **Debilidade** | -10% de tudo que recebe de cura | Armadilha |
+| 🐌 **Letargia** | -2 de iniciativa | Armadilha |
+| 🥀 **Fraqueza** | -2 em Atletismo | Evento |
+| 🤡 **Tolice** | -2 em Arcanismo, História, Investigação, Natureza e Religião | Evento |
+| 🦥 **Moleza** | -2 em Acrobacia, Prestidigitação e Furtividade | Evento |
+| 🙃 **Introversão** | -2 em Enganação, Intimidação, Atuação e Persuasão | Evento |
+| 🌫️ **Insensatez** | -2 em Intuição, Medicina, Percepção e Sobrevivência | Evento |
+| 🥵 **Exaustão** | -2 nos ataques, -2 nos testes e -5 de iniciativa | Evento |
+
+### Os buffs
+
+Um para cada debuff, com o sinal trocado. O Evento vencido sorteia entre eles.
+
+| Buff | O que faz | Espelha |
+| --- | --- | --- |
+| 💚 **Sustento** | +10% do HP máximo | Deterioração |
+| ✨ **Benção** | +1 em ataques e saves | Perdição |
+| 🧭 **Orientação** | +1 nos testes de perícia | Perturbação |
+| 🦁 **Coragem** | +2 em todo save | Medo |
+| 💧 **Purificado** | +1 nos ataques e nos testes | Envenenado |
+| 🌿 **Vigor** | +10% de tudo que recebe de cura | Debilidade |
+| ⚡ **Rapidez** | +2 de iniciativa | Letargia |
+| 💪 **Potência** | +2 em Atletismo | Fraqueza |
+| 📖 **Esperteza** | +2 no grupo de Arcanismo | Tolice |
+| 💨 **Pressa** | +2 no grupo de Acrobacia | Moleza |
+| 💬 **Sociável** | +2 no grupo de Enganação | Introversão |
+| 👀 **Prudência** | +2 no grupo de Intuição | Insensatez |
+
+Os cinco grupos de perícia cobrem 17 das 18 perícias — só *Adestrar Animais* fica fora.
+
+### Prazo: decai 1 stack por combate
+
+**Tudo empilha e tudo decai**: cada condição perde 1 stack quando um combate acaba, e sai
+quando chega a zero. Pegar Medo três vezes dá -6 em saves, e são três combates para passar.
+
+A **Exaustão é a exceção**: ela não decai. Fica até o fim da incursão, e só sai no
+**descanso** (ou por uma habilidade que diga isso).
+
+### Quem sai da incursão
+
+Só duas condições tiram o personagem, e cada uma no teto dela:
+
+| Condição | Teto | Por quê |
+| --- | --- | --- |
+| 🩸 **Deterioração** | 10 stacks | 10 × -10% = **-100% do HP máximo** |
+| 🥵 **Exaustão** | 5 pontos | é a regra escrita da Exaustão |
+
+As outras **não têm teto** — empilham livremente, porque decaem sozinhas e não disparam
+nada. Buff nunca tira ninguém. Esvaziando o grupo, a run termina em fracasso.
+
+### Como as penalidades entram na conta
+
+**São camada própria**, aplicada por cima do que a classe já deu. Não passam por
+`habilidades.juntar`, que consolida com `max()` porque duas passivas da mesma classe nunca
+somam — um `-2` seria engolido por esse `max`.
+
+Buff e debuff do mesmo par **se cancelam no mesmo número**: Medo ×3 com Coragem ×2 fecha
+em -2 de save. O HP máximo e a cura recebida somam os percentuais dos dois lados, e a cura
+nunca fica negativa.
+
+**O debuff de perícia muda qual perícia a sala usa**: com Tolice valendo em Arcanismo, a
+sala que aceita Arcanismo ou Percepção passa a sair em Percepção. O desconto entra na
+escolha, não só na conta — e a Esperteza reverte isso.
+
+### Onde o grupo vê isso
+
+No **painel de combate**, ao lado do HP de cada um, só com os ícones (`😨×2`). Em
+**`/incursao status`**, com o nome e a contagem de cada condição. E na hora em que a
+condição entra ou decai, numa linha no canal — penalidade invisível é penalidade que a
+mesa não entende.
+
+### O prêmio do Evento
+
+Sorteado entre os **12 buffs**, mais duas linhas que não viram condição porque acontecem na
+hora. Só entram no sorteio as que fazem diferença: o bot não oferece Graça a um grupo limpo
+nem Cura a um grupo inteiro.
+
+- **Cura** — +20% do HP máximo no personagem com menos vida do grupo
+- **Graça** — tira um debuff de alguém do grupo, sorteado entre todos (cada stack dela pode
+  tirar de outro personagem ou outro debuff, então o sorteio é sem reposição)
+- **qualquer um dos 12 buffs** — 1 stack para o **grupo inteiro**; é o piso do Evento
+
+### O descanso
+
+Cura metade do HP máximo (não mais tudo) e deixa **cada personagem** limpar **uma** coisa
+sua: 1 stack de um debuff, ou 1 ponto de Exaustão. É uma limpeza por pessoa, não uma para
+o grupo — e é a única saída da Exaustão.
+
+Os botões são a união do que o grupo carrega, porque a mensagem é uma só — cada clique age
+sobre as condições de **quem clicou**. Clicar numa categoria que você não carrega não gasta
+a sua escolha: o bot avisa e você escolhe outra. **Seguir** existe para quem carrega algo e
+prefere não gastar.
+
+A sala fecha quando todos escolheram, do mesmo jeito que a sala de teste fecha quando todos
+rolaram — e **quem não carrega nada entra já marcado**, então um grupo limpo atravessa o
+descanso sem clique nenhum. Quem caiu continua voltando com metade do HP. O estado vive em
+`run_descansos`, então um restart devolve os botões a quem ainda falta.
+
+### O Mímico do baú
+
+Falhar num Tesouro tem 35% de chance de acordar dois Mímicos, e aí a sala vira combate no
+mesmo passo em vez de devolver o grupo à votação. Os números vêm do bestiário e ficam
+gravados em `run_inimigos`, então a emboscada se remonta sozinha depois de um restart —
+ela não precisa existir no banco de salas.
+
+**Os itens não entram no bot.** Tesouro vencido anuncia o que caiu no texto da sala; quem
+guarda poções, itens de carga e material de craft é a planilha do grupo, como já acontece
+com os MEs.
 
 ## Avisos no canal
 
@@ -393,6 +540,37 @@ Os dois modelos já vêm preenchidos com um exemplo jogável: o banco do Vórtic
 (12 salas) e *A Cripta do Vórtice*. Depois de importar, `/incursao recarregar` faz o bot
 reler tudo sem reiniciar.
 
+### O que já está escrito
+
+As quatro Organizações têm banco, e cada uma tem uma incursão pronta num tier diferente,
+para o grupo testar a ficha em toda a faixa:
+
+| Incursão | Tier | Tamanho | Organização | Objetivo |
+| --- | --- | --- | --- | --- |
+| *O Contrato Rasgado* | 1 | Média | Aliança das Sombras | Doppelganger + 2 Brutamontes |
+| *O Ossuário de Vael* | 2 | Média | Guilda dos Mortos | Múmia + 2 Ogros Zumbi + 2 Carniçais |
+| *A Cripta do Vórtice* | 4 | Média | Vórtice Oculto | Medusa + 3 Nothics |
+| *A Brecha de Fogo Pálido* | 4 | Longa | Sentinelas do Alvorecer | Diabo Ósseo + Vrock + 2 Cães Infernais + Diabo Barbado |
+
+As três incursões novas tiram **todas** as criaturas do bestiário — nas planilhas delas só
+o nome está preenchido. Entre as quatro, cada mecânica que o importador do Monster Manual
+gera aparece ao menos uma vez:
+
+| Mecânica | Onde ver |
+| --- | --- |
+| Táticas de Matilha | os 3 Lobos do *Corredor dos Cães*, os 4 Cães do *Canil da Brecha* |
+| Multiataque do livro | Espiões e Brutamontes da Aliança, Trolls e Gárgulas do Alvorecer |
+| Teste imposto pelo golpe | a garra do Carniçal, na *Vala Comum* e no chefe da Guilda |
+| Regeneração | os três Trolls da *Despensa*, 10 por rodada cada um |
+| Recharge 5–6 + metade no sucesso | o sopro dos Cães Infernais |
+| Recharge 6 | os Esporos do Vrock, no chefe do Alvorecer |
+| Ação especial em ritmo fixo | o Olhar Aterrador da Múmia, a cada 2 rodadas |
+| Dano somado | a mordida do Basilisco (`2d6+3+2d6`) e o punho da Múmia |
+
+Contra um grupo cheio de 5, os três chefes novos ficam em 89%, 99% e 88% de vitória, de
+4,8 a 6,5 rodadas — medido com `tools/simular_combate.py`, que assume cinco Guerreiros, o
+grupo mais forte possível. Um grupo misto sente mais.
+
 **Como pôr mais de uma criatura numa sala**: a coluna `monstro_quantidade` repete a mesma
 criatura (3 = "Lobo 1", "Lobo 2", "Lobo 3"). Para um bando misto, preencha a aba
 **Monstros** — no banco ela tem `sala_id` e é somada à criatura da linha da sala; na
@@ -498,6 +676,8 @@ src/
   cogs/ficha.py comandos de ficha
   incursoes.py  schema das incursões: salas, monstros, validação, carregamento
   bestiario.py  busca das criaturas prontas pelo nome
+  condicoes.py  catalogo de debuff, maldicao, exaustao e buff, e as contas
+  consequencias.py  o que cada tipo de sala faz ao passar ou falhar
   motor.py      regras da run (rolagens, margem, progresso) sem nada de Discord
   embeds.py     montagem das mensagens da run
   cogs/incursao.py  runs: recrutamento, votação, salas, testes, combate
@@ -538,6 +718,7 @@ tests/
   test_registro.py cadastro por classe, proficiências, /ficha upar e /ficha voltar
   test_tier.py     quem pode entrar em cada incursão
   test_bestiario.py  criatura pelo nome, golpes, teste no golpe, matilha e regeneração
+  test_condicoes.py  os pares buff/debuff da planilha, decaimento, Mímico e descanso
   fakes.py      dublês do Discord usados pelos testes
 ```
 

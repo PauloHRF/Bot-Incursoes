@@ -158,9 +158,21 @@ def melhor_pericia(
     treinadas: list[str],
     bonus: dict[str, int] | None = None,
     efeitos: dict | None = None,
+    condicoes: dict[str, int] | None = None,
 ) -> tuple[str, int]:
-    """Dentre as perícias listadas pela sala, a melhor para este personagem."""
-    ranked = [(p, mod_pericia(p, numeros, treinadas, bonus, efeitos)) for p in opcoes]
+    """Dentre as perícias listadas pela sala, a melhor para este personagem.
+
+    `condicoes` é o ajuste por perícia que as maldições e os buffs da incursão
+    deixaram (src/condicoes.py). Entra na escolha, não só na conta: com Tolice
+    valendo em Arcanismo, a sala que aceita Arcanismo ou Percepção passa a sair
+    em Percepção.
+    """
+
+    def total(pericia: str) -> int:
+        valor = mod_pericia(pericia, numeros, treinadas, bonus, efeitos)
+        return valor + (condicoes or {}).get(pericia, 0)
+
+    ranked = [(p, total(p)) for p in opcoes]
     ranked.sort(key=lambda x: x[1], reverse=True)
     return ranked[0]
 
