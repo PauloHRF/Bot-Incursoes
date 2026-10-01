@@ -1,0 +1,791 @@
+{
+  "organizacao": "Sentinelas do Alvorecer",
+  "salas": [
+    {
+      "id": "SA01",
+      "nome": "Pátio das Estátuas",
+      "tipo": "Combate",
+      "descricao": "O pátio tem trinta estátuas de guarda, todas viradas para dentro, e a Ordem só esculpiu vinte e cinco. As cinco que sobram estão mais perto do que estavam ontem.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Gárgula 1",
+          "ca": 15,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 2,
+            "DES": 0,
+            "CON": 3,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Garras",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Gárgula 2",
+          "ca": 15,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 2,
+            "DES": 0,
+            "CON": 3,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Garras",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Gárgula 3",
+          "ca": 15,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 2,
+            "DES": 0,
+            "CON": 3,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Garras",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Gárgula 4",
+          "ca": 15,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 2,
+            "DES": 0,
+            "CON": 3,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Garras",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Gárgula 5",
+          "ca": 15,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 2,
+            "DES": 0,
+            "CON": 3,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Garras",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SA02",
+      "nome": "Ponte de Brasa",
+      "tipo": "Armadilha",
+      "descricao": "A ponte atravessa o poço do claustro e está quente o bastante para marcar a sola. O calor não vem de baixo: vem da pedra, e a pedra está lembrando de alguma coisa.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Acrobacia",
+        "Atletismo"
+      ],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": []
+    },
+    {
+      "id": "SA03",
+      "nome": "Canil da Brecha",
+      "tipo": "Combate",
+      "descricao": "O que passou pelo selo trouxe os cães junto, e os cães se acostumaram ao claustro antes dos donos. Caçam em matilha, e cospem fogo quando a matilha não basta.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Cão Infernal 1",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "1d8+3+2d6",
+          "hp": 45,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": 1,
+            "CON": 2,
+            "INT": -2,
+            "SAB": 1,
+            "CAR": -2
+          },
+          "habilidade": {
+            "nome": "Sopro de Fogo",
+            "save": "DES",
+            "cd": 12,
+            "texto": "",
+            "dano": "6d6",
+            "alvos": 3,
+            "atordoa": 0,
+            "cada": 2,
+            "recarga": 5,
+            "save_repete": false,
+            "metade": true
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "1d8+3+2d6"
+            }
+          ],
+          "matilha": true
+        },
+        {
+          "nome": "Cão Infernal 2",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "1d8+3+2d6",
+          "hp": 45,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": 1,
+            "CON": 2,
+            "INT": -2,
+            "SAB": 1,
+            "CAR": -2
+          },
+          "habilidade": {
+            "nome": "Sopro de Fogo",
+            "save": "DES",
+            "cd": 12,
+            "texto": "",
+            "dano": "6d6",
+            "alvos": 3,
+            "atordoa": 0,
+            "cada": 2,
+            "recarga": 5,
+            "save_repete": false,
+            "metade": true
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "1d8+3+2d6"
+            }
+          ],
+          "matilha": true
+        },
+        {
+          "nome": "Cão Infernal 3",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "1d8+3+2d6",
+          "hp": 45,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": 1,
+            "CON": 2,
+            "INT": -2,
+            "SAB": 1,
+            "CAR": -2
+          },
+          "habilidade": {
+            "nome": "Sopro de Fogo",
+            "save": "DES",
+            "cd": 12,
+            "texto": "",
+            "dano": "6d6",
+            "alvos": 3,
+            "atordoa": 0,
+            "cada": 2,
+            "recarga": 5,
+            "save_repete": false,
+            "metade": true
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "1d8+3+2d6"
+            }
+          ],
+          "matilha": true
+        },
+        {
+          "nome": "Cão Infernal 4",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "1d8+3+2d6",
+          "hp": 45,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": 1,
+            "CON": 2,
+            "INT": -2,
+            "SAB": 1,
+            "CAR": -2
+          },
+          "habilidade": {
+            "nome": "Sopro de Fogo",
+            "save": "DES",
+            "cd": 12,
+            "texto": "",
+            "dano": "6d6",
+            "alvos": 3,
+            "atordoa": 0,
+            "cada": 2,
+            "recarga": 5,
+            "save_repete": false,
+            "metade": true
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "1d8+3+2d6"
+            }
+          ],
+          "matilha": true
+        }
+      ]
+    },
+    {
+      "id": "SA04",
+      "nome": "Altar Profanado",
+      "tipo": "Evento",
+      "descricao": "O altar foi virado, lavado e usado de novo para outra coisa. Dá para desfazer o que fizeram aqui, e dá para desfazer errado — a segunda opção é mais rápida.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Religião",
+        "Arcanismo"
+      ],
+      "imagem": null,
+      "recompensa": "O que espera adiante começa o confronto enfraquecido.",
+      "pontos_organizacao": 2,
+      "monstros": []
+    },
+    {
+      "id": "SA05",
+      "nome": "Enfermaria do Alvorecer",
+      "tipo": "Descanso",
+      "descricao": "Camas limpas, ataduras dobradas e a luz da manhã entrando por um vitral que ninguém quebrou. É o único cômodo do mosteiro onde a Ordem ainda ganhou.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": "O grupo recupera o fôlego.",
+      "pontos_organizacao": 0,
+      "monstros": []
+    },
+    {
+      "id": "SA06",
+      "nome": "Sala das Correntes",
+      "tipo": "Combate",
+      "descricao": "Correntes do teto ao chão, e entre elas quatro que não precisam delas para prender ninguém. A barba de todos eles se mexe sozinha.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Diabo Barbado 1",
+          "ca": 13,
+          "ataque": 5,
+          "dano": "1d8+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 5,
+            "DES": 2,
+            "CON": 4,
+            "INT": -1,
+            "SAB": 2,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Barba",
+              "ataque": 5,
+              "dano": "1d8+2"
+            },
+            {
+              "nome": "Glaive",
+              "ataque": 5,
+              "dano": "1d10+3"
+            }
+          ]
+        },
+        {
+          "nome": "Diabo Barbado 2",
+          "ca": 13,
+          "ataque": 5,
+          "dano": "1d8+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 5,
+            "DES": 2,
+            "CON": 4,
+            "INT": -1,
+            "SAB": 2,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Barba",
+              "ataque": 5,
+              "dano": "1d8+2"
+            },
+            {
+              "nome": "Glaive",
+              "ataque": 5,
+              "dano": "1d10+3"
+            }
+          ]
+        },
+        {
+          "nome": "Diabo Barbado 3",
+          "ca": 13,
+          "ataque": 5,
+          "dano": "1d8+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 5,
+            "DES": 2,
+            "CON": 4,
+            "INT": -1,
+            "SAB": 2,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Barba",
+              "ataque": 5,
+              "dano": "1d8+2"
+            },
+            {
+              "nome": "Glaive",
+              "ataque": 5,
+              "dano": "1d10+3"
+            }
+          ]
+        },
+        {
+          "nome": "Diabo Barbado 4",
+          "ca": 13,
+          "ataque": 5,
+          "dano": "1d8+2",
+          "hp": 52,
+          "ataques": 2,
+          "saves": {
+            "FOR": 5,
+            "DES": 2,
+            "CON": 4,
+            "INT": -1,
+            "SAB": 2,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Barba",
+              "ataque": 5,
+              "dano": "1d8+2"
+            },
+            {
+              "nome": "Glaive",
+              "ataque": 5,
+              "dano": "1d10+3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SA07",
+      "nome": "Cripta dos Mártires",
+      "tipo": "Tesouro",
+      "descricao": "Os que morreram fechando os outros onze selos estão aqui, cada um com a arma que usou. A Ordem permite pegar emprestado. A Ordem espera devolver.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Religião",
+        "Investigação"
+      ],
+      "imagem": null,
+      "recompensa": "A arma de um mártir, emprestada pela Ordem.",
+      "pontos_organizacao": 3,
+      "monstros": []
+    },
+    {
+      "id": "SA08",
+      "nome": "Jardim Petrificado",
+      "tipo": "Combate",
+      "descricao": "O jardim está inteiro em pedra, folha por folha, e no meio dele há quatro jardineiros de pedra que a Ordem não esculpiu. Um deles pisca.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Basilisco 1",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "2d6+3+2d6",
+          "hp": 52,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": -1,
+            "CON": 2,
+            "INT": -4,
+            "SAB": -1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "2d6+3+2d6"
+            }
+          ]
+        },
+        {
+          "nome": "Basilisco 2",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "2d6+3+2d6",
+          "hp": 52,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": -1,
+            "CON": 2,
+            "INT": -4,
+            "SAB": -1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "2d6+3+2d6"
+            }
+          ]
+        },
+        {
+          "nome": "Basilisco 3",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "2d6+3+2d6",
+          "hp": 52,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": -1,
+            "CON": 2,
+            "INT": -4,
+            "SAB": -1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "2d6+3+2d6"
+            }
+          ]
+        },
+        {
+          "nome": "Basilisco 4",
+          "ca": 15,
+          "ataque": 5,
+          "dano": "2d6+3+2d6",
+          "hp": 52,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": -1,
+            "CON": 2,
+            "INT": -4,
+            "SAB": -1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "2d6+3+2d6"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SA09",
+      "nome": "Coro Silenciado",
+      "tipo": "Evento",
+      "descricao": "Trinta cadeiras de coro, trinta hábitos dobrados em cima delas, nenhum corpo. O canto continua. Vem das cadeiras, e sabe o nome de quem entra.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Intuição",
+        "Percepção",
+        "Religião"
+      ],
+      "imagem": null,
+      "recompensa": "Revela o que guarda o selo.",
+      "pontos_organizacao": 2,
+      "monstros": []
+    },
+    {
+      "id": "SA10",
+      "nome": "Despensa do Troll",
+      "tipo": "Combate",
+      "descricao": "Três coisas entraram na despensa, comeram o inverno inteiro do mosteiro e ficaram. O que o grupo cortar delas volta a crescer antes de a rodada acabar.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 3,
+      "monstros": [
+        {
+          "nome": "Troll 1",
+          "ca": 15,
+          "ataque": 7,
+          "dano": "1d6+4",
+          "hp": 84,
+          "ataques": 3,
+          "saves": {
+            "FOR": 4,
+            "DES": 1,
+            "CON": 5,
+            "INT": -2,
+            "SAB": -1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 7,
+              "dano": "1d6+4"
+            },
+            {
+              "nome": "Garra",
+              "ataque": 7,
+              "dano": "2d6+4"
+            },
+            {
+              "nome": "Garra",
+              "ataque": 7,
+              "dano": "2d6+4"
+            }
+          ],
+          "regeneracao": 10
+        },
+        {
+          "nome": "Troll 2",
+          "ca": 15,
+          "ataque": 7,
+          "dano": "1d6+4",
+          "hp": 84,
+          "ataques": 3,
+          "saves": {
+            "FOR": 4,
+            "DES": 1,
+            "CON": 5,
+            "INT": -2,
+            "SAB": -1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 7,
+              "dano": "1d6+4"
+            },
+            {
+              "nome": "Garra",
+              "ataque": 7,
+              "dano": "2d6+4"
+            },
+            {
+              "nome": "Garra",
+              "ataque": 7,
+              "dano": "2d6+4"
+            }
+          ],
+          "regeneracao": 10
+        },
+        {
+          "nome": "Troll 3",
+          "ca": 15,
+          "ataque": 7,
+          "dano": "1d6+4",
+          "hp": 84,
+          "ataques": 3,
+          "saves": {
+            "FOR": 4,
+            "DES": 1,
+            "CON": 5,
+            "INT": -2,
+            "SAB": -1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 7,
+              "dano": "1d6+4"
+            },
+            {
+              "nome": "Garra",
+              "ataque": 7,
+              "dano": "2d6+4"
+            },
+            {
+              "nome": "Garra",
+              "ataque": 7,
+              "dano": "2d6+4"
+            }
+          ],
+          "regeneracao": 10
+        }
+      ]
+    },
+    {
+      "id": "SA11",
+      "nome": "Escadaria em Espiral",
+      "tipo": "Armadilha",
+      "descricao": "A escada da torre sobe apertada e sem corrimão, e a cada volta falta um degrau — sempre no mesmo ponto da volta, o que é pior do que se fosse aleatório.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Acrobacia",
+        "Percepção"
+      ],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": []
+    },
+    {
+      "id": "SA12",
+      "nome": "Tesouro do Selo",
+      "tipo": "Tesouro",
+      "descricao": "O que a Ordem guarda perto do selo é o que ela não confia a mais ninguém. Está tudo catalogado, e o catálogo tem duas linhas riscadas.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Arcanismo",
+        "História"
+      ],
+      "imagem": null,
+      "recompensa": "Um item da reserva do Alvorecer.",
+      "pontos_organizacao": 2,
+      "monstros": []
+    }
+  ]
+}

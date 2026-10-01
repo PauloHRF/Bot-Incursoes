@@ -1,0 +1,590 @@
+{
+  "organizacao": "Aliança das Sombras",
+  "salas": [
+    {
+      "id": "AS01",
+      "nome": "Alçapão do Beco",
+      "tipo": "Armadilha",
+      "descricao": "O alçapão abre para baixo e para dentro, e quem pisa errado desce os quatro metros junto com ele. Lá embaixo há palha velha, que ajuda menos do que parece.",
+      "dificuldade": "Fácil",
+      "cd": 10,
+      "alvo_progresso": 5,
+      "pericias": [
+        "Acrobacia",
+        "Furtividade"
+      ],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": []
+    },
+    {
+      "id": "AS02",
+      "nome": "Sala de Contagem",
+      "tipo": "Combate",
+      "descricao": "Quatro homens contam moedas numa mesa comprida e não param de contar quando a porta abre. Um deles termina a pilha antes de pegar a besta.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": [
+        {
+          "nome": "Bandido 1",
+          "ca": 12,
+          "ataque": 3,
+          "dano": "1d8+1",
+          "hp": 11,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 1,
+            "CON": 1,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Besta Leve",
+              "ataque": 3,
+              "dano": "1d8+1"
+            }
+          ]
+        },
+        {
+          "nome": "Bandido 2",
+          "ca": 12,
+          "ataque": 3,
+          "dano": "1d8+1",
+          "hp": 11,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 1,
+            "CON": 1,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Besta Leve",
+              "ataque": 3,
+              "dano": "1d8+1"
+            }
+          ]
+        },
+        {
+          "nome": "Bandido 3",
+          "ca": 12,
+          "ataque": 3,
+          "dano": "1d8+1",
+          "hp": 11,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 1,
+            "CON": 1,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Besta Leve",
+              "ataque": 3,
+              "dano": "1d8+1"
+            }
+          ]
+        },
+        {
+          "nome": "Bandido 4",
+          "ca": 12,
+          "ataque": 3,
+          "dano": "1d8+1",
+          "hp": 11,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 1,
+            "CON": 1,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Besta Leve",
+              "ataque": 3,
+              "dano": "1d8+1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AS03",
+      "nome": "Corredor dos Cães",
+      "tipo": "Combate",
+      "descricao": "A Aliança não usa cadeado onde pode usar bicho. Três deles dividem o corredor e trabalham juntos há tempo bastante para não precisar se olhar.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": [
+        {
+          "nome": "Lobo 1",
+          "ca": 13,
+          "ataque": 4,
+          "dano": "2d4+2",
+          "hp": 11,
+          "ataques": 1,
+          "saves": {
+            "FOR": 1,
+            "DES": 2,
+            "CON": 1,
+            "INT": -4,
+            "SAB": 1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 4,
+              "dano": "2d4+2"
+            }
+          ],
+          "matilha": true
+        },
+        {
+          "nome": "Lobo 2",
+          "ca": 13,
+          "ataque": 4,
+          "dano": "2d4+2",
+          "hp": 11,
+          "ataques": 1,
+          "saves": {
+            "FOR": 1,
+            "DES": 2,
+            "CON": 1,
+            "INT": -4,
+            "SAB": 1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 4,
+              "dano": "2d4+2"
+            }
+          ],
+          "matilha": true
+        },
+        {
+          "nome": "Lobo 3",
+          "ca": 13,
+          "ataque": 4,
+          "dano": "2d4+2",
+          "hp": 11,
+          "ataques": 1,
+          "saves": {
+            "FOR": 1,
+            "DES": 2,
+            "CON": 1,
+            "INT": -4,
+            "SAB": 1,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 4,
+              "dano": "2d4+2"
+            }
+          ],
+          "matilha": true
+        }
+      ]
+    },
+    {
+      "id": "AS04",
+      "nome": "Mesa de Penhores",
+      "tipo": "Tesouro",
+      "descricao": "Tudo que a cidade empenhou e não resgatou está nesta mesa, etiquetado. O truque é saber qual etiqueta é falsa — e é sempre a mais convincente.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Prestidigitação",
+        "Investigação"
+      ],
+      "imagem": null,
+      "recompensa": "Um item empenhado e nunca resgatado.",
+      "pontos_organizacao": 2,
+      "monstros": []
+    },
+    {
+      "id": "AS05",
+      "nome": "Adega Falsa",
+      "tipo": "Descanso",
+      "descricao": "A parede dos fundos gira, e atrás dela há barris de verdade, colchão e uma lamparina acesa. Alguém dorme aqui. Não está agora, e isso basta.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": "O grupo recupera o fôlego.",
+      "pontos_organizacao": 0,
+      "monstros": []
+    },
+    {
+      "id": "AS06",
+      "nome": "Passagem dos Kenku",
+      "tipo": "Combate",
+      "descricao": "Eles falam com a voz das pessoas que já mataram no corredor, e usam essas vozes para chamar quem vem chegando. Funciona mais vezes do que deveria.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": [
+        {
+          "nome": "Kenku 1",
+          "ca": 13,
+          "ataque": 5,
+          "dano": "1d6+3",
+          "hp": 13,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 3,
+            "CON": 0,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 5,
+              "dano": "1d6+3"
+            }
+          ]
+        },
+        {
+          "nome": "Kenku 2",
+          "ca": 13,
+          "ataque": 5,
+          "dano": "1d6+3",
+          "hp": 13,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 3,
+            "CON": 0,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 5,
+              "dano": "1d6+3"
+            }
+          ]
+        },
+        {
+          "nome": "Kenku 3",
+          "ca": 13,
+          "ataque": 5,
+          "dano": "1d6+3",
+          "hp": 13,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 3,
+            "CON": 0,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 5,
+              "dano": "1d6+3"
+            }
+          ]
+        },
+        {
+          "nome": "Kenku 4",
+          "ca": 13,
+          "ataque": 5,
+          "dano": "1d6+3",
+          "hp": 13,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 3,
+            "CON": 0,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 5,
+              "dano": "1d6+3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AS07",
+      "nome": "Senha Trocada",
+      "tipo": "Evento",
+      "descricao": "O guarda pede a senha da semana. A senha que a Aliança deu ao grupo é a da semana passada, e o guarda sabe disso desde antes de perguntar.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Enganação",
+        "Intuição",
+        "Persuasão"
+      ],
+      "imagem": null,
+      "recompensa": "Passagem livre: a próxima sala começa com metade do progresso feito.",
+      "pontos_organizacao": 2,
+      "monstros": []
+    },
+    {
+      "id": "AS08",
+      "nome": "Baú que Morde",
+      "tipo": "Combate",
+      "descricao": "O baú no fim do corredor está aberto, cheio e sem guarda nenhum — o que, nestes túneis, é a coisa mais suspeita que existe.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Mímico",
+          "ca": 12,
+          "ataque": 5,
+          "dano": "1d8+3+1d8",
+          "hp": 58,
+          "ataques": 1,
+          "saves": {
+            "FOR": 3,
+            "DES": 1,
+            "CON": 2,
+            "INT": -3,
+            "SAB": 1,
+            "CAR": -1
+          },
+          "golpes": [
+            {
+              "nome": "Mordida",
+              "ataque": 5,
+              "dano": "1d8+3+1d8"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AS09",
+      "nome": "Telhado Molhado",
+      "tipo": "Armadilha",
+      "descricao": "O túnel sobe e sai num telhado de ardósia, três andares acima do beco. Chove. A única passagem para o outro lado é a calha, e a calha é velha.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Acrobacia",
+        "Atletismo"
+      ],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": []
+    },
+    {
+      "id": "AS10",
+      "nome": "Sala dos Sussurros",
+      "tipo": "Evento",
+      "descricao": "É aqui que a Aliança escuta a cidade: canos de bronze saem das paredes e cada um traz a conversa de um cômodo diferente. Um deles traz a conversa desta sala.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Percepção",
+        "Intuição"
+      ],
+      "imagem": null,
+      "recompensa": "Revela a CA do próximo inimigo.",
+      "pontos_organizacao": 2,
+      "monstros": []
+    },
+    {
+      "id": "AS11",
+      "nome": "Escolta da Casa",
+      "tipo": "Combate",
+      "descricao": "Dois de terno e dois de músculo. Os de terno é que decidem quando começa, e já decidiram antes de o grupo entrar.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Espião 1",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 27,
+          "ataques": 2,
+          "saves": {
+            "FOR": 0,
+            "DES": 2,
+            "CON": 0,
+            "INT": 1,
+            "SAB": 2,
+            "CAR": 3
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Espada Curta",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Espião 2",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 27,
+          "ataques": 2,
+          "saves": {
+            "FOR": 0,
+            "DES": 2,
+            "CON": 0,
+            "INT": 1,
+            "SAB": 2,
+            "CAR": 3
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Espada Curta",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Brutamontes 1",
+          "ca": 11,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 32,
+          "ataques": 2,
+          "saves": {
+            "FOR": 2,
+            "DES": 0,
+            "CON": 2,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Maça",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Maça",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ],
+          "matilha": true
+        },
+        {
+          "nome": "Brutamontes 2",
+          "ca": 11,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 32,
+          "ataques": 2,
+          "saves": {
+            "FOR": 2,
+            "DES": 0,
+            "CON": 2,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Maça",
+              "ataque": 4,
+              "dano": "1d6+2"
+            },
+            {
+              "nome": "Maça",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ],
+          "matilha": true
+        }
+      ]
+    },
+    {
+      "id": "AS12",
+      "nome": "Cofre de Parede",
+      "tipo": "Tesouro",
+      "descricao": "O cofre não tem porta: tem a parede inteira. O segredo é qual dos tijolos é o trinco, e há oitenta tijolos, e dois deles são armadilha.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Prestidigitação",
+        "Arcanismo"
+      ],
+      "imagem": null,
+      "recompensa": "Moeda antiga e um favor escrito da Aliança.",
+      "pontos_organizacao": 3,
+      "monstros": []
+    }
+  ]
+}

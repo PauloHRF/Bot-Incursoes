@@ -1,0 +1,113 @@
+{
+  "id": "sombras_contrato",
+  "nome": "O Contrato Rasgado",
+  "organizacao": "Aliança das Sombras",
+  "tamanho": "Média",
+  "tier": 1,
+  "lore_inicial": "A Aliança não manda recado duas vezes. O primeiro veio num envelope sem selo, com metade de um contrato dentro e a outra metade queimada. O segundo foi um homem que bateu na porta, disse um endereço e foi embora antes que alguém perguntasse o nome dele.\n\nO endereço é uma casa de penhores no Beco do Funil. Por baixo dela corre meia cidade: túneis que a Aliança cavou, alugou e esqueceu. Alguém lá embaixo rasgou um contrato e ficou com o que não era dele. Vocês vão descer, achar essa pessoa e trazer de volta o que ela levou — ou o que sobrar dela.",
+  "lore_final": "O contrato volta inteiro, remendado com fita e sangue seco, e ninguém na Aliança faz cerimônia ao recebê-lo. Guardam numa gaveta junto de outros cem iguais.\n\nO que vocês levam de verdade é o nome de vocês dito em voz alta na sala dos fundos, por gente que até ontem não sabia que vocês existiam. Na Aliança isso vale mais que a bolsa — e cobra mais caro depois.",
+  "imagem_capa": null,
+  "recompensa_mes": 10,
+  "pontos_conclusao": 10,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "A Sala dos Fundos",
+    "tipo": "Combate",
+    "descricao": "A pessoa sentada à mesa tem o rosto de quem mandou vocês aqui, e usa esse rosto sem pressa de largar. O contrato rasgado está na mesa, debaixo da mão dela.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "10 MEs por participante + pontos com a Aliança das Sombras",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Doppelganger",
+        "ca": 14,
+        "ataque": 6,
+        "dano": "1d6+4",
+        "hp": 52,
+        "ataques": 2,
+        "saves": {
+          "FOR": 0,
+          "DES": 4,
+          "CON": 2,
+          "INT": 0,
+          "SAB": 1,
+          "CAR": 2
+        },
+        "golpes": [
+          {
+            "nome": "Pancada",
+            "ataque": 6,
+            "dano": "1d6+4"
+          },
+          {
+            "nome": "Pancada",
+            "ataque": 6,
+            "dano": "1d6+4"
+          }
+        ]
+      },
+      {
+        "nome": "Brutamontes 1",
+        "ca": 11,
+        "ataque": 4,
+        "dano": "1d6+2",
+        "hp": 32,
+        "ataques": 2,
+        "saves": {
+          "FOR": 2,
+          "DES": 0,
+          "CON": 2,
+          "INT": 0,
+          "SAB": 0,
+          "CAR": 0
+        },
+        "golpes": [
+          {
+            "nome": "Maça",
+            "ataque": 4,
+            "dano": "1d6+2"
+          },
+          {
+            "nome": "Maça",
+            "ataque": 4,
+            "dano": "1d6+2"
+          }
+        ],
+        "matilha": true
+      },
+      {
+        "nome": "Brutamontes 2",
+        "ca": 11,
+        "ataque": 4,
+        "dano": "1d6+2",
+        "hp": 32,
+        "ataques": 2,
+        "saves": {
+          "FOR": 2,
+          "DES": 0,
+          "CON": 2,
+          "INT": 0,
+          "SAB": 0,
+          "CAR": 0
+        },
+        "golpes": [
+          {
+            "nome": "Maça",
+            "ataque": 4,
+            "dano": "1d6+2"
+          },
+          {
+            "nome": "Maça",
+            "ataque": 4,
+            "dano": "1d6+2"
+          }
+        ],
+        "matilha": true
+      }
+    ]
+  }
+}
