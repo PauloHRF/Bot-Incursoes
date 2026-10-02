@@ -14,7 +14,16 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import bestiario, classes as cl, config, database as db, embeds as E, motor
+from .. import (
+    bestiario,
+    classes as cl,
+    condicoes,
+    config,
+    consequencias,
+    database as db,
+    embeds as E,
+    motor,
+)
 from ..incursoes import (
     BancoDeSalas,
     Incursao,
@@ -22,12 +31,43 @@ from ..incursoes import (
     arquivo_da_organizacao,
     carregar_bancos,
     carregar_todas,
+    monstros_de_criatura,
 )
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
 from ..rules import tier
 from .ficha import sugerir_personagens
 
 log = logging.getLogger("incursoes.run")
+
+
+def emboscada_de(sala: Sala) -> Sala:
+    """O Tesouro que virou combate, quando a falha acorda os Mímicos.
+
+    Função pura e determinística de propósito: a mesma sala sempre devolve a
+    mesma emboscada, então remontá-la depois de um restart dá no mesmo. Vem com
+    `monstros` vazio se o bestiário não tiver Mímico.
+    """
+    do_livro = bestiario.buscar(consequencias.NOME_DO_MIMICO)
+    monstros = []
+    if do_livro is not None:
+        monstros = monstros_de_criatura(
+            {
+                "nome": consequencias.NOME_DO_MIMICO,
+                "quantidade": consequencias.MIMICOS,
+            },
+            f"{sala.id}: emboscada",
+        )
+    return Sala(
+        id=sala.id,
+        nome=f"{sala.nome} — a emboscada",
+        tipo="Combate",
+        descricao=(
+            "O baú abriu antes de alguém encostar nele, e o que estava dentro "
+            "era o próprio baú."
+        ),
+        imagem=sala.imagem,
+        monstros=monstros,
+    )
 
 # Teto de um efeito que so acaba quando o alvo passa no save: nao e para chegar
 # la — e so uma trava para nada ficar preso o combate inteiro.
@@ -99,6 +139,61 @@ class ViewSala(discord.ui.View):
 
     async def _rolar(self, interaction: discord.Interaction) -> None:
         await self.cog.rolar(interaction, self.run_id, self.sala_id)
+
+
+class ViewDescanso(discord.ui.View):
+    """O descanso cura e deixa **cada um** limpar uma condição sua.
+
+    Os botões são a união do que o grupo carrega, porque a mensagem é uma só;
+    cada clique age sobre as condições de quem clicou, e vale uma por
+    personagem. Quem não carrega nada não precisa clicar. O "Seguir" existe para
+    quem carrega algo e prefere não gastar — sem ele, um jogador ausente
+    travaria a sala.
+
+    A sala fecha quando todos escolheram, como a de teste fecha quando todos
+    rolaram; o estado vive em `run_descansos`, então um restart devolve os
+    botões a quem ainda falta.
+    """
+
+    OPCOES = (
+        ("debuff", "Tirar um debuff meu", "🧪"),
+        ("exaustao", "Tirar 1 de Exaustão", "🥵"),
+    )
+
+    def __init__(
+        self, cog: "Incursoes", run_id: int, sala_id: str, disponiveis: set[str]
+    ):
+        super().__init__(timeout=None)
+        self.cog = cog
+        self.run_id = run_id
+        self.sala_id = sala_id
+        for chave, rotulo, emoji in self.OPCOES:
+            if chave not in disponiveis:
+                continue
+            botao = discord.ui.Button(
+                label=rotulo,
+                emoji=emoji,
+                style=discord.ButtonStyle.primary,
+                custom_id=f"inc:limpar:{run_id}:{sala_id}:{chave}",
+            )
+            botao.callback = self._fazer(chave)
+            self.add_item(botao)
+        seguir = discord.ui.Button(
+            label="Seguir",
+            emoji="➡️",
+            style=discord.ButtonStyle.secondary,
+            custom_id=f"inc:limpar:{run_id}:{sala_id}:nada",
+        )
+        seguir.callback = self._fazer("nada")
+        self.add_item(seguir)
+
+    def _fazer(self, chave: str):
+        async def callback(interaction: discord.Interaction) -> None:
+            await self.cog.limpar_no_descanso(
+                interaction, self.run_id, self.sala_id, chave
+            )
+
+        return callback
 
 
 class ViewCombate(discord.ui.View):
@@ -354,9 +449,14 @@ class Incursoes(commands.Cog):
             opcoes = await self._opcoes(run, run["linha_atual"])
             return ViewVotacao(self, run["id"], run["linha_atual"], opcoes) if opcoes else None
         if run["status"] in ("em_sala", "objetivo") and run["sala_atual"]:
-            sala = self._sala(incursao, run["sala_atual"])
+            sala = await self._sala_corrente(run)
             if sala and sala.tem_teste:
                 return ViewSala(self, run["id"], sala.id)
+            if sala and sala.tipo == "Descanso":
+                # O descanso fica aberto ate alguem escolher o que limpar.
+                return ViewDescanso(
+                    self, run["id"], sala.id, await self._limpezas_disponiveis(run)
+                )
             if sala and sala.e_combate:
                 estado = await self._estado_combate(run, sala)
                 return ViewCombate(
@@ -430,6 +530,24 @@ class Incursoes(commands.Cog):
             return incursao.objetivo
         banco = self.bancos.get(incursao.organizacao)
         return banco.sala(sala_id) if banco else None
+
+    async def _sala_corrente(self, run: dict[str, Any]) -> Optional[Sala]:
+        """A sala em que o grupo está, contando o Tesouro que virou emboscada.
+
+        A emboscada de Mímicos não existe no banco, então não dá para achá-la
+        por id. O que a identifica é persistente: existe linha de combate aberta
+        neste passo e a sala escrita não é de Combate. Assim ela sobrevive a um
+        restart sem tabela nova — e o passo avançar basta para esquecê-la.
+        """
+        incursao = self._incursao_da_run(run)
+        if incursao is None:
+            return None
+        sala = self._sala(incursao, run["sala_atual"])
+        if sala is None or sala.e_combate:
+            return sala
+        if await db.estado_combate(self.bot.db, run["id"], self._passo(run)):
+            return emboscada_de(sala)
+        return sala
 
     async def _opcoes(self, run: dict[str, Any], passo: int) -> list[Sala]:
         """As salas sorteadas para aquele passo desta run."""
@@ -952,10 +1070,32 @@ class Incursoes(commands.Cog):
             await db.definir_hp_varios(
                 self.bot.db, run["id"], {c.user_id: c.hp_atual for c in combatentes}
             )
-            mensagem = await canal.send(embed=E.descanso(sala, mudancas))
+            # Alem de curar, o descanso deixa cada um limpar UMA condicao sua.
+            # A sala fecha quando todos escolherem — e quem nao carrega nada ja
+            # entra marcado, entao grupo limpo nao precisa clicar.
+            disponiveis = await self._limpezas_disponiveis(run)
+            faltam = await self._descanso_pendente(run)
+            mensagem = await canal.send(
+                embed=E.descanso(
+                    sala, mudancas, disponiveis, faltam=len(faltam)
+                ),
+                view=(
+                    ViewDescanso(self, run["id"], sala.id, disponiveis)
+                    if faltam
+                    else None
+                ),
+            )
             # O descanso tambem e a sala do passo: sai do canal na proxima escolha.
             await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
-            await self._concluir_sala(await db.buscar_run(self.bot.db, run["id"]), sala, None)
+            if faltam:
+                await canal.send(
+                    f"🏕️ {await self._chamar(run, faltam)} — o descanso deixa cada "
+                    f"um limpar **uma** condição sua."
+                )
+                return
+            await self._concluir_sala(
+                await db.buscar_run(self.bot.db, run["id"]), sala, None
+            )
             return
 
         incursao = self._incursao_da_run(run)
@@ -1017,31 +1157,56 @@ class Incursoes(commands.Cog):
             return incursao.passos + 1
         return run["linha_atual"]
 
+    def _tier_da_run(self, run: dict[str, Any]) -> Optional[int]:
+        """O tier da incursão — é ele que dimensiona debuff, buff e maldição."""
+        incursao = self._incursao_da_run(run)
+        return incursao.tier if incursao else None
+
+    async def _saldo(self, run: dict[str, Any], user_id: int) -> condicoes.Penalidades:
+        """O que este personagem carrega de condição, já somado."""
+        return condicoes.penalidades(
+            await db.condicoes_de(self.bot.db, run["id"], user_id),
+            self._tier_da_run(run),
+        )
+
     async def _combatentes(
         self, run: dict[str, Any], efeitos_ligados: Optional[list[dict]] = None
     ) -> list[Combatente]:
         """Monta os combatentes juntando a ficha de cada um com o HP atual da run."""
         personagens = await db.personagens_da_run(self.bot.db, run["id"])
+        tier_atual = self._tier_da_run(run)
+        carregadas = await db.condicoes_da_run(self.bot.db, run["id"])
         combatentes = []
         for p in personagens:
             # As passivas da classe entram como numero: multiataque, critico
             # mais facil e dano extra saem daqui.
             efeitos = p.get("efeitos") or {}
+            # E por cima delas, o que as salas deixaram: debuff, maldicao,
+            # exaustao e buff. Camada propria porque sao somas com sinal, e
+            # habilidades.juntar consolida com max().
+            saldo = condicoes.penalidades(carregadas.get(p["user_id"], {}), tier_atual)
+            hp_max = condicoes.hp_maximo(p["hp_max"], saldo)
+            atual = hp_max if p["hp_atual"] is None else min(p["hp_atual"], hp_max)
             combatentes.append(
                 Combatente(
                     user_id=p["user_id"],
                     nome=p["nome"],
                     ca=p["ca"],
-                    bonus_ataque=p["bonus_ataque"],
+                    bonus_ataque=p["bonus_ataque"] + saldo.ataque,
                     dano_arma=p["dano_arma"],
-                    hp_max=p["hp_max"],
-                    hp_atual=p["hp_max"] if p["hp_atual"] is None else p["hp_atual"],
+                    hp_max=hp_max,
+                    hp_atual=atual,
                     thp=p.get("thp") or 0,
                     ataques=efeitos.get("ataques", 1),
                     critico_em=efeitos.get("critico_em", 20),
                     dano_extra=efeitos.get("dano_extra", 0),
                     dano_ferido=efeitos.get("dano_ferido", 0),
-                    saves=p.get("saves") or {},
+                    saves={
+                        atributo: valor + saldo.saves
+                        for atributo, valor in (p.get("saves") or {}).items()
+                    },
+                    mod_iniciativa_extra=saldo.iniciativa,
+                    cura_recebida_pct=saldo.cura_recebida_pct,
                 )
             )
         for ligado in efeitos_ligados or []:
@@ -1176,6 +1341,7 @@ class Incursoes(commands.Cog):
             vez=0,
             e_objetivo=e_objetivo,
             recompensa=sala.recompensa if e_objetivo else None,
+            condicoes_do_grupo=await db.condicoes_da_run(self.bot.db, run["id"]),
         )
         de_pe = [c.user_id for c in estado.ativos] if estado else None
         mensagem = await canal.send(
@@ -1248,6 +1414,7 @@ class Incursoes(commands.Cog):
             anterior=registro.get("anterior"),
             e_objetivo=bool(incursao and sala.id == incursao.objetivo.id),
             encerrado=encerrado,
+            condicoes_do_grupo=await db.condicoes_da_run(self.bot.db, run["id"]),
         )
 
     async def _niveis(self, run: dict[str, Any]) -> list[int]:
@@ -1271,7 +1438,7 @@ class Incursoes(commands.Cog):
             return
 
         incursao = self._incursao_da_run(run)
-        sala = self._sala(incursao, sala_id)
+        sala = await self._sala_corrente(run)
         estado = await self._estado_combate(run, sala)
         if estado is None:
             await interaction.response.send_message("Este combate já terminou.", ephemeral=True)
@@ -1412,6 +1579,11 @@ class Incursoes(commands.Cog):
                 return
             respondido = True
             await interaction.response.send_message(texto, ephemeral=True)
+            # Registra na hora de mandar, nao antes: parte destas respostas sai
+            # depois da trava, e a rodada pode ter virado no meio. Registrada
+            # antes, ela seria removida da lista por _limpar_efemeras sem ter
+            # chegado a existir — e ficaria no canal para sempre.
+            self._guardar_efemera(run["id"], interaction)
 
         esperando: Optional[str] = None
         ativo = True
@@ -1772,7 +1944,7 @@ class Incursoes(commands.Cog):
 
         # Em combate, quem ja agiu nao abre o menu: o turno e um so.
         incursao = self._incursao_da_run(run)
-        sala = self._sala(incursao, sala_id)
+        sala = await self._sala_corrente(run)
         if sala is not None and sala.e_combate:
             estado = await self._estado_combate(run, sala)
             if estado is not None:
@@ -1843,7 +2015,7 @@ class Incursoes(commands.Cog):
             return
 
         incursao = self._incursao_da_run(run)
-        sala = self._sala(incursao, sala_id)
+        sala = await self._sala_corrente(run)
         estado = await self._estado_combate(run, sala) if sala and sala.e_combate else None
         acao = habilidade.acao or {}
 
@@ -2427,11 +2599,30 @@ class Incursoes(commands.Cog):
         if canal and estado is not None:
             await canal.send(embed=E.combate_vencido(sala, estado))
 
+        # Um combate a menos no prazo dos debuffs e dos buffs. As maldicoes e a
+        # Exaustao tem prazo NULL e nao sao tocadas: duram a incursao.
+        await self._vencer_prazo_das_condicoes(run)
+
         passo = run["linha_atual"]
         if passo < incursao.passos:
             await self._abrir_votacao(await db.buscar_run(self.bot.db, run["id"]), passo + 1)
         else:
             await self._chegar_ao_objetivo(await db.buscar_run(self.bot.db, run["id"]))
+
+    async def _vencer_prazo_das_condicoes(self, run: dict[str, Any]) -> None:
+        """Fecha um combate: toda condição perde 1 stack, menos a Exaustão."""
+        acabaram = await db.decair_condicoes(self.bot.db, run["id"])
+        if not acabaram:
+            return
+        canal = await self._canal(run)
+        if not canal:
+            return
+        apelidos = await self._apelidos(run)
+        linhas = [
+            f"{condicoes.rotulo(cid)} passa em {apelidos.get(user_id, f'<@{user_id}>')}"
+            for user_id, cid in acabaram
+        ]
+        await canal.send("⏳ " + "; ".join(linhas) + ".")
 
     async def rolar(self, interaction: discord.Interaction, run_id: int, sala_id: str) -> None:
         run = await db.buscar_run(self.bot.db, run_id)
@@ -2443,7 +2634,13 @@ class Incursoes(commands.Cog):
             return
 
         incursao = self._incursao_da_run(run)
-        sala = self._sala(incursao, sala_id)
+        sala = await self._sala_corrente(run)
+        if sala is None or sala.e_combate:
+            # O baú acordou entre o clique e a chegada: não há mais teste aqui.
+            await interaction.response.send_message(
+                "Esta sala virou combate — não há teste para rolar.", ephemeral=True
+            )
+            return
         personagem = await db.personagem_da_run(self.bot.db, run_id, interaction.user.id)
         if not personagem:
             await interaction.response.send_message(
@@ -2452,7 +2649,9 @@ class Incursoes(commands.Cog):
             return
 
         personagem["user_id"] = interaction.user.id
-        resultado = motor.testar(personagem, sala)
+        resultado = motor.testar(
+            personagem, sala, saldo=await self._saldo(run, interaction.user.id)
+        )
         novo = await db.registrar_teste(
             self.bot.db,
             run_id,
@@ -2471,6 +2670,11 @@ class Incursoes(commands.Cog):
             )
             return
 
+        # O resumo privado da rolagem — e do dano que ela custou — sai do canal
+        # junto com os outros efemeros, quando o grupo entra na proxima sala.
+        # O resumo privado da rolagem — e do dano que ela custou — sai do canal
+        # junto com os outros efemeros, quando o grupo entra na proxima sala.
+        self._guardar_efemera(run_id, interaction)
         veredito = (
             f"passou por **{resultado.margem}** de margem"
             if resultado.passou
@@ -2507,13 +2711,21 @@ class Incursoes(commands.Cog):
 
         await self._limpar_botoes(await db.buscar_run(self.bot.db, run["id"]))
 
+        desfecho = None
         if resolucao is not None:
             apelidos = await self._apelidos(run)
-            await canal.send(embed=E.resultado_sala(resolucao, apelidos))
+            desfecho = await self._consequencias_da_sala(run, sala, resolucao)
+            await canal.send(embed=E.resultado_sala(resolucao, apelidos, desfecho))
             if resolucao.superada and sala.pontos_organizacao:
                 await self._creditar(
                     run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{self._passo(run)}:{sala.id}"
                 )
+            await self._expulsar_estourados(run)
+
+        # Mímico acordado no baú: a sala vira combate em vez de devolver à votação.
+        if desfecho is not None and desfecho.mimicos:
+            await self._soltar_mimicos(run, sala)
+            return
 
         incursao = self._incursao_da_run(run)
         passo = run["linha_atual"]
@@ -2521,6 +2733,329 @@ class Incursoes(commands.Cog):
             await self._abrir_votacao(run, passo + 1)
         else:
             await self._chegar_ao_objetivo(run)
+
+    # ------------------------------------------------------------ descanso
+
+    # O descanso tira uma coisa: um stack de debuff, ou um ponto de Exaustao.
+    # A Exaustao tem botao proprio porque e a unica que nao decai com o
+    # combate — o descanso e a unica saida dela.
+    TIPOS_DE_LIMPEZA = {
+        "debuff": (condicoes.DEBUFF,),
+        "exaustao": (condicoes.EXAUSTAO,),
+    }
+
+    @staticmethod
+    def _limpezas_de(carregadas: dict[str, int]) -> set[str]:
+        """Quais das três limpezas servem para quem carrega isto."""
+        return {
+            chave
+            for chave, tipos in Incursoes.TIPOS_DE_LIMPEZA.items()
+            if consequencias.a_limpar(carregadas, tipos)
+        }
+
+    async def _limpezas_disponiveis(self, run: dict[str, Any]) -> set[str]:
+        """A união do que o grupo carrega — é o que decide quais botões existem.
+
+        Os botões são os mesmos para todos porque a mensagem é uma só; cada
+        clique age sobre as condições de quem clicou.
+        """
+        carregadas = await db.condicoes_da_run(self.bot.db, run["id"])
+        disponiveis: set[str] = set()
+        for condicoes_do_jogador in carregadas.values():
+            disponiveis |= self._limpezas_de(condicoes_do_jogador)
+        return disponiveis
+
+    async def _descanso_pendente(self, run: dict[str, Any]) -> list[int]:
+        """Quem ainda não escolheu no descanso deste passo.
+
+        Quem não carrega nada não precisa clicar: entra marcado, para um grupo
+        limpo não ter de dar cinco cliques à toa.
+        """
+        passo = self._passo(run)
+        carregadas = await db.condicoes_da_run(self.bot.db, run["id"])
+        pendentes = []
+        for user_id in await db.participantes(self.bot.db, run["id"]):
+            if not self._limpezas_de(carregadas.get(user_id, {})):
+                await db.marcar_descanso(self.bot.db, run["id"], passo, user_id)
+                continue
+            pendentes.append(user_id)
+        ja = await db.quem_descansou(self.bot.db, run["id"], passo)
+        return [u for u in pendentes if u not in ja]
+
+    async def limpar_no_descanso(
+        self, interaction: discord.Interaction, run_id: int, sala_id: str, chave: str
+    ) -> None:
+        """Cada personagem limpa UMA condição sua. A sala fecha quando todos escolhem."""
+        run = await db.buscar_run(self.bot.db, run_id)
+        if not run or run["status"] != "em_sala" or run["sala_atual"] != sala_id:
+            await interaction.response.send_message(
+                "Este descanso já terminou.", ephemeral=True
+            )
+            return
+        user_id = interaction.user.id
+        if not await db.esta_na_run(self.bot.db, run_id, user_id):
+            await interaction.response.send_message(
+                "Você não faz parte desta run.", ephemeral=True
+            )
+            return
+        passo = self._passo(run)
+        if user_id in await db.quem_descansou(self.bot.db, run_id, passo):
+            await interaction.response.send_message(
+                "Você já escolheu neste descanso — é uma por personagem.",
+                ephemeral=True,
+            )
+            return
+
+        minhas = await db.condicoes_de(self.bot.db, run_id, user_id)
+        tipos = self.TIPOS_DE_LIMPEZA.get(chave)
+        if tipos:
+            candidatas = consequencias.a_limpar(minhas, tipos)
+            if not candidatas:
+                # Nao gasta a escolha: o botao existe por causa de outra pessoa.
+                await interaction.response.send_message(
+                    "Você não carrega nada dessa categoria — escolha outra.",
+                    ephemeral=True,
+                )
+                return
+            cid = candidatas[0]
+            sobrou = await db.reduzir_condicao(self.bot.db, run_id, user_id, cid)
+            resto = f" (ainda ×{sobrou})" if sobrou else ""
+            publico = (
+                f"o descanso tira {condicoes.rotulo(cid)} de "
+                f"**{await self._nome_na_run(run, user_id)}**{resto}"
+            )
+            privado = f"O descanso tira {condicoes.rotulo(cid)} de você{resto}."
+        else:
+            publico = f"**{await self._nome_na_run(run, user_id)}** descansa sem limpar nada"
+            privado = "Você segue sem limpar nada."
+
+        await db.marcar_descanso(self.bot.db, run_id, passo, user_id)
+        await interaction.response.send_message(privado, ephemeral=True)
+        self._guardar_efemera(run_id, interaction)
+        canal = await self._canal(run)
+        if canal:
+            await canal.send(f"🏕️ {publico}.")
+
+        if await self._descanso_pendente(run):
+            await self._atualizar_descanso(run, sala_id)
+            return
+        incursao = self._incursao_da_run(run)
+        await self._concluir_sala(run, self._sala(incursao, sala_id), None)
+
+    async def _atualizar_descanso(self, run: dict[str, Any], sala_id: str) -> None:
+        """Reescreve o cartão do descanso com quem ainda falta escolher."""
+        incursao = self._incursao_da_run(run)
+        sala = self._sala(incursao, sala_id)
+        atual = await db.buscar_run(self.bot.db, run["id"]) or run
+        canal = await self._canal(atual)
+        if not (canal and sala and atual.get("mensagem_id")):
+            return
+        disponiveis = await self._limpezas_disponiveis(atual)
+        faltam = await self._descanso_pendente(atual)
+        try:
+            mensagem = await canal.fetch_message(atual["mensagem_id"])
+            await mensagem.edit(
+                embed=E.descanso(sala, None, disponiveis, faltam=len(faltam)),
+                view=ViewDescanso(self, run["id"], sala_id, disponiveis),
+            )
+        except discord.HTTPException:
+            pass
+
+    async def _nome_na_run(self, run: dict[str, Any], user_id: int) -> str:
+        personagem = await db.personagem_da_run(self.bot.db, run["id"], user_id)
+        return (personagem or {}).get("nome") or f"<@{user_id}>"
+
+    # ------------------------------------------- o que a sala deixa no grupo
+
+    async def _consequencias_da_sala(
+        self, run: dict[str, Any], sala: Sala, resolucao: ResolucaoSala
+    ) -> consequencias.Desfecho:
+        """Aplica o que a sala faz com o grupo e devolve o texto do embed.
+
+        O que cada tipo faz está em `src/consequencias.py`; aqui só persiste.
+        Armadilha e Evento batem em **quem falhou** — é a mesma regra do
+        progresso, em que cada um responde pela própria rolagem. O prêmio de um
+        Evento vencido é do grupo.
+        """
+        desfecho = consequencias.Desfecho()
+        if sala.tipo == "Armadilha" and resolucao.quem_falhou:
+            await self._castigo_de_armadilha(run, sala, resolucao, desfecho)
+        elif sala.tipo == "Evento":
+            if resolucao.superada:
+                await self._premio_de_evento(run, desfecho)
+            elif resolucao.quem_falhou:
+                await self._castigo_de_evento(run, resolucao, desfecho)
+        elif sala.tipo == "Tesouro" and not resolucao.superada:
+            if consequencias.acordou_mimico():
+                desfecho.mimicos = True
+                desfecho.linhas.append(
+                    "O baú não era um baú. **Mímicos** se descolam da parede."
+                )
+            else:
+                desfecho.linhas.append("O grupo sai sem nada — mas sai inteiro.")
+        return desfecho
+
+    async def _castigo_de_armadilha(
+        self,
+        run: dict[str, Any],
+        sala: Sala,
+        resolucao: ResolucaoSala,
+        desfecho: consequencias.Desfecho,
+    ) -> None:
+        """Quem falhou leva o Dano (-20% do HP) e um debuff de Armadilha."""
+        combatentes = {c.user_id: c for c in await self._combatentes(run)}
+        hps: dict[int, int] = {}
+        for falhou in resolucao.quem_falhou:
+            combatente = combatentes.get(falhou.user_id)
+            if combatente is None:
+                continue
+            dano = consequencias.dano_da_armadilha(combatente.hp_max)
+            combatente.hp_atual = max(0, combatente.hp_atual - dano)
+            hps[falhou.user_id] = combatente.hp_atual
+            debuff = consequencias.debuff_da_armadilha()
+            stacks = await db.aplicar_condicao(
+                self.bot.db, run["id"], falhou.user_id, debuff
+            )
+            desfecho.linhas.append(
+                f"**{falhou.personagem}** leva **{dano}** de dano e fica com "
+                f"{condicoes.rotulo(debuff, stacks)} — "
+                f"{condicoes.descricao(debuff, stacks=stacks)}"
+            )
+        if hps:
+            await db.definir_hp_varios(self.bot.db, run["id"], hps)
+
+    async def _premio_de_evento(
+        self, run: dict[str, Any], desfecho: consequencias.Desfecho
+    ) -> None:
+        """O Evento vencido dá uma coisa só: um buff, a Cura ou a Graça."""
+        carregadas = await db.condicoes_da_run(self.bot.db, run["id"])
+        combatentes = await self._combatentes(run)
+        machucados = [c for c in combatentes if c.hp_atual < c.hp_max]
+        sujos = consequencias.sortear_para_limpar(carregadas, (condicoes.DEBUFF,))
+        premio = consequencias.premio_do_evento(
+            tem_debuff=bool(sujos), tem_machucado=bool(machucados)
+        )
+
+        # Cura: +20% do HP máximo no personagem com menos vida do grupo.
+        if premio == consequencias.CURA and machucados:
+            alvo = min(machucados, key=lambda c: c.hp_atual)
+            bruta = consequencias.cura_do_evento(alvo.hp_max)
+            ganho = min(alvo.hp_max - alvo.hp_atual, motor.cura_liquida(alvo, bruta))
+            alvo.hp_atual += ganho
+            await db.definir_hp(self.bot.db, run["id"], alvo.user_id, alvo.hp_atual)
+            desfecho.linhas.append(
+                f"✨ **Cura**: **{alvo.nome}** recupera **{ganho}** de HP "
+                f"({alvo.hp_atual}/{alvo.hp_max})."
+            )
+            return
+
+        # Graça: tira um debuff de alguém do grupo, sorteado entre todos.
+        if premio == consequencias.GRACA:
+            escolhidos = consequencias.sortear_para_limpar(
+                carregadas, (condicoes.DEBUFF,)
+            )
+            if escolhidos:
+                partes = []
+                for user_id, cid in escolhidos:
+                    await db.reduzir_condicao(self.bot.db, run["id"], user_id, cid)
+                    nome = next(
+                        (c.nome for c in combatentes if c.user_id == user_id), "alguém"
+                    )
+                    partes.append(f"{condicoes.rotulo(cid)} de **{nome}**")
+                desfecho.linhas.append(
+                    f"✨ **{consequencias.NOME_DA_GRACA}** tira "
+                    + ", ".join(partes)
+                    + "."
+                )
+                return
+
+        # Sobrou buff, que é o piso do Evento: vale para o grupo inteiro.
+        if premio not in condicoes.BUFFS:
+            premio = condicoes.BUFFS[0]
+        for c in combatentes:
+            await db.aplicar_condicao(self.bot.db, run["id"], c.user_id, premio)
+        desfecho.linhas.append(
+            f"✨ O grupo inteiro ganha {condicoes.rotulo(premio)} — "
+            f"{condicoes.descricao(premio)}"
+        )
+
+    async def _castigo_de_evento(
+        self,
+        run: dict[str, Any],
+        resolucao: ResolucaoSala,
+        desfecho: consequencias.Desfecho,
+    ) -> None:
+        """Quem falhou pega um debuff de Evento ou um ponto de Exaustão."""
+        for falhou in resolucao.quem_falhou:
+            castigo = consequencias.castigo_do_evento()
+            stacks = await db.aplicar_condicao(
+                self.bot.db, run["id"], falhou.user_id, castigo
+            )
+            desfecho.linhas.append(
+                f"**{falhou.personagem}** fica com "
+                f"{condicoes.rotulo(castigo, stacks)} — "
+                f"{condicoes.descricao(castigo, stacks=stacks)}"
+            )
+
+    async def _expulsar_estourados(self, run: dict[str, Any]) -> None:
+        """Quem bateu no teto de uma condição sai da incursão.
+
+        O teto é por condição, como na planilha: Deterioração em 10 (que é
+        -100% do HP máximo) e Exaustão em 5. As outras não tiram ninguém.
+        Esvaziando o grupo, a run fracassa.
+        """
+        tier_atual = self._tier_da_run(run)
+        carregadas = await db.condicoes_da_run(self.bot.db, run["id"])
+        canal = await self._canal(run)
+        saiu = False
+        for user_id, condicoes_do_jogador in sorted(carregadas.items()):
+            saldo = condicoes.penalidades(condicoes_do_jogador, tier_atual)
+            if not saldo.fora:
+                continue
+            personagem = await db.personagem_da_run(self.bot.db, run["id"], user_id)
+            nome = (personagem or {}).get("nome", f"<@{user_id}>")
+            if not await db.remover_participante(self.bot.db, run["id"], user_id):
+                continue
+            saiu = True
+            motivos = ", ".join(condicoes.POR_ID[c].nome for c in saldo.estourou)
+            if canal:
+                await canal.send(
+                    f"<@{user_id}> — **{nome}** não consegue seguir: {motivos} chegou "
+                    f"ao limite. O personagem sai da incursão."
+                )
+        if saiu and not await db.participantes(self.bot.db, run["id"]):
+            # Sem ninguem de pe a run termina aqui. Nao ha combate, entao nao ha
+            # estado para o embed de derrota: fecha com uma linha e os pontos de
+            # participacao, que o grupo levou ate onde deu.
+            await self._encerrar_run(run, "fracasso")
+            await self._creditar(
+                run, config.PONTOS_PARTICIPACAO, "Participação na incursão", "participacao"
+            )
+            if canal:
+                await canal.send(
+                    "A incursão termina aqui: não sobrou ninguém em condições de "
+                    "seguir."
+                )
+
+    async def _soltar_mimicos(self, run: dict[str, Any], sala: Sala) -> None:
+        """A falha no Tesouro acordou o baú: a sala vira um combate.
+
+        Os números dos Mímicos ficam gravados em `run_inimigos` por
+        `_abrir_combate`, então o combate se remonta sozinho depois de um
+        restart — a emboscada não precisa existir no banco de salas.
+        """
+        emboscada = emboscada_de(sala)
+        if not emboscada.monstros:
+            # Sem Mímico no bestiário não há emboscada: segue o fluxo normal.
+            log.warning("Mímico não encontrado no bestiário; emboscada cancelada")
+            incursao = self._incursao_da_run(run)
+            passo = run["linha_atual"]
+            if incursao and passo < incursao.passos:
+                await self._abrir_votacao(run, passo + 1)
+            else:
+                await self._chegar_ao_objetivo(run)
+            return
+        await self._abrir_combate(run, emboscada)
 
     async def _chegar_ao_objetivo(self, run: dict[str, Any]) -> None:
         incursao = self._incursao_da_run(run)
@@ -2554,7 +3089,7 @@ class Incursoes(commands.Cog):
                 "O grupo está votando a próxima sala.", ephemeral=True
             )
             return
-        sala = self._sala(incursao, run["sala_atual"])
+        sala = await self._sala_corrente(run)
         if not sala:
             await interaction.response.send_message("A run ainda não entrou numa sala.", ephemeral=True)
             return
@@ -2596,7 +3131,7 @@ class Incursoes(commands.Cog):
             await interaction.response.send_message("Não há teste aberto agora.", ephemeral=True)
             return
         incursao = self._incursao_da_run(run)
-        sala = self._sala(incursao, run["sala_atual"])
+        sala = await self._sala_corrente(run)
         if sala and sala.e_combate:
             await interaction.response.send_message(
                 "Sala de combate não usa teste de perícia — use `/incursao atacar`.",
@@ -2649,7 +3184,7 @@ class Incursoes(commands.Cog):
             await interaction.response.send_message("Não há combate aberto agora.", ephemeral=True)
             return
         incursao = self._incursao_da_run(run)
-        sala = self._sala(incursao, run["sala_atual"])
+        sala = await self._sala_corrente(run)
         if not (sala and sala.e_combate):
             await interaction.response.send_message(
                 "Esta sala não é de combate.", ephemeral=True
@@ -2663,12 +3198,20 @@ class Incursoes(commands.Cog):
         if not run:
             return
         incursao = self._incursao_da_run(run)
-        sala = self._sala(incursao, run["sala_atual"])
+        sala = await self._sala_corrente(run)
         registros = (
             await db.testes_da_sala(self.bot.db, run["id"], self._passo(run)) if sala else []
         )
         await interaction.response.send_message(
-            embed=E.status(run, incursao, await self._membros(run), sala, len(registros))
+            embed=E.status(
+                run,
+                incursao,
+                await self._membros(run),
+                sala,
+                len(registros),
+                await db.condicoes_da_run(self.bot.db, run["id"]),
+                await self._apelidos(run),
+            )
         )
 
     @grupo.command(name="desistir", description="Propõe abandonar a incursão (precisa de maioria)")

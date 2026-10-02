@@ -273,7 +273,7 @@ def sala_aberta(
         e.add_field(
             name="Desafio",
             value=(
-                f"**CD {sala.cd}** · progresso necessário: **{sala.alvo_progresso}**\n"
+                f"**CD {sala.cd_efetiva}** · progresso necessário: **{sala.alvo_progresso}**\n"
                 f"Perícias: {', '.join(sala.pericias)}"
             ),
             inline=False,
@@ -304,7 +304,11 @@ def sala_aberta(
     return _rodape(e, rodape), arquivo
 
 
-def resultado_sala(resolucao: ResolucaoSala, apelidos: dict[int, str]) -> discord.Embed:
+def resultado_sala(
+    resolucao: ResolucaoSala,
+    apelidos: dict[int, str],
+    desfecho: Optional[Any] = None,
+) -> discord.Embed:
     sala = resolucao.sala
     e = discord.Embed(
         title=f"{EMOJI_TIPO.get(sala.tipo, '•')} {sala.nome} — {'superada' if resolucao.superada else 'atravessada a duras penas'}",
@@ -339,10 +343,27 @@ def resultado_sala(resolucao: ResolucaoSala, apelidos: dict[int, str]) -> discor
             value="O grupo segue em frente, mas não leva o bônus desta sala.",
             inline=False,
         )
+
+    # O que a sala deixou: dano, debuff, maldição, buff ou o baú que acordou.
+    if desfecho is not None and desfecho.linhas:
+        e.add_field(
+            name="O que fica", value="\n".join(desfecho.linhas)[:1024], inline=False
+        )
     return e
 
 
-def descanso(sala: Sala, curas: Optional[list[str]] = None) -> discord.Embed:
+LIMPEZAS = {
+    "debuff": "1 stack de um debuff seu",
+    "exaustao": "1 ponto de Exaustão — que não passa de outro jeito",
+}
+
+
+def descanso(
+    sala: Sala,
+    curas: Optional[list[str]] = None,
+    limpezas: Optional[set[str]] = None,
+    faltam: int = 0,
+) -> discord.Embed:
     e = discord.Embed(
         title=f"🔥 {sala.nome}", description=sala.descricao, color=COR_SUCESSO
     )
@@ -352,7 +373,33 @@ def descanso(sala: Sala, curas: Optional[list[str]] = None) -> discord.Embed:
         e.add_field(name="HP recuperado", value="\n".join(curas), inline=False)
     elif curas is not None:
         e.add_field(name="HP", value="Todos já estavam inteiros.", inline=False)
+    if limpezas:
+        restam = (
+            f"\n\n**{faltam}** ainda {'precisa' if faltam == 1 else 'precisam'} escolher."
+            if faltam
+            else ""
+        )
+        e.add_field(
+            name="Cada um tira uma coisa",
+            value="\n".join(f"• {LIMPEZAS[c]}" for c in LIMPEZAS if c in limpezas)
+            + "\n\nA escolha é de cada personagem, e vale **uma** por cabeça."
+            + restam,
+            inline=False,
+        )
+        return _rodape(e, "Sem teste nesta sala — cada um escolhe o que limpar.")
     return _rodape(e, "Sem teste nesta sala.")
+
+
+def linha_de_condicoes(carregadas: dict[str, int]) -> str:
+    """As condições de um personagem em linha: '😨 Medo ×2 · 🐌 Letargia'."""
+    from . import condicoes
+
+    rotulos = [
+        condicoes.rotulo(cid, stacks)
+        for cid, stacks in sorted(carregadas.items())
+        if stacks > 0 and cid in condicoes.POR_ID
+    ]
+    return " · ".join(rotulos)
 
 
 def status(
@@ -361,6 +408,8 @@ def status(
     membros: list[discord.abc.User],
     sala: Optional[Sala],
     ja_rolaram: int,
+    condicoes_do_grupo: Optional[dict[int, dict[str, int]]] = None,
+    apelidos: Optional[dict[int, str]] = None,
 ) -> discord.Embed:
     rotulos = {
         "recrutando": "montando o grupo",
@@ -395,6 +444,22 @@ def status(
         value="\n".join(m.mention for m in membros) or "*nenhum*",
         inline=False,
     )
+    # O que cada um carrega de sala: sem isto o grupo joga com penalidade
+    # invisivel e nao entende por que o dado parou de obedecer.
+    if condicoes_do_grupo:
+        linhas = []
+        for user_id, carregadas in sorted(condicoes_do_grupo.items()):
+            texto = linha_de_condicoes(carregadas)
+            if not texto:
+                continue
+            quem = (apelidos or {}).get(user_id, f"<@{user_id}>")
+            linhas.append(f"**{quem}** · {texto}")
+        if linhas:
+            e.add_field(
+                name="O que o grupo carrega",
+                value="\n".join(linhas)[:1024],
+                inline=False,
+            )
     return e
 
 
@@ -500,7 +565,7 @@ def _marcas_do_combatente(c) -> str:
     return (" " + "".join(marcas)) if marcas else ""
 
 
-def _linha_hp(c) -> str:
+def _linha_hp(c, carregadas: Optional[dict[str, int]] = None) -> str:
     if c.hp_atual <= 0:
         return f"💀 ~~{c.nome}~~ — caído"
     if getattr(c, "atordoado", False):
@@ -509,9 +574,22 @@ def _linha_hp(c) -> str:
         atordoado = ""
     # A vida temporaria entra antes do HP, entao aparece separada.
     temporaria = f" +{c.thp} THP" if getattr(c, "thp", 0) else ""
+    # As condicoes de sala entram so com o icone: o nome inteiro estouraria a
+    # linha, e /incursao status mostra o detalhe.
+    marcas = ""
+    if carregadas:
+        from . import condicoes
+
+        icones = [
+            condicoes.POR_ID[cid].icone + (f"×{stacks}" if stacks > 1 else "")
+            for cid, stacks in sorted(carregadas.items())
+            if stacks > 0 and cid in condicoes.POR_ID
+        ]
+        marcas = ("  " + " ".join(icones)) if icones else ""
     return (
         f"❤️ {c.nome} — {barra(c.hp_atual, c.hp_max, 6)} "
         f"{c.hp_atual}/{c.hp_max}{temporaria}{_marcas_do_combatente(c)}{atordoado}"
+        f"{marcas}"
     )
 
 
@@ -606,6 +684,7 @@ def combate(
     e_objetivo: bool = False,
     recompensa: Optional[str] = None,
     encerrado: bool = False,
+    condicoes_do_grupo: Optional[dict[int, dict[str, int]]] = None,
 ) -> tuple[discord.Embed, Optional[discord.File]]:
     """O painel do combate.
 
@@ -643,7 +722,11 @@ def combate(
     )
     e.add_field(
         name="Grupo",
-        value="\n".join(_linha_hp(c) for c in estado.combatentes) or "*ninguém*",
+        value="\n".join(
+            _linha_hp(c, (condicoes_do_grupo or {}).get(c.user_id))
+            for c in estado.combatentes
+        )
+        or "*ninguém*",
         inline=False,
     )
 

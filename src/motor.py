@@ -97,17 +97,29 @@ class ResultadoTeste:
         return max(0, self.total - self.cd)
 
 
-def testar(ficha: dict[str, Any], sala: Sala, rng: Optional[random.Random] = None) -> ResultadoTeste:
-    """Rola o teste da sala usando a melhor perícia da ficha entre as listadas."""
-    if not sala.tem_teste or sala.cd is None:
+def testar(
+    ficha: dict[str, Any],
+    sala: Sala,
+    rng: Optional[random.Random] = None,
+    saldo: Optional[Any] = None,
+) -> ResultadoTeste:
+    """Rola o teste da sala usando a melhor perícia da ficha entre as listadas.
+
+    `saldo` é o `condicoes.Penalidades` do personagem: Envenenamento, Exaustão,
+    as maldições de perícia e a Orientação entram por aqui, na escolha da
+    perícia e no modificador.
+    """
+    if not sala.tem_teste or sala.cd_efetiva is None:
         raise ValueError(f"a sala {sala.id} ({sala.tipo}) não é resolvida por teste de perícia")
     efeitos = ficha.get("efeitos") or {}
+    ajuste = {p: saldo.no_teste(p) for p in sala.pericias} if saldo else None
     pericia, modificador = melhor_pericia(
         sala.pericias,
         ficha["numeros"],
         ficha["pericias"],
         ficha.get("bonus_pericias"),
         efeitos,
+        ajuste,
     )
     return ResultadoTeste(
         user_id=ficha["user_id"],
@@ -115,7 +127,7 @@ def testar(ficha: dict[str, Any], sala: Sala, rng: Optional[random.Random] = Non
         pericia=pericia,
         d20=rolar_d20(rng),
         modificador=modificador,
-        cd=sala.cd,
+        cd=sala.cd_efetiva,
     )
 
 
@@ -170,10 +182,12 @@ def entrada_liberada(
 
 
 # Consequência individual de falhar, por tipo de sala (tabela do documento de design).
+# O que falhar custa, por tipo de sala. Quem aplica é `src/consequencias.py`;
+# aqui fica só a linha que o grupo lê no embed.
 CONSEQUENCIA_FALHA = {
-    "Armadilha": "sofre uma penalidade leve — dano superficial ou material gasto",
-    "Evento": "não contribui para a descoberta, mas sai ileso",
-    "Tesouro": "não leva o item extra",
+    "Armadilha": "leva dano e sai com um debuff",
+    "Evento": "carrega uma maldição ou um ponto de Exaustão pelo resto da incursão",
+    "Tesouro": "não leva o item — e pode ter acordado o que dormia no baú",
     "Combate": "sofre dano e fica fora do resto do combate",
 }
 
@@ -270,6 +284,11 @@ class Combatente:
     saves: dict = field(default_factory=dict)
     # Perde a proxima vez: habilidade de criatura que atordoa.
     atordoado: bool = False
+    # O que as condicoes da incursao deixaram (src/condicoes.py). O ataque, os
+    # saves e o HP maximo ja vem corrigidos de quem monta o combatente; estes
+    # dois precisam valer na hora de rolar e de curar.
+    mod_iniciativa_extra: int = 0
+    cura_recebida_pct: int = 0
 
     @property
     def ca_efetiva(self) -> int:
@@ -862,10 +881,14 @@ class Iniciativa:
 
 
 def mod_iniciativa(quem: Any) -> int:
-    """O modificador de Destreza de um personagem ou de uma criatura."""
+    """O modificador de Destreza de um personagem ou de uma criatura.
+
+    No personagem, a Exaustao entra aqui: ela nao mexe no save de DES, mexe só
+    na ordem do combate.
+    """
     if isinstance(quem, Inimigo):
         return quem.save("DES")
-    return (quem.saves or {}).get("DES", 0)
+    return (quem.saves or {}).get("DES", 0) + quem.mod_iniciativa_extra
 
 
 def rolar_iniciativa(
@@ -946,6 +969,19 @@ def proxima_sequencia(pilha: int, acertou: bool, por_acerto: int, teto: int) -> 
     return min(teto, pilha + por_acerto)
 
 
+def cura_liquida(combatente: Combatente, bruta: int) -> int:
+    """Quanto de uma cura chega de fato.
+
+    `cura_recebida_pct` vem assinado de `condicoes`: a Debilidade manda -10%
+    por stack e o Vigor +10%, então o mesmo campo corta ou acrescenta. O piso
+    é zero — nem a Debilidade mais empilhada transforma cura em dano.
+    """
+    pct = combatente.cura_recebida_pct
+    if bruta <= 0 or pct == 0:
+        return bruta
+    return max(0, bruta + (bruta * max(-100, pct)) // 100)
+
+
 def curar(combatente: Combatente, fracao: float) -> int:
     """Cura uma fração do HP máximo, sem passar do teto. Devolve quanto curou.
 
@@ -955,17 +991,23 @@ def curar(combatente: Combatente, fracao: float) -> int:
     if combatente.caido:
         return 0
     antes = combatente.hp_atual
-    combatente.hp_atual = min(combatente.hp_max, antes + max(1, int(combatente.hp_max * fracao)))
+    bruta = max(1, int(combatente.hp_max * fracao))
+    combatente.hp_atual = min(combatente.hp_max, antes + cura_liquida(combatente, bruta))
     return combatente.hp_atual - antes
 
 
 # Quanto do HP máximo um personagem caído recupera ao descansar.
 FRACAO_DESCANSO_CAIDO = 0.5
 
+# Quanto do HP máximo quem está de pé recupera. O descanso não cura mais tudo:
+# ele cura uma fatia e ainda deixa o grupo escolher o que limpar.
+FRACAO_DESCANSO = 0.5
+
 
 def aplicar_descanso(combatentes: list[Combatente]) -> list[str]:
-    """Descanso: quem está de pé recupera tudo, quem caiu volta com metade.
+    """Descanso: cura uma fração do HP máximo; quem caiu volta com metade.
 
+    A Maldição da Debilidade corta esta cura como corta qualquer outra.
     Devolve uma linha por personagem que mudou, para o embed da sala.
     """
     mudancas = []
@@ -975,6 +1017,10 @@ def aplicar_descanso(combatentes: list[Combatente]) -> list[str]:
             c.hp_atual = max(1, int(c.hp_max * FRACAO_DESCANSO_CAIDO))
             mudancas.append(f"{c.nome} volta a lutar com {c.hp_atual}/{c.hp_max} de HP")
         elif c.hp_atual < c.hp_max:
-            c.hp_atual = c.hp_max
-            mudancas.append(f"{c.nome} recupera {c.hp_max - antes} de HP ({c.hp_max}/{c.hp_max})")
+            ganho = cura_liquida(c, max(1, int(c.hp_max * FRACAO_DESCANSO)))
+            c.hp_atual = min(c.hp_max, antes + ganho)
+            mudancas.append(
+                f"{c.nome} recupera {c.hp_atual - antes} de HP "
+                f"({c.hp_atual}/{c.hp_max})"
+            )
     return mudancas

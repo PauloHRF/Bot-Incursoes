@@ -1,0 +1,181 @@
+{
+  "id": "mortos_ossuario",
+  "nome": "O Ossuário de Vael",
+  "organizacao": "Guilda dos Mortos",
+  "tamanho": "Média",
+  "tier": 2,
+  "lore_inicial": "A Guilda dos Mortos não enterra ninguém: arquiva. Cada corpo que passa pelas mãos deles vira uma linha num livro, e o livro vale mais que o corpo.\n\nFaz três semanas que o Ossuário de Vael parou de mandar as linhas. O mensageiro que subiu para perguntar desceu de novo por conta própria, três dias depois, e não estava respirando quando desceu. A Guilda quer saber quem anda mexendo no arquivo dela. E quer o arquivista de volta, no estado em que estiver.",
+  "lore_final": "O arquivo volta para a Guilda em nove caixas, e o arquivista numa décima, do tamanho errado. Ninguém pergunta o que aconteceu com o resto dele.\n\nVael reabre na semana seguinte, com arquivista novo e a mesma quota de linhas por mês. A diferença é a corrente nova no portão de ossos, e a ordem — escrita, assinada — de que ninguém desça sozinho outra vez.",
+  "imagem_capa": null,
+  "recompensa_mes": 10,
+  "pontos_conclusao": 10,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "O Arquivista",
+    "tipo": "Combate",
+    "descricao": "Ele ainda está na mesa, ainda com a pena na mão, e ainda escrevendo — mas as linhas que escreve agora são nomes de gente viva. Levanta a cabeça quando o grupo entra, e a cabeça continua subindo depois do ponto em que deveria parar.\n\nO que ele costurou para carregar as caixas se levanta junto, e o que sobrou do mensageiro da Guilda se levanta atrás.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "10 MEs por participante + pontos com a Guilda dos Mortos",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Múmia",
+        "ca": 11,
+        "ataque": 5,
+        "dano": "2d6+3+3d6",
+        "hp": 58,
+        "ataques": 1,
+        "saves": {
+          "FOR": 3,
+          "DES": -1,
+          "CON": 2,
+          "INT": -2,
+          "SAB": 2,
+          "CAR": 1
+        },
+        "habilidade": {
+          "nome": "Olhar Aterrador",
+          "save": "SAB",
+          "cd": 11,
+          "texto": "",
+          "dano": null,
+          "alvos": 1,
+          "atordoa": 1,
+          "cada": 2,
+          "recarga": null,
+          "save_repete": false,
+          "metade": false
+        },
+        "golpes": [
+          {
+            "nome": "Punho Putrefato",
+            "ataque": 5,
+            "dano": "2d6+3+3d6"
+          }
+        ]
+      },
+      {
+        "nome": "Ogro Zumbi 1",
+        "ca": 8,
+        "ataque": 6,
+        "dano": "2d8+4",
+        "hp": 85,
+        "ataques": 1,
+        "saves": {
+          "FOR": 4,
+          "DES": -2,
+          "CON": 4,
+          "INT": -4,
+          "SAB": 0,
+          "CAR": -3
+        },
+        "golpes": [
+          {
+            "nome": "Maça Estrela",
+            "ataque": 6,
+            "dano": "2d8+4"
+          }
+        ]
+      },
+      {
+        "nome": "Ogro Zumbi 2",
+        "ca": 8,
+        "ataque": 6,
+        "dano": "2d8+4",
+        "hp": 85,
+        "ataques": 1,
+        "saves": {
+          "FOR": 4,
+          "DES": -2,
+          "CON": 4,
+          "INT": -4,
+          "SAB": 0,
+          "CAR": -3
+        },
+        "golpes": [
+          {
+            "nome": "Maça Estrela",
+            "ataque": 6,
+            "dano": "2d8+4"
+          }
+        ]
+      },
+      {
+        "nome": "Carniçal 1",
+        "ca": 12,
+        "ataque": 4,
+        "dano": "2d4+2",
+        "hp": 22,
+        "ataques": 1,
+        "saves": {
+          "FOR": 1,
+          "DES": 2,
+          "CON": 0,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Garras",
+            "ataque": 4,
+            "dano": "2d4+2",
+            "efeito": {
+              "nome": "Garras",
+              "save": "CON",
+              "cd": 10,
+              "texto": "",
+              "dano": null,
+              "alvos": 1,
+              "atordoa": 1,
+              "cada": 2,
+              "recarga": null,
+              "save_repete": true,
+              "metade": false
+            }
+          }
+        ]
+      },
+      {
+        "nome": "Carniçal 2",
+        "ca": 12,
+        "ataque": 4,
+        "dano": "2d4+2",
+        "hp": 22,
+        "ataques": 1,
+        "saves": {
+          "FOR": 1,
+          "DES": 2,
+          "CON": 0,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Garras",
+            "ataque": 4,
+            "dano": "2d4+2",
+            "efeito": {
+              "nome": "Garras",
+              "save": "CON",
+              "cd": 10,
+              "texto": "",
+              "dano": null,
+              "alvos": 1,
+              "atordoa": 1,
+              "cada": 2,
+              "recarga": null,
+              "save_repete": true,
+              "metade": false
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

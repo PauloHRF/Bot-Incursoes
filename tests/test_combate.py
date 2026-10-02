@@ -329,7 +329,7 @@ async def caso_derrota_total():
 
 
 async def caso_descanso_cura():
-    """A sala de Descanso levanta os caídos e completa quem está machucado."""
+    """A sala de Descanso levanta os caídos e cura uma fatia de quem está vivo."""
     conn, canal, cog = await preparar()
     # banco so de Descanso: o primeiro passo cura o grupo na certa
     incursao, _ = montar_conteudo(
@@ -351,12 +351,19 @@ async def caso_descanso_cura():
     assert hps[JOGADORES[0]] == maximo // 2, (
         f"caído deveria voltar com metade, veio {hps[JOGADORES[0]]}"
     )
-    assert hps[JOGADORES[1]] == maximo, f"machucado deveria completar, veio {hps[JOGADORES[1]]}"
+    # O descanso espera a escolha do que limpar, mas quem nao carrega nada ja
+    # entra marcado: grupo limpo atravessa sem clique. Ver test_condicoes.py
+    # para o descanso com condicoes na mesa.
+    # O descanso nao completa mais: cura FRACAO_DESCANSO do maximo, sem passar do teto.
+    esperado = min(maximo, 5 + max(1, int(maximo * motor.FRACAO_DESCANSO)))
+    assert hps[JOGADORES[1]] == esperado, (
+        f"machucado deveria ir a {esperado}, veio {hps[JOGADORES[1]]}"
+    )
     assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == 2
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
-    print("  descanso cura e levanta caídos: ok")
+    print("  descanso cura uma fatia e levanta caídos: ok")
 
 
 async def caso_restart_no_combate():

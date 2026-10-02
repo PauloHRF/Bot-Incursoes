@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 import aiosqlite
 
-from . import config
+from . import condicoes, config
 from .incursoes import GolpeDoMonstro, HabilidadeDoMonstro
 from .rules import normalizar_lista_pericias, normalizar_pericia
 
@@ -211,6 +211,29 @@ CREATE TABLE IF NOT EXISTS run_efeitos (
     PRIMARY KEY (run_id, passo, alvo_tipo, alvo_id, efeito)
 );
 
+-- O que as salas deixaram no personagem: os buffs e debuffs da incursao.
+-- Diferente de run_efeitos, que vive dentro de um combate so: aqui a condicao
+-- atravessa salas. O prazo nao fica aqui -- quem decai e quem nao decai esta no
+-- catalogo (condicoes.Condicao.decai): tudo perde 1 stack por combate, menos a
+-- Exaustao, que so sai no descanso. As contas estao em src/condicoes.py.
+CREATE TABLE IF NOT EXISTS run_condicoes (
+    run_id   INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    user_id  INTEGER NOT NULL,
+    condicao TEXT    NOT NULL,
+    stacks   INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (run_id, user_id, condicao)
+);
+
+-- Quem ja escolheu o que limpar no descanso daquele passo. O descanso limpa
+-- uma condicao POR PERSONAGEM, entao a sala fecha quando todos escolheram --
+-- igual a sala de teste, que fecha quando todos rolaram.
+CREATE TABLE IF NOT EXISTS run_descansos (
+    run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo   INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    PRIMARY KEY (run_id, passo, user_id)
+);
+
 -- Quantas vezes cada um ja usou cada habilidade. A chave diz quando zera:
 -- "combate:<passo>", "descanso:<n>" ou "incursao".
 CREATE TABLE IF NOT EXISTS run_usos (
@@ -289,6 +312,15 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
         await conn.execute("DROP TABLE IF EXISTS personagens_v1")
 
     faltava_run_salas = not await _tabela_existe(conn, "run_salas")
+
+    # O prazo das condicoes saiu da tabela: era uma contagem de combates por
+    # linha, e virou "decai 1 stack por combate" com o catalogo decidindo quem
+    # decai. A tabela e recriada; condicao de run em andamento se perde, o que
+    # e o pior que acontece (o grupo segue limpo).
+    if await _tabela_existe(conn, "run_condicoes") and (
+        "combates" in await _colunas(conn, "run_condicoes")
+    ):
+        await conn.execute("DROP TABLE run_condicoes")
 
     # O combate de uma criatura so guardava o HP na propria run_combate, e nao
     # guardava CA, ataque nem dano: nao da para remontar um combate em andamento
@@ -1323,6 +1355,160 @@ async def limpar_efeitos_vencidos(
         (run_id, passo, rodada),
     )
     await conn.commit()
+
+
+# ----------------------------------------------------------------- condicoes
+# Debuff, maldicao, exaustao e buff: o que a sala deixou no personagem e
+# atravessa o resto da incursao. As contas estao em src/condicoes.py.
+
+
+async def aplicar_condicao(
+    conn: aiosqlite.Connection, run_id: int, user_id: int, condicao: str, quantos: int = 1
+) -> int:
+    """Soma `quantos` stacks e devolve quantos o personagem tem agora.
+
+    O teto e por condicao e esta no catalogo: a Deterioracao para em 10 e a
+    Exaustao em 5, que e onde elas tiram o personagem da incursao; as outras
+    nao tem teto, porque decaem 1 por combate e nao disparam sozinhas.
+    """
+    atual = await stacks_da_condicao(conn, run_id, user_id, condicao)
+    novo = atual + max(1, quantos)
+    teto = (condicoes.POR_ID.get(condicao) or condicoes.Condicao("", "", "", "", "")).teto
+    if teto is not None:
+        novo = min(teto, novo)
+    await conn.execute(
+        "INSERT INTO run_condicoes (run_id, user_id, condicao, stacks)"
+        " VALUES (?, ?, ?, ?)"
+        " ON CONFLICT(run_id, user_id, condicao)"
+        " DO UPDATE SET stacks = excluded.stacks",
+        (run_id, user_id, condicao, novo),
+    )
+    await conn.commit()
+    return novo
+
+
+async def stacks_da_condicao(
+    conn: aiosqlite.Connection, run_id: int, user_id: int, condicao: str
+) -> int:
+    async with conn.execute(
+        "SELECT stacks FROM run_condicoes"
+        " WHERE run_id = ? AND user_id = ? AND condicao = ?",
+        (run_id, user_id, condicao),
+    ) as cur:
+        linha = await cur.fetchone()
+    return int(linha["stacks"]) if linha else 0
+
+
+async def condicoes_de(
+    conn: aiosqlite.Connection, run_id: int, user_id: int
+) -> dict[str, int]:
+    """O que este personagem carrega: {condicao: stacks}."""
+    async with conn.execute(
+        "SELECT condicao, stacks FROM run_condicoes WHERE run_id = ? AND user_id = ?",
+        (run_id, user_id),
+    ) as cur:
+        return {r["condicao"]: int(r["stacks"]) for r in await cur.fetchall()}
+
+
+async def condicoes_da_run(
+    conn: aiosqlite.Connection, run_id: int
+) -> dict[int, dict[str, int]]:
+    """O que o grupo inteiro carrega: {user_id: {condicao: stacks}}."""
+    async with conn.execute(
+        "SELECT user_id, condicao, stacks FROM run_condicoes WHERE run_id = ?",
+        (run_id,),
+    ) as cur:
+        tudo: dict[int, dict[str, int]] = {}
+        for r in await cur.fetchall():
+            tudo.setdefault(int(r["user_id"]), {})[r["condicao"]] = int(r["stacks"])
+    return tudo
+
+
+async def reduzir_condicao(
+    conn: aiosqlite.Connection, run_id: int, user_id: int, condicao: str, quanto: int = 1
+) -> int:
+    """Tira `quanto` stacks. Chegando a zero, a condicao sai da tabela."""
+    atual = await stacks_da_condicao(conn, run_id, user_id, condicao)
+    if atual <= 0:
+        return 0
+    novo = atual - quanto
+    if novo <= 0:
+        await conn.execute(
+            "DELETE FROM run_condicoes"
+            " WHERE run_id = ? AND user_id = ? AND condicao = ?",
+            (run_id, user_id, condicao),
+        )
+        await conn.commit()
+        return 0
+    await conn.execute(
+        "UPDATE run_condicoes SET stacks = ?"
+        " WHERE run_id = ? AND user_id = ? AND condicao = ?",
+        (novo, run_id, user_id, condicao),
+    )
+    await conn.commit()
+    return novo
+
+
+async def decair_condicoes(
+    conn: aiosqlite.Connection, run_id: int
+) -> list[tuple[int, str]]:
+    """Fecha um combate: cada condicao perde 1 stack. Devolve as que acabaram.
+
+    Quem nao decai (a Exaustao) nao e tocada — ela so sai no descanso ou por
+    habilidade. Quem o catalogo nao conhece tambem fica, para uma condicao
+    renomeada no codigo nao desaparecer sozinha de uma run em andamento.
+    """
+    permanentes = set(condicoes.PERMANENTES)
+    async with conn.execute(
+        "SELECT user_id, condicao, stacks FROM run_condicoes WHERE run_id = ?",
+        (run_id,),
+    ) as cur:
+        linhas = [
+            (int(r["user_id"]), r["condicao"], int(r["stacks"]))
+            for r in await cur.fetchall()
+        ]
+
+    acabaram = []
+    for user_id, cid, stacks in linhas:
+        if cid in permanentes or cid not in condicoes.POR_ID:
+            continue
+        if stacks <= 1:
+            acabaram.append((user_id, cid))
+            await conn.execute(
+                "DELETE FROM run_condicoes"
+                " WHERE run_id = ? AND user_id = ? AND condicao = ?",
+                (run_id, user_id, cid),
+            )
+        else:
+            await conn.execute(
+                "UPDATE run_condicoes SET stacks = stacks - 1"
+                " WHERE run_id = ? AND user_id = ? AND condicao = ?",
+                (run_id, user_id, cid),
+            )
+    await conn.commit()
+    return acabaram
+
+
+async def marcar_descanso(
+    conn: aiosqlite.Connection, run_id: int, passo: int, user_id: int
+) -> bool:
+    """Marca que este personagem já escolheu no descanso. False se já tinha."""
+    cur = await conn.execute(
+        "INSERT OR IGNORE INTO run_descansos (run_id, passo, user_id) VALUES (?, ?, ?)",
+        (run_id, passo, user_id),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
+async def quem_descansou(
+    conn: aiosqlite.Connection, run_id: int, passo: int
+) -> set[int]:
+    async with conn.execute(
+        "SELECT user_id FROM run_descansos WHERE run_id = ? AND passo = ?",
+        (run_id, passo),
+    ) as cur:
+        return {int(r["user_id"]) for r in await cur.fetchall()}
 
 
 async def usos_da_run(

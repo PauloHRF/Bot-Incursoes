@@ -1,0 +1,623 @@
+{
+  "organizacao": "Guilda dos Mortos",
+  "salas": [
+    {
+      "id": "GM01",
+      "nome": "Portão de Ossos",
+      "tipo": "Combate",
+      "descricao": "O portão é feito do que sobrou de quem tentou entrar sem convite, e a Guilda faz questão de que isso seja legível de longe. Quatro peças ainda seguram lança.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": [
+        {
+          "nome": "Esqueleto 1",
+          "ca": 13,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 13,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 2,
+            "CON": 2,
+            "INT": -2,
+            "SAB": -1,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Esqueleto 2",
+          "ca": 13,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 13,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 2,
+            "CON": 2,
+            "INT": -2,
+            "SAB": -1,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Esqueleto 3",
+          "ca": 13,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 13,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 2,
+            "CON": 2,
+            "INT": -2,
+            "SAB": -1,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Esqueleto 4",
+          "ca": 13,
+          "ataque": 4,
+          "dano": "1d6+2",
+          "hp": 13,
+          "ataques": 1,
+          "saves": {
+            "FOR": 0,
+            "DES": 2,
+            "CON": 2,
+            "INT": -2,
+            "SAB": -1,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Espada Curta",
+              "ataque": 4,
+              "dano": "1d6+2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GM02",
+      "nome": "Poço dos Sudários",
+      "tipo": "Armadilha",
+      "descricao": "Panos brancos descem do teto até o chão, centenas deles, e a passagem é entre eles. Nem todos estão vazios, e o que pesa dentro de um deles ainda escorre.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Acrobacia",
+        "Percepção"
+      ],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": []
+    },
+    {
+      "id": "GM03",
+      "nome": "Vala Comum",
+      "tipo": "Combate",
+      "descricao": "A vala tem três metros de fundo e ninguém a fechou. O que se move lá dentro se move devagar — menos um, que não se move nada até estar perto.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Zumbi 1",
+          "ca": 8,
+          "ataque": 3,
+          "dano": "1d6+1",
+          "hp": 22,
+          "ataques": 1,
+          "saves": {
+            "FOR": 1,
+            "DES": -2,
+            "CON": 3,
+            "INT": -4,
+            "SAB": 0,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Pancada",
+              "ataque": 3,
+              "dano": "1d6+1"
+            }
+          ]
+        },
+        {
+          "nome": "Zumbi 2",
+          "ca": 8,
+          "ataque": 3,
+          "dano": "1d6+1",
+          "hp": 22,
+          "ataques": 1,
+          "saves": {
+            "FOR": 1,
+            "DES": -2,
+            "CON": 3,
+            "INT": -4,
+            "SAB": 0,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Pancada",
+              "ataque": 3,
+              "dano": "1d6+1"
+            }
+          ]
+        },
+        {
+          "nome": "Zumbi 3",
+          "ca": 8,
+          "ataque": 3,
+          "dano": "1d6+1",
+          "hp": 22,
+          "ataques": 1,
+          "saves": {
+            "FOR": 1,
+            "DES": -2,
+            "CON": 3,
+            "INT": -4,
+            "SAB": 0,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Pancada",
+              "ataque": 3,
+              "dano": "1d6+1"
+            }
+          ]
+        },
+        {
+          "nome": "Carniçal",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "2d4+2",
+          "hp": 22,
+          "ataques": 1,
+          "saves": {
+            "FOR": 1,
+            "DES": 2,
+            "CON": 0,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -2
+          },
+          "golpes": [
+            {
+              "nome": "Garras",
+              "ataque": 4,
+              "dano": "2d4+2",
+              "efeito": {
+                "nome": "Garras",
+                "save": "CON",
+                "cd": 10,
+                "texto": "",
+                "dano": null,
+                "alvos": 1,
+                "atordoa": 1,
+                "cada": 2,
+                "recarga": null,
+                "save_repete": true,
+                "metade": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GM04",
+      "nome": "Capela Invertida",
+      "tipo": "Evento",
+      "descricao": "O altar está no teto e as velas queimam para baixo, pingando cera que sobe. Rezar aqui funciona. Rezar errado aqui também funciona, e é esse o problema.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Religião",
+        "Arcanismo"
+      ],
+      "imagem": null,
+      "recompensa": "Bênção torta: o próximo teste do grupo sai com folga.",
+      "pontos_organizacao": 2,
+      "monstros": []
+    },
+    {
+      "id": "GM05",
+      "nome": "Cela do Coveiro",
+      "tipo": "Descanso",
+      "descricao": "Um catre, uma bacia e um caderno de linhas por preencher. O coveiro não está, e as coisas daqui são as únicas do ossuário que não pertenceram a um morto.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": "O grupo recupera o fôlego.",
+      "pontos_organizacao": 0,
+      "monstros": []
+    },
+    {
+      "id": "GM06",
+      "nome": "Corredor sem Luz",
+      "tipo": "Combate",
+      "descricao": "As tochas acendem e apagam sozinhas, e no intervalo entre uma coisa e outra as sombras da parede ficam sempre uma a mais do que o grupo tem gente.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Sombra 1",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "2d6+2",
+          "hp": 16,
+          "ataques": 1,
+          "saves": {
+            "FOR": -2,
+            "DES": 2,
+            "CON": 1,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -1
+          },
+          "golpes": [
+            {
+              "nome": "Drenar Força",
+              "ataque": 4,
+              "dano": "2d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Sombra 2",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "2d6+2",
+          "hp": 16,
+          "ataques": 1,
+          "saves": {
+            "FOR": -2,
+            "DES": 2,
+            "CON": 1,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -1
+          },
+          "golpes": [
+            {
+              "nome": "Drenar Força",
+              "ataque": 4,
+              "dano": "2d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Sombra 3",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "2d6+2",
+          "hp": 16,
+          "ataques": 1,
+          "saves": {
+            "FOR": -2,
+            "DES": 2,
+            "CON": 1,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -1
+          },
+          "golpes": [
+            {
+              "nome": "Drenar Força",
+              "ataque": 4,
+              "dano": "2d6+2"
+            }
+          ]
+        },
+        {
+          "nome": "Sombra 4",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "2d6+2",
+          "hp": 16,
+          "ataques": 1,
+          "saves": {
+            "FOR": -2,
+            "DES": 2,
+            "CON": 1,
+            "INT": -2,
+            "SAB": 0,
+            "CAR": -1
+          },
+          "golpes": [
+            {
+              "nome": "Drenar Força",
+              "ataque": 4,
+              "dano": "2d6+2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GM07",
+      "nome": "Mesa de Amortalhar",
+      "tipo": "Tesouro",
+      "descricao": "É onde a Guilda prepara o que vai para o arquivo. Os instrumentos são bons, e o que foi tirado dos corpos antes de amortalhar está na gaveta de baixo.",
+      "dificuldade": "Média",
+      "cd": 15,
+      "alvo_progresso": 10,
+      "pericias": [
+        "Investigação",
+        "Medicina"
+      ],
+      "imagem": null,
+      "recompensa": "O que a Guilda tirou dos mortos e não anotou.",
+      "pontos_organizacao": 2,
+      "monstros": []
+    },
+    {
+      "id": "GM08",
+      "nome": "Galeria dos Nomes",
+      "tipo": "Evento",
+      "descricao": "Paredes de lápides sem corpo, só nome e data. Uma delas tem o nome do mensageiro que a Guilda mandou aqui — com a data de três dias antes de ele descer.",
+      "dificuldade": "Fácil",
+      "cd": 10,
+      "alvo_progresso": 5,
+      "pericias": [
+        "História",
+        "Intuição"
+      ],
+      "imagem": null,
+      "recompensa": "Uma pista do que espera no fim.",
+      "pontos_organizacao": 1,
+      "monstros": []
+    },
+    {
+      "id": "GM09",
+      "nome": "Ala dos Lamentos",
+      "tipo": "Combate",
+      "descricao": "O som vem de dentro das paredes e não para quando o grupo para. O que grita não tem boca, e passa pela pedra como quem passa por cortina.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Espectro 1",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "3d6",
+          "hp": 22,
+          "ataques": 1,
+          "saves": {
+            "FOR": -5,
+            "DES": 2,
+            "CON": 0,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Drenar Vida",
+              "ataque": 4,
+              "dano": "3d6"
+            }
+          ]
+        },
+        {
+          "nome": "Espectro 2",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "3d6",
+          "hp": 22,
+          "ataques": 1,
+          "saves": {
+            "FOR": -5,
+            "DES": 2,
+            "CON": 0,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Drenar Vida",
+              "ataque": 4,
+              "dano": "3d6"
+            }
+          ]
+        },
+        {
+          "nome": "Espectro 3",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "3d6",
+          "hp": 22,
+          "ataques": 1,
+          "saves": {
+            "FOR": -5,
+            "DES": 2,
+            "CON": 0,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Drenar Vida",
+              "ataque": 4,
+              "dano": "3d6"
+            }
+          ]
+        },
+        {
+          "nome": "Espectro 4",
+          "ca": 12,
+          "ataque": 4,
+          "dano": "3d6",
+          "hp": 22,
+          "ataques": 1,
+          "saves": {
+            "FOR": -5,
+            "DES": 2,
+            "CON": 0,
+            "INT": 0,
+            "SAB": 0,
+            "CAR": 0
+          },
+          "golpes": [
+            {
+              "nome": "Drenar Vida",
+              "ataque": 4,
+              "dano": "3d6"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GM10",
+      "nome": "Escada Quebrada",
+      "tipo": "Armadilha",
+      "descricao": "Faltam onze degraus no meio, e o vão dá direto no nível de baixo do ossuário, onde a Guilda empilha o que não coube em caixa.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Atletismo",
+        "Acrobacia"
+      ],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 1,
+      "monstros": []
+    },
+    {
+      "id": "GM11",
+      "nome": "Fossa do Gigante",
+      "tipo": "Combate",
+      "descricao": "Alguém costurou dois corpos grandes de volta ao trabalho e não caprichou. Eles são lentos, são burros, e cada um aguenta o que o grupo inteiro aguenta junto.",
+      "dificuldade": null,
+      "cd": null,
+      "alvo_progresso": null,
+      "pericias": [],
+      "imagem": null,
+      "recompensa": null,
+      "pontos_organizacao": 2,
+      "monstros": [
+        {
+          "nome": "Ogro Zumbi 1",
+          "ca": 8,
+          "ataque": 6,
+          "dano": "2d8+4",
+          "hp": 85,
+          "ataques": 1,
+          "saves": {
+            "FOR": 4,
+            "DES": -2,
+            "CON": 4,
+            "INT": -4,
+            "SAB": 0,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Maça Estrela",
+              "ataque": 6,
+              "dano": "2d8+4"
+            }
+          ]
+        },
+        {
+          "nome": "Ogro Zumbi 2",
+          "ca": 8,
+          "ataque": 6,
+          "dano": "2d8+4",
+          "hp": 85,
+          "ataques": 1,
+          "saves": {
+            "FOR": 4,
+            "DES": -2,
+            "CON": 4,
+            "INT": -4,
+            "SAB": 0,
+            "CAR": -3
+          },
+          "golpes": [
+            {
+              "nome": "Maça Estrela",
+              "ataque": 6,
+              "dano": "2d8+4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GM12",
+      "nome": "Relicário Lacrado",
+      "tipo": "Tesouro",
+      "descricao": "A porta do relicário foi lacrada por dentro, o que é uma informação em si. O lacre é de cera e osso, e a cera ainda está mole.",
+      "dificuldade": "Difícil",
+      "cd": 20,
+      "alvo_progresso": 15,
+      "pericias": [
+        "Arcanismo",
+        "História"
+      ],
+      "imagem": null,
+      "recompensa": "Uma relíquia do arquivo da Guilda.",
+      "pontos_organizacao": 3,
+      "monstros": []
+    }
+  ]
+}

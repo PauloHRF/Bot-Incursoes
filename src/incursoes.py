@@ -30,6 +30,11 @@ ORGANIZACOES = (
 )
 DIFICULDADES = ("Fácil", "Média", "Difícil")
 
+# Quanto a CD de uma Armadilha cai em relação à escrita na planilha. Passar numa
+# armadilha não dá nada — só evita o dano e o debuff —, então ela precisa ser
+# mais fácil que um Evento para valer o voto.
+DESCONTO_CD_ARMADILHA = 3
+
 # Quantas salas o grupo atravessa antes do objetivo, por tamanho.
 TAMANHOS = {"Curta": 3, "Média": 5, "Longa": 7}
 
@@ -226,6 +231,21 @@ class Sala:
     def monstro(self) -> Optional[Monstro]:
         """O primeiro inimigo da sala, para quando basta um nome."""
         return self.monstros[0] if self.monstros else None
+
+    @property
+    def cd_efetiva(self) -> Optional[int]:
+        """A CD que o grupo rola de fato.
+
+        Armadilha sai mais fácil que Evento de propósito: passar nela não dá
+        nada, só evita o dano e o debuff. Sem esse desconto ela nunca
+        competiria na votação. A CD da planilha fica como foi escrita; o
+        desconto é regra do bot, num lugar só.
+        """
+        if self.cd is None:
+            return None
+        if self.tipo == "Armadilha":
+            return max(1, self.cd - DESCONTO_CD_ARMADILHA)
+        return self.cd
 
     @property
     def tem_teste(self) -> bool:
@@ -625,6 +645,20 @@ def _monstros_de_dict(bruto: dict[str, Any], onde: str, problemas: list[str]) ->
     if quantidade == 1:
         return [criatura(nome)]
     return [criatura(f"{nome} {n}") for n in range(1, quantidade + 1)]
+
+
+def monstros_de_criatura(
+    bruto: dict[str, Any], onde: str = "criatura"
+) -> list[Monstro]:
+    """As criaturas de uma entrada só, para quem monta sala fora da planilha.
+
+    É o caminho do bestiário, igual ao do importador: só o nome preenchido já
+    traz os números do livro. Devolve lista vazia se a entrada não fechar, em
+    vez de levantar — quem chama decide o que fazer sem a criatura.
+    """
+    problemas: list[str] = []
+    monstros = _monstros_de_dict(bruto, onde, problemas)
+    return [] if problemas else monstros
 
 
 def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Optional[Sala]:

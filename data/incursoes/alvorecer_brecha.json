@@ -1,0 +1,203 @@
+{
+  "id": "alvorecer_brecha",
+  "nome": "A Brecha de Fogo Pálido",
+  "organizacao": "Sentinelas do Alvorecer",
+  "tamanho": "Longa",
+  "tier": 4,
+  "lore_inicial": "O Alvorecer mantém doze selos, e onze deles estão onde deveriam estar. O décimo segundo fica sob o mosteiro de Fogo Pálido, e há um mês o sino de lá toca sozinho, sempre na mesma hora, sempre uma badalada a mais do que na noite anterior.\n\nOntem tocou trinta e uma vezes. A Ordem mandou três noviços contar a trigésima segunda. Nenhum voltou, mas o sino tocou de novo — e dentro dele, dizem os que estavam perto, tinha voz.\n\nVocês vão até o selo. Se ele ainda estiver inteiro, fechem. Se não estiver, tragam de volta o que passou por ele.",
+  "lore_final": "O sino não toca mais. Foi derrubado da torre e enterrado de bronze para baixo, que é como o Alvorecer trata as coisas que aprenderam a falar.\n\nO selo foi refeito por cima do antigo, com os nomes dos três noviços na borda — a Ordem escreve os mortos no que eles morreram defendendo. O de vocês não entra ali, porque vocês voltaram. Entra no outro livro, o dos que a Ordem chama de novo quando o próximo sino começar.",
+  "imagem_capa": null,
+  "recompensa_mes": 15,
+  "pontos_conclusao": 15,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "A Câmara do Sino",
+    "tipo": "Combate",
+    "descricao": "O selo está partido ao meio e o sino caiu em cima dele, de boca para baixo. O que passou está sentado no sino, alto e seco como um inseto de pé, com as asas abertas até as duas paredes — e esperou o tempo todo pela trigésima segunda badalada, que é a que o grupo acaba de dar ao abrir a porta.\n\nA brecha não escolheu lado: o que veio atrás dele veio dos dois, e só parou de se matar porque vocês chegaram.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "15 MEs por participante + pontos com as Sentinelas do Alvorecer",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Diabo Ósseo",
+        "ca": 19,
+        "ataque": 8,
+        "dano": "1d8+4",
+        "hp": 142,
+        "ataques": 3,
+        "saves": {
+          "FOR": 4,
+          "DES": 3,
+          "CON": 4,
+          "INT": 5,
+          "SAB": 6,
+          "CAR": 7
+        },
+        "golpes": [
+          {
+            "nome": "Garra",
+            "ataque": 8,
+            "dano": "1d8+4"
+          },
+          {
+            "nome": "Garra",
+            "ataque": 8,
+            "dano": "1d8+4"
+          },
+          {
+            "nome": "Ferroada",
+            "ataque": 8,
+            "dano": "2d8+4+5d6"
+          }
+        ]
+      },
+      {
+        "nome": "Vrock",
+        "ca": 15,
+        "ataque": 6,
+        "dano": "2d6+3",
+        "hp": 104,
+        "ataques": 2,
+        "saves": {
+          "FOR": 3,
+          "DES": 5,
+          "CON": 4,
+          "INT": -1,
+          "SAB": 4,
+          "CAR": 2
+        },
+        "habilidade": {
+          "nome": "Esporos",
+          "save": "CON",
+          "cd": 14,
+          "texto": "",
+          "dano": "1d10",
+          "alvos": 3,
+          "atordoa": 0,
+          "cada": 2,
+          "recarga": 6,
+          "save_repete": false,
+          "metade": false
+        },
+        "golpes": [
+          {
+            "nome": "Bico",
+            "ataque": 6,
+            "dano": "2d6+3"
+          },
+          {
+            "nome": "Talões",
+            "ataque": 6,
+            "dano": "2d10+3"
+          }
+        ]
+      },
+      {
+        "nome": "Cão Infernal 1",
+        "ca": 15,
+        "ataque": 5,
+        "dano": "1d8+3+2d6",
+        "hp": 45,
+        "ataques": 1,
+        "saves": {
+          "FOR": 3,
+          "DES": 1,
+          "CON": 2,
+          "INT": -2,
+          "SAB": 1,
+          "CAR": -2
+        },
+        "habilidade": {
+          "nome": "Sopro de Fogo",
+          "save": "DES",
+          "cd": 12,
+          "texto": "",
+          "dano": "6d6",
+          "alvos": 3,
+          "atordoa": 0,
+          "cada": 2,
+          "recarga": 5,
+          "save_repete": false,
+          "metade": true
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 5,
+            "dano": "1d8+3+2d6"
+          }
+        ],
+        "matilha": true
+      },
+      {
+        "nome": "Cão Infernal 2",
+        "ca": 15,
+        "ataque": 5,
+        "dano": "1d8+3+2d6",
+        "hp": 45,
+        "ataques": 1,
+        "saves": {
+          "FOR": 3,
+          "DES": 1,
+          "CON": 2,
+          "INT": -2,
+          "SAB": 1,
+          "CAR": -2
+        },
+        "habilidade": {
+          "nome": "Sopro de Fogo",
+          "save": "DES",
+          "cd": 12,
+          "texto": "",
+          "dano": "6d6",
+          "alvos": 3,
+          "atordoa": 0,
+          "cada": 2,
+          "recarga": 5,
+          "save_repete": false,
+          "metade": true
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 5,
+            "dano": "1d8+3+2d6"
+          }
+        ],
+        "matilha": true
+      },
+      {
+        "nome": "Diabo Barbado",
+        "ca": 13,
+        "ataque": 5,
+        "dano": "1d8+2",
+        "hp": 52,
+        "ataques": 2,
+        "saves": {
+          "FOR": 5,
+          "DES": 2,
+          "CON": 4,
+          "INT": -1,
+          "SAB": 2,
+          "CAR": 0
+        },
+        "golpes": [
+          {
+            "nome": "Barba",
+            "ataque": 5,
+            "dano": "1d8+2"
+          },
+          {
+            "nome": "Glaive",
+            "ataque": 5,
+            "dano": "1d10+3"
+          }
+        ]
+      }
+    ]
+  }
+}
