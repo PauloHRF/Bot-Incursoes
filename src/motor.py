@@ -9,7 +9,7 @@ import random
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Sequence
 
 from . import ameaca
 from .incursoes import OPCOES_POR_PASSO, Monstro, Sala
@@ -283,6 +283,10 @@ class Combatente:
     # enquanto estao ligadas. Ver src/ameaca.py.
     ameaca: int = 0
     ameaca_extra: int = 0
+    # Dado de dano a mais em todo golpe, de buff curto que o grupo recebeu
+    # (a Danca totemica). Diferente de `dano_extra`, que e numero fixo, e de
+    # `dano_por_alvo`, que so vale contra o inimigo marcado.
+    dano_bonus: str = ""
     # Marca do Cacador e afins: valem so contra aquele inimigo.
     dano_por_alvo: dict = field(default_factory=dict)
     vantagem_contra: set = field(default_factory=set)
@@ -629,6 +633,9 @@ def atacar_inimigo(
         extra += combatente.dano_ferido
     marcado = combatente.dano_por_alvo.get(inimigo.indice)
     vantagem = combatente.vantagem or inimigo.indice in combatente.vantagem_contra
+    # Os dados de dano a mais somam todos: o da propria habilidade, a marca
+    # naquele inimigo e o buff curto que o grupo recebeu.
+    bonus = [b for b in (dano_bonus, marcado, combatente.dano_bonus) if b]
     golpe = atacar(
         combatente.nome,
         combatente.bonus_ataque + bonus_extra,
@@ -638,17 +645,22 @@ def atacar_inimigo(
         rng,
         critico_em=combatente.critico_em,
         dano_extra=extra,
-        dano_bonus=dano_bonus or marcado,
+        dano_bonus=bonus[0] if bonus else None,
         garantido=garantido,
         critico_forcado=critico_forcado,
         vantagem=vantagem,
     )
-    # A marca soma junto com o dano bonus da propria habilidade.
-    if dano_bonus and marcado and golpe.acertou:
-        golpe.dano += rolar_dano(marcado, rng, critico=golpe.critico)
+    if golpe.acertou:
+        for extra_dado in bonus[1:]:
+            golpe.dano += rolar_dano(extra_dado, rng, critico=golpe.critico)
     if golpe.acertou:
         inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
     return golpe
+
+
+def sortear_um(itens: Sequence[Any], rng: Optional[random.Random] = None) -> Any:
+    """Um da lista, sem peso nenhum. Lista vazia devolve None."""
+    return _rng(rng).choice(list(itens)) if itens else None
 
 
 def sortear_alvo(
@@ -993,13 +1005,19 @@ def rolar_iniciativas(
 
 
 def ganhar_thp(combatente: Combatente, quantidade: int) -> int:
-    """Vida temporária não empilha: vale a maior. Devolve quanto ficou.
+    """Vida temporária empilha: soma na que já havia. Devolve quanto ficou.
+
+    É a regra do Espírito Guardião do xamã — "ganhar novos THPs não substitui
+    os antigos, se soma a eles" —, e ela vale para todas as fontes, porque o
+    xamã ganha THP por gatilho de d20: substituindo, o quarto gatilho da luta
+    não daria nada. O teto do xamã com substituição era 16, e o tier 5 dele
+    pede 20 para a versão melhorada: a habilidade era inalcançável.
 
     Quem está caído não ganha THP — voltar a lutar é outra história.
     """
     if combatente.caido or quantidade <= 0:
         return combatente.thp
-    combatente.thp = max(combatente.thp, quantidade)
+    combatente.thp += quantidade
     return combatente.thp
 
 
@@ -1053,18 +1071,29 @@ def cura_liquida(combatente: Combatente, bruta: int) -> int:
     return max(0, bruta + (bruta * max(-100, pct)) // 100)
 
 
-def curar(combatente: Combatente, fracao: float) -> int:
-    """Cura uma fração do HP máximo, sem passar do teto. Devolve quanto curou.
+def curar_quanto(combatente: Combatente, bruta: int) -> int:
+    """Cura uma quantidade já rolada, sem passar do teto. Devolve quanto curou.
 
     Não levanta caído: quem está em 0 HP está fora do combate, e voltar é
     assunto do descanso ou de uma habilidade que diga isso.
     """
-    if combatente.caido:
+    if combatente.caido or bruta <= 0:
         return 0
     antes = combatente.hp_atual
-    bruta = max(1, int(combatente.hp_max * fracao))
     combatente.hp_atual = min(combatente.hp_max, antes + cura_liquida(combatente, bruta))
     return combatente.hp_atual - antes
+
+
+def curar(combatente: Combatente, fracao: float) -> int:
+    """Cura uma fração do HP máximo. Devolve quanto curou.
+
+    As habilidades do clérigo e do xamã curam por dado ('2d8+3'); as do
+    guerreiro e do paladino, por fração do máximo. As duas descem em
+    `curar_quanto`, que é onde a conta de verdade mora.
+    """
+    if combatente.caido:
+        return 0
+    return curar_quanto(combatente, max(1, int(combatente.hp_max * fracao)))
 
 
 # Quanto do HP máximo um personagem caído recupera ao descansar.

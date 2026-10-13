@@ -508,7 +508,9 @@ def _desserializar(row: aiosqlite.Row) -> dict[str, Any]:
         efeitos = classes.efeitos(p["classe"], p["nivel"], p["escolhas"])
         p["numeros"] = numeros
         p["efeitos"] = efeitos
-        p["habilidades"] = classes.habilidades(p["classe"], p["nivel"])
+        p["habilidades"] = classes.habilidades(
+            p["classe"], p["nivel"], p["escolhas"]
+        )
         p["pendencias"] = classes.escolhas_pendentes(
             p["classe"], p["nivel"], p["escolhas"]
         )

@@ -73,17 +73,17 @@ def caso_thp_absorve_antes_do_hp():
     do_thp, do_hp = motor.absorver(c, 10)
     assert (do_thp, do_hp) == (6, 4) and c.thp == 0 and c.hp_atual == 36
 
-    # nao empilha: vale a maior
+    # empilha: soma na que ja havia (a regra do Espirito Guardiao)
     motor.ganhar_thp(c, 5)
     motor.ganhar_thp(c, 3)
-    assert c.thp == 5
+    assert c.thp == 8
     motor.ganhar_thp(c, 9)
-    assert c.thp == 9
+    assert c.thp == 17
 
     # quem caiu nao ganha vida temporaria
     caido = motor.Combatente(2, "X", 15, 0, "1d1", 40, 0)
     assert motor.ganhar_thp(caido, 10) == 0
-    print("  THP absorve o dano antes do HP e nao empilha: ok")
+    print("  THP absorve o dano antes do HP e empilha: ok")
 
 
 def caso_golpe_registra_o_absorvido():
@@ -120,15 +120,17 @@ async def caso_danca_totemica_cobre_o_grupo():
 
     inter = FakeInteraction(canal, dono)
     await cog.usar_habilidade(inter, run["id"], "OBJ", "danca_totemica")
-    assert "grupo ganha" in inter.resposta
+    assert "vida temporaria para o grupo" in inter.resposta, inter.resposta
 
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     assert all(c.tem_thp for c in estado.vivos), [c.thp for c in estado.vivos]
-    # e todo mundo leva o bonus no proximo ataque
-    assert all(c.dano_por_alvo or c.dano_extra or True for c in estado.vivos)
+    # e o bonus de dano chega mesmo no combatente, nao so na tabela de efeitos
+    assert all(c.dano_bonus == "1d6+4" for c in estado.vivos), [
+        c.dano_bonus for c in estado.vivos
+    ]
     ligados = await db.efeitos_ativos(conn, run["id"], cog._passo(run), 0)
     assert len(ligados) == len(estado.vivos), ligados
-    print("  Danca totemica da THP e bonus ao grupo inteiro: ok")
+    print("  Danca totemica da THP e bonus de dano ao grupo inteiro: ok")
 
 
 async def caso_aura_totemica_depende_do_thp():

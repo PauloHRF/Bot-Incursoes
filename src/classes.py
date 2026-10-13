@@ -101,11 +101,24 @@ class Classe:
         alvo = min(tier(nivel), max(self.tiers))
         return self.tiers[alvo]
 
-    def habilidades_ate(self, nivel: int) -> list[tuple[int, Habilidade]]:
-        """Tudo que o personagem já tem, do tier 1 até o dele."""
+    def habilidades_ate(
+        self, nivel: int, escolhas: Optional[dict] = None
+    ) -> list[tuple[int, Habilidade]]:
+        """Tudo que o personagem já tem, do tier 1 até o dele.
+
+        A habilidade com `exige_escolha` só entra para quem escolheu aquela
+        opção: o clérigo tem uma magia por círculo, não as três. Sem passar
+        `escolhas`, nenhuma das destravadas entra — quem só quer a lista da
+        classe (a tabela de referência) vê as escolhas, não os prêmios delas.
+        """
+        feitas = escolhas or {}
         teto = min(tier(nivel), max(self.tiers))
         return [
-            (t, h) for t in range(1, teto + 1) for h in self.habilidades.get(t, [])
+            (t, h)
+            for t in range(1, teto + 1)
+            for h in self.habilidades.get(t, [])
+            if h.exige_escolha is None
+            or feitas.get(h.exige_escolha[0]) == h.exige_escolha[1]
         ]
 
     def habilidades_do_tier(self, tier_alvo: int) -> list[Habilidade]:
@@ -212,6 +225,18 @@ CLASSES: dict[str, Classe] = {
                 (73, 20, 7, 5, 11, 11, "1d10+5"),
             ]),
         ),
+        Classe(
+            "clerigo",
+            "Clérigo",
+            "Cura o grupo e dobra o inimigo com testes de resistência.",
+            _tabela([
+                (19, 15, 4, 3, 5, 5, "1d8"),
+                (31, 16, 4, 4, 7, 7, "1d8"),
+                (45, 17, 5, 4, 8, 8, "2d8"),
+                (59, 18, 5, 5, 10, 9, "2d8"),
+                (73, 19, 6, 5, 11, 11, "2d8"),
+            ]),
+        ),
     )
 }
 
@@ -247,10 +272,32 @@ def numeros(identificador: Optional[str], nivel: int) -> Optional[NumerosDoTier]
     return alvo.numeros(nivel) if alvo else None
 
 
-def habilidades(identificador: Optional[str], nivel: int) -> list[tuple[int, Habilidade]]:
-    """As habilidades que o personagem já tem, com o tier de cada uma."""
+# Quanto a CD de uma habilidade de jogador fica acima do acerto da classe. É a
+# conta do 5e (8 + proficiência), encostada no número que a tabela já tem: a
+# classe que acerta melhor também é mais difícil de resistir, e a CD acompanha
+# o save das criaturas, que sobe de +0 no tier 1 para +6 no tier 5.
+BASE_DA_CD = 8
+
+
+def cd_de_habilidade(identificador: Optional[str], nivel: int) -> int:
+    """A CD do teste de resistência que uma habilidade daquela classe força.
+
+    Clérigo: 13 no tier 1, subindo até 19 no tier 5. Classe sem tabela de
+    números cai na CD do tier 1, que é o mínimo defensável.
+    """
+    do_tier = numeros(identificador, nivel)
+    return BASE_DA_CD + (do_tier.acerto if do_tier else 5)
+
+
+def habilidades(
+    identificador: Optional[str], nivel: int, escolhas: Optional[dict] = None
+) -> list[tuple[int, Habilidade]]:
+    """As habilidades que o personagem já tem, com o tier de cada uma.
+
+    `escolhas` destrava as que dependem de uma decisão — a magia do clérigo.
+    """
     alvo = classe(identificador)
-    return alvo.habilidades_ate(nivel) if alvo else []
+    return alvo.habilidades_ate(nivel, escolhas) if alvo else []
 
 
 def saves_fortes(identificador: Optional[str]) -> tuple[str, ...]:
