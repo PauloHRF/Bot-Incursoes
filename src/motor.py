@@ -301,6 +301,13 @@ class Combatente:
     # enquanto estao ligadas. Ver src/ameaca.py.
     ameaca: int = 0
     ameaca_extra: int = 0
+    # Fly: multiplica o PESO dele no sorteio, nao a ameaca crua. A curva
+    # x/(x+Y) e quase reta embaixo — ameaca 1 e 2 estao a 1,8x de distancia —,
+    # entao mexer na ameaca so daria "modesto" ou "imune", sem meio-termo. O
+    # fator e esse meio-termo: 0.2 deixa dificil de alcancar sem invulneravel.
+    ameaca_fator: float = 1.0
+    # Circle of Power: quem passa no save da criatura nao leva nem metade.
+    save_anula: bool = False
     # Dado de dano a mais em todo golpe, de buff curto que o grupo recebeu
     # (a Danca totemica). Diferente de `dano_extra`, que e numero fixo, e de
     # `dano_por_alvo`, que so vale contra o inimigo marcado.
@@ -692,7 +699,9 @@ def sortear_alvo(
     vivos = estado.vivos
     if not vivos:
         return None
-    return ameaca.sortear(vivos, ameaca.de_quem(vivos), rng)
+    return ameaca.sortear(
+        vivos, ameaca.de_quem(vivos), rng, ameaca.fatores_de(vivos)
+    )
 
 
 def sortear_alvos(
@@ -709,7 +718,8 @@ def sortear_alvos(
         return []
     preferidos = [c for c in vivos if not c.atordoado] or vivos
     return ameaca.sortear_varios(
-        preferidos, ameaca.de_quem(preferidos), quantos, rng
+        preferidos, ameaca.de_quem(preferidos), quantos, rng,
+        ameaca.fatores_de(preferidos),
     )
 
 
@@ -841,7 +851,10 @@ def impor_save(
     """
     resultado = salvar_combatente(alvo, efeito.save, efeito.cd, rng)
     investida = Investida(inimigo.nome, efeito.nome, alvo, resultado)
-    if efeito.dano and (not resultado.passou or getattr(efeito, "metade", False)):
+    # Circle of Power: quem passa no save escapa inteiro, mesmo que o efeito
+    # diga "metade no sucesso".
+    meia_entra = getattr(efeito, "metade", False) and not alvo.save_anula
+    if efeito.dano and (not resultado.passou or meia_entra):
         cheio = rolar_dano(efeito.dano, rng)
         sofrido = reduzido(alvo, cheio if not resultado.passou else cheio // 2)
         investida.dano = sofrido

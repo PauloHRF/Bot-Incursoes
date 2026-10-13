@@ -255,6 +255,24 @@ CLASSES: dict[str, Classe] = {
                 (73, 20, 6, 5, 11, 11, "3d10"),
             ]),
         ),
+        # O mais frouxo do jogo, de propósito. O HP segue o padrão exato das
+        # outras classes por dado de vida — d12 sobe 20 por tier, d10 sobe 18,
+        # d8 sobe 14 —, então o d6 do Mago sobe 12. A CA é a pior de todas,
+        # porque ele não veste armadura. E a coluna de dano não é arma: é o
+        # cantrip (Fire Bolt, Ray of Frost), na progressão do 5e comprimida em
+        # cinco tiers. Ele mata rápido porque morre rápido.
+        Classe(
+            "mago",
+            "Mago",
+            "Apaga a sala com uma magia e cai em dois golpes.",
+            _tabela([
+                (15, 13, 4, 3, 5, 5, "1d10"),
+                (27, 14, 4, 4, 7, 7, "2d10"),
+                (39, 15, 5, 4, 8, 8, "2d10"),
+                (51, 16, 5, 5, 10, 9, "3d10"),
+                (63, 17, 6, 5, 11, 11, "4d10"),
+            ]),
+        ),
     )
 }
 

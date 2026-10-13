@@ -1218,6 +1218,8 @@ class Incursoes(commands.Cog):
             self._aplicar_ligado(combatentes, ligado)
         self._aplicar_aura_totemica(combatentes, personagens)
         self._aplicar_infusoes(combatentes, personagens)
+        self._aplicar_aura_de_save(combatentes, personagens)
+        self._aplicar_escudo_arcano(combatentes, personagens, tier_atual)
         return combatentes
 
     @staticmethod
@@ -1245,6 +1247,42 @@ class Incursoes(commands.Cog):
             c.bonus_ataque += melhor.get("acerto", 0)
             c.ca_extra += melhor.get("ca", 0)
             c.dano_extra += melhor.get("dano", 0)
+
+    @staticmethod
+    def _aplicar_aura_de_save(
+        combatentes: list[Combatente], personagens: list[dict[str, Any]]
+    ) -> None:
+        """Sabedoria Arcana: o grupo inteiro resiste melhor às criaturas.
+
+        Como a Infusão e a aura do xamã, vale a melhor e não a soma. Entra em
+        todos os atributos, porque a criatura escolhe qual save cobra.
+        """
+        melhor = max(
+            (((p.get("efeitos") or {}).get("aura_save") or 0) for p in personagens),
+            default=0,
+        )
+        if melhor <= 0:
+            return
+        for c in combatentes:
+            c.saves = {atributo: valor + melhor for atributo, valor in c.saves.items()}
+
+    @staticmethod
+    def _aplicar_escudo_arcano(
+        combatentes: list[Combatente], personagens: list[dict[str, Any]], tier: int
+    ) -> None:
+        """Escudo Arcano: o mago entra em combate com o escudo de pé.
+
+        No livro ele recarrega a cada magia de abjuração; aqui recarrega a
+        cada combate, que é o que o bot tem de ciclo. É o que deixa o d6 de
+        vida do mago jogável sem mexer na tabela dele.
+        """
+        for p in personagens:
+            por_tier = ((p.get("efeitos") or {}).get("escudo_arcano")) or 0
+            if not por_tier:
+                continue
+            quem = next((c for c in combatentes if c.user_id == p["user_id"]), None)
+            if quem is not None:
+                motor.ganhar_thp(quem, por_tier * max(1, tier))
 
     @staticmethod
     def _aplicar_aura_totemica(
@@ -1296,6 +1334,18 @@ class Incursoes(commands.Cog):
                 quem.critico_em = min(quem.critico_em, valor["critico_em"])
             if valor.get("dano_bonus"):
                 quem.dano_bonus = valor["dano_bonus"]
+            # Haste e afins: o segundo golpe por duracao.
+            if valor.get("ataques"):
+                quem.ataques = max(quem.ataques, valor["ataques"])
+            # Fly: multiplica o peso dele no sorteio de alvo. Vale o menor
+            # fator, que e o mais protegido.
+            if valor.get("ameaca_fator") is not None:
+                quem.ameaca_fator = min(
+                    quem.ameaca_fator, float(valor["ameaca_fator"])
+                )
+            # Circle of Power: passar no save passa a escapar inteiro.
+            if valor.get("save_anula"):
+                quem.save_anula = True
             # A sequencia do Martial Arts nao entra aqui: ela e contada golpe a
             # golpe dentro do turno, em atacar().
             return
@@ -2288,8 +2338,8 @@ class Incursoes(commands.Cog):
         # quatro criaturas so atrapalha.
         if acao.get("tipo") == "grupo" or acao.get("alvo") == "proprio":
             return False
-        if acao.get("tipo") == "cura":
-            if acao.get("alvo") != "aliado":
+        if acao.get("tipo") == "cura" or acao.get("alvo") == "aliados":
+            if acao.get("tipo") == "cura" and acao.get("alvo") != "aliado":
                 return False
             opcoes = [
                 (str(p["user_id"]), p["nome"], f"{p['hp_atual']}/{p['hp_max']} HP")
@@ -2508,6 +2558,22 @@ class Incursoes(commands.Cog):
                 habilidade.id, acao["efeitos"], expira, dono=user_id,
             )
             alvo_nome = alvo.nome
+        elif acao.get("alvo") == "aliados":
+            # Fly: pega varios do grupo, nao so quem lancou. Sem escolha vale
+            # quem esta de pe, do mais exposto para o menos — o que o mago
+            # faria: tirar de alcance quem esta levando pancada.
+            quantos = acao.get("alvos", 1)
+            escolhidos = [
+                c for c in estado.vivos if c.user_id in set(alvos or ())
+            ] or sorted(estado.vivos, key=lambda c: -c.ameaca_total)[:quantos]
+            if not escolhidos:
+                return "Nao ha ninguem de pe para a habilidade."
+            for quem_recebe in escolhidos[:quantos]:
+                await db.aplicar_efeito(
+                    self.bot.db, run["id"], passo, "personagem",
+                    quem_recebe.user_id, habilidade.id, acao["efeitos"], expira,
+                )
+            alvo_nome = ", ".join(c.nome for c in escolhidos[:quantos])
         else:
             await db.aplicar_efeito(
                 self.bot.db, run["id"], passo, "personagem", user_id,

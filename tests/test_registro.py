@@ -85,8 +85,8 @@ def caso_tabela_das_classes():
     # o nome, o id e a grafia sem acento levam a mesma classe
     assert cl.classe("Xamã") is cl.classe("xama") is cl.classe("xama")
     assert cl.classe("LADINO") is cl.CLASSES["ladino"]
-    assert cl.classe("mago") is None, "classe ainda nao escrita nao pode ser escolhida"
-    assert "Mago" in cl.CLASSES_PENDENTES
+    assert cl.classe("feiticeiro") is None, "classe ainda nao escrita nao pode ser escolhida"
+    assert "Feiticeiro" in cl.CLASSES_PENDENTES
     assert len(cl.CLASSES) + len(cl.CLASSES_PENDENTES) == len(cl.CLASSES_PREVISTAS)
     print(f"  {len(cl.CLASSES)} classes com tabela, {len(cl.CLASSES_PENDENTES)} previstas: ok")
 
@@ -149,7 +149,9 @@ async def caso_menu_limita_as_proficiencias():
 async def caso_classe_pendente_e_recusada():
     conn, canal, ficha = await preparar()
     inter = FakeInteraction(canal, JOGADORES[0])
-    await ficha.registrar.callback(ficha, inter, "Elminster", Escolha("mago", "Mago"))
+    await ficha.registrar.callback(
+        ficha, inter, "Elminster", Escolha("feiticeiro", "Feiticeiro")
+    )
     assert "ainda nao esta pronta" in inter.resposta, inter.resposta
     assert "Ladino" in inter.resposta, "a recusa lista o que da para jogar"
     assert await db.listar_personagens(conn, GUILD, JOGADORES[0]) == []

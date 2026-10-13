@@ -74,8 +74,15 @@ def peso(x: int) -> float:
     return bruta / (bruta + Y)
 
 
-def fracoes(ameacas: Sequence[int]) -> list[float]:
+def fracoes(
+    ameacas: Sequence[int], fatores: Optional[Sequence[float]] = None
+) -> list[float]:
     """A fatia da atenção de cada um, somando 1.
+
+    `fatores` multiplica o peso já curvado, e não a ameaça crua. É o que o Fly
+    usa: a curva é quase reta embaixo — `peso(1)` e `peso(2)` estão a 1,8x de
+    distância —, então mexer na ameaça só dá "modesto" ou "imune". No peso o
+    fator é um botão de verdade: 0,2 tira de alcance sem tornar invulnerável.
 
     Todos em zero (ou lista vazia de peso) caem no uniforme: sem ameaça
     nenhuma, a criatura não tem motivo para preferir alguém.
@@ -83,15 +90,19 @@ def fracoes(ameacas: Sequence[int]) -> list[float]:
     if not ameacas:
         return []
     pesos = [peso(x) for x in ameacas]
+    if fatores is not None:
+        pesos = [p * max(0.0, f) for p, f in zip(pesos, fatores)]
     total = sum(pesos)
     if total <= 0:
         return [1 / len(ameacas)] * len(ameacas)
     return [p / total for p in pesos]
 
 
-def porcentagens(ameacas: Sequence[int]) -> list[float]:
+def porcentagens(
+    ameacas: Sequence[int], fatores: Optional[Sequence[float]] = None
+) -> list[float]:
     """As frações em pontos percentuais, para mostrar na ficha e no painel."""
-    return [f * 100 for f in fracoes(ameacas)]
+    return [f * 100 for f in fracoes(ameacas, fatores)]
 
 
 def _rng(rng: Optional[random.Random]) -> Any:
@@ -99,10 +110,13 @@ def _rng(rng: Optional[random.Random]) -> Any:
 
 
 def sortear(
-    itens: Sequence[T], ameacas: Sequence[int], rng: Optional[random.Random] = None
+    itens: Sequence[T],
+    ameacas: Sequence[int],
+    rng: Optional[random.Random] = None,
+    fatores: Optional[Sequence[float]] = None,
 ) -> Optional[T]:
     """Um alvo, sorteado com a ameaça como peso."""
-    escolhidos = sortear_varios(itens, ameacas, 1, rng)
+    escolhidos = sortear_varios(itens, ameacas, 1, rng, fatores)
     return escolhidos[0] if escolhidos else None
 
 
@@ -111,6 +125,7 @@ def sortear_varios(
     ameacas: Sequence[int],
     quantos: int,
     rng: Optional[random.Random] = None,
+    fatores: Optional[Sequence[float]] = None,
 ) -> list[T]:
     """Vários alvos diferentes, sorteados com a ameaça como peso.
 
@@ -119,7 +134,8 @@ def sortear_varios(
     embaralhados pela ameaça, porque a ordem decide quem leva o quê quando a
     habilidade resolve alvo por alvo.
     """
-    restantes = list(zip(itens, ameacas))
+    pesados = fatores if fatores is not None else [1.0] * len(ameacas)
+    restantes = list(zip(itens, ameacas, pesados))
     gerador = _rng(rng)
     escolhidos: list[T] = []
     while restantes and len(escolhidos) < max(0, quantos):
@@ -134,9 +150,14 @@ def sortear_varios(
 PRECISAO = 10_000
 
 
-def _qual(restantes: Sequence[tuple[Any, int]], gerador: Any) -> int:
+def _qual(restantes: Sequence[tuple[Any, int, float]], gerador: Any) -> int:
     """A posição sorteada entre os que sobraram, com a ameaça como peso."""
-    fatias = [round(f * PRECISAO) for f in fracoes([x for _, x in restantes])]
+    fatias = [
+        round(f * PRECISAO)
+        for f in fracoes(
+            [x for _, x, _ in restantes], [g for _, _, g in restantes]
+        )
+    ]
     total = sum(fatias)
     if total <= 0:
         return 0
@@ -152,3 +173,8 @@ def _qual(restantes: Sequence[tuple[Any, int]], gerador: Any) -> int:
 def de_quem(combatentes: Iterable[Any]) -> list[int]:
     """A ameaça de cada combatente, para passar junto com a lista deles."""
     return [getattr(c, "ameaca_total", 0) for c in combatentes]
+
+
+def fatores_de(combatentes: Iterable[Any]) -> list[float]:
+    """O multiplicador de peso de cada um — o Fly, por enquanto."""
+    return [float(getattr(c, "ameaca_fator", 1.0)) for c in combatentes]

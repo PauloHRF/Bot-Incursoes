@@ -534,6 +534,153 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "O Flash of Genius dele soma +10 em vez de +5.",
                        {"flash_bonus": 10})],
     },
+    # A forma combinada para toda classe nova: ativa com tres magias nos
+    # tiers impares, passiva nos pares. O livro e base, nao autoridade — o que
+    # manda e o arquetipo no sentido popular, e o do Mago e o Fireball.
+    #
+    # Nada de slot nem de lista preparada: a escolha do tier e permanente,
+    # como no clerigo. A coluna de dano da tabela E o cantrip dele, entao Fire
+    # Bolt e Ray of Frost nao aparecem aqui — sao o ataque basico.
+    "mago": {
+        1: [Habilidade("magia_mago_t1", "Magia de 1o circulo", ESCOLHA,
+                       "Escolhe uma: Magic Missile, Sleep ou Thunderwave.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "magic_missile", "nome": "Magic Missile",
+                            "texto": "3d4+3 garantido, sem save"},
+                           {"id": "sleep", "nome": "Sleep",
+                            "texto": "Os inimigos que falharem perdem a vez"},
+                           {"id": "thunderwave_mago", "nome": "Thunderwave",
+                            "texto": "2d8 em todos, metade em quem resistir"},
+                       ]}),
+            Habilidade("magic_missile", "Magic Missile", ATIVA,
+                       "1x por descanso: 3d4+3 num inimigo. Nao tem save — os "
+                       "dardos sempre acertam.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": 1,
+                             "dano": "3d4+3", "sem_save": True},
+                       exige_escolha=("magia_mago_t1", "magic_missile")),
+            Habilidade("sleep", "Sleep", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de SAB; "
+                       "quem falha perde a proxima vez.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": "todos",
+                             "atordoa": 1},
+                       exige_escolha=("magia_mago_t1", "sleep")),
+            Habilidade("thunderwave_mago", "Thunderwave", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de CON; "
+                       "quem falha leva 2d8, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "CON", "alvos": "todos",
+                             "dano": "2d8", "metade": True},
+                       exige_escolha=("magia_mago_t1", "thunderwave_mago"))],
+        # Scholar: Expertise numa pericia de saber, escolhida pelo jogador. O
+        # `expertise` ja existe (o ladino usa), entao cada opcao so declara a
+        # pericia que dobra.
+        2: [Habilidade("scholar", "Scholar", ESCOLHA,
+                       "Especializou-se num campo de estudo: o bonus daquela "
+                       "pericia dobra.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "arcanismo", "nome": "Arcanismo",
+                            "texto": "O bonus de Arcanismo dobra",
+                            "efeito": {"expertise": ["Arcanismo"]}},
+                           {"id": "historia", "nome": "Historia",
+                            "texto": "O bonus de Historia dobra",
+                            "efeito": {"expertise": ["História"]}},
+                           {"id": "investigacao", "nome": "Investigacao",
+                            "texto": "O bonus de Investigacao dobra",
+                            "efeito": {"expertise": ["Investigação"]}},
+                           {"id": "medicina", "nome": "Medicina",
+                            "texto": "O bonus de Medicina dobra",
+                            "efeito": {"expertise": ["Medicina"]}},
+                           {"id": "natureza", "nome": "Natureza",
+                            "texto": "O bonus de Natureza dobra",
+                            "efeito": {"expertise": ["Natureza"]}},
+                           {"id": "religiao", "nome": "Religiao",
+                            "texto": "O bonus de Religiao dobra",
+                            "efeito": {"expertise": ["Religião"]}},
+                       ]})],
+        3: [Habilidade("magia_mago_t3", "Magia de 3o circulo", ESCOLHA,
+                       "Escolhe uma: Fireball, Hypnotic Pattern ou Fly.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "fireball", "nome": "Fireball",
+                            "texto": "8d6 em todos, metade em quem resistir"},
+                           {"id": "hypnotic_pattern_mago", "nome": "Hypnotic Pattern",
+                            "texto": "Os inimigos que falharem perdem a vez"},
+                           {"id": "fly", "nome": "Fly",
+                            "texto": "Tres aliados saem de alcance por 3 rodadas"},
+                       ]}),
+            Habilidade("fireball", "Fireball", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de DES; "
+                       "quem falha leva 8d6, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": "todos",
+                             "dano": "8d6", "metade": True},
+                       exige_escolha=("magia_mago_t3", "fireball")),
+            Habilidade("hypnotic_pattern_mago", "Hypnotic Pattern", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de SAB; "
+                       "quem falha perde a proxima vez.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": "todos",
+                             "atordoa": 1},
+                       exige_escolha=("magia_mago_t3", "hypnotic_pattern_mago")),
+            # Voar e posicional, e o bot nao tem posicao. O que sobra do que
+            # voar faz e sair de alcance: o peso dos tres no sorteio de alvo
+            # cai a um quinto. E fator, e nao troca de ameaca, porque a curva
+            # x/(x+10) e quase reta embaixo: mexer na ameaca crua so daria
+            # "modesto" (13% -> 9%) ou "imune" (peso 0), sem meio-termo.
+            Habilidade("fly", "Fly", ATIVA,
+                       "1x por descanso: tres aliados sobem fora de alcance "
+                       "por 3 rodadas — os inimigos quase deixam de mira-los.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "duracao", "turnos": 3, "alvo": "aliados",
+                             "alvos": 3, "efeitos": {"ameaca_fator": 0.2}},
+                       exige_escolha=("magia_mago_t3", "fly"))],
+        4: [Habilidade("tradicao_arcana", "Tradicao arcana", ESCOLHA,
+                       "Escolhe uma: Evocacao Potente, Escudo Arcano ou "
+                       "Sabedoria Arcana.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "evocacao_potente", "nome": "Evocacao Potente",
+                            "texto": "+1d8 de dano em tudo que ele lanca",
+                            "efeito": {"dano_bonus": "1d8"}},
+                           {"id": "escudo_arcano", "nome": "Escudo Arcano",
+                            "texto": "THP igual a 2x o tier, e recarrega a cada magia",
+                            "efeito": {"escudo_arcano": 2}},
+                           {"id": "sabedoria_arcana", "nome": "Sabedoria Arcana",
+                            "texto": "+2 nos saves do grupo inteiro",
+                            "efeito": {"aura_save": 2}},
+                       ]})],
+        5: [Habilidade("magia_mago_t5", "Magia de 5o circulo", ESCOLHA,
+                       "Escolhe uma: Cone of Cold, Hold Monster ou Circle of Power.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "cone_of_cold", "nome": "Cone of Cold",
+                            "texto": "12d8 em todos, metade em quem resistir"},
+                           {"id": "hold_monster", "nome": "Hold Monster",
+                            "texto": "Um inimigo perde tres vezes seguidas"},
+                           {"id": "circle_of_power", "nome": "Circle of Power",
+                            "texto": "O grupo resiste melhor e escapa inteiro"},
+                       ]}),
+            Habilidade("cone_of_cold", "Cone of Cold", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de CON; "
+                       "quem falha leva 12d8, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "CON", "alvos": "todos",
+                             "dano": "12d8", "metade": True},
+                       exige_escolha=("magia_mago_t5", "cone_of_cold")),
+            Habilidade("hold_monster", "Hold Monster", ATIVA,
+                       "1x por descanso: um inimigo faz save de SAB; falhando, "
+                       "perde tres vezes seguidas.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "atordoa": 3},
+                       exige_escolha=("magia_mago_t5", "hold_monster")),
+            Habilidade("circle_of_power", "Circle of Power", ATIVA,
+                       "1x por descanso: por 3 rodadas o grupo rola os saves "
+                       "com vantagem e, passando, nao leva nem metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "turnos": 3,
+                             "efeitos": {"vantagem": True, "save_anula": True}},
+                       exige_escolha=("magia_mago_t5", "circle_of_power"))],
+    },
 }
 
 
@@ -573,6 +720,10 @@ NEUTRO: dict = {
     "flash_bonus": 0,
     # O que o artifice infunde no equipamento do grupo: {onde: quanto}.
     "infusao": {},
+    # Escudo Arcano do mago: THP por tier, que recarrega a cada magia.
+    "escudo_arcano": 0,
+    # Sabedoria Arcana do mago: quanto o grupo inteiro soma nos saves.
+    "aura_save": 0,
 }
 
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.
