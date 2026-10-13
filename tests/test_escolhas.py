@@ -97,6 +97,7 @@ def caso_catalogo_das_escolhas():
         "fighting_style", "expertise_1", "expertise_2",
         "primal_knowledge", "escolha_totemica",
         "magia_t1", "dominio_t2", "magia_t3", "dominio_t4", "magia_t5",
+        "ferramenta_t1", "infusao", "engenho_t3",
     }, decidiveis
     print(f"  as {len(decidiveis)} escolhas do documento estao no catalogo: ok")
 

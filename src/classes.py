@@ -67,7 +67,8 @@ SAVES_FORTES: dict[str, tuple[str, str]] = {
     "clerigo": ("CON", "SAB"),
     "druida": ("CON", "SAB"),
     "feiticeiro": ("DES", "CON"),
-    "artifice": ("FOR", "CON"),
+    # O livro novo dá CON e INT ao Artífice; a entrada antiga dizia FOR e CON.
+    "artifice": ("CON", "INT"),
     "bardo": ("DES", "CAR"),
     "bruxo": ("SAB", "CAR"),
 }
@@ -235,6 +236,24 @@ CLASSES: dict[str, Classe] = {
                 (45, 17, 5, 4, 8, 8, "2d8"),
                 (59, 18, 5, 5, 10, 9, "2d8"),
                 (73, 19, 6, 5, 11, 11, "2d8"),
+            ]),
+        ),
+        # Os números do Artífice não vinham no documento, que trouxe só o
+        # capítulo do livro. Ficou o HP e o dano do Clérigo (os dois são
+        # meio-conjuradores de d8 que batem de perto), com um ponto de CA a
+        # mais, porque o livro dá escudo a ele e armadura pesada ao Armorer.
+        # O que distingue o Artífice é o que ele empresta ao grupo, não o
+        # número dele.
+        Classe(
+            "artifice",
+            "Artífice",
+            "Empresta número ao grupo: infunde o equipamento e salva o teste alheio.",
+            _tabela([
+                (19, 16, 4, 3, 5, 5, "1d8"),
+                (31, 17, 4, 4, 7, 7, "1d8"),
+                (45, 18, 5, 4, 8, 8, "2d8"),
+                (59, 19, 5, 5, 10, 9, "2d8"),
+                (73, 20, 6, 5, 11, 11, "2d8"),
             ]),
         ),
     )

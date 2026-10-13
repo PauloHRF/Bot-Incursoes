@@ -213,9 +213,15 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "+2 em Percepcao, Sobrevivencia e Natureza.",
                        {"bonus_pericia": {"Percepção": 2, "Sobrevivência": 2,
                                           "Natureza": 2}}),
-            Habilidade("sobrevivente_repeticao", "Sobrevivente — repeticao", ATIVA,
-                       "1x por incursao: repete um teste falhado dessas tres pericias.",
-                       usos=_usos("incursao"))],
+            # Era "repete um teste falhado", que o bot nao sabe fazer: a
+            # rolagem ja virou consequencia quando daria para repetir. Vira o
+            # mesmo socorro, que chega na hora certa e da no mesmo.
+            Habilidade("sobrevivente_socorro", "Sobrevivente — socorro", ATIVA,
+                       "1x por incursao: quando alguem falha o teste da sala, "
+                       "soma +5 — e so dispara se o +5 fizer passar.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "bonus": 5})],
         5: [Habilidade("cacador_supremo", "Cacador Supremo", ATIVA,
                        "1x por descanso: uma presa por 3 turnos, com +2d8 e vantagem.",
                        usos=_usos("descanso"),
@@ -237,9 +243,15 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "+2 em Persuasao, Intuicao, Religiao e Intimidacao.",
                        {"bonus_pericia": {"Persuasão": 2, "Intuição": 2, "Religião": 2,
                                           "Intimidação": 2}}),
-            Habilidade("lider_sagrado_repeticao", "Lider Sagrado — repeticao", ATIVA,
-                       "1x por incursao: um aliado repete um teste falhado.",
-                       usos=_usos("incursao"))],
+            # A nota de revisao do documento diz "melhor dar +5 para um aliado
+            # que o paladino queira", e e o que entra: o mesmo socorro do
+            # Flash of Genius, que o artifice trouxe.
+            Habilidade("lider_sagrado_socorro", "Lider Sagrado — socorro", ATIVA,
+                       "1x por incursao: quando um aliado falha o teste da sala, "
+                       "soma +5 — e so dispara se o +5 fizer passar.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "bonus": 5})],
         5: [Habilidade("avatar_da_luz", "Avatar da Luz", ATIVA,
                        "1x por incursao: 3 turnos com +2 CA, +5 de dano e cura por turno.",
                        usos=_usos("incursao"),
@@ -424,6 +436,100 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "vira_contra": True},
                        exige_escolha=("magia_t5", "dominate_person"))],
     },
+    # O artifice sem itens e o artifice emprestando numero. Os itens ficam na
+    # planilha do grupo, entao as cinco habilidades de classe que sao itens no
+    # livro (Replicate, Tinker, Adept, Spell-Storing, Soul of Artifice) viram
+    # uma coisa so: a Infusao, que e o bonus que o item daria. O resto puxa de
+    # quatro subclasses, porque o fio comum de todas e o mesmo — "some um
+    # bonus numa rolagem": Alchemical Savant, Arcane Firearm, Arcane Jolt,
+    # Guided Precision e o Flash of Genius da classe.
+    "artifice": {
+        1: [Habilidade("ferramenta_t1", "Magia de ferramenta", ESCOLHA,
+                       "Escolhe uma: Cure Wounds, Thunderwave ou Faerie Fire.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "cure_wounds_art", "nome": "Cure Wounds",
+                            "texto": "Cura 2d8+3 de um aliado"},
+                           {"id": "thunderwave", "nome": "Thunderwave",
+                            "texto": "2d8 em todos os inimigos que falharem"},
+                           {"id": "faerie_fire", "nome": "Faerie Fire",
+                            "texto": "O grupo ataca o alvo com vantagem"},
+                       ]}),
+            Habilidade("cure_wounds_art", "Cure Wounds", ATIVA,
+                       "1x por descanso: cura 2d8+3 de um aliado.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "cura", "dado": "2d8+3", "alvo": "aliado"},
+                       exige_escolha=("ferramenta_t1", "cure_wounds_art")),
+            Habilidade("thunderwave", "Thunderwave", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de CON; "
+                       "quem falha leva 2d8, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "CON", "alvos": "todos",
+                             "dano": "2d8", "metade": True},
+                       exige_escolha=("ferramenta_t1", "thunderwave")),
+            Habilidade("faerie_fire", "Faerie Fire", ATIVA,
+                       "1x por descanso: um inimigo fica delineado; o grupo "
+                       "ataca ele com vantagem na proxima rodada.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": 1,
+                             "turnos": 1, "vantagem_do_grupo": True},
+                       exige_escolha=("ferramenta_t1", "faerie_fire"))],
+        # Replicate Magic Item: no livro ele faz itens e distribui. Aqui o item
+        # mora na planilha do grupo, entao entra o que o item faz — o +1 que
+        # todos passam a ter. Vale a melhor infusao, como a aura do xama.
+        2: [Habilidade("infusao", "Infusao", ESCOLHA,
+                       "O equipamento que ele infunde da +1 ao grupo inteiro. "
+                       "Escolhe onde: acerto, CA ou dano.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "armas", "nome": "Armas infundidas",
+                            "texto": "+1 de acerto para o grupo inteiro",
+                            "efeito": {"infusao": {"acerto": 1}}},
+                           {"id": "armaduras", "nome": "Armaduras infundidas",
+                            "texto": "+1 de CA para o grupo inteiro",
+                            "efeito": {"infusao": {"ca": 1}}},
+                           {"id": "municao", "nome": "Municao infundida",
+                            "texto": "+1 de dano para o grupo inteiro",
+                            "efeito": {"infusao": {"dano": 1}}},
+                       ]})],
+        # O "+bonus numa rolagem" de cada subclasse, um por opcao.
+        3: [Habilidade("engenho_t3", "Engenho", ESCOLHA,
+                       "Escolhe um: Arma Arcana, Sabedoria Alquimica ou "
+                       "Precisao Guiada.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "arma_arcana", "nome": "Arma Arcana",
+                            "texto": "+1d8 de dano em todo golpe dele",
+                            "efeito": {"dano_bonus": "1d8"}},
+                           {"id": "sabedoria_alquimica", "nome": "Sabedoria Alquimica",
+                            "texto": "As curas dele curam 1d6 a mais",
+                            "efeito": {"bonus_cura": "1d6"}},
+                           {"id": "precisao_guiada", "nome": "Precisao Guiada",
+                            "texto": "+3 de dano em todo golpe dele",
+                            "efeito": {"dano_extra": 3}},
+                       ]}),
+            MULTIATAQUE],
+        # Flash of Genius, a assinatura da classe. Reacao automatica, como a
+        # esquiva do ladino, e com o mesmo cuidado: so entra quando vira o
+        # veredito, para nao queimar o uso de graca.
+        4: [Habilidade("flash_of_genius", "Flash of Genius", ATIVA,
+                       "1x por descanso: quando alguem do grupo falha o teste "
+                       "da sala, soma +5 — e so dispara se o +5 fizer passar.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "bonus": 5})],
+        # Arcane Jolt: os dois caminhos dividem o contador, como as duas
+        # tradicoes do xama.
+        5: [Habilidade("arcane_jolt_dano", "Arcane Jolt — destrutivo", ATIVA,
+                       "1x por combate: um golpe com +2d6 de dano.",
+                       usos=_usos("combate"), recarga_com="arcane_jolt",
+                       acao={"tipo": "golpes", "quantidade": 1,
+                             "dano_bonus": "2d6"}),
+            Habilidade("arcane_jolt_cura", "Arcane Jolt — restaurador", ATIVA,
+                       "1x por combate: cura 2d6 de um aliado.",
+                       usos=_usos("combate"), recarga_com="arcane_jolt",
+                       acao={"tipo": "cura", "dado": "2d6", "alvo": "aliado"}),
+            Habilidade("genio_refinado", "Genio refinado", PASSIVA,
+                       "O Flash of Genius dele soma +10 em vez de +5.",
+                       {"flash_bonus": 10})],
+    },
 }
 
 
@@ -459,6 +565,10 @@ NEUTRO: dict = {
     "dano_bonus": "",
     "bonus_cura": "",
     "cura_limpa_controle": False,
+    # Quanto o Flash of Genius soma. O tier 5 do artifice sobe de 5 para 10.
+    "flash_bonus": 0,
+    # O que o artifice infunde no equipamento do grupo: {onde: quanto}.
+    "infusao": {},
 }
 
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.
@@ -488,7 +598,7 @@ def media_do_dado(expressao: str) -> float:
 def juntar_efeito(juntos: dict, efeito: dict) -> None:
     """Soma um efeito no acumulado, respeitando a regra de cada chave."""
     for chave, valor in (efeito or {}).items():
-        if chave in ("bonus_pericia", "bonus_save_atributo"):
+        if chave in ("bonus_pericia", "bonus_save_atributo", "infusao"):
             for nome, bonus in valor.items():
                 atual = juntos[chave].get(nome, 0)
                 juntos[chave][nome] = max(atual, bonus)

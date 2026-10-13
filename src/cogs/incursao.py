@@ -1217,7 +1217,34 @@ class Incursoes(commands.Cog):
         for ligado in efeitos_ligados or []:
             self._aplicar_ligado(combatentes, ligado)
         self._aplicar_aura_totemica(combatentes, personagens)
+        self._aplicar_infusoes(combatentes, personagens)
         return combatentes
+
+    @staticmethod
+    def _aplicar_infusoes(
+        combatentes: list[Combatente], personagens: list[dict[str, Any]]
+    ) -> None:
+        """O equipamento que o artífice infundiu, no grupo inteiro.
+
+        No livro ele replica itens mágicos e os distribui; aqui os itens ficam
+        na planilha do grupo, então o que entra no bot é o que o item faz — um
+        ponto a mais para todos, no acerto, na CA ou no dano. Como a aura do
+        xamã, vale a melhor quando há mais de um artífice.
+
+        O lado dos testes de perícia não entra aqui: é o Flash of Genius que
+        cuida dele, e de um jeito melhor, porque chega depois da rolagem.
+        """
+        melhor: dict[str, int] = {}
+        for p in personagens:
+            infusao = ((p.get("efeitos") or {}).get("infusao")) or {}
+            for onde, quanto in infusao.items():
+                melhor[onde] = max(melhor.get(onde, 0), quanto)
+        if not melhor:
+            return
+        for c in combatentes:
+            c.bonus_ataque += melhor.get("acerto", 0)
+            c.ca_extra += melhor.get("ca", 0)
+            c.dano_extra += melhor.get("dano", 0)
 
     @staticmethod
     def _aplicar_aura_totemica(
@@ -2626,6 +2653,37 @@ class Incursoes(commands.Cog):
         )
         return f"\u2728 **{habilidade.nome}**\n{resumo}"
 
+    async def _socorrer_o_teste(self, run: dict[str, Any], resultado) -> None:
+        """Flash of Genius: quem tem a reação salva o teste falhado de alguém.
+
+        Dispara sozinho, como as outras reações do bot, e só quando o bônus
+        vira a falha em sucesso — não queima o uso num teste que já passou nem
+        num que falhou longe demais. Serve qualquer um do grupo, inclusive
+        quem tem a habilidade.
+        """
+        passo = self._passo(run)
+        for p in await db.personagens_da_run(self.bot.db, run["id"]):
+            habilidade, acao = self._reacao_de(p, "falhou_teste")
+            if habilidade is None:
+                continue
+            # O tier 5 sobe o bonus de 5 para 10, por passiva.
+            bonus = ((p.get("efeitos") or {}).get("flash_bonus")) or acao.get("bonus", 0)
+            if not motor.vale_ajudar(resultado, bonus):
+                continue
+            if not await db.gastar_uso(
+                self.bot.db, run["id"], p["user_id"], habilidade.chave_de_uso,
+                self._chave_de_recarga(habilidade, run, passo), habilidade.vezes,
+            ):
+                continue
+            resultado.ajuda = bonus
+            resultado.quem_ajudou = p["nome"]
+            await self._anunciar_habilidade(
+                run,
+                f"✨ **{habilidade.nome}**: {p['nome']} socorre "
+                f"{resultado.personagem} com **+{bonus}** — o teste passa.",
+            )
+            return
+
     @staticmethod
     def _reacao_de(personagem: dict[str, Any], quando: str):
         """A reacao daquele gatilho, se o personagem tiver alguma."""
@@ -2921,6 +2979,10 @@ class Incursoes(commands.Cog):
         resultado = motor.testar(
             personagem, sala, saldo=await self._saldo(run, interaction.user.id)
         )
+        # Flash of Genius: alguem do grupo socorre a falha antes de ela virar
+        # consequencia. Entra no `modificador` gravado, para a margem e o
+        # progresso da sala contarem com a ajuda.
+        await self._socorrer_o_teste(run, resultado)
         novo = await db.registrar_teste(
             self.bot.db,
             run_id,
@@ -2930,7 +2992,7 @@ class Incursoes(commands.Cog):
             resultado.personagem,
             resultado.pericia,
             resultado.d20,
-            resultado.modificador,
+            resultado.modificador + resultado.ajuda,
             resultado.cd,
         )
         if not novo:
@@ -2949,9 +3011,15 @@ class Incursoes(commands.Cog):
             if resultado.passou
             else f"falhou por **{resultado.cd - resultado.total}**"
         )
+        socorro = (
+            f" (+{resultado.ajuda} de {resultado.quem_ajudou})"
+            if resultado.ajuda
+            else ""
+        )
         await interaction.response.send_message(
-            f"🎲 **{resultado.d20}** {resultado.modificador:+d} = **{resultado.total}** "
-            f"em {resultado.pericia} (CD {resultado.cd}) — {veredito}.",
+            f"🎲 **{resultado.d20}** {resultado.modificador:+d}{socorro} = "
+            f"**{resultado.total}** em {resultado.pericia} (CD {resultado.cd}) "
+            f"— {veredito}.",
             ephemeral=True,
         )
 

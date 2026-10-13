@@ -83,10 +83,15 @@ class ResultadoTeste:
     d20: int
     modificador: int
     cd: int
+    # O que alguém de fora somou depois da rolagem: o Flash of Genius do
+    # artífice. Entra no total, então vale para passar e para a margem.
+    ajuda: int = 0
+    # Quem ajudou, para a linha dizer de quem veio.
+    quem_ajudou: str = ""
 
     @property
     def total(self) -> int:
-        return self.d20 + self.modificador
+        return self.d20 + self.modificador + self.ajuda
 
     @property
     def passou(self) -> bool:
@@ -96,6 +101,19 @@ class ResultadoTeste:
     def margem(self) -> int:
         """Progresso que este personagem contribui. Nunca negativo."""
         return max(0, self.total - self.cd)
+
+
+def vale_ajudar(resultado: "ResultadoTeste", bonus: int) -> bool:
+    """Se somar `bonus` viraria aquela falha em sucesso.
+
+    O Flash of Genius dispara sozinho, como as outras reações do bot, então
+    precisa de um critério para não queimar o uso de graça: só entra quando
+    muda o veredito. Sobre quem já passou, e sobre quem falhou por mais do que
+    o bônus cobre, não mexe.
+    """
+    if resultado.passou or bonus <= 0:
+        return False
+    return resultado.total + bonus >= resultado.cd
 
 
 def testar(
