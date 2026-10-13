@@ -504,8 +504,12 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                            {"id": "precisao_guiada", "nome": "Precisao Guiada",
                             "texto": "+3 de dano em todo golpe dele",
                             "efeito": {"dano_extra": 3}},
-                       ]}),
-            MULTIATAQUE],
+                       ]})],
+        # Sem Multiattack de proposito: no livro, so o Armorer e o Battle
+        # Smith ganham Extra Attack — os outros tres arquetipos nao. Como o
+        # que montamos e a classe, e nao um arquetipo, o segundo golpe nao vem
+        # de base. Com ele e o d10, o artifice fechava em 33 de dano por
+        # rodada no tier 5: o maior do jogo, acima do barbaro.
         # Flash of Genius, a assinatura da classe. Reacao automatica, como a
         # esquiva do ladino, e com o mesmo cuidado: so entra quando vira o
         # veredito, para nao queimar o uso de graca.

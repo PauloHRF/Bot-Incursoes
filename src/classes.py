@@ -238,22 +238,21 @@ CLASSES: dict[str, Classe] = {
                 (73, 19, 6, 5, 11, 11, "2d8"),
             ]),
         ),
-        # Os números do Artífice não vinham no documento, que trouxe só o
-        # capítulo do livro. Ficou o HP e o dano do Clérigo (os dois são
-        # meio-conjuradores de d8 que batem de perto), com um ponto de CA a
-        # mais, porque o livro dá escudo a ele e armadura pesada ao Armorer.
-        # O que distingue o Artífice é o que ele empresta ao grupo, não o
-        # número dele.
+        # O HP é o do Clérigo porque os dois são classes de d8. O dado de dano
+        # é o que os separa: o Artífice bate com engenhoca, então sobe de d8
+        # para d10 e ganha um terceiro degrau no tier 5, onde o Clérigo para
+        # em dois. A CA leva um ponto a mais que a dele, porque o livro dá
+        # escudo ao Artífice e armadura pesada ao Armorer.
         Classe(
             "artifice",
             "Artífice",
             "Empresta número ao grupo: infunde o equipamento e salva o teste alheio.",
             _tabela([
-                (19, 16, 4, 3, 5, 5, "1d8"),
-                (31, 17, 4, 4, 7, 7, "1d8"),
-                (45, 18, 5, 4, 8, 8, "2d8"),
-                (59, 19, 5, 5, 10, 9, "2d8"),
-                (73, 20, 6, 5, 11, 11, "2d8"),
+                (19, 16, 4, 3, 5, 5, "1d10"),
+                (31, 17, 4, 4, 7, 7, "1d10"),
+                (45, 18, 5, 4, 8, 8, "2d10"),
+                (59, 19, 5, 5, 10, 9, "2d10"),
+                (73, 20, 6, 5, 11, 11, "3d10"),
             ]),
         ),
     )

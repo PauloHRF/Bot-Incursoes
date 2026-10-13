@@ -76,17 +76,21 @@ async def em_combate(conn, cog, incursao, run_id):
 
 def caso_tabela_e_identidade():
     artifice = cl.CLASSES["artifice"]
-    # Os numeros foram propostos por mim, nao vieram do documento: o que o
-    # teste guarda e a relacao com os vizinhos, nao os valores soltos.
     clerigo = cl.CLASSES["clerigo"]
+    # O HP e a CA andam com o clerigo: as duas sao classes de d8, e o artifice
+    # leva um ponto de CA a mais pelo escudo.
     for t in range(1, 6):
         meu, dele = artifice.tiers[t], clerigo.tiers[t]
         assert meu.hp == dele.hp, f"T{t}: o HP acompanha o clerigo"
-        assert meu.dano == dele.dano, f"T{t}: o dano acompanha o clerigo"
         assert meu.ca == dele.ca + 1, f"T{t}: um ponto de CA a mais (escudo)"
+    # O dado de dano e o que os separa: d10 com tres degraus, onde o clerigo
+    # tem d8 com dois.
+    assert [artifice.tiers[t].dano for t in range(1, 6)] == [
+        "1d10", "1d10", "2d10", "2d10", "3d10"
+    ]
     assert artifice.saves == ("CON", "INT"), "os saves do livro novo"
     assert "Artífice" not in cl.CLASSES_PENDENTES
-    print("  a tabela segue o clerigo com +1 de CA, e os saves sao CON e INT: ok")
+    print("  HP e CA seguem o clerigo; o dano e d10 em tres degraus: ok")
 
 
 def caso_as_cinco_camadas_de_escolha():
@@ -100,7 +104,11 @@ def caso_as_cinco_camadas_de_escolha():
     ids = {h.id for _t, h in cl.habilidades("artifice", 9)}
     assert "flash_of_genius" in ids and "genio_refinado" in ids
     assert {"arcane_jolt_dano", "arcane_jolt_cura"} <= ids
-    print("  tres tiers de escolha, e o Flash e o Jolt vem sem escolher: ok")
+    # E sem Multiattack: no livro so dois dos cinco arquetipos o ganham, e com
+    # ele o d10 levava o artifice a 33 de dano por rodada, acima do barbaro.
+    assert "multiataque" not in ids, "o artifice nao bate duas vezes"
+    assert cl.efeitos("artifice", 10, {}).get("ataques", 1) == 1
+    print("  tres tiers de escolha, sem Multiattack, Flash e Jolt de graca: ok")
 
 
 def caso_magia_de_ferramenta_destrava_uma():
