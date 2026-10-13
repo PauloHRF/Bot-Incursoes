@@ -9,8 +9,9 @@ import random
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Sequence
 
+from . import ameaca
 from .incursoes import OPCOES_POR_PASSO, Monstro, Sala
 from .rules import PESO_TIER, melhor_pericia, tier
 
@@ -82,10 +83,15 @@ class ResultadoTeste:
     d20: int
     modificador: int
     cd: int
+    # O que alguém de fora somou depois da rolagem: o Flash of Genius do
+    # artífice. Entra no total, então vale para passar e para a margem.
+    ajuda: int = 0
+    # Quem ajudou, para a linha dizer de quem veio.
+    quem_ajudou: str = ""
 
     @property
     def total(self) -> int:
-        return self.d20 + self.modificador
+        return self.d20 + self.modificador + self.ajuda
 
     @property
     def passou(self) -> bool:
@@ -95,6 +101,19 @@ class ResultadoTeste:
     def margem(self) -> int:
         """Progresso que este personagem contribui. Nunca negativo."""
         return max(0, self.total - self.cd)
+
+
+def vale_ajudar(resultado: "ResultadoTeste", bonus: int) -> bool:
+    """Se somar `bonus` viraria aquela falha em sucesso.
+
+    O Flash of Genius dispara sozinho, como as outras reações do bot, então
+    precisa de um critério para não queimar o uso de graça: só entra quando
+    muda o veredito. Sobre quem já passou, e sobre quem falhou por mais do que
+    o bônus cobre, não mexe.
+    """
+    if resultado.passou or bonus <= 0:
+        return False
+    return resultado.total + bonus >= resultado.cd
 
 
 def testar(
@@ -277,6 +296,22 @@ class Combatente:
     vantagem: bool = False
     ca_extra: int = 0
     cura_por_turno: float = 0.0
+    # Ameaca: o peso dele no sorteio de alvo. `ameaca` e a da classe (a linha
+    # de frente virando numero) e `ameaca_extra` e o que as habilidades somam
+    # enquanto estao ligadas. Ver src/ameaca.py.
+    ameaca: int = 0
+    ameaca_extra: int = 0
+    # Fly: multiplica o PESO dele no sorteio, nao a ameaca crua. A curva
+    # x/(x+Y) e quase reta embaixo — ameaca 1 e 2 estao a 1,8x de distancia —,
+    # entao mexer na ameaca so daria "modesto" ou "imune", sem meio-termo. O
+    # fator e esse meio-termo: 0.2 deixa dificil de alcancar sem invulneravel.
+    ameaca_fator: float = 1.0
+    # Circle of Power: quem passa no save da criatura nao leva nem metade.
+    save_anula: bool = False
+    # Dado de dano a mais em todo golpe, de buff curto que o grupo recebeu
+    # (a Danca totemica). Diferente de `dano_extra`, que e numero fixo, e de
+    # `dano_por_alvo`, que so vale contra o inimigo marcado.
+    dano_bonus: str = ""
     # Marca do Cacador e afins: valem so contra aquele inimigo.
     dano_por_alvo: dict = field(default_factory=dict)
     vantagem_contra: set = field(default_factory=set)
@@ -293,6 +328,11 @@ class Combatente:
     @property
     def ca_efetiva(self) -> int:
         return self.ca + self.ca_extra
+
+    @property
+    def ameaca_total(self) -> int:
+        """A ameaça que conta no sorteio: a da classe mais a das habilidades."""
+        return max(0, self.ameaca + self.ameaca_extra)
 
     @property
     def tem_thp(self) -> bool:
@@ -618,6 +658,9 @@ def atacar_inimigo(
         extra += combatente.dano_ferido
     marcado = combatente.dano_por_alvo.get(inimigo.indice)
     vantagem = combatente.vantagem or inimigo.indice in combatente.vantagem_contra
+    # Os dados de dano a mais somam todos: o da propria habilidade, a marca
+    # naquele inimigo e o buff curto que o grupo recebeu.
+    bonus = [b for b in (dano_bonus, marcado, combatente.dano_bonus) if b]
     golpe = atacar(
         combatente.nome,
         combatente.bonus_ataque + bonus_extra,
@@ -627,25 +670,38 @@ def atacar_inimigo(
         rng,
         critico_em=combatente.critico_em,
         dano_extra=extra,
-        dano_bonus=dano_bonus or marcado,
+        dano_bonus=bonus[0] if bonus else None,
         garantido=garantido,
         critico_forcado=critico_forcado,
         vantagem=vantagem,
     )
-    # A marca soma junto com o dano bonus da propria habilidade.
-    if dano_bonus and marcado and golpe.acertou:
-        golpe.dano += rolar_dano(marcado, rng, critico=golpe.critico)
+    if golpe.acertou:
+        for extra_dado in bonus[1:]:
+            golpe.dano += rolar_dano(extra_dado, rng, critico=golpe.critico)
     if golpe.acertou:
         inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
     return golpe
 
 
+def sortear_um(itens: Sequence[Any], rng: Optional[random.Random] = None) -> Any:
+    """Um da lista, sem peso nenhum. Lista vazia devolve None."""
+    return _rng(rng).choice(list(itens)) if itens else None
+
+
 def sortear_alvo(
     estado: EstadoCombate, rng: Optional[random.Random] = None
 ) -> Optional[Combatente]:
-    """Quem um inimigo ataca. Só quem está de pé pode ser alvo."""
+    """Quem um inimigo ataca. Só quem está de pé pode ser alvo.
+
+    A Ameaça pesa o sorteio: quem está na frente aparece mais. Ninguém fica
+    imune nem é alvo certo — o apoio ainda leva pancada, só menos.
+    """
     vivos = estado.vivos
-    return _rng(rng).choice(vivos) if vivos else None
+    if not vivos:
+        return None
+    return ameaca.sortear(
+        vivos, ameaca.de_quem(vivos), rng, ameaca.fatores_de(vivos)
+    )
 
 
 def sortear_alvos(
@@ -654,18 +710,17 @@ def sortear_alvos(
     """Vários alvos diferentes, para habilidades que pegam mais de um.
 
     Quem já está atordoado não é sorteado enquanto houver alguém de pé sem
-    atordoamento — atordoar duas vezes a mesma pessoa não faz nada.
+    atordoamento — atordoar duas vezes a mesma pessoa não faz nada. Entre os
+    que sobram, a Ameaça pesa o sorteio como no alvo único.
     """
     vivos = estado.vivos
     if not vivos:
         return []
     preferidos = [c for c in vivos if not c.atordoado] or vivos
-    gerador = _rng(rng)
-    if quantos >= len(preferidos):
-        escolhidos = list(preferidos)
-        gerador.shuffle(escolhidos)
-        return escolhidos
-    return gerador.sample(preferidos, quantos)
+    return ameaca.sortear_varios(
+        preferidos, ameaca.de_quem(preferidos), quantos, rng,
+        ameaca.fatores_de(preferidos),
+    )
 
 
 def contra_atacar(
@@ -699,12 +754,17 @@ class Investida:
     inimigo: str
     habilidade: str
     alvo: Combatente
-    save: ResultadoSave
+    # Quem rolou. Habilidade de resistencia tem `save`; a de ataque tem
+    # `ataque`, porque quem rola e a criatura, contra a CA do alvo.
+    save: Optional[ResultadoSave] = None
+    ataque: Optional[GolpeAtaque] = None
     dano: int = 0
     absorvido: int = 0
     atordoou: bool = False
     # Por quantas rodadas o alvo fica atordoado, quando fica.
     atordoa_por: int = 0
+    # Condicoes que o alvo leva para fora da sala, por ter falhado.
+    debuffs: list[str] = field(default_factory=list)
     # Se o alvo refaz o save no fim do turno para se livrar.
     repete_save: bool = False
     # Veio do acerto de um golpe (a garra que paralisa), nao de acao propria.
@@ -712,7 +772,10 @@ class Investida:
 
     @property
     def escapou(self) -> bool:
-        return self.save.passou
+        """Saiu ileso: passou no save, ou a criatura errou o ataque."""
+        if self.ataque is not None:
+            return not self.ataque.acertou
+        return self.save is not None and self.save.passou
 
 
 def usar_habilidade_do_inimigo(
@@ -727,10 +790,56 @@ def usar_habilidade_do_inimigo(
     habilidade = inimigo.habilidade
     if habilidade is None:
         return []
-    return [
-        impor_save(inimigo, habilidade, alvo, rng)
-        for alvo in sortear_alvos(estado, habilidade.alvos, rng)
-    ]
+    alvos = sortear_alvos(estado, habilidade.alvos, rng)
+    if e_ataque(habilidade):
+        # Rolagem de ataque: a Matilha vale aqui como vale nos golpes.
+        vantagem = tem_matilha(inimigo, estado)
+        return [investir_atacando(inimigo, habilidade, a, rng, vantagem) for a in alvos]
+    return [impor_save(inimigo, habilidade, alvo, rng) for alvo in alvos]
+
+
+def tem_matilha(inimigo: Inimigo, estado: EstadoCombate) -> bool:
+    """Táticas de Matilha: vantagem enquanto outra criatura da sala estiver de pé."""
+    return bool(inimigo.matilha) and any(
+        i is not inimigo for i in estado.inimigos_vivos
+    )
+
+
+def e_ataque(efeito: Any) -> bool:
+    """A habilidade rola ataque contra a CA, em vez de impor resistência."""
+    return bool(getattr(efeito, "e_ataque", False))
+
+
+def investir_atacando(
+    inimigo: Inimigo,
+    efeito: Any,
+    alvo: Combatente,
+    rng: Optional[random.Random] = None,
+    vantagem: bool = False,
+) -> Investida:
+    """A habilidade que é uma pancada: a criatura rola ataque contra a CA do alvo.
+
+    O alvo não rola nada — a armadura dele defende sozinha. O bônus é o da
+    criatura, o mesmo dos golpes dela: a ficha não dá um número próprio para a
+    habilidade, e o Golpe Poderoso do troll acerta com a perícia da garra.
+    """
+    golpe = atacar(
+        inimigo.nome,
+        inimigo.ataque,
+        efeito.dano or "0",
+        alvo.nome,
+        alvo.ca_efetiva,
+        rng,
+        vantagem=vantagem,
+    )
+    golpe.arma = efeito.nome
+    investida = Investida(inimigo.nome, efeito.nome, alvo, ataque=golpe)
+    if golpe.acertou:
+        golpe.dano = reduzido(alvo, golpe.dano)
+        golpe.absorvido, _ = absorver(alvo, golpe.dano)
+        investida.dano = golpe.dano
+        investida.absorvido = golpe.absorvido
+    return investida
 
 
 def impor_save(
@@ -742,7 +851,10 @@ def impor_save(
     """
     resultado = salvar_combatente(alvo, efeito.save, efeito.cd, rng)
     investida = Investida(inimigo.nome, efeito.nome, alvo, resultado)
-    if efeito.dano and (not resultado.passou or getattr(efeito, "metade", False)):
+    # Circle of Power: quem passa no save escapa inteiro, mesmo que o efeito
+    # diga "metade no sucesso".
+    meia_entra = getattr(efeito, "metade", False) and not alvo.save_anula
+    if efeito.dano and (not resultado.passou or meia_entra):
         cheio = rolar_dano(efeito.dano, rng)
         sofrido = reduzido(alvo, cheio if not resultado.passou else cheio // 2)
         investida.dano = sofrido
@@ -759,6 +871,10 @@ def impor_save(
         investida.atordoou = True
         investida.atordoa_por = efeito.atordoa
         investida.repete_save = bool(efeito.save_repete)
+    # As condicoes sao as mesmas da armadilha, e saem da sala junto com o
+    # grupo. Quem cai no combate nao as leva: ja esta fora.
+    if not resultado.passou and not alvo.caido:
+        investida.debuffs = list(getattr(efeito, "debuff", ()) or ())
     return investida
 
 
@@ -810,11 +926,9 @@ def turno_do_inimigo(
         alvo = sortear_alvo(estado, rng)
         if alvo is None:
             break
-        # Matilha: vantagem enquanto outra criatura da sala estiver de pe.
-        vantagem = inimigo.matilha and any(
-            i is not inimigo for i in estado.inimigos_vivos
+        golpe = contra_atacar(
+            inimigo, alvo, rng, golpe_do_monstro, tem_matilha(inimigo, estado)
         )
-        golpe = contra_atacar(inimigo, alvo, rng, golpe_do_monstro, vantagem)
         vez.golpes.append((golpe, alvo))
         efeito = getattr(golpe_do_monstro, "efeito", None)
         if efeito and golpe.acertou and not alvo.caido:
@@ -922,13 +1036,19 @@ def rolar_iniciativas(
 
 
 def ganhar_thp(combatente: Combatente, quantidade: int) -> int:
-    """Vida temporária não empilha: vale a maior. Devolve quanto ficou.
+    """Vida temporária empilha: soma na que já havia. Devolve quanto ficou.
+
+    É a regra do Espírito Guardião do xamã — "ganhar novos THPs não substitui
+    os antigos, se soma a eles" —, e ela vale para todas as fontes, porque o
+    xamã ganha THP por gatilho de d20: substituindo, o quarto gatilho da luta
+    não daria nada. O teto do xamã com substituição era 16, e o tier 5 dele
+    pede 20 para a versão melhorada: a habilidade era inalcançável.
 
     Quem está caído não ganha THP — voltar a lutar é outra história.
     """
     if combatente.caido or quantidade <= 0:
         return combatente.thp
-    combatente.thp = max(combatente.thp, quantidade)
+    combatente.thp += quantidade
     return combatente.thp
 
 
@@ -982,18 +1102,29 @@ def cura_liquida(combatente: Combatente, bruta: int) -> int:
     return max(0, bruta + (bruta * max(-100, pct)) // 100)
 
 
-def curar(combatente: Combatente, fracao: float) -> int:
-    """Cura uma fração do HP máximo, sem passar do teto. Devolve quanto curou.
+def curar_quanto(combatente: Combatente, bruta: int) -> int:
+    """Cura uma quantidade já rolada, sem passar do teto. Devolve quanto curou.
 
     Não levanta caído: quem está em 0 HP está fora do combate, e voltar é
     assunto do descanso ou de uma habilidade que diga isso.
     """
-    if combatente.caido:
+    if combatente.caido or bruta <= 0:
         return 0
     antes = combatente.hp_atual
-    bruta = max(1, int(combatente.hp_max * fracao))
     combatente.hp_atual = min(combatente.hp_max, antes + cura_liquida(combatente, bruta))
     return combatente.hp_atual - antes
+
+
+def curar(combatente: Combatente, fracao: float) -> int:
+    """Cura uma fração do HP máximo. Devolve quanto curou.
+
+    As habilidades do clérigo e do xamã curam por dado ('2d8+3'); as do
+    guerreiro e do paladino, por fração do máximo. As duas descem em
+    `curar_quanto`, que é onde a conta de verdade mora.
+    """
+    if combatente.caido:
+        return 0
+    return curar_quanto(combatente, max(1, int(combatente.hp_max * fracao)))
 
 
 # Quanto do HP máximo um personagem caído recupera ao descansar.

@@ -515,6 +515,8 @@ def resumo_do_golpe(golpes: list[tuple]) -> str:
 MARCA_ALVO = "🎯"
 MARCA_PROTEGIDO = "🛡️"
 MARCA_ABENCOADO = "✨"
+# Ameaça acima da da classe: alguma habilidade está chamando a atenção.
+MARCA_AMEACA = "🩸"
 
 
 def golpes_da_criatura(m) -> str:
@@ -562,7 +564,29 @@ def _marcas_do_combatente(c) -> str:
         marcas.append(MARCA_ALVO)
     if getattr(c, "ca_extra", 0) or getattr(c, "cura_por_turno", 0):
         marcas.append(MARCA_ABENCOADO)
+    if getattr(c, "ameaca_extra", 0) > 0:
+        marcas.append(MARCA_AMEACA)
     return (" " + "".join(marcas)) if marcas else ""
+
+
+def linha_de_ameaca(combatentes) -> str:
+    """Quanto da atenção dos inimigos cada um está puxando.
+
+    É a Ameaça já passada pela curva e normalizada, que é o número que decide
+    de verdade — a ameaça crua não diz nada sozinha, porque o que importa é a
+    comparação com o resto do grupo.
+    """
+    from . import ameaca
+
+    de_pe = [c for c in combatentes if c.hp_atual > 0]
+    if len(de_pe) < 2:
+        return ""
+    fatias = ameaca.porcentagens([c.ameaca_total for c in de_pe])
+    partes = [
+        f"{c.nome} {fatia:.0f}%{MARCA_AMEACA if c.ameaca_extra > 0 else ''}"
+        for c, fatia in sorted(zip(de_pe, fatias), key=lambda par: -par[1])
+    ]
+    return " · ".join(partes)
 
 
 def _linha_hp(c, carregadas: Optional[dict[str, int]] = None) -> str:
@@ -609,14 +633,31 @@ def texto_do_contra_ataque(contra, alvo_nome: str) -> str:
 
 
 def texto_da_investida(investida) -> str:
-    """A linha da habilidade de uma criatura, com o save de quem foi mirado."""
+    """A linha da habilidade de uma criatura, com a rolagem de quem foi mirado.
+
+    Na habilidade de resistência quem rola é o alvo, contra a CD; na de ataque
+    é a criatura, contra a CA. A linha diz qual das duas foi.
+    """
+    from . import condicoes
+
+    quem = investida.alvo.nome if hasattr(investida.alvo, "nome") else investida.alvo
+    cabeca = f"✴️ **{investida.inimigo}** · {investida.habilidade}"
+    if investida.ataque is not None:
+        contra = investida.ataque
+        rolagem = (
+            f"🎲 {contra.d20} {fmt(contra.bonus)} = **{contra.total}** "
+            f"vs CA {contra.ca_alvo}"
+        )
+        if not contra.acertou:
+            return f"{cabeca} em {quem} · {rolagem} → errou"
+        critico = " **crítico!**" if contra.critico else ""
+        return f"{cabeca} em {quem} · {rolagem} →{critico} **{investida.dano}** de dano"
+
     save = investida.save
     rolagem = (
         f"🎲 {save.d20} {fmt(save.modificador)} = **{save.total}** "
         f"vs CD {save.cd}"
     )
-    quem = investida.alvo.nome if hasattr(investida.alvo, "nome") else investida.alvo
-    cabeca = f"✴️ **{investida.inimigo}** · {investida.habilidade}"
     if investida.escapou:
         if investida.dano:
             return f"{cabeca} em {quem} · {rolagem} → resistiu: **{investida.dano}** de dano (metade)"
@@ -626,6 +667,11 @@ def texto_da_investida(investida) -> str:
         consequencias.append(f"**{investida.dano}** de dano")
     if investida.atordoou:
         consequencias.append("**atordoado**")
+    consequencias += [
+        f"**{condicoes.rotulo(cid)}**"
+        for cid in investida.debuffs
+        if cid in condicoes.POR_ID
+    ]
     pancada = ", ".join(consequencias) or "nada"
     return f"{cabeca} em {quem} · {rolagem} → falhou: {pancada}"
 
@@ -729,6 +775,10 @@ def combate(
         or "*ninguém*",
         inline=False,
     )
+
+    atencao = linha_de_ameaca(estado.combatentes)
+    if atencao:
+        e.add_field(name=f"{MARCA_AMEACA} Ameaça", value=atencao, inline=False)
 
     if ordem:
         e.add_field(

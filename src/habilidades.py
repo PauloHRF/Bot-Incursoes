@@ -10,6 +10,7 @@
     dano_ferido    soma só contra alvo com metade ou menos do HP
     critico_em     o menor d20 que já é crítico
     ataques        quantos golpes por rodada
+    ameaca         soma na Ameaça: o peso dele no sorteio de alvo (src/ameaca.py)
 
 Ativas e escolhas ficam sem efeito: aparecem na ficha e no aviso de nível, mas
 ainda não mexem em conta nenhuma — elas entram junto com o sistema de usos
@@ -17,6 +18,7 @@ ainda não mexem em conta nenhuma — elas entram junto com o sistema de usos
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -43,6 +45,10 @@ class Habilidade:
     escolha: Optional[dict] = None
     # Dois caminhos da mesma habilidade dividem o mesmo contador de usos.
     recarga_com: Optional[str] = None
+    # (id da escolha, id da opção): a habilidade só existe para quem escolheu
+    # aquela opção. É como o clérigo tem uma magia por círculo em vez de três
+    # — a escolha não soma número, ela destrava a ativa.
+    exige_escolha: Optional[tuple[str, str]] = None
 
     @property
     def automatica(self) -> bool:
@@ -121,10 +127,11 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                                 "entre": "todas", "aplica": "proficiencia"})],
         3: [MULTIATAQUE,
             Habilidade("reckless_attack", "Reckless Attack", ATIVA,
-                       "1x por combate: os ataques do proximo turno tem vantagem.",
+                       "1x por combate: os ataques do proximo turno tem vantagem, "
+                       "e voce ganha ameaca 3 — atacar descuidado chama atencao.",
                        usos=_usos("combate"),
                        acao={"tipo": "duracao", "turnos": 1, "alvo": "proprio",
-                             "efeitos": {"vantagem": True}})],
+                             "efeitos": {"vantagem": True, "ameaca": 3}})],
         4: [Habilidade("relentless", "Relentless", ATIVA,
                        "1x por combate: ao cair a 0 HP fica com 1 HP e ganha 1d12+7 de THP.",
                        usos=_usos("combate"),
@@ -206,9 +213,15 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "+2 em Percepcao, Sobrevivencia e Natureza.",
                        {"bonus_pericia": {"Percepção": 2, "Sobrevivência": 2,
                                           "Natureza": 2}}),
-            Habilidade("sobrevivente_repeticao", "Sobrevivente — repeticao", ATIVA,
-                       "1x por incursao: repete um teste falhado dessas tres pericias.",
-                       usos=_usos("incursao"))],
+            # Era "repete um teste falhado", que o bot nao sabe fazer: a
+            # rolagem ja virou consequencia quando daria para repetir. Vira o
+            # mesmo socorro, que chega na hora certa e da no mesmo.
+            Habilidade("sobrevivente_socorro", "Sobrevivente — socorro", ATIVA,
+                       "1x por incursao: quando alguem falha o teste da sala, "
+                       "soma +5 — e so dispara se o +5 fizer passar.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "bonus": 5})],
         5: [Habilidade("cacador_supremo", "Cacador Supremo", ATIVA,
                        "1x por descanso: uma presa por 3 turnos, com +2d8 e vantagem.",
                        usos=_usos("descanso"),
@@ -230,9 +243,15 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "+2 em Persuasao, Intuicao, Religiao e Intimidacao.",
                        {"bonus_pericia": {"Persuasão": 2, "Intuição": 2, "Religião": 2,
                                           "Intimidação": 2}}),
-            Habilidade("lider_sagrado_repeticao", "Lider Sagrado — repeticao", ATIVA,
-                       "1x por incursao: um aliado repete um teste falhado.",
-                       usos=_usos("incursao"))],
+            # A nota de revisao do documento diz "melhor dar +5 para um aliado
+            # que o paladino queira", e e o que entra: o mesmo socorro do
+            # Flash of Genius, que o artifice trouxe.
+            Habilidade("lider_sagrado_socorro", "Lider Sagrado — socorro", ATIVA,
+                       "1x por incursao: quando um aliado falha o teste da sala, "
+                       "soma +5 — e so dispara se o +5 fizer passar.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "bonus": 5})],
         5: [Habilidade("avatar_da_luz", "Avatar da Luz", ATIVA,
                        "1x por incursao: 3 turnos com +2 CA, +5 de dano e cura por turno.",
                        usos=_usos("incursao"),
@@ -247,13 +266,13 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        acao={"tipo": "golpes", "quantidade": 1, "dano_bonus": "1d6",
                              "thp_proprio": "1d6"}),
             Habilidade("tradicao_espiritual", "Tradicao xamanica — espiritual", ATIVA,
-                       "1x por descanso: cura um aliado e da 1d6+3 de THP a ele.",
+                       "1x por descanso: cura 2d8+3 de um aliado; voce ganha 1d6+3 de THP.",
                        usos=_usos("descanso"), recarga_com="tradicao_xamanica",
-                       acao={"tipo": "cura", "fracao": 0.3, "alvo": "aliado",
-                             "thp_alvo": "1d6+3"})],
-        2: [Habilidade("convocacao_totemica", "Convocacao totemica", PASSIVA,
-                       "Com 18+ no d20 ganha 2 THP; com THP, o grupo ganha +1 em tudo.",
-                       {"totem": {"gatilho": 18, "thp": 2, "aura": 1}})],
+                       acao={"tipo": "cura", "dado": "2d8+3", "alvo": "aliado",
+                             "thp_proprio": "1d6+3"})],
+        2: [Habilidade("espirito_guardiao", "Espirito Guardiao", PASSIVA,
+                       "Com 19+ no d20 ganha 5 THP; com THP, o grupo ganha +1 em tudo.",
+                       {"totem": {"gatilho": 19, "thp": 5, "aura": 1}})],
         3: [Habilidade("escolha_totemica", "Multiattack ou Cantico Benevolente", ESCOLHA,
                        "Escolhe entre atacar 2x por rodada ou dar 4 THP extra ao curar.",
                        escolha={"tipo": "opcao", "opcoes": [
@@ -264,22 +283,403 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "efeito": {"thp_na_cura": 4}},
                        ]}),
             Habilidade("danca_totemica", "Danca totemica", ATIVA,
-                       "1x por descanso: o grupo ganha 2d6+4 de THP e +1d6+4 no proximo ataque.",
+                       "1x por descanso: o grupo ganha 4d6+4 de THP e +1d6+4 no proximo ataque.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "grupo", "thp": "2d6+4", "turnos": 1,
+                       acao={"tipo": "grupo", "thp": "4d6+4", "turnos": 1,
                              "efeitos": {"dano_bonus": "1d6+4"}})],
+        # O gatilho do Espirito Guardiao cai de 19 para 15: a Sintonizacao
+        # substitui o totem inteiro, porque `juntar_efeito` guarda o de maior
+        # aura e as duas tem aura 1 — a de 15 e a ultima a entrar e vence.
         4: [Habilidade("sintonizacao_ancestral", "Sintonizacao Ancestral", PASSIVA,
-                       "+2 em Historia, Natureza, Medicina, Adestrar Animais e Intuicao.",
-                       {"bonus_pericia": {"História": 2, "Natureza": 2, "Medicina": 2,
+                       "Com 15+ no d20 ganha 5 THP. E +2 em Historia, Natureza, "
+                       "Medicina, Adestrar Animais e Intuicao.",
+                       {"totem": {"gatilho": 15, "thp": 5, "aura": 1},
+                        "bonus_pericia": {"História": 2, "Natureza": 2, "Medicina": 2,
                                           "Adestrar Animais": 2, "Intuição": 2}})],
         5: [Habilidade("expansao_totemica", "Expansao totemica", PASSIVA,
-                       "Com THP, o grupo ganha +2 em acertos e +3 em cura e dano.",
-                       {"totem": {"gatilho": 18, "thp": 2, "aura": 2, "aura_dano": 3}}),
+                       "Com THP, o grupo ganha +2 em acertos, testes, cura e dano.",
+                       {"totem": {"gatilho": 15, "thp": 5, "aura": 2, "aura_dano": 2}}),
             Habilidade("guerreiros_ancioes", "Guerreiros ancioes", ATIVA,
-                       "1x por incursao: o proximo ataque dos aliados crita com 18+.",
+                       "1x por incursao: os proximos dois ataques dos aliados levam "
+                       "+1d6+5 de dano e critam com 15+, e o grupo cura 10% do HP. "
+                       "Com 20+ de THP, gasta 20 e vira 1d10+5, critico automatico, "
+                       "20% de cura e 8d6 em todos os inimigos.",
                        usos=_usos("incursao"),
-                       acao={"tipo": "grupo", "turnos": 1,
-                             "efeitos": {"critico_em": 18}})],
+                       acao={"tipo": "grupo", "turnos": 2, "cura_fracao": 0.1,
+                             "efeitos": {"dano_bonus": "1d6+5", "critico_em": 15},
+                             "melhoria": {
+                                 "custo_thp": 20, "cura_fracao": 0.2,
+                                 "dano_em_todos": "8d6",
+                                 "efeitos": {"dano_bonus": "1d10+5",
+                                             "critico_em": 1}}})],
+    },
+    # O clerigo escolhe em todos os tiers: a magia nos impares, o dominio nos
+    # pares. A escolha de magia nao soma numero — ela destrava a ativa, por
+    # `exige_escolha`. A CD dos saves que ele forca sai de
+    # classes.cd_de_habilidade (8 + acerto): 13 no tier 1, 19 no tier 5.
+    "clerigo": {
+        1: [Habilidade("magia_t1", "Magia de 1o circulo", ESCOLHA,
+                       "Escolhe uma: Cure Wounds, Command ou Guiding Bolt.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "cure_wounds", "nome": "Cure Wounds",
+                            "texto": "Cura 2d8+3 de um aliado"},
+                           {"id": "command", "nome": "Command",
+                            "texto": "Um inimigo perde a proxima vez"},
+                           {"id": "guiding_bolt", "nome": "Guiding Bolt",
+                            "texto": "4d6 e o grupo ataca ele com vantagem"},
+                       ]}),
+            Habilidade("cure_wounds", "Cure Wounds", ATIVA,
+                       "1x por descanso: cura 2d8+3 de um aliado.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "cura", "dado": "2d8+3", "alvo": "aliado"},
+                       exige_escolha=("magia_t1", "cure_wounds")),
+            Habilidade("command", "Command", ATIVA,
+                       "1x por descanso: um inimigo faz save de SAB; falhando, "
+                       "perde a proxima vez.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1, "atordoa": 1},
+                       exige_escolha=("magia_t1", "command")),
+            Habilidade("guiding_bolt", "Guiding Bolt", ATIVA,
+                       "1x por descanso: 4d6 de dano num inimigo; o grupo ataca "
+                       "ele com vantagem na proxima rodada.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": 1,
+                             "dano": "4d6", "sem_save": True, "turnos": 1,
+                             "vantagem_do_grupo": True},
+                       exige_escolha=("magia_t1", "guiding_bolt"))],
+        2: [Habilidade("dominio_t2", "Dominio divino", ESCOLHA,
+                       "Escolhe um: Protetor, Taumaturgo ou Curandeiro.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "protetor", "nome": "Protetor",
+                            "texto": "+2 de CA", "efeito": {"ca": 2}},
+                           # Pede escolha encadeada (o dominio, e depois quais
+                           # duas pericias), que o bot ainda nao sabe pedir.
+                           {"id": "taumaturgo", "nome": "Taumaturgo",
+                            "texto": "Proficiencia em 2 pericias",
+                            "pendente": True},
+                           {"id": "curandeiro", "nome": "Curandeiro",
+                            "texto": "As curas dele curam 1d6 a mais",
+                            "efeito": {"bonus_cura": "1d6"}},
+                       ]})],
+        3: [Habilidade("magia_t3", "Magia de 2o circulo", ESCOLHA,
+                       "Escolhe uma: Spirit Guardians, Mass Healing Word ou "
+                       "Hypnotic Pattern.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "spirit_guardians", "nome": "Spirit Guardians",
+                            "texto": "3d8 em todos os inimigos que falharem"},
+                           {"id": "mass_healing_word", "nome": "Mass Healing Word",
+                            "texto": "O grupo inteiro cura 2d4+4"},
+                           {"id": "hypnotic_pattern", "nome": "Hypnotic Pattern",
+                            "texto": "Os inimigos que falharem perdem a vez"},
+                       ]}),
+            Habilidade("spirit_guardians", "Spirit Guardians", ATIVA,
+                       "1x por incursao: todos os inimigos fazem save de SAB; "
+                       "quem falha leva 3d8.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": "todos",
+                             "dano": "3d8"},
+                       exige_escolha=("magia_t3", "spirit_guardians")),
+            Habilidade("mass_healing_word", "Mass Healing Word", ATIVA,
+                       "1x por descanso: o grupo inteiro cura 2d4+4.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "cura_dado": "2d4+4"},
+                       exige_escolha=("magia_t3", "mass_healing_word")),
+            Habilidade("hypnotic_pattern", "Hypnotic Pattern", ATIVA,
+                       "1x por incursao: todos os inimigos fazem save de SAB; "
+                       "quem falha perde a proxima vez.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": "todos",
+                             "atordoa": 1},
+                       exige_escolha=("magia_t3", "hypnotic_pattern"))],
+        4: [Habilidade("dominio_t4", "Dominio maior", ESCOLHA,
+                       "Escolhe um: Ataques abencoados, Especialista em cura "
+                       "ou Restauracao.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "ataques_abencoados", "nome": "Ataques abencoados",
+                            "texto": "+1d8 de dano nos ataques",
+                            "efeito": {"dano_bonus": "1d8"}},
+                           {"id": "especialista_cura", "nome": "Especialista em cura",
+                            "texto": "As curas dele curam 1d6 a mais",
+                            "efeito": {"bonus_cura": "1d6"}},
+                           {"id": "restauracao", "nome": "Restauracao",
+                            "texto": "As curas dele tiram o atordoamento",
+                            "efeito": {"cura_limpa_controle": True}},
+                       ]})],
+        5: [Habilidade("magia_t5", "Magia de 3o circulo", ESCOLHA,
+                       "Escolhe uma: Flame Strike, Mass Cure Wounds ou "
+                       "Dominate Person.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "flame_strike", "nome": "Flame Strike",
+                            "texto": "10d6 em todos, metade em quem resistir"},
+                           {"id": "mass_cure_wounds", "nome": "Mass Cure Wounds",
+                            "texto": "O grupo inteiro cura 5d8+5"},
+                           {"id": "dominate_person", "nome": "Dominate Person",
+                            "texto": "Um inimigo ataca outro"},
+                       ]}),
+            Habilidade("flame_strike", "Flame Strike", ATIVA,
+                       "1x por incursao: todos os inimigos fazem save de DES; "
+                       "quem falha leva 10d6, quem passa leva metade.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "DES", "alvos": "todos",
+                             "dano": "10d6", "metade": True},
+                       exige_escolha=("magia_t5", "flame_strike")),
+            Habilidade("mass_cure_wounds", "Mass Cure Wounds", ATIVA,
+                       "1x por descanso: o grupo inteiro cura 5d8+5.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "cura_dado": "5d8+5"},
+                       exige_escolha=("magia_t5", "mass_cure_wounds")),
+            Habilidade("dominate_person", "Dominate Person", ATIVA,
+                       "1x por descanso: um inimigo faz save de SAB; falhando, "
+                       "ataca outra criatura dele.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "vira_contra": True},
+                       exige_escolha=("magia_t5", "dominate_person"))],
+    },
+    # O artifice sem itens e o artifice emprestando numero. Os itens ficam na
+    # planilha do grupo, entao as cinco habilidades de classe que sao itens no
+    # livro (Replicate, Tinker, Adept, Spell-Storing, Soul of Artifice) viram
+    # uma coisa so: a Infusao, que e o bonus que o item daria. O resto puxa de
+    # quatro subclasses, porque o fio comum de todas e o mesmo — "some um
+    # bonus numa rolagem": Alchemical Savant, Arcane Firearm, Arcane Jolt,
+    # Guided Precision e o Flash of Genius da classe.
+    "artifice": {
+        1: [Habilidade("ferramenta_t1", "Magia de ferramenta", ESCOLHA,
+                       "Escolhe uma: Cure Wounds, Thunderwave ou Faerie Fire.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "cure_wounds_art", "nome": "Cure Wounds",
+                            "texto": "Cura 2d8+3 de um aliado"},
+                           {"id": "thunderwave", "nome": "Thunderwave",
+                            "texto": "2d8 em todos os inimigos que falharem"},
+                           {"id": "faerie_fire", "nome": "Faerie Fire",
+                            "texto": "O grupo ataca o alvo com vantagem"},
+                       ]}),
+            Habilidade("cure_wounds_art", "Cure Wounds", ATIVA,
+                       "1x por descanso: cura 2d8+3 de um aliado.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "cura", "dado": "2d8+3", "alvo": "aliado"},
+                       exige_escolha=("ferramenta_t1", "cure_wounds_art")),
+            Habilidade("thunderwave", "Thunderwave", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de CON; "
+                       "quem falha leva 2d8, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "CON", "alvos": "todos",
+                             "dano": "2d8", "metade": True},
+                       exige_escolha=("ferramenta_t1", "thunderwave")),
+            Habilidade("faerie_fire", "Faerie Fire", ATIVA,
+                       "1x por descanso: um inimigo fica delineado; o grupo "
+                       "ataca ele com vantagem na proxima rodada.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": 1,
+                             "turnos": 1, "vantagem_do_grupo": True},
+                       exige_escolha=("ferramenta_t1", "faerie_fire"))],
+        # Replicate Magic Item: no livro ele faz itens e distribui. Aqui o item
+        # mora na planilha do grupo, entao entra o que o item faz — o +1 que
+        # todos passam a ter. Vale a melhor infusao, como a aura do xama.
+        2: [Habilidade("infusao", "Infusao", ESCOLHA,
+                       "O equipamento que ele infunde da +1 ao grupo inteiro. "
+                       "Escolhe onde: acerto, CA ou dano.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "armas", "nome": "Armas infundidas",
+                            "texto": "+1 de acerto para o grupo inteiro",
+                            "efeito": {"infusao": {"acerto": 1}}},
+                           {"id": "armaduras", "nome": "Armaduras infundidas",
+                            "texto": "+1 de CA para o grupo inteiro",
+                            "efeito": {"infusao": {"ca": 1}}},
+                           {"id": "municao", "nome": "Municao infundida",
+                            "texto": "+1 de dano para o grupo inteiro",
+                            "efeito": {"infusao": {"dano": 1}}},
+                       ]})],
+        # O "+bonus numa rolagem" de cada subclasse, um por opcao.
+        3: [Habilidade("engenho_t3", "Engenho", ESCOLHA,
+                       "Escolhe um: Arma Arcana, Sabedoria Alquimica ou "
+                       "Precisao Guiada.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "arma_arcana", "nome": "Arma Arcana",
+                            "texto": "+1d8 de dano em todo golpe dele",
+                            "efeito": {"dano_bonus": "1d8"}},
+                           {"id": "sabedoria_alquimica", "nome": "Sabedoria Alquimica",
+                            "texto": "As curas dele curam 1d6 a mais",
+                            "efeito": {"bonus_cura": "1d6"}},
+                           {"id": "precisao_guiada", "nome": "Precisao Guiada",
+                            "texto": "+3 de dano em todo golpe dele",
+                            "efeito": {"dano_extra": 3}},
+                       ]})],
+        # Sem Multiattack de proposito: no livro, so o Armorer e o Battle
+        # Smith ganham Extra Attack — os outros tres arquetipos nao. Como o
+        # que montamos e a classe, e nao um arquetipo, o segundo golpe nao vem
+        # de base. Com ele e o d10, o artifice fechava em 33 de dano por
+        # rodada no tier 5: o maior do jogo, acima do barbaro.
+        # Flash of Genius, a assinatura da classe. Reacao automatica, como a
+        # esquiva do ladino, e com o mesmo cuidado: so entra quando vira o
+        # veredito, para nao queimar o uso de graca.
+        4: [Habilidade("flash_of_genius", "Flash of Genius", ATIVA,
+                       "1x por descanso: quando alguem do grupo falha o teste "
+                       "da sala, soma +5 — e so dispara se o +5 fizer passar.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "bonus": 5})],
+        # Arcane Jolt: os dois caminhos dividem o contador, como as duas
+        # tradicoes do xama.
+        5: [Habilidade("arcane_jolt_dano", "Arcane Jolt — destrutivo", ATIVA,
+                       "1x por combate: um golpe com +2d6 de dano.",
+                       usos=_usos("combate"), recarga_com="arcane_jolt",
+                       acao={"tipo": "golpes", "quantidade": 1,
+                             "dano_bonus": "2d6"}),
+            Habilidade("arcane_jolt_cura", "Arcane Jolt — restaurador", ATIVA,
+                       "1x por combate: cura 2d6 de um aliado.",
+                       usos=_usos("combate"), recarga_com="arcane_jolt",
+                       acao={"tipo": "cura", "dado": "2d6", "alvo": "aliado"}),
+            Habilidade("genio_refinado", "Genio refinado", PASSIVA,
+                       "O Flash of Genius dele soma +10 em vez de +5.",
+                       {"flash_bonus": 10})],
+    },
+    # A forma combinada para toda classe nova: ativa com tres magias nos
+    # tiers impares, passiva nos pares. O livro e base, nao autoridade — o que
+    # manda e o arquetipo no sentido popular, e o do Mago e o Fireball.
+    #
+    # Nada de slot nem de lista preparada: a escolha do tier e permanente,
+    # como no clerigo. A coluna de dano da tabela E o cantrip dele, entao Fire
+    # Bolt e Ray of Frost nao aparecem aqui — sao o ataque basico.
+    "mago": {
+        1: [Habilidade("magia_mago_t1", "Magia de 1o circulo", ESCOLHA,
+                       "Escolhe uma: Magic Missile, Sleep ou Thunderwave.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "magic_missile", "nome": "Magic Missile",
+                            "texto": "3d4+3 garantido, sem save"},
+                           {"id": "sleep", "nome": "Sleep",
+                            "texto": "Os inimigos que falharem perdem a vez"},
+                           {"id": "thunderwave_mago", "nome": "Thunderwave",
+                            "texto": "2d8 em todos, metade em quem resistir"},
+                       ]}),
+            Habilidade("magic_missile", "Magic Missile", ATIVA,
+                       "1x por descanso: 3d4+3 num inimigo. Nao tem save — os "
+                       "dardos sempre acertam.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": 1,
+                             "dano": "3d4+3", "sem_save": True},
+                       exige_escolha=("magia_mago_t1", "magic_missile")),
+            Habilidade("sleep", "Sleep", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de SAB; "
+                       "quem falha perde a proxima vez.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": "todos",
+                             "atordoa": 1},
+                       exige_escolha=("magia_mago_t1", "sleep")),
+            Habilidade("thunderwave_mago", "Thunderwave", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de CON; "
+                       "quem falha leva 2d8, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "CON", "alvos": "todos",
+                             "dano": "2d8", "metade": True},
+                       exige_escolha=("magia_mago_t1", "thunderwave_mago"))],
+        # Scholar: Expertise numa pericia de saber, escolhida pelo jogador. O
+        # `expertise` ja existe (o ladino usa), entao cada opcao so declara a
+        # pericia que dobra.
+        2: [Habilidade("scholar", "Scholar", ESCOLHA,
+                       "Especializou-se num campo de estudo: o bonus daquela "
+                       "pericia dobra.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "arcanismo", "nome": "Arcanismo",
+                            "texto": "O bonus de Arcanismo dobra",
+                            "efeito": {"expertise": ["Arcanismo"]}},
+                           {"id": "historia", "nome": "Historia",
+                            "texto": "O bonus de Historia dobra",
+                            "efeito": {"expertise": ["História"]}},
+                           {"id": "investigacao", "nome": "Investigacao",
+                            "texto": "O bonus de Investigacao dobra",
+                            "efeito": {"expertise": ["Investigação"]}},
+                           {"id": "medicina", "nome": "Medicina",
+                            "texto": "O bonus de Medicina dobra",
+                            "efeito": {"expertise": ["Medicina"]}},
+                           {"id": "natureza", "nome": "Natureza",
+                            "texto": "O bonus de Natureza dobra",
+                            "efeito": {"expertise": ["Natureza"]}},
+                           {"id": "religiao", "nome": "Religiao",
+                            "texto": "O bonus de Religiao dobra",
+                            "efeito": {"expertise": ["Religião"]}},
+                       ]})],
+        3: [Habilidade("magia_mago_t3", "Magia de 3o circulo", ESCOLHA,
+                       "Escolhe uma: Fireball, Hypnotic Pattern ou Fly.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "fireball", "nome": "Fireball",
+                            "texto": "8d6 em todos, metade em quem resistir"},
+                           {"id": "hypnotic_pattern_mago", "nome": "Hypnotic Pattern",
+                            "texto": "Os inimigos que falharem perdem a vez"},
+                           {"id": "fly", "nome": "Fly",
+                            "texto": "Tres aliados saem de alcance por 3 rodadas"},
+                       ]}),
+            Habilidade("fireball", "Fireball", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de DES; "
+                       "quem falha leva 8d6, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": "todos",
+                             "dano": "8d6", "metade": True},
+                       exige_escolha=("magia_mago_t3", "fireball")),
+            Habilidade("hypnotic_pattern_mago", "Hypnotic Pattern", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de SAB; "
+                       "quem falha perde a proxima vez.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": "todos",
+                             "atordoa": 1},
+                       exige_escolha=("magia_mago_t3", "hypnotic_pattern_mago")),
+            # Voar e posicional, e o bot nao tem posicao. O que sobra do que
+            # voar faz e sair de alcance: o peso dos tres no sorteio de alvo
+            # cai a um quinto. E fator, e nao troca de ameaca, porque a curva
+            # x/(x+10) e quase reta embaixo: mexer na ameaca crua so daria
+            # "modesto" (13% -> 9%) ou "imune" (peso 0), sem meio-termo.
+            Habilidade("fly", "Fly", ATIVA,
+                       "1x por descanso: tres aliados sobem fora de alcance "
+                       "por 3 rodadas — os inimigos quase deixam de mira-los.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "duracao", "turnos": 3, "alvo": "aliados",
+                             "alvos": 3, "efeitos": {"ameaca_fator": 0.2}},
+                       exige_escolha=("magia_mago_t3", "fly"))],
+        4: [Habilidade("tradicao_arcana", "Tradicao arcana", ESCOLHA,
+                       "Escolhe uma: Evocacao Potente, Escudo Arcano ou "
+                       "Sabedoria Arcana.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "evocacao_potente", "nome": "Evocacao Potente",
+                            "texto": "+1d8 de dano em tudo que ele lanca",
+                            "efeito": {"dano_bonus": "1d8"}},
+                           {"id": "escudo_arcano", "nome": "Escudo Arcano",
+                            "texto": "THP igual a 2x o tier, e recarrega a cada magia",
+                            "efeito": {"escudo_arcano": 2}},
+                           {"id": "sabedoria_arcana", "nome": "Sabedoria Arcana",
+                            "texto": "+2 nos saves do grupo inteiro",
+                            "efeito": {"aura_save": 2}},
+                       ]})],
+        5: [Habilidade("magia_mago_t5", "Magia de 5o circulo", ESCOLHA,
+                       "Escolhe uma: Cone of Cold, Hold Monster ou Circle of Power.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "cone_of_cold", "nome": "Cone of Cold",
+                            "texto": "12d8 em todos, metade em quem resistir"},
+                           {"id": "hold_monster", "nome": "Hold Monster",
+                            "texto": "Um inimigo perde tres vezes seguidas"},
+                           {"id": "circle_of_power", "nome": "Circle of Power",
+                            "texto": "O grupo resiste melhor e escapa inteiro"},
+                       ]}),
+            Habilidade("cone_of_cold", "Cone of Cold", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de CON; "
+                       "quem falha leva 12d8, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "CON", "alvos": "todos",
+                             "dano": "12d8", "metade": True},
+                       exige_escolha=("magia_mago_t5", "cone_of_cold")),
+            Habilidade("hold_monster", "Hold Monster", ATIVA,
+                       "1x por descanso: um inimigo faz save de SAB; falhando, "
+                       "perde tres vezes seguidas.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "atordoa": 3},
+                       exige_escolha=("magia_mago_t5", "hold_monster")),
+            Habilidade("circle_of_power", "Circle of Power", ATIVA,
+                       "1x por descanso: por 3 rodadas o grupo rola os saves "
+                       "com vantagem e, passando, nao leva nem metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "turnos": 3,
+                             "efeitos": {"vantagem": True, "save_anula": True}},
+                       exige_escolha=("magia_mago_t5", "circle_of_power"))],
     },
 }
 
@@ -310,13 +710,50 @@ NEUTRO: dict = {
     "dano_ferido": 0,
     "critico_em": 20,
     "ataques": 1,
+    "ameaca": 0,
+    # Dados, nao numeros: entram como expressao ('1d8') e sao comparados pela
+    # media, porque max() de texto compararia caractere por caractere.
+    "dano_bonus": "",
+    "bonus_cura": "",
+    "cura_limpa_controle": False,
+    # Quanto o Flash of Genius soma. O tier 5 do artifice sobe de 5 para 10.
+    "flash_bonus": 0,
+    # O que o artifice infunde no equipamento do grupo: {onde: quanto}.
+    "infusao": {},
+    # Escudo Arcano do mago: THP por tier, que recarrega a cada magia.
+    "escudo_arcano": 0,
+    # Sabedoria Arcana do mago: quanto o grupo inteiro soma nos saves.
+    "aura_save": 0,
 }
+
+# Chaves cujo valor e uma expressao de dano, e nao um inteiro.
+DADOS = ("dano_bonus", "bonus_cura")
+
+
+def media_do_dado(expressao: str) -> float:
+    """A media de uma expressao como '2d6+3', para comparar dois dados.
+
+    Nao rola nada: cada NdF vale N*(F+1)/2 e o resto soma como esta.
+    """
+    total = 0.0
+    for termo in re.findall(r"[+-]?[^+-]+", expressao or ""):
+        termo = termo.strip()
+        if not termo:
+            continue
+        sinal = -1 if termo.startswith("-") else 1
+        corpo = termo.lstrip("+-").strip()
+        if "d" in corpo.lower():
+            quantas, _, faces = corpo.lower().partition("d")
+            total += sinal * int(quantas or 1) * (int(faces) + 1) / 2
+        else:
+            total += sinal * int(corpo)
+    return total
 
 
 def juntar_efeito(juntos: dict, efeito: dict) -> None:
     """Soma um efeito no acumulado, respeitando a regra de cada chave."""
     for chave, valor in (efeito or {}).items():
-        if chave in ("bonus_pericia", "bonus_save_atributo"):
+        if chave in ("bonus_pericia", "bonus_save_atributo", "infusao"):
             for nome, bonus in valor.items():
                 atual = juntos[chave].get(nome, 0)
                 juntos[chave][nome] = max(atual, bonus)
@@ -330,6 +767,10 @@ def juntar_efeito(juntos: dict, efeito: dict) -> None:
                 juntos["totem"] = dict(valor)
         elif chave == "critico_em":
             juntos["critico_em"] = min(juntos["critico_em"], valor)
+        elif chave in DADOS:
+            atual = juntos.get(chave) or ""
+            if media_do_dado(valor) >= media_do_dado(atual):
+                juntos[chave] = valor
         elif chave in juntos:
             juntos[chave] = max(juntos[chave], valor)
 

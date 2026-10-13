@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+from . import condicoes
 from .rules import (
     ATRIBUTOS,
     TIER_MAXIMO,
@@ -48,6 +49,12 @@ MAX_INIMIGOS = 6
 # dela pode pegar de uma vez.
 MAX_ATAQUES_DO_MONSTRO = 8
 MAX_ALVOS = 6
+
+# No lugar do atributo do save: a habilidade rola ataque contra a CA do alvo em
+# vez de pedir resistência. É a pancada física — o Golpe Poderoso do troll, que
+# a armadura apara em vez de a Constituição aguentar. Sem CD, porque quem rola
+# é a criatura.
+ATAQUE = "ATK"
 
 # Tipos que resolvem a sala por teste de perícia (margem vs CD).
 TIPOS_COM_TESTE = ("Armadilha", "Evento", "Tesouro")
@@ -86,15 +93,21 @@ class HabilidadeDoMonstro:
     Ela toma a ação do turno — a criatura usa a habilidade *em vez* de atacar.
     `cada` é o ritmo: com 2, ela sai nas rodadas 2, 4, 6..., o que dá ao grupo
     uma rodada de respiro entre uma e outra.
+
+    Com `save` em ATAQUE a conta inverte: a criatura rola ataque contra a CA do
+    alvo, que não rola nada, e a CD não vale. O bônus é o do primeiro golpe
+    dela — a ficha não dá um número próprio para a habilidade.
     """
 
     nome: str
-    save: str  # o atributo que o alvo rola: FOR, DES, CON, INT, SAB, CAR
-    cd: int
+    save: str  # o atributo que o alvo rola: FOR, DES, CON, INT, SAB, CAR — ou ATAQUE
+    cd: int = 0
     texto: str = ""
     dano: Optional[str] = None  # o que quem falha sofre, se houver
     alvos: int = 1
     atordoa: int = 0  # rodadas de atordoamento em quem falhar
+    # Condições de `src/condicoes.py` que quem falha carrega para fora da sala.
+    debuff: list[str] = field(default_factory=list)
     cada: int = 2
     # Recharge 5–6 da 5e: sai na primeira rodada e, depois de usada, volta
     # quando um d6 tira este número ou mais. Com recarga, `cada` não vale.
@@ -104,6 +117,11 @@ class HabilidadeDoMonstro:
     save_repete: bool = False
     # "ou metade do dano num sucesso": quem resiste nao escapa inteiro.
     metade: bool = False
+
+    @property
+    def e_ataque(self) -> bool:
+        """A habilidade rola ataque contra a CA, em vez de impor resistência."""
+        return self.save == ATAQUE
 
     def disponivel(self, rodada: int) -> bool:
         """Só para o ritmo fixo; a recarga é decidida pela criatura, com dado."""
@@ -129,6 +147,7 @@ class HabilidadeDoMonstro:
             "dano": self.dano,
             "alvos": self.alvos,
             "atordoa": self.atordoa,
+            "debuff": list(self.debuff),
             "cada": self.cada,
             "recarga": self.recarga,
             "save_repete": self.save_repete,
@@ -470,12 +489,17 @@ def _habilidade_do_monstro(
         return None
 
     onde = f"{onde} (habilidade '{nome}')"
-    save = _atributos(bruto.get("save"), onde, "save", problemas)
-    cd = _inteiro(bruto.get("cd"))
-    if len(save) != 1:
-        problemas.append(f"{onde}: diga um atributo de resistência (ex.: CON).")
-    if cd is None or cd <= 0:
-        problemas.append(f"{onde}: falta a CD do teste de resistência.")
+    # Habilidade de ataque não pede atributo nem CD: a criatura rola contra a CA.
+    e_ataque = str(bruto.get("save") or "").strip().upper() == ATAQUE
+    if e_ataque:
+        save, cd = [ATAQUE], 0
+    else:
+        save = _atributos(bruto.get("save"), onde, "save", problemas)
+        cd = _inteiro(bruto.get("cd"))
+        if len(save) != 1:
+            problemas.append(f"{onde}: diga um atributo de resistência (ex.: CON).")
+        if cd is None or cd <= 0:
+            problemas.append(f"{onde}: falta a CD do teste de resistência.")
 
     dano = str(bruto.get("dano") or "").strip() or None
     if dano and not EXPR_DANO.match(dano):
@@ -485,6 +509,7 @@ def _habilidade_do_monstro(
     alvos = _inteiro(bruto.get("alvos"))
     alvos = 1 if alvos is None else alvos
     atordoa = _inteiro(bruto.get("atordoa")) or 0
+    debuff = _debuffs_do_monstro(bruto.get("debuff"), onde, problemas)
     cada = _inteiro(bruto.get("cada"))
     cada = 2 if cada is None else cada
     recarga = _inteiro(bruto.get("recarga"))
@@ -500,10 +525,14 @@ def _habilidade_do_monstro(
         problemas.append(f"{onde}: a habilidade precisa mirar de 1 a {MAX_ALVOS} alvos.")
     if cada < 1:
         problemas.append(f"{onde}: 'cada' é de quantas em quantas rodadas (1 ou mais).")
-    if not dano and not atordoa:
-        problemas.append(f"{onde}: a habilidade não faz nada — falta dano ou atordoamento.")
+    if not dano and not atordoa and not debuff:
+        problemas.append(
+            f"{onde}: a habilidade não faz nada — falta dano, atordoamento ou debuff."
+        )
+    if e_ataque and not dano:
+        problemas.append(f"{onde}: habilidade de ataque precisa de dano.")
 
-    if len(save) != 1 or cd is None or cd <= 0:
+    if len(save) != 1 or cd is None or (cd <= 0 and not e_ataque):
         return None
     return HabilidadeDoMonstro(
         nome=nome,
@@ -513,11 +542,38 @@ def _habilidade_do_monstro(
         dano=dano,
         alvos=max(1, min(alvos, MAX_ALVOS)),
         atordoa=max(0, atordoa),
+        debuff=debuff,
         cada=max(1, cada),
         recarga=recarga,
         save_repete=repete,
         metade=metade,
     )
+
+
+def _debuffs_do_monstro(bruto: Any, onde: str, problemas: list[str]) -> list[str]:
+    """As condições que a habilidade deixa em quem falha, pelos ids do catálogo.
+
+    Só debuff: a criatura não abençoa ninguém. Condição que não existe no
+    catálogo é erro, não silêncio — errar o nome de um debuff some com ele.
+    """
+    if not bruto:
+        return []
+    nomes = bruto if isinstance(bruto, (list, tuple)) else [bruto]
+    achados: list[str] = []
+    for item in nomes:
+        chave = str(item).strip()
+        if not chave:
+            continue
+        condicao = condicoes.POR_ID.get(chave) or condicoes.POR_NOME.get(chave)
+        if condicao is None:
+            problemas.append(f"{onde}: '{chave}' não é uma condição conhecida.")
+            continue
+        if not condicao.ruim:
+            problemas.append(f"{onde}: '{condicao.nome}' é um buff — criatura não dá buff.")
+            continue
+        if condicao.id not in achados:
+            achados.append(condicao.id)
+    return achados
 
 
 def _marcado(valor: Any) -> bool:

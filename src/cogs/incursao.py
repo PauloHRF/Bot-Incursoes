@@ -15,6 +15,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .. import (
+    ameaca,
     bestiario,
     classes as cl,
     condicoes,
@@ -34,7 +35,7 @@ from ..incursoes import (
     monstros_de_criatura,
 )
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
-from ..rules import tier
+from ..rules import fmt, tier
 from .ficha import sugerir_personagens
 
 log = logging.getLogger("incursoes.run")
@@ -1201,18 +1202,87 @@ class Incursoes(commands.Cog):
                     critico_em=efeitos.get("critico_em", 20),
                     dano_extra=efeitos.get("dano_extra", 0),
                     dano_ferido=efeitos.get("dano_ferido", 0),
+                    # Ataques Abencoados, do clerigo: dado a mais em todo golpe.
+                    dano_bonus=efeitos.get("dano_bonus", ""),
                     saves={
                         atributo: valor + saldo.saves
                         for atributo, valor in (p.get("saves") or {}).items()
                     },
                     mod_iniciativa_extra=saldo.iniciativa,
                     cura_recebida_pct=saldo.cura_recebida_pct,
+                    # A classe diz onde ele fica na sala; as passivas somam.
+                    ameaca=ameaca.inicial(p.get("classe")) + efeitos.get("ameaca", 0),
                 )
             )
         for ligado in efeitos_ligados or []:
             self._aplicar_ligado(combatentes, ligado)
         self._aplicar_aura_totemica(combatentes, personagens)
+        self._aplicar_infusoes(combatentes, personagens)
+        self._aplicar_aura_de_save(combatentes, personagens)
+        self._aplicar_escudo_arcano(combatentes, personagens, tier_atual)
         return combatentes
+
+    @staticmethod
+    def _aplicar_infusoes(
+        combatentes: list[Combatente], personagens: list[dict[str, Any]]
+    ) -> None:
+        """O equipamento que o artífice infundiu, no grupo inteiro.
+
+        No livro ele replica itens mágicos e os distribui; aqui os itens ficam
+        na planilha do grupo, então o que entra no bot é o que o item faz — um
+        ponto a mais para todos, no acerto, na CA ou no dano. Como a aura do
+        xamã, vale a melhor quando há mais de um artífice.
+
+        O lado dos testes de perícia não entra aqui: é o Flash of Genius que
+        cuida dele, e de um jeito melhor, porque chega depois da rolagem.
+        """
+        melhor: dict[str, int] = {}
+        for p in personagens:
+            infusao = ((p.get("efeitos") or {}).get("infusao")) or {}
+            for onde, quanto in infusao.items():
+                melhor[onde] = max(melhor.get(onde, 0), quanto)
+        if not melhor:
+            return
+        for c in combatentes:
+            c.bonus_ataque += melhor.get("acerto", 0)
+            c.ca_extra += melhor.get("ca", 0)
+            c.dano_extra += melhor.get("dano", 0)
+
+    @staticmethod
+    def _aplicar_aura_de_save(
+        combatentes: list[Combatente], personagens: list[dict[str, Any]]
+    ) -> None:
+        """Sabedoria Arcana: o grupo inteiro resiste melhor às criaturas.
+
+        Como a Infusão e a aura do xamã, vale a melhor e não a soma. Entra em
+        todos os atributos, porque a criatura escolhe qual save cobra.
+        """
+        melhor = max(
+            (((p.get("efeitos") or {}).get("aura_save") or 0) for p in personagens),
+            default=0,
+        )
+        if melhor <= 0:
+            return
+        for c in combatentes:
+            c.saves = {atributo: valor + melhor for atributo, valor in c.saves.items()}
+
+    @staticmethod
+    def _aplicar_escudo_arcano(
+        combatentes: list[Combatente], personagens: list[dict[str, Any]], tier: int
+    ) -> None:
+        """Escudo Arcano: o mago entra em combate com o escudo de pé.
+
+        No livro ele recarrega a cada magia de abjuração; aqui recarrega a
+        cada combate, que é o que o bot tem de ciclo. É o que deixa o d6 de
+        vida do mago jogável sem mexer na tabela dele.
+        """
+        for p in personagens:
+            por_tier = ((p.get("efeitos") or {}).get("escudo_arcano")) or 0
+            if not por_tier:
+                continue
+            quem = next((c for c in combatentes if c.user_id == p["user_id"]), None)
+            if quem is not None:
+                motor.ganhar_thp(quem, por_tier * max(1, tier))
 
     @staticmethod
     def _aplicar_aura_totemica(
@@ -1251,11 +1321,31 @@ class Incursoes(commands.Cog):
                 return
             quem.dano_extra += valor.get("dano_extra", 0)
             quem.ca_extra += valor.get("ca", 0)
+            quem.ameaca_extra += valor.get("ameaca", 0)
             quem.reducao_dano = max(quem.reducao_dano, valor.get("reducao_dano", 0.0))
             quem.cura_por_turno = max(
                 quem.cura_por_turno, valor.get("cura_por_turno", 0.0)
             )
             quem.vantagem = quem.vantagem or bool(valor.get("vantagem"))
+            # Buff curto de grupo: o critico mais facil e o dado de dano a
+            # mais. Sem isto a Danca totemica e os Guerreiros ancioes
+            # gravavam o efeito e ele nao chegava a valer em golpe nenhum.
+            if valor.get("critico_em"):
+                quem.critico_em = min(quem.critico_em, valor["critico_em"])
+            if valor.get("dano_bonus"):
+                quem.dano_bonus = valor["dano_bonus"]
+            # Haste e afins: o segundo golpe por duracao.
+            if valor.get("ataques"):
+                quem.ataques = max(quem.ataques, valor["ataques"])
+            # Fly: multiplica o peso dele no sorteio de alvo. Vale o menor
+            # fator, que e o mais protegido.
+            if valor.get("ameaca_fator") is not None:
+                quem.ameaca_fator = min(
+                    quem.ameaca_fator, float(valor["ameaca_fator"])
+                )
+            # Circle of Power: passar no save passa a escapar inteiro.
+            if valor.get("save_anula"):
+                quem.save_anula = True
             # A sequencia do Martial Arts nao entra aqui: ela e contada golpe a
             # golpe dentro do turno, em atacar().
             return
@@ -1751,6 +1841,7 @@ class Incursoes(commands.Cog):
         # nao agiu perde a desta.
         ja_agiram = {a["alvo_id"] for a in antes if a["tipo"] == motor.PERSONAGEM}
         await self._guardar_atordoamentos(run, estado, feito.investidas, ja_agiram)
+        pegaram = await self._guardar_debuffs(run, feito.investidas)
         await self._reacoes_do_revide(run, estado, feito.golpes)
         linhas = []
         if feito.regenerou:
@@ -1769,6 +1860,7 @@ class Incursoes(commands.Cog):
             # O teste que o golpe impos sai logo abaixo dele.
             if posicao in feito.efeitos_dos_golpes:
                 linhas.append(E.texto_da_investida(feito.efeitos_dos_golpes[posicao]))
+        linhas += [f"🧪 {texto}" for texto in pegaram]
         self._registrar(run, estado.rodada, linhas)
 
     async def _virar_rodada(self, run: dict[str, Any], sala: Sala, estado) -> None:
@@ -2116,10 +2208,125 @@ class Incursoes(commands.Cog):
         if acao.get("tipo") == "cura":
             return await self._resolver_cura(run, user_id, habilidade, acao, alvos, estado)
         if acao.get("tipo") == "grupo":
-            return await self._resolver_grupo(run, estado, habilidade, acao)
+            return await self._resolver_grupo(run, estado, habilidade, acao, user_id)
         if acao.get("tipo") == "duracao":
             return await self._resolver_duracao(run, user_id, estado, habilidade, acao, alvos)
+        if acao.get("tipo") == "save":
+            return await self._resolver_save(run, user_id, estado, habilidade, acao, alvos)
         return await self._resolver_golpes(run, user_id, estado, habilidade, acao, alvos)
+
+    async def _resolver_save(
+        self, run: dict[str, Any], user_id: int, estado, habilidade, acao, alvos
+    ) -> str:
+        """A habilidade que força teste de resistência nas criaturas.
+
+        É o caminho inverso do combate: até aqui só criatura cobrava save de
+        personagem. A CD sai da classe de quem usou (8 + acerto), e `alvos`
+        pode ser um escolhido ou "todos".
+        """
+        passo = self._passo(run)
+        quem = await self._personagem_na_run(run, user_id)
+        cd = cl.cd_de_habilidade((quem or {}).get("classe"), (quem or {}).get("nivel", 1))
+
+        if acao.get("alvos") == "todos":
+            mirados = list(estado.inimigos_vivos)
+        else:
+            escolhido = (estado.alvo_preferido(alvos[0]) if alvos else None) or (
+                estado.alvo_preferido()
+            )
+            mirados = [escolhido] if escolhido else []
+        if not mirados:
+            return "Nao ha inimigo de pe para a habilidade."
+
+        linhas: list[str] = []
+        caidos: list[str] = []
+        for inimigo in mirados:
+            # Guiding Bolt nao e resistivel: o dano entra, o save nao e rolado.
+            if acao.get("sem_save"):
+                passou, rolagem = False, ""
+            else:
+                save = motor.salvar_inimigo(inimigo, acao["save"], cd)
+                passou = save.passou
+                rolagem = f"🎲 {save.d20} {fmt(save.modificador)} = **{save.total}**"
+
+            sofridos: list[str] = []
+            if acao.get("dano"):
+                cheio = motor.rolar_dano(acao["dano"])
+                levou = cheio if not passou else (cheio // 2 if acao.get("metade") else 0)
+                if levou:
+                    inimigo.hp_atual = max(0, inimigo.hp_atual - levou)
+                    sofridos.append(f"**{levou}** de dano")
+            if not passou and acao.get("atordoa") and not inimigo.caido:
+                inimigo.atordoado = True
+                await db.aplicar_efeito(
+                    self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
+                    "atordoado", {"por": habilidade.nome},
+                    estado.rodada + acao["atordoa"], dono=user_id,
+                )
+                sofridos.append("**perde a vez**")
+            if not passou and acao.get("vira_contra") and not inimigo.caido:
+                sofridos.append(
+                    await self._virar_contra_os_seus(run, estado, inimigo, habilidade)
+                )
+            if not passou and acao.get("vantagem_do_grupo"):
+                await self._vantagem_do_grupo(
+                    run, estado, inimigo, habilidade, acao.get("turnos", 1)
+                )
+                sofridos.append("**o grupo ataca ele com vantagem**")
+
+            if inimigo.caido:
+                caidos.append(inimigo.nome)
+            resultado = ", ".join(p for p in sofridos if p) or "resistiu"
+            meio = f" · {rolagem} vs CD {cd}" if rolagem else ""
+            linhas.append(f"{inimigo.nome}{meio} → {resultado}")
+
+        await db.definir_hp_inimigos(
+            self.bot.db, run["id"], passo,
+            {i.indice: i.hp_atual for i in estado.inimigos},
+        )
+        cabeca = f"✨ **{habilidade.nome}** (CD {cd})"
+        texto = cabeca + "\n" + "\n".join(f"· {l}" for l in linhas)
+        if caidos:
+            texto += f"\n💀 caem: {', '.join(caidos)}"
+        await self._anunciar_habilidade(run, texto)
+        return texto
+
+    async def _virar_contra_os_seus(
+        self, run: dict[str, Any], estado, dominado, habilidade
+    ) -> str:
+        """Dominate Person: a criatura ataca outra criatura dela."""
+        outros = [i for i in estado.inimigos_vivos if i is not dominado]
+        if not outros:
+            return "**mas nao tem em quem bater**"
+        vitima = motor.sortear_um(outros)
+        golpe = motor.atacar(
+            dominado.nome, dominado.ataque, dominado.dano, vitima.nome, vitima.ca
+        )
+        if not golpe.acertou:
+            return f"**vira contra {vitima.nome}** e erra"
+        vitima.hp_atual = max(0, vitima.hp_atual - golpe.dano)
+        await db.definir_hp_inimigos(
+            self.bot.db, run["id"], self._passo(run),
+            {i.indice: i.hp_atual for i in estado.inimigos},
+        )
+        return f"**acerta {vitima.nome}** com **{golpe.dano}** de dano"
+
+    async def _vantagem_do_grupo(
+        self, run: dict[str, Any], estado, inimigo, habilidade, turnos: int
+    ) -> None:
+        """Guiding Bolt: todo mundo do grupo ataca aquele inimigo com vantagem.
+
+        A Marca do Caçador só beneficia o dono; esta é do grupo, então entra
+        um efeito por pessoa, cada um dono do seu.
+        """
+        passo = self._passo(run)
+        expira = estado.rodada + max(1, turnos)
+        for c in estado.vivos:
+            await db.aplicar_efeito(
+                self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
+                f"{habilidade.id}:{c.user_id}", {"vantagem": True}, expira,
+                dono=c.user_id,
+            )
 
     async def _pedir_alvo(
         self, interaction: discord.Interaction, run, sala_id, habilidade, estado
@@ -2131,16 +2338,21 @@ class Incursoes(commands.Cog):
         # quatro criaturas so atrapalha.
         if acao.get("tipo") == "grupo" or acao.get("alvo") == "proprio":
             return False
-        if acao.get("tipo") == "cura":
-            if acao.get("alvo") != "aliado":
+        if acao.get("tipo") == "cura" or acao.get("alvo") == "aliados":
+            if acao.get("tipo") == "cura" and acao.get("alvo") != "aliado":
                 return False
             opcoes = [
                 (str(p["user_id"]), p["nome"], f"{p['hp_atual']}/{p['hp_max']} HP")
                 for p in await db.personagens_da_run(self.bot.db, run["id"])
             ]
         else:
+            # Habilidade que pega todos nao tem alvo a escolher (Flame Strike,
+            # Hypnotic Pattern): `alvos` vem como "todos", nao como numero.
+            quantos = acao.get("alvos", 1)
+            if quantos == "todos":
+                return False
             vivos = estado.inimigos_vivos if estado else []
-            if len(vivos) <= 1 and acao.get("alvos", 1) <= 1:
+            if len(vivos) <= 1 and quantos <= 1:
                 return False
             opcoes = [
                 (str(i.indice), i.nome, f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca}")
@@ -2160,8 +2372,34 @@ class Incursoes(commands.Cog):
         )
         return True
 
+    @staticmethod
+    def _quanto_cura(alvo, acao: dict, bonus_cura: Optional[str]) -> int:
+        """Cura o alvo e devolve quanto entrou de HP.
+
+        Duas escritas convivem: por dado ('2d8+3', do clérigo e do xamã) e por
+        fração do HP máximo ('0.3', do guerreiro e do paladino). `bonus_cura`
+        é o que as passivas de quem cura somam — o +1d6 do Curandeiro.
+        """
+        extra = motor.rolar_dano(bonus_cura) if bonus_cura else 0
+        if acao.get("dado"):
+            return motor.curar_quanto(alvo, motor.rolar_dano(acao["dado"]) + extra)
+        curado = motor.curar(alvo, acao["fracao"])
+        # Na cura por fração o bônus entra depois, porque o teto do HP já
+        # pode ter engolido a primeira parte.
+        return curado + (motor.curar_quanto(alvo, extra) if extra else 0)
+
+    async def _limpar_atordoamento(self, run: dict[str, Any], alvo) -> None:
+        """Tira o atordoamento de quem recebeu cura (Restauração, do clérigo)."""
+        if not getattr(alvo, "atordoado", False):
+            return
+        alvo.atordoado = False
+        await db.remover_efeito(
+            self.bot.db, run["id"], self._passo(run), "personagem",
+            alvo.user_id, "atordoado",
+        )
+
     async def _resolver_cura(
-        self, run, user_id: int, habilidade, acao, alvos, estado
+        self, run: dict[str, Any], user_id: int, habilidade, acao, alvos, estado
     ) -> str:
         """Cura a si mesmo ou a um aliado, dentro ou fora do combate."""
         combatentes = estado.combatentes if estado else await self._combatentes(run)
@@ -2170,13 +2408,25 @@ class Incursoes(commands.Cog):
         if alvo is None:
             return "Alvo invalido."
 
-        curado = motor.curar(alvo, acao["fracao"])
+        quem_curou = await self._personagem_na_run(run, user_id)
+        dele = ((quem_curou or {}).get("efeitos") or {})
+        curado = self._quanto_cura(alvo, acao, dele.get("bonus_cura"))
         await db.definir_hp(self.bot.db, run["id"], alvo.user_id, alvo.hp_atual)
+        # Restauracao, do clerigo: a cura tira o atordoamento de quem recebe.
+        if curado and dele.get("cura_limpa_controle"):
+            await self._limpar_atordoamento(run, alvo)
         temporario = 0
         quanto_thp = motor.rolar_dano(acao["thp_alvo"]) if acao.get("thp_alvo") else 0
+        # O xama ganha THP ao usar o caminho espiritual, mesmo curando outro.
+        if acao.get("thp_proprio"):
+            proprio = next((c for c in combatentes if c.user_id == user_id), None)
+            if proprio is not None:
+                motor.ganhar_thp(proprio, motor.rolar_dano(acao["thp_proprio"]))
+                await db.definir_thp(
+                    self.bot.db, run["id"], proprio.user_id, proprio.thp
+                )
         # Cantico Benevolente: a escolha do Xama soma THP em cima da cura.
-        quem_curou = await self._personagem_na_run(run, user_id)
-        extra_cantico = ((quem_curou or {}).get("efeitos") or {}).get("thp_na_cura", 0)
+        extra_cantico = dele.get("thp_na_cura", 0)
         if extra_cantico and alvo.user_id != user_id:
             quanto_thp += extra_cantico
         if quanto_thp:
@@ -2196,16 +2446,64 @@ class Incursoes(commands.Cog):
         await self._anunciar_habilidade(run, texto)
         return texto
 
-    async def _resolver_grupo(self, run, estado, habilidade, acao) -> str:
-        """Habilidade que cai no grupo inteiro: THP para todos e um buff curto."""
+    async def _resolver_grupo(self, run, estado, habilidade, acao, user_id: int) -> str:
+        """Habilidade que cai no grupo inteiro: THP, cura e um buff curto.
+
+        `melhoria` \u00e9 a vers\u00e3o car\u00edssima dos Guerreiros Anci\u00f5es: quem usa paga
+        THP e, por esse pre\u00e7o, o grupo leva a forma melhor e os inimigos levam
+        dano. Sem THP suficiente, sai a vers\u00e3o normal.
+        """
         passo = self._passo(run)
+        acao, pago = self._versao_da_habilidade(acao, estado, user_id)
+        linhas: list[str] = []
+
         quanto = motor.rolar_dano(acao["thp"]) if acao.get("thp") else 0
-        novos = {}
+        novos: dict[int, int] = {}
         for c in estado.vivos:
-            motor.ganhar_thp(c, quanto)
+            if quanto:
+                motor.ganhar_thp(c, quanto)
             novos[c.user_id] = c.thp
+        if quanto:
+            linhas.append(f"**{quanto}** de vida temporaria para o grupo")
+
+        if acao.get("cura_fracao") or acao.get("cura_dado"):
+            # Mass Healing Word e Mass Cure Wounds curam por dado; os
+            # Guerreiros ancioes, por fracao do maximo. O bonus de quem cura
+            # (Curandeiro, Especialista em cura) vale aqui como na cura de um.
+            quem_curou = await self._personagem_na_run(run, user_id)
+            bonus = ((quem_curou or {}).get("efeitos") or {}).get("bonus_cura")
+            como = (
+                {"dado": acao["cura_dado"]} if acao.get("cura_dado")
+                else {"fracao": acao["cura_fracao"]}
+            )
+            curados = {}
+            for c in estado.vivos:
+                if self._quanto_cura(c, como, bonus):
+                    curados[c.user_id] = c.hp_atual
+            if curados:
+                await db.definir_hp_varios(self.bot.db, run["id"], curados)
+            quanto_texto = acao.get("cura_dado") or f"{int(acao['cura_fracao'] * 100)}%"
+            linhas.append(f"**{quanto_texto}** de HP de volta")
+
+        if pago:
+            novos[pago[0]] = pago[1]
         if novos:
             await db.definir_thp_varios(self.bot.db, run["id"], novos)
+
+        if acao.get("dano_em_todos"):
+            caiu = []
+            for inimigo in list(estado.inimigos_vivos):
+                levou = motor.rolar_dano(acao["dano_em_todos"])
+                inimigo.hp_atual = max(0, inimigo.hp_atual - levou)
+                if inimigo.caido:
+                    caiu.append(inimigo.nome)
+            await db.definir_hp_inimigos(
+                self.bot.db, run["id"], passo,
+                {i.indice: i.hp_atual for i in estado.inimigos},
+            )
+            linhas.append(f"**{acao['dano_em_todos']}** em todos os inimigos")
+            if caiu:
+                linhas.append(f"caem: {', '.join(caiu)}")
 
         if acao.get("efeitos"):
             expira = estado.rodada + acao.get("turnos", 1)
@@ -2214,16 +2512,35 @@ class Incursoes(commands.Cog):
                     self.bot.db, run["id"], passo, "personagem", c.user_id,
                     habilidade.id, acao["efeitos"], expira,
                 )
+            linhas.append("e um bonus nos proximos ataques")
 
-        if quanto:
-            texto = (
-                f"\u2728 **{habilidade.nome}**: o grupo ganha **{quanto}** de vida "
-                "temporaria e um bonus no proximo ataque."
-            )
-        else:
-            texto = f"\u2728 **{habilidade.nome}**: o grupo inteiro leva o bonus."
+        corpo = "; ".join(linhas) or "o grupo inteiro leva o bonus"
+        marca = " \u2b50" if pago else ""
+        texto = f"\u2728 **{habilidade.nome}**{marca}: {corpo}."
         await self._anunciar_habilidade(run, texto)
         return texto
+
+    @staticmethod
+    def _versao_da_habilidade(
+        acao: dict, estado, user_id: int
+    ) -> tuple[dict, Optional[tuple[int, int]]]:
+        """Escolhe entre a a\u00e7\u00e3o normal e a `melhoria` que custa THP.
+
+        Devolve (a\u00e7\u00e3o a usar, (user_id, THP que sobrou) se pagou). Quem paga \u00e9
+        quem usou, e s\u00f3 se tiver o THP inteiro \u2014 a melhoria n\u00e3o sai pela
+        metade. \u00c9 o que deixa o xam\u00e3 trocar 20 de vida tempor\u00e1ria pela forma
+        grande dos Guerreiros Anci\u00f5es.
+        """
+        melhoria = acao.get("melhoria") or {}
+        custo = melhoria.get("custo_thp", 0)
+        dono = next((c for c in estado.vivos if c.user_id == user_id), None)
+        if not custo or dono is None or dono.thp < custo:
+            return {k: v for k, v in acao.items() if k != "melhoria"}, None
+        dono.thp -= custo
+        juntas = {k: v for k, v in acao.items() if k != "melhoria"}
+        juntas.update(melhoria)
+        juntas.pop("custo_thp", None)
+        return juntas, (dono.user_id, dono.thp)
 
     async def _resolver_duracao(
         self, run, user_id: int, estado, habilidade, acao, alvos
@@ -2241,6 +2558,22 @@ class Incursoes(commands.Cog):
                 habilidade.id, acao["efeitos"], expira, dono=user_id,
             )
             alvo_nome = alvo.nome
+        elif acao.get("alvo") == "aliados":
+            # Fly: pega varios do grupo, nao so quem lancou. Sem escolha vale
+            # quem esta de pe, do mais exposto para o menos — o que o mago
+            # faria: tirar de alcance quem esta levando pancada.
+            quantos = acao.get("alvos", 1)
+            escolhidos = [
+                c for c in estado.vivos if c.user_id in set(alvos or ())
+            ] or sorted(estado.vivos, key=lambda c: -c.ameaca_total)[:quantos]
+            if not escolhidos:
+                return "Nao ha ninguem de pe para a habilidade."
+            for quem_recebe in escolhidos[:quantos]:
+                await db.aplicar_efeito(
+                    self.bot.db, run["id"], passo, "personagem",
+                    quem_recebe.user_id, habilidade.id, acao["efeitos"], expira,
+                )
+            alvo_nome = ", ".join(c.nome for c in escolhidos[:quantos])
         else:
             await db.aplicar_efeito(
                 self.bot.db, run["id"], passo, "personagem", user_id,
@@ -2386,6 +2719,37 @@ class Incursoes(commands.Cog):
         )
         return f"\u2728 **{habilidade.nome}**\n{resumo}"
 
+    async def _socorrer_o_teste(self, run: dict[str, Any], resultado) -> None:
+        """Flash of Genius: quem tem a reação salva o teste falhado de alguém.
+
+        Dispara sozinho, como as outras reações do bot, e só quando o bônus
+        vira a falha em sucesso — não queima o uso num teste que já passou nem
+        num que falhou longe demais. Serve qualquer um do grupo, inclusive
+        quem tem a habilidade.
+        """
+        passo = self._passo(run)
+        for p in await db.personagens_da_run(self.bot.db, run["id"]):
+            habilidade, acao = self._reacao_de(p, "falhou_teste")
+            if habilidade is None:
+                continue
+            # O tier 5 sobe o bonus de 5 para 10, por passiva.
+            bonus = ((p.get("efeitos") or {}).get("flash_bonus")) or acao.get("bonus", 0)
+            if not motor.vale_ajudar(resultado, bonus):
+                continue
+            if not await db.gastar_uso(
+                self.bot.db, run["id"], p["user_id"], habilidade.chave_de_uso,
+                self._chave_de_recarga(habilidade, run, passo), habilidade.vezes,
+            ):
+                continue
+            resultado.ajuda = bonus
+            resultado.quem_ajudou = p["nome"]
+            await self._anunciar_habilidade(
+                run,
+                f"✨ **{habilidade.nome}**: {p['nome']} socorre "
+                f"{resultado.personagem} com **+{bonus}** — o teste passa.",
+            )
+            return
+
     @staticmethod
     def _reacao_de(personagem: dict[str, Any], quando: str):
         """A reacao daquele gatilho, se o personagem tiver alguma."""
@@ -2469,6 +2833,30 @@ class Incursoes(commands.Cog):
                 f"\u2728 **{habilidade.nome}**: {atingido.nome} se recusa a cair "
                 f"— fica com {atingido.hp_atual} HP e {atingido.thp} de THP.",
             )
+
+    async def _guardar_debuffs(
+        self, run: dict[str, Any], investidas: list
+    ) -> list[str]:
+        """Grava as condições que as criaturas aplicaram, e diz o que cada um pegou.
+
+        São as mesmas condições da armadilha, na mesma tabela: o Envenenado que
+        a aranha deixa sai da sala com o grupo e decai por combate como
+        qualquer outro. Quem caiu no combate não leva nada — já está fora.
+        """
+        linhas: list[str] = []
+        for investida in investidas:
+            if not investida.debuffs or investida.alvo.caido:
+                continue
+            for cid in investida.debuffs:
+                stacks = await db.aplicar_condicao(
+                    self.bot.db, run["id"], investida.alvo.user_id, cid
+                )
+                linhas.append(
+                    f"**{investida.alvo.nome}** fica com "
+                    f"{condicoes.rotulo(cid, stacks)} — "
+                    f"{condicoes.descricao(cid, stacks=stacks)}"
+                )
+        return linhas
 
     async def _guardar_atordoamentos(
         self, run: dict[str, Any], estado, investidas: list, ja_agiram: set[int]
@@ -2599,6 +2987,11 @@ class Incursoes(commands.Cog):
         if canal and estado is not None:
             await canal.send(embed=E.combate_vencido(sala, estado))
 
+        # Antes de decair: quem a criatura levou ao teto sai agora. Na outra
+        # ordem o decaimento tiraria o stack que estourou, e o teto de uma
+        # condicao que decai nunca pegaria ninguem.
+        await self._expulsar_estourados(run)
+
         # Um combate a menos no prazo dos debuffs e dos buffs. As maldicoes e a
         # Exaustao tem prazo NULL e nao sao tocadas: duram a incursao.
         await self._vencer_prazo_das_condicoes(run)
@@ -2652,6 +3045,10 @@ class Incursoes(commands.Cog):
         resultado = motor.testar(
             personagem, sala, saldo=await self._saldo(run, interaction.user.id)
         )
+        # Flash of Genius: alguem do grupo socorre a falha antes de ela virar
+        # consequencia. Entra no `modificador` gravado, para a margem e o
+        # progresso da sala contarem com a ajuda.
+        await self._socorrer_o_teste(run, resultado)
         novo = await db.registrar_teste(
             self.bot.db,
             run_id,
@@ -2661,7 +3058,7 @@ class Incursoes(commands.Cog):
             resultado.personagem,
             resultado.pericia,
             resultado.d20,
-            resultado.modificador,
+            resultado.modificador + resultado.ajuda,
             resultado.cd,
         )
         if not novo:
@@ -2680,9 +3077,15 @@ class Incursoes(commands.Cog):
             if resultado.passou
             else f"falhou por **{resultado.cd - resultado.total}**"
         )
+        socorro = (
+            f" (+{resultado.ajuda} de {resultado.quem_ajudou})"
+            if resultado.ajuda
+            else ""
+        )
         await interaction.response.send_message(
-            f"🎲 **{resultado.d20}** {resultado.modificador:+d} = **{resultado.total}** "
-            f"em {resultado.pericia} (CD {resultado.cd}) — {veredito}.",
+            f"🎲 **{resultado.d20}** {resultado.modificador:+d}{socorro} = "
+            f"**{resultado.total}** em {resultado.pericia} (CD {resultado.cd}) "
+            f"— {veredito}.",
             ephemeral=True,
         )
 

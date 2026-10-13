@@ -56,9 +56,22 @@ async def escolher(cog, canal, dono, personagem_id, habilidade_id, valores):
 
 
 def caso_catalogo_das_escolhas():
-    """Toda ESCOLHA do documento sabe dizer o que o jogador decide."""
+    """Toda ESCOLHA do documento sabe dizer o que o jogador decide.
+
+    E toda opção faz alguma coisa: soma número (`efeito`), destrava uma ativa
+    (alguém com `exige_escolha` apontando para ela) ou se declara pendente.
+    Opção que não faz nada das três sumiria em silêncio na ficha.
+    """
     decidiveis = []
     for classe in cl.CLASSES.values():
+        # Da tabela crua, não da lista filtrada: aqui interessa toda opção que
+        # alguma habilidade destrava, e não só a de uma escolha já feita.
+        destravam = {
+            h.exige_escolha
+            for lista in classe.habilidades.values()
+            for h in lista
+            if h.exige_escolha
+        }
         for _t, h in classe.habilidades_ate(10):
             if h.tipo != cl.ESCOLHA:
                 continue
@@ -69,7 +82,12 @@ def caso_catalogo_das_escolhas():
                 assert len(forma["opcoes"]) >= 2
                 for o in forma["opcoes"]:
                     assert o["id"] and o["nome"] and o["texto"]
-                    assert o["efeito"], o
+                    faz = (
+                        o.get("efeito")
+                        or o.get("pendente")
+                        or (h.id, o["id"]) in destravam
+                    )
+                    assert faz, f"{classe.nome}/{h.nome}/{o['id']} nao faz nada"
             else:
                 assert forma["quantidade"] >= 1
                 assert forma["entre"] in ("proficientes", "todas")
@@ -78,6 +96,10 @@ def caso_catalogo_das_escolhas():
     assert set(decidiveis) == {
         "fighting_style", "expertise_1", "expertise_2",
         "primal_knowledge", "escolha_totemica",
+        "magia_t1", "dominio_t2", "magia_t3", "dominio_t4", "magia_t5",
+        "ferramenta_t1", "infusao", "engenho_t3",
+        "magia_mago_t1", "scholar", "magia_mago_t3", "tradicao_arcana",
+        "magia_mago_t5",
     }, decidiveis
     print(f"  as {len(decidiveis)} escolhas do documento estao no catalogo: ok")
 

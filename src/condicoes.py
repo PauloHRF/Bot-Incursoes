@@ -228,6 +228,9 @@ CATALOGO: tuple[Condicao, ...] = (
 )
 
 POR_ID: dict[str, Condicao] = {c.id: c for c in CATALOGO}
+# As fichas das criaturas escrevem a condição pelo nome ("Envenenado"), não pelo
+# id. É a mesma grafia do catálogo, então a busca é direta.
+POR_NOME: dict[str, Condicao] = {c.nome: c for c in CATALOGO}
 
 DEBUFFS = tuple(c.id for c in CATALOGO if c.tipo == DEBUFF)
 BUFFS = tuple(c.id for c in CATALOGO if c.tipo == BUFF)

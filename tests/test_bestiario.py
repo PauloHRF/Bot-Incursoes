@@ -94,9 +94,10 @@ def caso_sala_so_com_nome():
     assert (lobo.ca, lobo.hp, lobo.ataque) == (13, 11, 4)
     assert lobo.matilha and lobo.saves["DES"] == 2, "save que falta sai do atributo"
 
-    # volta igual do JSON, com os golpes e o teste da garra
+    # volta igual do JSON, com os golpes e o teste da mordida
     carnical = monstro_de({"nome": "Carniçal"})[0]
-    assert carnical.golpes[0].efeito.atordoa == 1
+    assert carnical.golpes[0].efeito.debuff == ["letargia"], "a mordida deixa condição"
+    assert carnical.habilidade.atordoa == 2, "as Garras Paralisantes tiram duas rodadas"
     volta = monstro_de(carnical.para_dict())[0]
     assert volta.para_dict() == carnical.para_dict()
 
@@ -125,36 +126,40 @@ def caso_golpes_diferentes():
 
 def caso_teste_no_golpe():
     carnical = monstro_de({"nome": "Carniçal"})[0]
+
+    def so_os_golpes(quem):
+        # Sem isto o carniçal usa as Garras Paralisantes (recarga 5) em vez de
+        # morder, e o teste do golpe nunca sai.
+        inimigo = inimigo_de(carnical)
+        inimigo.habilidade = None
+        estado = motor.EstadoCombate([inimigo], 1, [quem])
+        return motor.turno_do_inimigo(estado.inimigos[0], estado, Dado(5))
+
     heroi = alvo()
-    estado = motor.EstadoCombate([inimigo_de(carnical)], 1, [heroi])
-    # d20 = 5: acerta CA 1 e falha o CON CD 10
-    vez = motor.turno_do_inimigo(estado.inimigos[0], estado, Dado(5))
+    # d20 = 5: acerta CA 1 e falha o CON CD 12 da mordida
+    vez = so_os_golpes(heroi)
     assert vez.golpes[0][0].acertou
     investida = vez.efeitos_dos_golpes[0]
-    assert investida.do_golpe and investida.atordoou and investida.repete_save
-    assert heroi.atordoado
+    assert investida.do_golpe and investida.debuffs == ["letargia"]
 
     # errou o golpe: não há teste
     armadura = alvo(ca=99)
-    estado = motor.EstadoCombate([inimigo_de(carnical)], 1, [armadura])
-    vez = motor.turno_do_inimigo(estado.inimigos[0], estado, Dado(5))
+    vez = so_os_golpes(armadura)
     assert not vez.golpes[0][0].acertou and not vez.investidas
-    assert not armadura.atordoado
-    print("  a garra do carniçal só paralisa quando acerta: ok")
+    print("  a mordida do carniçal só deixa condição quando acerta: ok")
 
 
 def caso_metade_no_sucesso():
-    aranha = monstro_de({"nome": "Aranha Gigante"})[0]
-    efeito = aranha.golpes[0].efeito
-    assert efeito.metade and efeito.dano == "2d8" and not efeito.atordoa
-    heroi = alvo()
-    inimigo = inimigo_de(aranha)
-    # d20 = 15 passa no CON CD 11: o veneno (2d8 = 16) cai pela metade
-    investida = motor.impor_save(inimigo, efeito, heroi, Dado(15))
-    assert investida.escapou and investida.dano == 8
-    # quem falha leva inteiro
+    ankheg = monstro_de({"nome": "Ankheg"})[0]
+    efeito = ankheg.habilidade
+    assert efeito.metade and efeito.dano == "3d6" and not efeito.atordoa
+    inimigo = inimigo_de(ankheg)
+    # d20 = 15 passa no DES CD 13: o ácido (3d6 = 18) cai pela metade
+    investida = motor.impor_save(inimigo, efeito, alvo(), Dado(15))
+    assert investida.escapou and investida.dano == 9
+    # quem falha leva inteiro (3d6 com todo dado em 2)
     investida = motor.impor_save(inimigo, efeito, alvo(), Dado(2))
-    assert not investida.escapou and investida.dano == 4
+    assert not investida.escapou and investida.dano == 6
     print("  sucesso no save leva metade do dano: ok")
 
 
@@ -214,8 +219,9 @@ async def caso_combate_com_criatura_do_livro():
 
     # o banco guarda os golpes com o teste, e o estado volta inteiro dele
     estado = await cog._estado_combate(run, incursao.objetivo)
-    garra = estado.inimigos[0].golpes[0]
-    assert garra.nome == "Garras" and garra.efeito.save == "CON"
+    mordida = estado.inimigos[0].golpes[0]
+    assert mordida.nome == "Mordida" and mordida.efeito.save == "CON"
+    assert mordida.efeito.debuff == ["letargia"], "a condição sobrevive ao banco"
 
     await atacar_ate_cair(conn, canal, cog, run_id, "OBJ", limite=60)
     final = await db.buscar_run(conn, run_id)
