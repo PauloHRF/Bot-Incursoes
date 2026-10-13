@@ -15,6 +15,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .. import (
+    ameaca,
     bestiario,
     classes as cl,
     condicoes,
@@ -1207,6 +1208,8 @@ class Incursoes(commands.Cog):
                     },
                     mod_iniciativa_extra=saldo.iniciativa,
                     cura_recebida_pct=saldo.cura_recebida_pct,
+                    # A classe diz onde ele fica na sala; as passivas somam.
+                    ameaca=ameaca.inicial(p.get("classe")) + efeitos.get("ameaca", 0),
                 )
             )
         for ligado in efeitos_ligados or []:
@@ -1251,6 +1254,7 @@ class Incursoes(commands.Cog):
                 return
             quem.dano_extra += valor.get("dano_extra", 0)
             quem.ca_extra += valor.get("ca", 0)
+            quem.ameaca_extra += valor.get("ameaca", 0)
             quem.reducao_dano = max(quem.reducao_dano, valor.get("reducao_dano", 0.0))
             quem.cura_por_turno = max(
                 quem.cura_por_turno, valor.get("cura_por_turno", 0.0)

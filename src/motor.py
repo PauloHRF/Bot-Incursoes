@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Iterable, Optional
 
+from . import ameaca
 from .incursoes import OPCOES_POR_PASSO, Monstro, Sala
 from .rules import PESO_TIER, melhor_pericia, tier
 
@@ -277,6 +278,11 @@ class Combatente:
     vantagem: bool = False
     ca_extra: int = 0
     cura_por_turno: float = 0.0
+    # Ameaca: o peso dele no sorteio de alvo. `ameaca` e a da classe (a linha
+    # de frente virando numero) e `ameaca_extra` e o que as habilidades somam
+    # enquanto estao ligadas. Ver src/ameaca.py.
+    ameaca: int = 0
+    ameaca_extra: int = 0
     # Marca do Cacador e afins: valem so contra aquele inimigo.
     dano_por_alvo: dict = field(default_factory=dict)
     vantagem_contra: set = field(default_factory=set)
@@ -293,6 +299,11 @@ class Combatente:
     @property
     def ca_efetiva(self) -> int:
         return self.ca + self.ca_extra
+
+    @property
+    def ameaca_total(self) -> int:
+        """A ameaça que conta no sorteio: a da classe mais a das habilidades."""
+        return max(0, self.ameaca + self.ameaca_extra)
 
     @property
     def tem_thp(self) -> bool:
@@ -643,9 +654,15 @@ def atacar_inimigo(
 def sortear_alvo(
     estado: EstadoCombate, rng: Optional[random.Random] = None
 ) -> Optional[Combatente]:
-    """Quem um inimigo ataca. Só quem está de pé pode ser alvo."""
+    """Quem um inimigo ataca. Só quem está de pé pode ser alvo.
+
+    A Ameaça pesa o sorteio: quem está na frente aparece mais. Ninguém fica
+    imune nem é alvo certo — o apoio ainda leva pancada, só menos.
+    """
     vivos = estado.vivos
-    return _rng(rng).choice(vivos) if vivos else None
+    if not vivos:
+        return None
+    return ameaca.sortear(vivos, ameaca.de_quem(vivos), rng)
 
 
 def sortear_alvos(
@@ -654,18 +671,16 @@ def sortear_alvos(
     """Vários alvos diferentes, para habilidades que pegam mais de um.
 
     Quem já está atordoado não é sorteado enquanto houver alguém de pé sem
-    atordoamento — atordoar duas vezes a mesma pessoa não faz nada.
+    atordoamento — atordoar duas vezes a mesma pessoa não faz nada. Entre os
+    que sobram, a Ameaça pesa o sorteio como no alvo único.
     """
     vivos = estado.vivos
     if not vivos:
         return []
     preferidos = [c for c in vivos if not c.atordoado] or vivos
-    gerador = _rng(rng)
-    if quantos >= len(preferidos):
-        escolhidos = list(preferidos)
-        gerador.shuffle(escolhidos)
-        return escolhidos
-    return gerador.sample(preferidos, quantos)
+    return ameaca.sortear_varios(
+        preferidos, ameaca.de_quem(preferidos), quantos, rng
+    )
 
 
 def contra_atacar(

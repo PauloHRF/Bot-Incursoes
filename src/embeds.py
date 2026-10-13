@@ -515,6 +515,8 @@ def resumo_do_golpe(golpes: list[tuple]) -> str:
 MARCA_ALVO = "🎯"
 MARCA_PROTEGIDO = "🛡️"
 MARCA_ABENCOADO = "✨"
+# Ameaça acima da da classe: alguma habilidade está chamando a atenção.
+MARCA_AMEACA = "🩸"
 
 
 def golpes_da_criatura(m) -> str:
@@ -562,7 +564,29 @@ def _marcas_do_combatente(c) -> str:
         marcas.append(MARCA_ALVO)
     if getattr(c, "ca_extra", 0) or getattr(c, "cura_por_turno", 0):
         marcas.append(MARCA_ABENCOADO)
+    if getattr(c, "ameaca_extra", 0) > 0:
+        marcas.append(MARCA_AMEACA)
     return (" " + "".join(marcas)) if marcas else ""
+
+
+def linha_de_ameaca(combatentes) -> str:
+    """Quanto da atenção dos inimigos cada um está puxando.
+
+    É a Ameaça já passada pela curva e normalizada, que é o número que decide
+    de verdade — a ameaça crua não diz nada sozinha, porque o que importa é a
+    comparação com o resto do grupo.
+    """
+    from . import ameaca
+
+    de_pe = [c for c in combatentes if c.hp_atual > 0]
+    if len(de_pe) < 2:
+        return ""
+    fatias = ameaca.porcentagens([c.ameaca_total for c in de_pe])
+    partes = [
+        f"{c.nome} {fatia:.0f}%{MARCA_AMEACA if c.ameaca_extra > 0 else ''}"
+        for c, fatia in sorted(zip(de_pe, fatias), key=lambda par: -par[1])
+    ]
+    return " · ".join(partes)
 
 
 def _linha_hp(c, carregadas: Optional[dict[str, int]] = None) -> str:
@@ -751,6 +775,10 @@ def combate(
         or "*ninguém*",
         inline=False,
     )
+
+    atencao = linha_de_ameaca(estado.combatentes)
+    if atencao:
+        e.add_field(name=f"{MARCA_AMEACA} Ameaça", value=atencao, inline=False)
 
     if ordem:
         e.add_field(

@@ -10,6 +10,7 @@
     dano_ferido    soma só contra alvo com metade ou menos do HP
     critico_em     o menor d20 que já é crítico
     ataques        quantos golpes por rodada
+    ameaca         soma na Ameaça: o peso dele no sorteio de alvo (src/ameaca.py)
 
 Ativas e escolhas ficam sem efeito: aparecem na ficha e no aviso de nível, mas
 ainda não mexem em conta nenhuma — elas entram junto com o sistema de usos
@@ -121,10 +122,11 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                                 "entre": "todas", "aplica": "proficiencia"})],
         3: [MULTIATAQUE,
             Habilidade("reckless_attack", "Reckless Attack", ATIVA,
-                       "1x por combate: os ataques do proximo turno tem vantagem.",
+                       "1x por combate: os ataques do proximo turno tem vantagem, "
+                       "e voce ganha ameaca 3 — atacar descuidado chama atencao.",
                        usos=_usos("combate"),
                        acao={"tipo": "duracao", "turnos": 1, "alvo": "proprio",
-                             "efeitos": {"vantagem": True}})],
+                             "efeitos": {"vantagem": True, "ameaca": 3}})],
         4: [Habilidade("relentless", "Relentless", ATIVA,
                        "1x por combate: ao cair a 0 HP fica com 1 HP e ganha 1d12+7 de THP.",
                        usos=_usos("combate"),
@@ -310,6 +312,7 @@ NEUTRO: dict = {
     "dano_ferido": 0,
     "critico_em": 20,
     "ataques": 1,
+    "ameaca": 0,
 }
 
 
