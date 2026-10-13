@@ -609,14 +609,31 @@ def texto_do_contra_ataque(contra, alvo_nome: str) -> str:
 
 
 def texto_da_investida(investida) -> str:
-    """A linha da habilidade de uma criatura, com o save de quem foi mirado."""
+    """A linha da habilidade de uma criatura, com a rolagem de quem foi mirado.
+
+    Na habilidade de resistência quem rola é o alvo, contra a CD; na de ataque
+    é a criatura, contra a CA. A linha diz qual das duas foi.
+    """
+    from . import condicoes
+
+    quem = investida.alvo.nome if hasattr(investida.alvo, "nome") else investida.alvo
+    cabeca = f"✴️ **{investida.inimigo}** · {investida.habilidade}"
+    if investida.ataque is not None:
+        contra = investida.ataque
+        rolagem = (
+            f"🎲 {contra.d20} {fmt(contra.bonus)} = **{contra.total}** "
+            f"vs CA {contra.ca_alvo}"
+        )
+        if not contra.acertou:
+            return f"{cabeca} em {quem} · {rolagem} → errou"
+        critico = " **crítico!**" if contra.critico else ""
+        return f"{cabeca} em {quem} · {rolagem} →{critico} **{investida.dano}** de dano"
+
     save = investida.save
     rolagem = (
         f"🎲 {save.d20} {fmt(save.modificador)} = **{save.total}** "
         f"vs CD {save.cd}"
     )
-    quem = investida.alvo.nome if hasattr(investida.alvo, "nome") else investida.alvo
-    cabeca = f"✴️ **{investida.inimigo}** · {investida.habilidade}"
     if investida.escapou:
         if investida.dano:
             return f"{cabeca} em {quem} · {rolagem} → resistiu: **{investida.dano}** de dano (metade)"
@@ -626,6 +643,11 @@ def texto_da_investida(investida) -> str:
         consequencias.append(f"**{investida.dano}** de dano")
     if investida.atordoou:
         consequencias.append("**atordoado**")
+    consequencias += [
+        f"**{condicoes.rotulo(cid)}**"
+        for cid in investida.debuffs
+        if cid in condicoes.POR_ID
+    ]
     pancada = ", ".join(consequencias) or "nada"
     return f"{cabeca} em {quem} · {rolagem} → falhou: {pancada}"
 

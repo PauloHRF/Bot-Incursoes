@@ -699,12 +699,17 @@ class Investida:
     inimigo: str
     habilidade: str
     alvo: Combatente
-    save: ResultadoSave
+    # Quem rolou. Habilidade de resistencia tem `save`; a de ataque tem
+    # `ataque`, porque quem rola e a criatura, contra a CA do alvo.
+    save: Optional[ResultadoSave] = None
+    ataque: Optional[GolpeAtaque] = None
     dano: int = 0
     absorvido: int = 0
     atordoou: bool = False
     # Por quantas rodadas o alvo fica atordoado, quando fica.
     atordoa_por: int = 0
+    # Condicoes que o alvo leva para fora da sala, por ter falhado.
+    debuffs: list[str] = field(default_factory=list)
     # Se o alvo refaz o save no fim do turno para se livrar.
     repete_save: bool = False
     # Veio do acerto de um golpe (a garra que paralisa), nao de acao propria.
@@ -712,7 +717,10 @@ class Investida:
 
     @property
     def escapou(self) -> bool:
-        return self.save.passou
+        """Saiu ileso: passou no save, ou a criatura errou o ataque."""
+        if self.ataque is not None:
+            return not self.ataque.acertou
+        return self.save is not None and self.save.passou
 
 
 def usar_habilidade_do_inimigo(
@@ -727,10 +735,56 @@ def usar_habilidade_do_inimigo(
     habilidade = inimigo.habilidade
     if habilidade is None:
         return []
-    return [
-        impor_save(inimigo, habilidade, alvo, rng)
-        for alvo in sortear_alvos(estado, habilidade.alvos, rng)
-    ]
+    alvos = sortear_alvos(estado, habilidade.alvos, rng)
+    if e_ataque(habilidade):
+        # Rolagem de ataque: a Matilha vale aqui como vale nos golpes.
+        vantagem = tem_matilha(inimigo, estado)
+        return [investir_atacando(inimigo, habilidade, a, rng, vantagem) for a in alvos]
+    return [impor_save(inimigo, habilidade, alvo, rng) for alvo in alvos]
+
+
+def tem_matilha(inimigo: Inimigo, estado: EstadoCombate) -> bool:
+    """Táticas de Matilha: vantagem enquanto outra criatura da sala estiver de pé."""
+    return bool(inimigo.matilha) and any(
+        i is not inimigo for i in estado.inimigos_vivos
+    )
+
+
+def e_ataque(efeito: Any) -> bool:
+    """A habilidade rola ataque contra a CA, em vez de impor resistência."""
+    return bool(getattr(efeito, "e_ataque", False))
+
+
+def investir_atacando(
+    inimigo: Inimigo,
+    efeito: Any,
+    alvo: Combatente,
+    rng: Optional[random.Random] = None,
+    vantagem: bool = False,
+) -> Investida:
+    """A habilidade que é uma pancada: a criatura rola ataque contra a CA do alvo.
+
+    O alvo não rola nada — a armadura dele defende sozinha. O bônus é o da
+    criatura, o mesmo dos golpes dela: a ficha não dá um número próprio para a
+    habilidade, e o Golpe Poderoso do troll acerta com a perícia da garra.
+    """
+    golpe = atacar(
+        inimigo.nome,
+        inimigo.ataque,
+        efeito.dano or "0",
+        alvo.nome,
+        alvo.ca_efetiva,
+        rng,
+        vantagem=vantagem,
+    )
+    golpe.arma = efeito.nome
+    investida = Investida(inimigo.nome, efeito.nome, alvo, ataque=golpe)
+    if golpe.acertou:
+        golpe.dano = reduzido(alvo, golpe.dano)
+        golpe.absorvido, _ = absorver(alvo, golpe.dano)
+        investida.dano = golpe.dano
+        investida.absorvido = golpe.absorvido
+    return investida
 
 
 def impor_save(
@@ -759,6 +813,10 @@ def impor_save(
         investida.atordoou = True
         investida.atordoa_por = efeito.atordoa
         investida.repete_save = bool(efeito.save_repete)
+    # As condicoes sao as mesmas da armadilha, e saem da sala junto com o
+    # grupo. Quem cai no combate nao as leva: ja esta fora.
+    if not resultado.passou and not alvo.caido:
+        investida.debuffs = list(getattr(efeito, "debuff", ()) or ())
     return investida
 
 
@@ -810,11 +868,9 @@ def turno_do_inimigo(
         alvo = sortear_alvo(estado, rng)
         if alvo is None:
             break
-        # Matilha: vantagem enquanto outra criatura da sala estiver de pe.
-        vantagem = inimigo.matilha and any(
-            i is not inimigo for i in estado.inimigos_vivos
+        golpe = contra_atacar(
+            inimigo, alvo, rng, golpe_do_monstro, tem_matilha(inimigo, estado)
         )
-        golpe = contra_atacar(inimigo, alvo, rng, golpe_do_monstro, vantagem)
         vez.golpes.append((golpe, alvo))
         efeito = getattr(golpe_do_monstro, "efeito", None)
         if efeito and golpe.acertou and not alvo.caido:

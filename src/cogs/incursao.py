@@ -1751,6 +1751,7 @@ class Incursoes(commands.Cog):
         # nao agiu perde a desta.
         ja_agiram = {a["alvo_id"] for a in antes if a["tipo"] == motor.PERSONAGEM}
         await self._guardar_atordoamentos(run, estado, feito.investidas, ja_agiram)
+        pegaram = await self._guardar_debuffs(run, feito.investidas)
         await self._reacoes_do_revide(run, estado, feito.golpes)
         linhas = []
         if feito.regenerou:
@@ -1769,6 +1770,7 @@ class Incursoes(commands.Cog):
             # O teste que o golpe impos sai logo abaixo dele.
             if posicao in feito.efeitos_dos_golpes:
                 linhas.append(E.texto_da_investida(feito.efeitos_dos_golpes[posicao]))
+        linhas += [f"🧪 {texto}" for texto in pegaram]
         self._registrar(run, estado.rodada, linhas)
 
     async def _virar_rodada(self, run: dict[str, Any], sala: Sala, estado) -> None:
@@ -2470,6 +2472,30 @@ class Incursoes(commands.Cog):
                 f"— fica com {atingido.hp_atual} HP e {atingido.thp} de THP.",
             )
 
+    async def _guardar_debuffs(
+        self, run: dict[str, Any], investidas: list
+    ) -> list[str]:
+        """Grava as condições que as criaturas aplicaram, e diz o que cada um pegou.
+
+        São as mesmas condições da armadilha, na mesma tabela: o Envenenado que
+        a aranha deixa sai da sala com o grupo e decai por combate como
+        qualquer outro. Quem caiu no combate não leva nada — já está fora.
+        """
+        linhas: list[str] = []
+        for investida in investidas:
+            if not investida.debuffs or investida.alvo.caido:
+                continue
+            for cid in investida.debuffs:
+                stacks = await db.aplicar_condicao(
+                    self.bot.db, run["id"], investida.alvo.user_id, cid
+                )
+                linhas.append(
+                    f"**{investida.alvo.nome}** fica com "
+                    f"{condicoes.rotulo(cid, stacks)} — "
+                    f"{condicoes.descricao(cid, stacks=stacks)}"
+                )
+        return linhas
+
     async def _guardar_atordoamentos(
         self, run: dict[str, Any], estado, investidas: list, ja_agiram: set[int]
     ) -> None:
@@ -2598,6 +2624,11 @@ class Incursoes(commands.Cog):
 
         if canal and estado is not None:
             await canal.send(embed=E.combate_vencido(sala, estado))
+
+        # Antes de decair: quem a criatura levou ao teto sai agora. Na outra
+        # ordem o decaimento tiraria o stack que estourou, e o teto de uma
+        # condicao que decai nunca pegaria ninguem.
+        await self._expulsar_estourados(run)
 
         # Um combate a menos no prazo dos debuffs e dos buffs. As maldicoes e a
         # Exaustao tem prazo NULL e nao sao tocadas: duram a incursao.
