@@ -307,6 +307,22 @@ CLASSES: dict[str, Classe] = {
                 (73, 19, 6, 5, 11, 11, "2d8"),
             ]),
         ),
+        # Mesma tabela do Mago, de proposito: os dois sao d6 e conjuram, e o
+        # que os separa nao e o corpo — e o Metamagic, que faz cada magia dele
+        # valer mais do que deveria. O Mago tem mais magias; o Feiticeiro tem
+        # magias melhores.
+        Classe(
+            "feiticeiro",
+            "Feiticeiro",
+            "A magia vem de dentro, e ele a torce: cada feitico sai melhorado.",
+            _tabela([
+                (15, 13, 4, 3, 5, 5, "1d10"),
+                (27, 14, 4, 4, 7, 7, "2d10"),
+                (39, 15, 5, 4, 8, 8, "2d10"),
+                (51, 16, 5, 5, 10, 9, "3d10"),
+                (63, 17, 6, 5, 11, 11, "4d10"),
+            ]),
+        ),
     )
 }
 

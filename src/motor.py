@@ -27,11 +27,22 @@ def _rng(rng: Optional[random.Random]) -> random.Random:
     return rng or random.SystemRandom()
 
 
-def rolar_d20(rng: Optional[random.Random] = None, vantagem: bool = False) -> int:
+def rolar_d20(
+    rng: Optional[random.Random] = None,
+    vantagem: bool = False,
+    desvantagem: bool = False,
+) -> int:
+    """Um d20, com vantagem ou desvantagem. As duas juntas se anulam."""
     gerador = _rng(rng)
+    if vantagem and desvantagem:
+        return gerador.randint(1, 20)
     if vantagem:
         # Vantagem: rola dois e fica com o melhor.
         return max(gerador.randint(1, 20), gerador.randint(1, 20))
+    if desvantagem:
+        # Desvantagem: rola dois e fica com o pior. E o Heightened Spell do
+        # feiticeiro, do lado do inimigo.
+        return min(gerador.randint(1, 20), gerador.randint(1, 20))
     return gerador.randint(1, 20)
 
 
@@ -630,9 +641,12 @@ def salvar(
     cd: int,
     rng: Optional[random.Random] = None,
     vantagem: bool = False,
+    desvantagem: bool = False,
 ) -> ResultadoSave:
     """A rolagem crua, para quem já sabe o modificador."""
-    return ResultadoSave(quem, atributo, rolar_d20(rng, vantagem), modificador, cd)
+    return ResultadoSave(
+        quem, atributo, rolar_d20(rng, vantagem, desvantagem), modificador, cd
+    )
 
 
 def salvar_combatente(
@@ -655,10 +669,14 @@ def salvar_inimigo(
     cd: int,
     rng: Optional[random.Random] = None,
     vantagem: bool = False,
+    desvantagem: bool = False,
 ) -> ResultadoSave:
     """O save de uma criatura, pela planilha dela ou pelo padrão provisório."""
     com_vantagem = vantagem or atributo in (inimigo.saves_vantagem or ())
-    return salvar(inimigo.nome, atributo, inimigo.save(atributo), cd, rng, com_vantagem)
+    return salvar(
+        inimigo.nome, atributo, inimigo.save(atributo), cd, rng,
+        com_vantagem, desvantagem,
+    )
 
 
 def atacar_inimigo(

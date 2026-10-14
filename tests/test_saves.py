@@ -53,7 +53,10 @@ def caso_catalogo_dos_saves():
         for atributo in fortes:
             assert atributo in ATRIBUTOS, (identificador, atributo)
     # as 14 previstas estao todas definidas, mesmo as sem tabela de numeros
-    assert "feiticeiro" in cl.SAVES_FORTES and "feiticeiro" not in cl.CLASSES
+    # Pela lista de pendentes: so prender um nome fixo quebra a cada classe
+    # nova que ganha tabela.
+    for nome in cl.CLASSES_PENDENTES:
+        assert cl.saves_fortes(nome), f"{nome} sem save mesmo sem tabela"
     for nome in cl.CLASSES_PREVISTAS:
         assert cl.saves_fortes(nome), f"{nome} sem save definido"
     # e toda classe jogavel carrega os dela
@@ -80,11 +83,14 @@ def caso_modificador_por_classe():
 
 def caso_classe_sem_tabela_e_sem_save():
     """Classe sem numeros ainda responde pelos saves; sem save, fica fraca."""
-    # Feiticeiro ainda nao tem tabela de numeros, mas ja tem os saves
-    assert cl.saves_fortes("Feiticeiro") == ("DES", "CON")
-    assert cl.saves("feiticeiro", 1) == {}, "sem tabela nao ha modificador"
-    # e o Mago, que ganhou tabela, agora responde com numero
+    # Pendente: tem save definido, mas sem tabela nao ha modificador. Pela
+    # lista, para nao quebrar a cada classe nova que ganha numeros.
+    for nome in cl.CLASSES_PENDENTES:
+        assert cl.saves_fortes(nome), f"{nome} sem save"
+        assert cl.saves(nome, 1) == {}, f"{nome} nao tem tabela"
+    # e quem ganhou tabela responde com numero
     assert cl.saves("mago", 1)["INT"] == FORTE[1]
+    assert cl.saves("feiticeiro", 1)["DES"] == FORTE[1]
     # Xama, Bardo e Bruxo entraram depois do documento
     assert cl.saves_fortes("xama") == ("SAB", "CAR")
     assert cl.saves_fortes("Bardo") == ("DES", "CAR")

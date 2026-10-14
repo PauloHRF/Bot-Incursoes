@@ -2260,6 +2260,19 @@ class Incursoes(commands.Cog):
             await interaction.response.send_message(texto, ephemeral=True)
             return
 
+        # Quickened Spell: o feiticeiro lanca a magia como acao de bonus, e o
+        # turno fica livre para atacar depois. A magia resolve na hora, em vez
+        # de esperar a vez na iniciativa — senao ela nao seria "rapida".
+        personagem = await self._personagem_na_run(run, interaction.user.id)
+        if ((personagem or {}).get("efeitos") or {}).get("magia_rapida"):
+            texto = await self._resolver_habilidade(
+                run, estado, interaction.user.id, habilidade, alvos or []
+            )
+            await interaction.response.send_message(texto, ephemeral=True)
+            self._guardar_efemera(run_id, interaction)
+            await self._atualizar_painel(run, sala, estado)
+            return
+
         if not await db.marcar_turno(
             self.bot.db, run_id, passo, estado.rodada, interaction.user.id,
             habilidade.id, alvos=alvos, resolvida=False,
@@ -2290,11 +2303,15 @@ class Incursoes(commands.Cog):
         if acao.get("tipo") == "invocar":
             return await self._resolver_invocar(run, user_id, estado, habilidade, acao)
         if acao.get("tipo") == "forma":
-            return await self._resolver_forma(run, user_id, estado, habilidade, acao)
+            return await self._resolver_forma(
+                run, user_id, estado, habilidade, acao,
+                alvos[0] if (alvos and acao.get("alvo") == "aliado") else None,
+            )
         return await self._resolver_golpes(run, user_id, estado, habilidade, acao, alvos)
 
     async def _resolver_forma(
-        self, run: dict[str, Any], user_id: int, estado, habilidade, acao
+        self, run: dict[str, Any], user_id: int, estado, habilidade, acao,
+        alvo_id: Optional[int] = None,
     ) -> str:
         """Wild Shape: o druida veste o corpo de outro bicho.
 
@@ -2304,7 +2321,9 @@ class Incursoes(commands.Cog):
         """
         passo = self._passo(run)
         tier_atual = max(1, self._tier_da_run(run))
-        quem = estado.combatente(user_id)
+        # O Wild Shape do druida cai nele; o Polymorph do feiticeiro cai num
+        # aliado. A conta e a mesma: muda so quem veste o corpo.
+        quem = estado.combatente(alvo_id if alvo_id is not None else user_id)
         if quem is None:
             return "Alvo invalido."
 
@@ -2317,7 +2336,7 @@ class Incursoes(commands.Cog):
         if acao.get("veneno_no_golpe"):
             efeitos["veneno_no_golpe"] = acao["veneno_no_golpe"]
         await db.aplicar_efeito(
-            self.bot.db, run["id"], passo, "personagem", user_id,
+            self.bot.db, run["id"], passo, "personagem", quem.user_id,
             habilidade.id, efeitos, estado.rodada + acao.get("turnos", 3),
         )
 
@@ -2327,7 +2346,7 @@ class Incursoes(commands.Cog):
         temporaria = acao.get("thp_por_tier", 0) * tier_atual * dobra
         if temporaria:
             motor.ganhar_thp(quem, temporaria)
-            await db.definir_thp(self.bot.db, run["id"], user_id, quem.thp)
+            await db.definir_thp(self.bot.db, run["id"], quem.user_id, quem.thp)
 
         pedacos = [f"dano {dano}"]
         if acao.get("ataques", 1) > 1:
@@ -2388,14 +2407,30 @@ class Incursoes(commands.Cog):
         passo = self._passo(run)
         quem = await self._personagem_na_run(run, user_id)
         cd = cl.cd_de_habilidade((quem or {}).get("classe"), (quem or {}).get("nivel", 1))
+        # O Metamagic do feiticeiro torce as magias DELE, para sempre: a CD
+        # sobe, o dano soma um dado, a magia pega um alvo a mais, e a criatura
+        # resiste com desvantagem. Vem das passivas dele, nao da acao.
+        meta = (quem or {}).get("efeitos") or {}
+        cd += meta.get("cd_magia", 0)
+        desvantagem = bool(meta.get("save_com_desvantagem"))
+        dado_extra = meta.get("dano_magia") or ""
 
         if acao.get("alvos") == "todos":
             mirados = list(estado.inimigos_vivos)
         else:
-            escolhido = (estado.alvo_preferido(alvos[0]) if alvos else None) or (
-                estado.alvo_preferido()
-            )
-            mirados = [escolhido] if escolhido else []
+            quantos = 1 + meta.get("alvos_extra", 0)
+            escolhidos = [
+                i for i in estado.inimigos_vivos if i.indice in set(alvos or ())
+            ]
+            # Twinned Spell: a magia de um alvo pega o seguinte tambem. Sem
+            # escolha explicita, pega o mais ferido, que e onde o dano fecha.
+            if len(escolhidos) < quantos:
+                sobram = sorted(
+                    (i for i in estado.inimigos_vivos if i not in escolhidos),
+                    key=lambda i: i.hp_atual,
+                )
+                escolhidos += sobram[: quantos - len(escolhidos)]
+            mirados = escolhidos[:quantos]
         if not mirados:
             return "Nao ha inimigo de pe para a habilidade."
 
@@ -2406,13 +2441,22 @@ class Incursoes(commands.Cog):
             if acao.get("sem_save"):
                 passou, rolagem = False, ""
             else:
-                save = motor.salvar_inimigo(inimigo, acao["save"], cd)
+                save = motor.salvar_inimigo(
+                    inimigo, acao["save"], cd, desvantagem=desvantagem
+                )
                 passou = save.passou
-                rolagem = f"🎲 {save.d20} {fmt(save.modificador)} = **{save.total}**"
+                marca = " (desvantagem)" if desvantagem else ""
+                rolagem = (
+                    f"🎲 {save.d20} {fmt(save.modificador)} = "
+                    f"**{save.total}**{marca}"
+                )
 
             sofridos: list[str] = []
             if acao.get("dano"):
                 cheio = motor.rolar_dano(acao["dano"])
+                # Empowered Spell: um dado a mais em toda magia dele.
+                if dado_extra:
+                    cheio += motor.rolar_dano(dado_extra)
                 levou = cheio if not passou else (cheio // 2 if acao.get("metade") else 0)
                 if levou:
                     inimigo.hp_atual = max(0, inimigo.hp_atual - levou)
@@ -2429,6 +2473,15 @@ class Incursoes(commands.Cog):
                 sofridos.append(
                     await self._virar_contra_os_seus(run, estado, inimigo, habilidade)
                 )
+            if not passou and acao.get("dano_por_rodada") and not inimigo.caido:
+                await db.aplicar_efeito(
+                    self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
+                    f"{habilidade.id}:corrente",
+                    {"dano_por_rodada": acao["dano_por_rodada"],
+                     "save": acao["save"], "cd": cd},
+                    estado.rodada + acao.get("turnos", 3), dono=user_id,
+                )
+                sofridos.append(f"**acorrentado** ({acao['dano_por_rodada']}/rodada)")
             if not passou and acao.get("penalidade_ataque") and not inimigo.caido:
                 inimigo.penalidade_ataque = max(
                     inimigo.penalidade_ataque, acao["penalidade_ataque"]
@@ -2511,11 +2564,12 @@ class Incursoes(commands.Cog):
         # Quem nao mira ninguem: o buff de grupo, o que vale so em si, e a
         # invocacao, que traz o aliado e nao escolhe inimigo.
         if (
-            acao.get("tipo") in ("grupo", "invocar", "forma")
+            acao.get("tipo") in ("grupo", "invocar")
+            or (acao.get("tipo") == "forma" and acao.get("alvo") != "aliado")
             or acao.get("alvo") == "proprio"
         ):
             return False
-        if acao.get("tipo") == "cura" or acao.get("alvo") == "aliados":
+        if acao.get("alvo") in ("aliado", "aliados") or acao.get("tipo") == "cura":
             if acao.get("tipo") == "cura" and acao.get("alvo") != "aliado":
                 return False
             opcoes = [
@@ -2743,6 +2797,11 @@ class Incursoes(commands.Cog):
             escolhidos = [
                 c for c in estado.vivos if c.user_id in set(alvos or ())
             ] or sorted(estado.vivos, key=lambda c: -c.ameaca_total)[:quantos]
+            # Dimension Door leva quem lancou junto, sempre em primeiro.
+            if acao.get("inclui_quem_usou"):
+                proprio = estado.combatente(user_id)
+                if proprio is not None and proprio not in escolhidos:
+                    escolhidos = [proprio] + escolhidos
             if not escolhidos:
                 return "Nao ha ninguem de pe para a habilidade."
             for quem_recebe in escolhidos[:quantos]:
@@ -3152,8 +3211,49 @@ class Incursoes(commands.Cog):
                     curas[c.user_id] = c.hp_atual
         if curas:
             await db.definir_hp_varios(self.bot.db, run["id"], curas)
+        await self._sangrar_acorrentados(run, estado)
         await self._refazer_saves(run, estado)
         await db.limpar_efeitos_vencidos(self.bot.db, run["id"], passo, estado.rodada)
+
+    async def _sangrar_acorrentados(self, run: dict[str, Any], estado) -> None:
+        """Grilhões Planares: a criatura presa sangra todo fim de rodada.
+
+        Na mesa ela andaria para fugir do efeito; aqui não há posição, então o
+        escape é o save: a cada rodada ela refaz o teste e, passando, a
+        corrente arrebenta. Sem isso a magia seria dano garantido e viraria a
+        mais forte de alvo único do jogo.
+        """
+        passo = self._passo(run)
+        ligados = await db.efeitos_ativos(self.bot.db, run["id"], passo, estado.rodada)
+        linhas: list[str] = []
+        mexeu = False
+        for ligado in ligados:
+            valor = ligado.get("valor") or {}
+            if ligado["alvo_tipo"] != "inimigo" or not valor.get("dano_por_rodada"):
+                continue
+            alvo = estado.inimigo(ligado["alvo_id"])
+            if alvo is None or alvo.caido:
+                continue
+            livre = motor.salvar_inimigo(alvo, valor.get("save", "DES"), valor["cd"])
+            if livre.passou:
+                await db.remover_efeito(
+                    self.bot.db, run["id"], passo, "inimigo",
+                    ligado["alvo_id"], ligado["efeito"],
+                )
+                linhas.append(f"⛓️ **{alvo.nome}** arrebenta a corrente")
+                continue
+            levou = motor.rolar_dano(valor["dano_por_rodada"])
+            alvo.hp_atual = max(0, alvo.hp_atual - levou)
+            mexeu = True
+            caiu = " e cai" if alvo.caido else ""
+            linhas.append(f"⛓️ **{alvo.nome}** sangra **{levou}** na corrente{caiu}")
+        if mexeu:
+            await db.definir_hp_inimigos(
+                self.bot.db, run["id"], passo,
+                {i.indice: i.hp_atual for i in estado.inimigos},
+            )
+        if linhas:
+            self._registrar(run, estado.rodada, linhas)
 
     async def _refazer_saves(self, run: dict[str, Any], estado) -> None:
         """Quem esta preso por um efeito de 'save no fim do turno' rola de novo.

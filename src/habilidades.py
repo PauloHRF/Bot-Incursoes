@@ -986,6 +986,153 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        acao={"tipo": "grupo", "cura_dado": "5d8+5"},
                        exige_escolha=("magia_druida_t5", "mass_cure_wounds_druida"))],
     },
+    # Mesmo corpo do mago, de proposito: os dois sao d6 e conjuram. O que os
+    # separa e o METAMAGIC, que e a assinatura do feiticeiro — ele torce as
+    # proprias magias, e aqui isso vale sempre, sem a contabilidade de Sorcery
+    # Points. O mago tem mais magias; o feiticeiro tem magias melhores.
+    "feiticeiro": {
+        1: [Habilidade("magia_feit_t1", "Fagulha inata", ESCOLHA,
+                       "Escolhe uma: Chromatic Orb, Burning Hands ou "
+                       "Dissonant Whispers.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "chromatic_orb", "nome": "Chromatic Orb",
+                            "texto": "4d8 num alvo, sem save"},
+                           {"id": "burning_hands", "nome": "Burning Hands",
+                            "texto": "3d6 em todos, metade no sucesso"},
+                           {"id": "dissonant_whispers", "nome": "Dissonant Whispers",
+                            "texto": "3d6 num alvo, e ele perde a vez"},
+                       ]}),
+            Habilidade("chromatic_orb", "Chromatic Orb", ATIVA,
+                       "1x por descanso: 4d8 num inimigo. Nao tem save — a "
+                       "esfera acerta.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": 1,
+                             "dano": "4d8", "sem_save": True},
+                       exige_escolha=("magia_feit_t1", "chromatic_orb")),
+            Habilidade("burning_hands", "Burning Hands", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de DES; "
+                       "quem falha leva 3d6, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": "todos",
+                             "dano": "3d6", "metade": True},
+                       exige_escolha=("magia_feit_t1", "burning_hands")),
+            Habilidade("dissonant_whispers", "Dissonant Whispers", ATIVA,
+                       "1x por descanso: um inimigo faz save de SAB; falhando, "
+                       "leva 3d6 e perde a proxima vez.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "dano": "3d6", "atordoa": 1},
+                       exige_escolha=("magia_feit_t1", "dissonant_whispers"))],
+        # Metamagic como passiva permanente: no livro cada uso custa Sorcery
+        # Point, e o bot nao tem pool. Vale sempre — a identidade sobrevive,
+        # a contabilidade nao.
+        2: [Habilidade("metamagia_t2", "Metamagia", ESCOLHA,
+                       "Ele torce as proprias magias, para sempre. Escolhe uma: "
+                       "Empowered, Twinned ou Heightened.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "empowered", "nome": "Empowered Spell",
+                            "texto": "+1d8 de dano em toda magia dele",
+                            "efeito": {"dano_magia": "1d8"}},
+                           {"id": "twinned", "nome": "Twinned Spell",
+                            "texto": "As magias de um alvo pegam dois",
+                            "efeito": {"alvos_extra": 1}},
+                           {"id": "heightened", "nome": "Heightened Spell",
+                            "texto": "A criatura resiste com desvantagem",
+                            "efeito": {"save_com_desvantagem": True}},
+                       ]})],
+        3: [Habilidade("magia_feit_t3", "Magia da origem", ESCOLHA,
+                       "Escolhe uma: Fireball, Haste ou Grilhoes Planares.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "fireball_feit", "nome": "Fireball",
+                            "texto": "8d6 em todos, metade no sucesso"},
+                           {"id": "haste", "nome": "Haste",
+                            "texto": "Um aliado ataca 2x e ganha +2 de CA"},
+                           {"id": "grilhoes_planares", "nome": "Grilhoes Planares",
+                            "texto": "4d8 e o alvo sangra 2d8 por rodada"},
+                       ]}),
+            Habilidade("fireball_feit", "Fireball", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de DES; "
+                       "quem falha leva 8d6, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": "todos",
+                             "dano": "8d6", "metade": True},
+                       exige_escolha=("magia_feit_t3", "fireball_feit")),
+            Habilidade("haste", "Haste", ATIVA,
+                       "1x por descanso: um aliado ataca duas vezes por rodada "
+                       "e ganha +2 de CA, por 3 rodadas.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "duracao", "turnos": 3, "alvo": "aliados",
+                             "alvos": 1, "efeitos": {"ataques": 2, "ca": 2}},
+                       exige_escolha=("magia_feit_t3", "haste")),
+            # A magia da casa. O texto diz que a criatura sangra se terminar o
+            # turno onde comecou — e aqui nao existe posicao, entao isso seria
+            # dano garantido. O escape virou o save: a cada rodada ela refaz o
+            # teste e, passando, arrebenta a corrente.
+            Habilidade("grilhoes_planares", "Grilhoes Planares", ATIVA,
+                       "1x por descanso: um inimigo faz save de DES e leva 4d8 "
+                       "(metade no sucesso). Falhando, fica acorrentado: sangra "
+                       "2d8 no fim de cada rodada e refaz o save para escapar.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": 1,
+                             "dano": "4d8", "metade": True, "turnos": 3,
+                             "dano_por_rodada": "2d8"},
+                       exige_escolha=("magia_feit_t3", "grilhoes_planares"))],
+        4: [Habilidade("metamagia_t4", "Segunda metamagia", ESCOLHA,
+                       "Mais um jeito de torcer as magias. Escolhe uma: "
+                       "Quickened, Empowered, Twinned ou Heightened.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "quickened", "nome": "Quickened Spell",
+                            "texto": "Lanca a magia E ataca no mesmo turno",
+                            "efeito": {"magia_rapida": 1}},
+                           {"id": "empowered_2", "nome": "Empowered Spell",
+                            "texto": "+1d8 de dano em toda magia dele",
+                            "efeito": {"dano_magia": "1d8"}},
+                           {"id": "twinned_2", "nome": "Twinned Spell",
+                            "texto": "As magias de um alvo pegam dois",
+                            "efeito": {"alvos_extra": 1}},
+                           {"id": "heightened_2", "nome": "Heightened Spell",
+                            "texto": "A criatura resiste com desvantagem",
+                            "efeito": {"save_com_desvantagem": True}},
+                       ]})],
+        5: [Habilidade("magia_feit_t5", "Magia maior", ESCOLHA,
+                       "Escolhe uma: Polymorph, Cone of Cold ou Dimension Door.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "polymorph", "nome": "Polymorph",
+                            "texto": "Um aliado vira uma fera e bate como ela"},
+                           {"id": "cone_of_cold_feit", "nome": "Cone of Cold",
+                            "texto": "12d8 em todos, metade no sucesso"},
+                           {"id": "dimension_door", "nome": "Dimension Door",
+                            "texto": "Ele e um aliado saem da mira"},
+                       ]}),
+            # Polymorph num ALIADO: e a forma do druida emprestada a outro.
+            Habilidade("polymorph", "Polymorph", ATIVA,
+                       "1x por descanso: um aliado vira uma fera por 3 rodadas "
+                       "— bate com o dado dela, +2 de CA e vida temporaria.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "forma", "nome": "Fera", "turnos": 3,
+                             "alvo": "aliado", "ca": 2, "ataques": 1,
+                             "thp_por_tier": 3,
+                             "dano": {1: "1d10+2", 2: "2d8+3", 3: "2d10+4",
+                                      4: "2d12+5", 5: "3d10+5"}},
+                       exige_escolha=("magia_feit_t5", "polymorph")),
+            Habilidade("cone_of_cold_feit", "Cone of Cold", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de CON; "
+                       "quem falha leva 12d8, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "CON", "alvos": "todos",
+                             "dano": "12d8", "metade": True},
+                       exige_escolha=("magia_feit_t5", "cone_of_cold_feit")),
+            # Teleporte nao tem onde pegar; o que sobra dele e "sair de onde
+            # estava". Mesmo caminho do Antilife Shell, em duas pessoas.
+            Habilidade("dimension_door", "Dimension Door", ATIVA,
+                       "1x por descanso: ele e um aliado desaparecem por 2 "
+                       "rodadas — nenhuma criatura consegue mira-los.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "duracao", "turnos": 2, "alvo": "aliados",
+                             "alvos": 2, "inclui_quem_usou": True,
+                             "efeitos": {"ameaca_fator": 0.0}},
+                       exige_escolha=("magia_feit_t5", "dimension_door"))],
+    },
 }
 
 
@@ -1038,10 +1185,17 @@ NEUTRO: dict = {
     "bichinho_cura": 0,
     # Forma Lunar: dobra a vida temporaria que o Wild Shape da.
     "forma_lunar": 0,
+    # Metamagia do feiticeiro. Dados entram em DADOS (comparados pela media);
+    # os outros sao numero ou bandeira.
+    "dano_magia": "",
+    "alvos_extra": 0,
+    "save_com_desvantagem": False,
+    "cd_magia": 0,
+    "magia_rapida": 0,
 }
 
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.
-DADOS = ("dano_bonus", "bonus_cura")
+DADOS = ("dano_bonus", "bonus_cura", "dano_magia")
 
 
 def media_do_dado(expressao: str) -> float:

@@ -10,7 +10,7 @@ sys.path.insert(0, str(RAIZ))
 
 from src import classes as cl, config, database as db  # noqa: E402
 from src.cogs.ficha import LIMITE_PERSONAGENS, Ficha, SeletorPericias  # noqa: E402
-from src.rules import NIVEL_MAXIMO, TIER_MAXIMO, tier  # noqa: E402
+from src.rules import NIVEL_MAXIMO, TIER_MAXIMO, chave_comparacao, tier  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     CLASSE_PADRAO,
@@ -85,8 +85,10 @@ def caso_tabela_das_classes():
     # o nome, o id e a grafia sem acento levam a mesma classe
     assert cl.classe("Xamã") is cl.classe("xama") is cl.classe("xama")
     assert cl.classe("LADINO") is cl.CLASSES["ladino"]
-    assert cl.classe("feiticeiro") is None, "classe ainda nao escrita nao pode ser escolhida"
-    assert "Feiticeiro" in cl.CLASSES_PENDENTES
+    # Da lista de pendentes, e nao de um nome fixo: cada classe nova que
+    # entra tirava este teste do ar.
+    for nome in cl.CLASSES_PENDENTES:
+        assert cl.classe(nome) is None, f"{nome} nao tem tabela e nao pode entrar"
     assert len(cl.CLASSES) + len(cl.CLASSES_PENDENTES) == len(cl.CLASSES_PREVISTAS)
     print(f"  {len(cl.CLASSES)} classes com tabela, {len(cl.CLASSES_PENDENTES)} previstas: ok")
 
@@ -149,8 +151,12 @@ async def caso_menu_limita_as_proficiencias():
 async def caso_classe_pendente_e_recusada():
     conn, canal, ficha = await preparar()
     inter = FakeInteraction(canal, JOGADORES[0])
+    # A primeira que ainda nao tem tabela. Acabando as pendentes, serve
+    # qualquer nome que nao exista: a recusa e a mesma.
+    pendente = cl.CLASSES_PENDENTES[0] if cl.CLASSES_PENDENTES else "Necromante"
     await ficha.registrar.callback(
-        ficha, inter, "Elminster", Escolha("feiticeiro", "Feiticeiro")
+        ficha, inter, "Elminster",
+        Escolha(chave_comparacao(pendente).replace(" ", "_"), pendente),
     )
     assert "ainda nao esta pronta" in inter.resposta, inter.resposta
     assert "Ladino" in inter.resposta, "a recusa lista o que da para jogar"
