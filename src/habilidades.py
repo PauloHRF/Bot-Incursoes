@@ -352,15 +352,23 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        escolha={"tipo": "opcao", "opcoes": [
                            {"id": "protetor", "nome": "Protetor",
                             "texto": "+2 de CA", "efeito": {"ca": 2}},
-                           # Pede escolha encadeada (o dominio, e depois quais
-                           # duas pericias), que o bot ainda nao sabe pedir.
                            {"id": "taumaturgo", "nome": "Taumaturgo",
-                            "texto": "Proficiencia em 2 pericias",
-                            "pendente": True},
+                            "texto": "Proficiencia em 2 pericias, à escolha"},
                            {"id": "curandeiro", "nome": "Curandeiro",
                             "texto": "As curas dele curam 1d6 a mais",
                             "efeito": {"bonus_cura": "1d6"}},
-                       ]})],
+                       ]}),
+            # Escolha encadeada: a primeira do bot. O dominio decide o QUE ele
+            # ganha, e so o Taumaturgo precisa de uma segunda pergunta — quais
+            # duas pericias. O `exige_escolha` que destrava magia de clerigo
+            # serve igual aqui, e o menu da ficha ja abre a proxima pendencia
+            # sozinho depois de gravar a primeira.
+            Habilidade("saber_taumaturgo", "Saber do Taumaturgo", ESCOLHA,
+                       "Escolhe as 2 pericias em que o dominio deu "
+                       "proficiencia.",
+                       escolha={"tipo": "pericias", "quantidade": 2,
+                                "entre": "todas", "aplica": "proficiencia"},
+                       exige_escolha=("dominio_t2", "taumaturgo"))],
         3: [Habilidade("magia_t3", "Magia de 2o circulo", ESCOLHA,
                        "Escolhe uma: Spirit Guardians, Mass Healing Word ou "
                        "Hypnotic Pattern.",
@@ -956,7 +964,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "Mass Cure Wounds.",
                        escolha={"tipo": "opcao", "opcoes": [
                            {"id": "antilife_shell", "nome": "Antilife Shell",
-                            "texto": "Os inimigos nao conseguem alcanca-lo"},
+                            "texto": "Dois aliados saem do alcance dos inimigos"},
                            {"id": "conjure_elemental", "nome": "Conjure Elemental",
                             "texto": "Um elemental de 70 HP entra na luta"},
                            {"id": "mass_cure_wounds_druida", "nome": "Mass Cure Wounds",
@@ -965,11 +973,20 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
             # Voar precisou de fator porque a curva nao tinha meio-termo; aqui
             # o extremo e o certo: no livro a esfera impede a criatura viva de
             # entrar, e todo ataque de criatura neste bot e corpo a corpo.
+            #
+            # Fator ZERO nao e invulnerabilidade: o sorteio de alvo tira do
+            # bolo quem ja foi escolhido e renormaliza o que sobra (ver
+            # `ameaca.sortear_varios`). Enquanto houver alguem fora da esfera,
+            # a criatura bate nele; quando os dois protegidos sao tudo que
+            # resta, o peso zera para todos e o sorteio volta ao uniforme —
+            # eles levam pancada. A esfera desvia a atencao, nao apaga o alvo.
             Habilidade("antilife_shell", "Antilife Shell", ATIVA,
-                       "1x por descanso: por 3 rodadas nenhuma criatura "
-                       "consegue mira-lo.",
+                       "1x por descanso: dois aliados ficam 2 rodadas fora do "
+                       "alcance — as criaturas batem em quem sobrou, e so neles "
+                       "se nao houver mais ninguem.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "duracao", "turnos": 3, "alvo": "proprio",
+                       acao={"tipo": "duracao", "turnos": 2, "alvo": "aliados",
+                             "alvos": 2,
                              "efeitos": {"ameaca_fator": 0.0}},
                        exige_escolha=("magia_druida_t5", "antilife_shell")),
             Habilidade("conjure_elemental", "Conjure Elemental", ATIVA,

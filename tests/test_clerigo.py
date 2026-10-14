@@ -118,16 +118,53 @@ def caso_escolha_destrava_uma_magia_so():
     print("  a escolha destrava uma magia e esconde as irmas: ok")
 
 
-def caso_taumaturgo_esta_declarado_pendente():
-    """Opção que o bot ainda não executa tem de dizer isso, não sumir calada."""
+def caso_taumaturgo_abre_a_escolha_encadeada():
+    """A primeira escolha do bot que puxa outra: domínio, depois as perícias."""
     dominio = next(
         h for _t, h in cl.habilidades("clerigo", 9) if h.id == "dominio_t2"
     )
     opcoes = {o["id"]: o for o in dominio.escolha["opcoes"]}
-    assert opcoes["taumaturgo"].get("pendente") is True
     assert opcoes["protetor"]["efeito"] == {"ca": 2}
     assert opcoes["curandeiro"]["efeito"] == {"bonus_cura": "1d6"}
-    print("  Taumaturgo esta marcado pendente, e os outros dois funcionam: ok")
+    # O Taumaturgo não soma número nenhum: o que ele faz é destravar a
+    # pergunta seguinte.
+    assert "efeito" not in opcoes["taumaturgo"]
+    assert "pendente" not in opcoes["taumaturgo"]
+
+    # Sem domínio escolhido, a segunda pergunta não existe.
+    pendentes = {h.id for _t, h in cl.escolhas_pendentes("clerigo", 9, {})}
+    assert "dominio_t2" in pendentes and "saber_taumaturgo" not in pendentes
+
+    # Protetor fecha o tier; Taumaturgo abre mais uma.
+    fechado = {
+        h.id for _t, h in cl.escolhas_pendentes(
+            "clerigo", 9, {"dominio_t2": "protetor"}
+        )
+    }
+    assert "saber_taumaturgo" not in fechado
+    aberto = {
+        h.id for _t, h in cl.escolhas_pendentes(
+            "clerigo", 9, {"dominio_t2": "taumaturgo"}
+        )
+    }
+    assert "saber_taumaturgo" in aberto
+
+    # E as duas perícias que ele responder entram na ficha como proficiência,
+    # fora da cota da classe — o mesmo caminho do Primal Knowledge.
+    extras = cl.pericias_extras(
+        "clerigo", 9,
+        {"dominio_t2": "taumaturgo",
+         "saber_taumaturgo": ["Arcanismo", "História"]},
+    )
+    assert extras == ["Arcanismo", "História"], extras
+    # Quem não é Taumaturgo não leva as perícias nem tendo a resposta gravada
+    # de um tier anterior.
+    assert cl.pericias_extras(
+        "clerigo", 9,
+        {"dominio_t2": "protetor",
+         "saber_taumaturgo": ["Arcanismo", "História"]},
+    ) == []
+    print("  Taumaturgo abre a segunda pergunta e as pericias entram: ok")
 
 
 def caso_passivas_de_dado_consolidam_pelo_maior():
@@ -324,7 +361,7 @@ async def main():
         caso_tabela_bate_com_o_documento()
         caso_cd_sai_do_acerto()
         caso_escolha_destrava_uma_magia_so()
-        caso_taumaturgo_esta_declarado_pendente()
+        caso_taumaturgo_abre_a_escolha_encadeada()
         caso_passivas_de_dado_consolidam_pelo_maior()
         await caso_cure_wounds_cura_por_dado()
         await caso_curandeiro_soma_na_cura()

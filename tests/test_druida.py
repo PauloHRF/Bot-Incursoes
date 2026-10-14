@@ -205,13 +205,21 @@ async def caso_aranha_envenena_quem_acerta():
     estado = await cog._estado_combate(run, incursao.objetivo)
     assert estado.combatente(JOGADORES[0]).veneno_no_golpe == 2, "a forma durou"
 
-    # o saco de pancada tem CA 1: o golpe acerta e o veneno entra
+    # O saco de pancada tem CA 1, mas o 1 natural erra sempre: morde ate
+    # acertar, uma vez por rodada, como os outros testes fazem.
     alvo = estado.inimigos[0].indice
-    inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.atacar(inter, run["id"], "OBJ", alvo)
-    estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
-                                       incursao.objetivo)
-    inimigo = estado.inimigo(alvo)
+    for _ in range(8):
+        inter = FakeInteraction(canal, JOGADORES[0])
+        await cog.atacar(inter, run["id"], "OBJ", alvo)
+        run = await db.buscar_run(conn, run["id"])
+        estado = await cog._estado_combate(run, incursao.objetivo)
+        inimigo = estado.inimigo(alvo)
+        if inimigo.penalidade_ataque == 2:
+            break
+        await db.atualizar_rodada(conn, run["id"], cog._passo(run),
+                                  estado.rodada + 1)
+        run = await db.buscar_run(conn, run["id"])
+        estado = await cog._estado_combate(run, incursao.objetivo)
     assert inimigo.penalidade_ataque == 2, inimigo.penalidade_ataque
     # e a penalidade chega na rolagem de verdade
     golpe = motor.contra_atacar(
@@ -277,32 +285,60 @@ async def caso_conjure_animals_traz_o_bando():
     print("  Conjure Animals usa o aliado conjurado que o bruxo trouxe: ok")
 
 
-async def caso_antilife_shell_tira_ele_da_mira():
+async def caso_antilife_shell_protege_dois_aliados():
+    """A esfera escolhe dois: eles saem da mira enquanto houver mais alguém."""
     conn, canal, cog, incursao, run = await preparar(
         escolhas={"magia_druida_t5": "antilife_shell"}
     )
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.usar_habilidade(inter, run["id"], "OBJ", "antilife_shell")
+    await cog.usar_habilidade(
+        inter, run["id"], "OBJ", "antilife_shell", [JOGADORES[1], JOGADORES[2]]
+    )
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
                                        incursao.objetivo)
-    protegido = estado.combatente(JOGADORES[0])
-    assert protegido.ameaca_fator == 0.0, protegido.ameaca_fator
+    fora = [c for c in estado.vivos if c.ameaca_fator == 0.0]
+    assert {c.user_id for c in fora} == {JOGADORES[1], JOGADORES[2]}, [
+        c.nome for c in fora
+    ]
+    # Quem lancou NAO entra de graca: sao dois aliados, a escolha dele.
+    assert estado.combatente(JOGADORES[0]).ameaca_fator == 1.0
 
-    # com fator 0 ele sai da mira de verdade, e os outros absorvem
+    # Com alguem de fora da esfera, as criaturas batem nele — nos protegidos,
+    # nunca.
     rng = random.Random(3)
     conta = collections.Counter(
         motor.sortear_alvo(estado, rng).nome for _ in range(5000)
     )
-    assert conta[protegido.nome] == 0, conta
+    for protegido in fora:
+        assert conta[protegido.nome] == 0, conta
     assert sum(conta.values()) == 5000, "os outros continuam sendo alvo"
-    print("  Antilife Shell tira ele da mira por completo, e o grupo absorve: ok")
+    print("  Antilife Shell tira dois da mira, e os outros absorvem: ok")
 
 
-def caso_antilife_shell_nao_quebra_se_todos_tiverem():
-    """Grupo inteiro protegido: a curva cai no uniforme, não em divisão por zero."""
-    fatias = ameaca.fracoes([6, 3, 2], [0.0, 0.0, 0.0])
-    assert fatias == [1 / 3] * 3, fatias
-    print("  grupo todo protegido cai no uniforme, sem dividir por zero: ok")
+def caso_a_esfera_nao_e_invulnerabilidade():
+    """Se só sobrarem os protegidos, eles levam pancada — não há alvo melhor."""
+    # Dois protegidos e um fora: a atencao inteira vai para quem esta fora.
+    fatias = ameaca.fracoes([6, 3, 2], [0.0, 0.0, 1.0])
+    assert fatias == [0.0, 0.0, 1.0], fatias
+    # Sobrando so os dois: o peso zera para todos e o sorteio volta ao
+    # uniforme. E o que o Antilife Shell promete — desviar a atencao, nao
+    # apagar o alvo.
+    fatias = ameaca.fracoes([6, 3], [0.0, 0.0])
+    assert fatias == [0.5, 0.5], fatias
+    print("  sobrando so os protegidos, a esfera deixa de valer: ok")
+
+
+def caso_a_esfera_dura_duas_rodadas():
+    habilidade = next(
+        h for _t, h in cl.habilidades(
+            "druida", 9, {"magia_druida_t5": "antilife_shell"}
+        )
+        if h.id == "antilife_shell"
+    )
+    assert habilidade.acao["turnos"] == 2, habilidade.acao
+    assert habilidade.acao["alvos"] == 2, habilidade.acao
+    assert "inclui_quem_usou" not in habilidade.acao
+    print("  a esfera e de 2 rodadas e 2 alvos, nenhum de brinde: ok")
 
 
 async def main():
@@ -318,8 +354,9 @@ async def main():
         caso_as_outras_duas_opcoes_do_bichinho()
         await caso_aura_of_vitality_regenera_o_grupo()
         await caso_conjure_animals_traz_o_bando()
-        await caso_antilife_shell_tira_ele_da_mira()
-        caso_antilife_shell_nao_quebra_se_todos_tiverem()
+        await caso_antilife_shell_protege_dois_aliados()
+        caso_a_esfera_nao_e_invulnerabilidade()
+        caso_a_esfera_dura_duas_rodadas()
     finally:
         for conn in _ABERTAS:
             try:

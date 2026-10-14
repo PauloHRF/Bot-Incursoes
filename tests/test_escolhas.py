@@ -72,7 +72,10 @@ def caso_catalogo_das_escolhas():
             for h in lista
             if h.exige_escolha
         }
-        for _t, h in classe.habilidades_ate(10):
+        # Da tabela crua também, e não da lista filtrada: a escolha
+        # encadeada (Saber do Taumaturgo) só existe depois de outra ser
+        # feita, e precisa ser tão bem formada quanto as de entrada.
+        for h in [h for lista in classe.habilidades.values() for h in lista]:
             if h.tipo != cl.ESCOLHA:
                 continue
             assert h.decidivel, f"{classe.nome}/{h.nome} sem forma de escolha"
@@ -107,6 +110,7 @@ def caso_catalogo_das_escolhas():
         "magia_feit_t5",
         "magia_bardo_t1", "inspiracao_t2", "magia_bardo_t3", "saber_t4",
         "magia_bardo_t5",
+        "saber_taumaturgo",
     }, decidiveis
     print(f"  as {len(decidiveis)} escolhas do documento estao no catalogo: ok")
 

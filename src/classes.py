@@ -458,19 +458,29 @@ def juntar_escolha(juntos: dict, habilidade: Habilidade, decidido) -> None:
 def escolhas_pendentes(
     identificador: Optional[str], nivel: int, feitas: Optional[dict] = None
 ) -> list[tuple[int, Habilidade]]:
-    """As decisões que o personagem já podia ter tomado e ainda não tomou."""
+    """As decisões que o personagem já podia ter tomado e ainda não tomou.
+
+    `feitas` entra duas vezes: tira da fila o que já foi decidido e destrava a
+    escolha que depende de outra. O Taumaturgo do clérigo é a encadeada —
+    escolher o domínio faz aparecer a pergunta de quais duas perícias.
+    """
     feitas = feitas or {}
     return [
         (t, h)
-        for t, h in habilidades(identificador, nivel)
+        for t, h in habilidades(identificador, nivel, feitas)
         if h.decidivel and not feitas.get(h.id)
     ]
 
 
 def pericias_extras(identificador: Optional[str], nivel: int, escolhas: dict) -> list[str]:
-    """Proficiências ganhas por escolha (Primal Knowledge), fora a cota da classe."""
+    """Proficiências ganhas por escolha (Primal Knowledge), fora a cota da classe.
+
+    `escolhas` também precisa ir para `habilidades`: o Saber do Taumaturgo só
+    existe para quem escolheu o domínio, e sem isso as perícias dele seriam
+    gravadas e nunca lidas.
+    """
     extras: list[str] = []
-    for _tier, habilidade in habilidades(identificador, nivel):
+    for _tier, habilidade in habilidades(identificador, nivel, escolhas):
         forma = habilidade.escolha or {}
         if forma.get("aplica") != "proficiencia":
             continue

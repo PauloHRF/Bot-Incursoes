@@ -257,21 +257,25 @@ async def caso_inspiracao_no_save_devolve_o_dano():
     gastos = await db.usos_da_run(conn, run_id, JOGADORES[0])
     assert not any(c[0] == "inspira_save" for c in gastos), gastos
 
-    # e agora um save que falhou por 3: o d10 cobre, e o dano volta
+    # E agora um save que falhou por UM: qualquer face do d10 cobre, entao o
+    # caso e deterministico. Que o dado possa nao bastar ja esta no caso do
+    # teto; aqui interessa o desfazer.
     perto = motor.Investida(
         "Algoz", "Grito", alvo,
-        save=motor.ResultadoSave(alvo.nome, "CAR", 9, 3, 15), dano=7,
+        save=motor.ResultadoSave(alvo.nome, "CAR", 11, 3, 15), dano=7,
         atordoou=True,
     )
-    hp_antes = alvo.hp_atual
+    # O motor ja descontou o dano antes de a reacao rodar: sem isso o alvo
+    # estaria com a vida cheia e a devolucao nao teria onde aparecer.
+    alvo.hp_atual -= 7
+    ferido = alvo.hp_atual
     await cog._inspirar_o_save(run, estado, [perto])
-    if perto.dano == 0:
-        assert not perto.atordoou, "resistindo, o atordoamento sai tambem"
-        assert alvo.hp_atual == hp_antes + 7, (hp_antes, alvo.hp_atual)
-        print("  Inspiracao no save devolve o dano e tira o atordoamento: ok")
-    else:
-        assert perto.dano == 7, "ou o dado nao bastou, e nada mudou"
-        print("  Inspiracao no save entrou e o dado nao bastou: ok")
+    assert perto.dano == 0, "falhando por 1, o d10 sempre cobre"
+    assert not perto.atordoou, "resistindo, o atordoamento sai tambem"
+    assert alvo.hp_atual == ferido + 7, (ferido, alvo.hp_atual)
+    gastos = await db.usos_da_run(conn, run_id, JOGADORES[0])
+    assert any(c[0] == "inspira_save" for c in gastos), gastos
+    print("  Inspiracao no save devolve o dano e tira o atordoamento: ok")
 
 
 # -------------------------------------------------------- Jack of All Trades
