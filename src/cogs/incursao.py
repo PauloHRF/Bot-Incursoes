@@ -1220,6 +1220,23 @@ class Incursoes(commands.Cog):
         self._aplicar_infusoes(combatentes, personagens)
         self._aplicar_aura_de_save(combatentes, personagens)
         self._aplicar_escudo_arcano(combatentes, personagens, tier_atual)
+        # Os aliados conjurados entram como combatentes comuns, com dono: assim
+        # herdam ameaca, HP, iniciativa e painel sem nada de novo. O que os
+        # separa e `dono`, que faz a vez deles ser resolvida sozinha.
+        for conjurado in await db.invocacoes(self.bot.db, run["id"], self._passo(run)):
+            combatentes.append(
+                Combatente(
+                    user_id=conjurado["user_id"],
+                    nome=conjurado["nome"],
+                    ca=conjurado["ca"],
+                    bonus_ataque=conjurado["ataque"],
+                    dano_arma=conjurado["dano"],
+                    hp_max=conjurado["hp_max"],
+                    hp_atual=conjurado["hp_atual"],
+                    ameaca=conjurado["ameaca"],
+                    dono=conjurado["dono"],
+                )
+            )
         return combatentes
 
     @staticmethod
@@ -1394,10 +1411,17 @@ class Incursoes(commands.Cog):
             self.bot.db, run["id"], passo, linha["rodada"] - 1
         )
         for ligado in ligados:
-            if ligado["alvo_tipo"] == "inimigo" and ligado["efeito"] == "atordoado":
-                alvo = next((i for i in inimigos if i.indice == ligado["alvo_id"]), None)
-                if alvo:
-                    alvo.atordoado = True
+            if ligado["alvo_tipo"] != "inimigo":
+                continue
+            alvo = next((i for i in inimigos if i.indice == ligado["alvo_id"]), None)
+            if alvo is None:
+                continue
+            if ligado["efeito"] == "atordoado":
+                alvo.atordoado = True
+            # Synaptic Static: a criatura atrapalhada erra mais enquanto dura.
+            penalidade = (ligado["valor"] or {}).get("penalidade_ataque") or 0
+            if penalidade:
+                alvo.penalidade_ataque = max(alvo.penalidade_ataque, penalidade)
         combatentes = await self._combatentes(run, ligados)
         for ligado in ligados:
             if ligado["alvo_tipo"] == "personagem" and ligado["efeito"] == "atordoado":
@@ -1623,6 +1647,7 @@ class Incursoes(commands.Cog):
         )
         if personagem:
             await self._totem_do_golpe(run, personagem, atacante, golpes)
+            await self._bencao_do_patrono(run, personagem, atacante, golpes)
         if sequencia:
             await self._guardar_sequencia(run, user_id, passo, pilha)
         self._registrar(run, estado.rodada, [E.linha_golpe(g) for g, _i in golpes])
@@ -1733,6 +1758,13 @@ class Incursoes(commands.Cog):
 
                 user_id = ator["alvo_id"]
                 combatente = estado.combatente(user_id)
+                # Aliado conjurado: ninguem clica por ele. Age sozinho, como a
+                # criatura, e a vez anda.
+                if combatente is not None and combatente.e_invocacao:
+                    if not combatente.caido and not combatente.atordoado:
+                        await self._vez_da_invocacao(run, estado, combatente)
+                    await db.definir_vez(self.bot.db, run["id"], passo, vez + 1)
+                    continue
                 turno = await db.turno_de(
                     self.bot.db, run["id"], passo, estado.rodada, user_id
                 )
@@ -1831,8 +1863,7 @@ class Incursoes(commands.Cog):
                 self.bot.db, run["id"], self._passo(run), {inimigo.indice: inimigo.hp_atual}
             )
         for atingido in feito.atingidos:
-            await db.definir_hp(self.bot.db, run["id"], atingido.user_id, atingido.hp_atual)
-            await db.definir_thp(self.bot.db, run["id"], atingido.user_id, atingido.thp)
+            await self._gravar_hp_do_combatente(run, atingido)
         if inimigo.habilidade:
             await db.definir_carga_inimigos(
                 self.bot.db, run["id"], self._passo(run), {inimigo.indice: inimigo.carregada}
@@ -2213,7 +2244,41 @@ class Incursoes(commands.Cog):
             return await self._resolver_duracao(run, user_id, estado, habilidade, acao, alvos)
         if acao.get("tipo") == "save":
             return await self._resolver_save(run, user_id, estado, habilidade, acao, alvos)
+        if acao.get("tipo") == "invocar":
+            return await self._resolver_invocar(run, user_id, estado, habilidade, acao)
         return await self._resolver_golpes(run, user_id, estado, habilidade, acao, alvos)
+
+    async def _resolver_invocar(
+        self, run: dict[str, Any], user_id: int, estado, habilidade, acao
+    ) -> str:
+        """Traz um aliado conjurado para a sala.
+
+        Ele entra como combatente de dono, no fim da ordem da rodada, e vive
+        até o grupo trocar de sala — a tabela é por passo, então ele some
+        sozinho. Conjurar de novo troca o aliado: o pacto dá um por vez.
+        """
+        passo = self._passo(run)
+        falso = await db.invocar(
+            self.bot.db, run["id"], passo, user_id,
+            acao["nome"], acao["ca"], acao["ataque"], acao["dano"],
+            acao["hp"], acao.get("ameaca", 0),
+        )
+        rolagem = motor.rolar_iniciativa(
+            motor.PERSONAGEM, falso, acao["nome"], acao.get("iniciativa", 0)
+        )
+        await db.acrescentar_iniciativa(
+            self.bot.db, run["id"], passo, motor.PERSONAGEM, falso,
+            acao["nome"], rolagem.d20, rolagem.modificador,
+        )
+        quem = estado.combatente(user_id)
+        texto = (
+            f"✨ **{habilidade.nome}**: {quem.nome if quem else 'Alguem'} "
+            f"invoca **{acao['nome']}** — {acao['hp']} HP, CA {acao['ca']}, "
+            f"ataque {fmt(acao['ataque'])} com {acao['dano']}. Ele luta "
+            f"sozinho, no fim da ordem."
+        )
+        await self._anunciar_habilidade(run, texto)
+        return texto
 
     async def _resolver_save(
         self, run: dict[str, Any], user_id: int, estado, habilidade, acao, alvos
@@ -2268,6 +2333,17 @@ class Incursoes(commands.Cog):
                 sofridos.append(
                     await self._virar_contra_os_seus(run, estado, inimigo, habilidade)
                 )
+            if not passou and acao.get("penalidade_ataque") and not inimigo.caido:
+                inimigo.penalidade_ataque = max(
+                    inimigo.penalidade_ataque, acao["penalidade_ataque"]
+                )
+                await db.aplicar_efeito(
+                    self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
+                    f"{habilidade.id}:atrapalhado",
+                    {"penalidade_ataque": acao["penalidade_ataque"]},
+                    estado.rodada + acao.get("turnos", 1), dono=user_id,
+                )
+                sofridos.append(f"**-{acao['penalidade_ataque']} de ataque**")
             if not passou and acao.get("vantagem_do_grupo"):
                 await self._vantagem_do_grupo(
                     run, estado, inimigo, habilidade, acao.get("turnos", 1)
@@ -2336,7 +2412,12 @@ class Incursoes(commands.Cog):
         # Quem so mexe em si mesmo (Rage, Reckless Attack, Avatar da Luz) ou no
         # grupo inteiro nao tem alvo a escolher — perguntar num combate de
         # quatro criaturas so atrapalha.
-        if acao.get("tipo") == "grupo" or acao.get("alvo") == "proprio":
+        # Quem nao mira ninguem: o buff de grupo, o que vale so em si, e a
+        # invocacao, que traz o aliado e nao escolhe inimigo.
+        if (
+            acao.get("tipo") in ("grupo", "invocar")
+            or acao.get("alvo") == "proprio"
+        ):
             return False
         if acao.get("tipo") == "cura" or acao.get("alvo") == "aliados":
             if acao.get("tipo") == "cura" and acao.get("alvo") != "aliado":
@@ -2719,6 +2800,71 @@ class Incursoes(commands.Cog):
         )
         return f"\u2728 **{habilidade.nome}**\n{resumo}"
 
+    async def _bencao_do_patrono(
+        self, run: dict[str, Any], personagem: dict[str, Any], combatente, golpes
+    ) -> None:
+        """Dark One's Blessing: derrubar um inimigo rende vida temporária.
+
+        O gatilho é a queda, não o acerto — por isso roda depois de o dano já
+        ter entrado no HP, olhando quem ficou no chão nesta sequência.
+        """
+        por_tier = ((personagem.get("efeitos") or {}).get("thp_ao_derrubar")) or 0
+        if not por_tier or combatente is None:
+            return
+        derrubados = sum(1 for _golpe, inimigo in golpes if inimigo.caido)
+        if not derrubados:
+            return
+        quanto = por_tier * max(1, self._tier_da_run(run))
+        motor.ganhar_thp(combatente, quanto)
+        await db.definir_thp(
+            self.bot.db, run["id"], combatente.user_id, combatente.thp
+        )
+        self._registrar(
+            run, 0,
+            [f"🩸 **{combatente.nome}** drena o que caiu: **+{quanto}** de THP"],
+        )
+
+    async def _gravar_hp_do_combatente(self, run: dict[str, Any], quem) -> None:
+        """Grava o HP de quem levou dano, no lugar certo.
+
+        O aliado conjurado não tem linha em `run_participantes` — ele vive na
+        tabela de invocações, dentro do passo. Sem este desvio, o inimigo que
+        batesse nele gravaria num lugar que não existe.
+        """
+        if quem.e_invocacao:
+            await db.definir_hp_invocacao(
+                self.bot.db, run["id"], self._passo(run), quem.user_id, quem.hp_atual
+            )
+            return
+        await db.definir_hp(self.bot.db, run["id"], quem.user_id, quem.hp_atual)
+        await db.definir_thp(self.bot.db, run["id"], quem.user_id, quem.thp)
+
+    async def _vez_da_invocacao(self, run: dict[str, Any], estado, aliado) -> None:
+        """A vez do aliado conjurado: ele bate no inimigo mais machucado.
+
+        Sem tática: o bot não joga por ninguém. Mirar o mais ferido é a única
+        escolha que não precisa de opinião — fecha combate mais rápido e não
+        desperdiça o golpe num alvo que já ia cair de qualquer forma.
+        """
+        alvo = min(
+            estado.inimigos_vivos, key=lambda i: i.hp_atual, default=None
+        )
+        if alvo is None:
+            return
+        golpe = motor.atacar(
+            aliado.nome, aliado.bonus_ataque, aliado.dano_arma, alvo.nome, alvo.ca
+        )
+        if golpe.acertou:
+            alvo.hp_atual = max(0, alvo.hp_atual - golpe.dano)
+            await db.definir_hp_inimigos(
+                self.bot.db, run["id"], self._passo(run),
+                {i.indice: i.hp_atual for i in estado.inimigos},
+            )
+        self._registrar(
+            run, estado.rodada,
+            [f"👹 **{aliado.nome}** · {E.texto_do_contra_ataque(golpe, alvo.nome)}"],
+        )
+
     async def _socorrer_o_teste(self, run: dict[str, Any], resultado) -> None:
         """Flash of Genius: quem tem a reação salva o teste falhado de alguém.
 
@@ -2731,6 +2877,10 @@ class Incursoes(commands.Cog):
         for p in await db.personagens_da_run(self.bot.db, run["id"]):
             habilidade, acao = self._reacao_de(p, "falhou_teste")
             if habilidade is None:
+                continue
+            # A Dark One's Own Luck do bruxo é o patrono torcendo o destino
+            # DELE: não socorre o teste de mais ninguém.
+            if acao.get("so_em_si") and p["user_id"] != resultado.user_id:
                 continue
             # O tier 5 sobe o bonus de 5 para 10, por passiva.
             bonus = ((p.get("efeitos") or {}).get("flash_bonus")) or acao.get("bonus", 0)

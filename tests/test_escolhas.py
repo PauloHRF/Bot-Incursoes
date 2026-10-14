@@ -100,6 +100,7 @@ def caso_catalogo_das_escolhas():
         "ferramenta_t1", "infusao", "engenho_t3",
         "magia_mago_t1", "scholar", "magia_mago_t3", "tradicao_arcana",
         "magia_mago_t5",
+        "pacto_t1", "invocacao_t2", "pacto_t3", "patrono_t4", "pacto_t5",
     }, decidiveis
     print(f"  as {len(decidiveis)} escolhas do documento estao no catalogo: ok")
 

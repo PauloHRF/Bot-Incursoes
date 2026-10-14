@@ -164,6 +164,26 @@ CREATE TABLE IF NOT EXISTS run_inimigos (
     PRIMARY KEY (run_id, passo, indice)
 );
 
+-- Aliado conjurado: o Summon Greater Demon do bruxo, e o que vier depois. Ele
+-- vive dentro de um passo, entao sai sozinho quando o grupo muda de sala. O
+-- `user_id` e negativo de proposito: ele entra no combate como um Combatente
+-- comum (herda ameaca, HP e iniciativa de graca) e o sinal garante que nunca
+-- colide com um id do Discord.
+CREATE TABLE IF NOT EXISTS run_invocacoes (
+    run_id   INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo    INTEGER NOT NULL,
+    user_id  INTEGER NOT NULL,
+    dono     INTEGER NOT NULL,
+    nome     TEXT    NOT NULL,
+    ca       INTEGER NOT NULL,
+    ataque   INTEGER NOT NULL,
+    dano     TEXT    NOT NULL,
+    hp_max   INTEGER NOT NULL,
+    hp_atual INTEGER NOT NULL,
+    ameaca   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (run_id, passo, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS run_ataques (
     run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
     passo   INTEGER NOT NULL,
@@ -1330,6 +1350,126 @@ async def efeitos_ativos(
     for linha in linhas:
         linha["valor"] = json.loads(linha["valor"] or "{}")
     return linhas
+
+
+async def acrescentar_iniciativa(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    tipo: str,
+    alvo_id: int,
+    nome: str,
+    d20: int,
+    modificador: int,
+) -> None:
+    """Põe mais alguém no fim da ordem, com o combate já em andamento.
+
+    No fim, e não na posição que a rolagem daria: `posicao` é a chave e o
+    ponteiro da vez caminha por ela, então inserir no meio bagunçaria quem já
+    agiu. O aliado conjurado age por último na rodada em que nasce e entra na
+    fila normal a partir da seguinte.
+    """
+    async with conn.execute(
+        "SELECT COALESCE(MAX(posicao), -1) AS fim FROM run_iniciativa"
+        " WHERE run_id = ? AND passo = ?",
+        (run_id, passo),
+    ) as cur:
+        fim = (await cur.fetchone())["fim"]
+    async with conn.execute(
+        "SELECT posicao FROM run_iniciativa"
+        " WHERE run_id = ? AND passo = ? AND tipo = ? AND alvo_id = ?",
+        (run_id, passo, tipo, alvo_id),
+    ) as cur:
+        existente = await cur.fetchone()
+    if existente is not None:
+        # Ja tem lugar na ordem (o conjuro anterior do mesmo dono): fica no
+        # mesmo ponto e so troca o nome, para o painel nao mostrar o antigo.
+        await conn.execute(
+            "UPDATE run_iniciativa SET nome = ?"
+            " WHERE run_id = ? AND passo = ? AND posicao = ?",
+            (nome, run_id, passo, existente["posicao"]),
+        )
+    else:
+        await conn.execute(
+            "INSERT INTO run_iniciativa"
+            " (run_id, passo, posicao, tipo, alvo_id, nome, d20, modificador)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (run_id, passo, fim + 1, tipo, alvo_id, nome, d20, modificador),
+        )
+    await conn.commit()
+
+
+async def invocar(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    dono: int,
+    nome: str,
+    ca: int,
+    ataque: int,
+    dano: str,
+    hp: int,
+    ameaca: int = 0,
+) -> int:
+    """Põe um aliado conjurado na sala. Devolve o id falso dele.
+
+    O id é negativo (nunca colide com um id do Discord) e **estável por dono**:
+    conjurar de novo substitui o aliado mas guarda o mesmo id, porque a linha
+    de iniciativa é ligada a ele. Reciclar o id de outro dono faria o aliado
+    novo herdar o lugar — e o nome — do anterior na ordem do combate.
+
+    O pacto dá um por dono: o segundo conjuro troca o primeiro.
+    """
+    async with conn.execute(
+        "SELECT user_id FROM run_invocacoes"
+        " WHERE run_id = ? AND passo = ? AND dono = ?",
+        (run_id, passo, dono),
+    ) as cur:
+        linha = await cur.fetchone()
+    if linha is not None:
+        falso = linha["user_id"]
+    else:
+        async with conn.execute(
+            "SELECT COALESCE(MIN(user_id), 0) AS menor FROM run_invocacoes"
+            " WHERE run_id = ? AND passo = ?",
+            (run_id, passo),
+        ) as cur:
+            falso = min(-1, (await cur.fetchone())["menor"] - 1)
+    await conn.execute(
+        "INSERT INTO run_invocacoes"
+        " (run_id, passo, user_id, dono, nome, ca, ataque, dano, hp_max, hp_atual, ameaca)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT(run_id, passo, user_id) DO UPDATE SET"
+        " nome = excluded.nome, ca = excluded.ca, ataque = excluded.ataque,"
+        " dano = excluded.dano, hp_max = excluded.hp_max,"
+        " hp_atual = excluded.hp_atual, ameaca = excluded.ameaca",
+        (run_id, passo, falso, dono, nome, ca, ataque, dano, hp, hp, ameaca),
+    )
+    await conn.commit()
+    return falso
+
+
+async def invocacoes(
+    conn: aiosqlite.Connection, run_id: int, passo: int
+) -> list[dict[str, Any]]:
+    """Os aliados conjurados naquela sala, na ordem em que entraram."""
+    async with conn.execute(
+        "SELECT * FROM run_invocacoes WHERE run_id = ? AND passo = ?"
+        " ORDER BY user_id DESC",
+        (run_id, passo),
+    ) as cur:
+        return [dict(r) for r in await cur.fetchall()]
+
+
+async def definir_hp_invocacao(
+    conn: aiosqlite.Connection, run_id: int, passo: int, user_id: int, hp: int
+) -> None:
+    await conn.execute(
+        "UPDATE run_invocacoes SET hp_atual = ?"
+        " WHERE run_id = ? AND passo = ? AND user_id = ?",
+        (max(0, hp), run_id, passo, user_id),
+    )
+    await conn.commit()
 
 
 async def remover_efeito(

@@ -681,6 +681,159 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "efeitos": {"vantagem": True, "save_anula": True}},
                        exige_escolha=("magia_mago_t5", "circle_of_power"))],
     },
+    # O bruxo trocou algo por poder, e o pacto cobra: TODA magia dele e 1x por
+    # incursao, o escopo mais raro do bot. Numa Media isso da 1 lance contra os
+    # ~1,4 do mago e os ~3 de quem tem "por combate" — entao cada uma bate mais
+    # forte que a do mago no mesmo tier. Poucos favores, grandes.
+    #
+    # As passivas dos tiers pares sao Eldritch Invocations, que e a assinatura
+    # da classe: conhecimento proibido que fica ligado para sempre.
+    "bruxo": {
+        1: [Habilidade("pacto_t1", "Dadiva do pacto", ESCOLHA,
+                       "Escolhe uma: Hex, Arms of Hadar ou Charm Person.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "hex", "nome": "Hex",
+                            "texto": "Marca um inimigo: +1d6 de dano nele"},
+                           {"id": "arms_of_hadar", "nome": "Arms of Hadar",
+                            "texto": "2d6 em todos, save de FOR"},
+                           {"id": "charm_person", "nome": "Charm Person",
+                            "texto": "Um inimigo perde a proxima vez"},
+                       ]}),
+            # Hex e a magia do bruxo: a marca que faz todo golpe no alvo doer
+            # mais. Mesmo caminho da Marca do Cacador do patrulheiro.
+            Habilidade("hex", "Hex", ATIVA,
+                       "1x por incursao: marca um inimigo por 3 rodadas; todo "
+                       "golpe nele causa +1d6 de dano.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "duracao", "turnos": 3, "alvo": "inimigo",
+                             "efeitos": {"dano_bonus": "1d6"}},
+                       exige_escolha=("pacto_t1", "hex")),
+            Habilidade("arms_of_hadar", "Arms of Hadar", ATIVA,
+                       "1x por incursao: todos os inimigos fazem save de FOR; "
+                       "quem falha leva 2d6, quem passa leva metade.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "FOR", "alvos": "todos",
+                             "dano": "2d6", "metade": True},
+                       exige_escolha=("pacto_t1", "arms_of_hadar")),
+            Habilidade("charm_person", "Charm Person", ATIVA,
+                       "1x por incursao: um inimigo faz save de SAB; falhando, "
+                       "perde a proxima vez.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "atordoa": 1},
+                       exige_escolha=("pacto_t1", "charm_person"))],
+        2: [Habilidade("invocacao_t2", "Eldritch Invocation", ESCOLHA,
+                       "Conhecimento proibido que fica ligado. Escolhe uma: "
+                       "Agonizing Blast, Fiendish Vigor ou Devil's Sight.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "agonizing_blast", "nome": "Agonizing Blast",
+                            "texto": "+3 de dano em todo Eldritch Blast",
+                            "efeito": {"dano_extra": 3}},
+                           {"id": "fiendish_vigor", "nome": "Fiendish Vigor",
+                            "texto": "Abre o combate com vida temporaria",
+                            "efeito": {"escudo_arcano": 2}},
+                           # Ver no escuro nao tem onde pegar: o bot nao tem
+                           # luz, visao nem escuridao. O que sobra da ficcao e
+                           # "percebe o que esta escondido", e a sala e metade
+                           # do jogo aqui.
+                           {"id": "devils_sight", "nome": "Devil's Sight",
+                            "texto": "+3 em Percepcao e Investigacao",
+                            "efeito": {"bonus_pericia": {"Percepção": 3,
+                                                         "Investigação": 3}}},
+                       ]})],
+        3: [Habilidade("pacto_t3", "Favor do patrono", ESCOLHA,
+                       "Escolhe uma: Hunger of Hadar, Healing Light ou "
+                       "Hypnotic Pattern.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "hunger_of_hadar", "nome": "Hunger of Hadar",
+                            "texto": "6d6 em todos E os que falharem perdem a vez"},
+                           {"id": "healing_light", "nome": "Healing Light",
+                            "texto": "Cura 6d6 de um aliado"},
+                           {"id": "hypnotic_pattern_bruxo", "nome": "Hypnotic Pattern",
+                            "texto": "Os inimigos que falharem perdem a vez"},
+                       ]}),
+            # O vazio do Great Old One: dano E controle no mesmo lance, que e o
+            # que justifica gastar o unico uso da incursao nele.
+            Habilidade("hunger_of_hadar", "Hunger of Hadar", ATIVA,
+                       "1x por incursao: todos os inimigos fazem save de DES; "
+                       "quem falha leva 6d6 e perde a proxima vez.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "DES", "alvos": "todos",
+                             "dano": "6d6", "atordoa": 1},
+                       exige_escolha=("pacto_t3", "hunger_of_hadar")),
+            Habilidade("healing_light", "Healing Light", ATIVA,
+                       "1x por incursao: cura 6d6 de um aliado.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "cura", "dado": "6d6", "alvo": "aliado"},
+                       exige_escolha=("pacto_t3", "healing_light")),
+            Habilidade("hypnotic_pattern_bruxo", "Hypnotic Pattern", ATIVA,
+                       "1x por incursao: todos os inimigos fazem save de SAB; "
+                       "quem falha perde as duas proximas vezes.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": "todos",
+                             "atordoa": 2},
+                       exige_escolha=("pacto_t3", "hypnotic_pattern_bruxo"))],
+        4: [Habilidade("patrono_t4", "Benesse do patrono", ESCOLHA,
+                       "Escolhe uma: Dark One's Own Luck, Dark One's Blessing "
+                       "ou Radiant Soul.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "own_luck", "nome": "Dark One's Own Luck",
+                            "texto": "O patrono torce o destino num teste seu",
+                            "efeito": {"sorte_do_patrono": 1}},
+                           {"id": "dark_blessing", "nome": "Dark One's Blessing",
+                            "texto": "Vida temporaria ao derrubar um inimigo",
+                            "efeito": {"thp_ao_derrubar": 2}},
+                           {"id": "radiant_soul", "nome": "Radiant Soul",
+                            "texto": "+1d8 de dano em tudo que ele lanca",
+                            "efeito": {"dano_bonus": "1d8"}},
+                       ]}),
+            # A Own Luck e reacao, nao numero: usa a maquina do Flash of Genius
+            # do artifice, so que o patrono socorre o proprio bruxo.
+            Habilidade("own_luck", "Dark One's Own Luck", ATIVA,
+                       "1x por incursao: quando VOCE falha o teste da sala, o "
+                       "patrono soma +10 — e so dispara se o +10 fizer passar.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "bonus": 10, "so_em_si": True},
+                       exige_escolha=("patrono_t4", "own_luck"))],
+        5: [Habilidade("pacto_t5", "Grande favor", ESCOLHA,
+                       "Escolhe uma: Hold Monster, Synaptic Static ou "
+                       "Summon Greater Demon.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "hold_monster_bruxo", "nome": "Hold Monster",
+                            "texto": "Um inimigo perde tres vezes seguidas"},
+                           {"id": "synaptic_static", "nome": "Synaptic Static",
+                            "texto": "8d6 em todos, e eles passam a errar mais"},
+                           {"id": "summon_greater_demon", "nome": "Summon Greater Demon",
+                            "texto": "Um demonio entra na luta e bate sozinho"},
+                       ]}),
+            Habilidade("hold_monster_bruxo", "Hold Monster", ATIVA,
+                       "1x por incursao: um inimigo faz save de SAB; falhando, "
+                       "perde tres vezes seguidas.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "atordoa": 3},
+                       exige_escolha=("pacto_t5", "hold_monster_bruxo")),
+            # O -1d6 do livro vira -3 no ataque da criatura: o bot nao rola
+            # dado de penalidade, e -3 e a media de 1d6 arredondada.
+            Habilidade("synaptic_static", "Synaptic Static", ATIVA,
+                       "1x por incursao: todos os inimigos fazem save de INT; "
+                       "quem falha leva 8d6 e perde 3 de ataque por 3 rodadas.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "save", "save": "INT", "alvos": "todos",
+                             "dano": "8d6", "metade": True, "turnos": 3,
+                             "penalidade_ataque": 3},
+                       exige_escolha=("pacto_t5", "synaptic_static")),
+            Habilidade("summon_greater_demon", "Summon Greater Demon", ATIVA,
+                       "1x por incursao: um demonio entra na sala com HP "
+                       "proprio, age na vez dele e bate no inimigo mais "
+                       "ferido. Sai quando o grupo troca de sala.",
+                       usos=_usos("incursao"),
+                       acao={"tipo": "invocar", "nome": "Demonio do pacto",
+                             "ca": 15, "ataque": 8, "dano": "2d6+4", "hp": 45,
+                             "ameaca": 4, "iniciativa": 2},
+                       exige_escolha=("pacto_t5", "summon_greater_demon"))],
+    },
 }
 
 
@@ -724,6 +877,11 @@ NEUTRO: dict = {
     "escudo_arcano": 0,
     # Sabedoria Arcana do mago: quanto o grupo inteiro soma nos saves.
     "aura_save": 0,
+    # Dark One's Blessing: THP por tier ao derrubar um inimigo.
+    "thp_ao_derrubar": 0,
+    # Dark One's Own Luck: so marca que ele tem a benesse; o socorro vem da
+    # reacao, nao daqui.
+    "sorte_do_patrono": 0,
 }
 
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.

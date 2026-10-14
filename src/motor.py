@@ -308,6 +308,11 @@ class Combatente:
     ameaca_fator: float = 1.0
     # Circle of Power: quem passa no save da criatura nao leva nem metade.
     save_anula: bool = False
+    # Invocacao: o user_id de quem a trouxe. Preenchido, este combatente nao e
+    # um jogador — e um aliado conjurado, que age sozinho na vez dele. Ele e um
+    # Combatente comum de proposito: assim herda a ameaca (os inimigos miram
+    # nele), o HP, a iniciativa e a linha do painel sem codigo novo.
+    dono: Optional[int] = None
     # Dado de dano a mais em todo golpe, de buff curto que o grupo recebeu
     # (a Danca totemica). Diferente de `dano_extra`, que e numero fixo, e de
     # `dano_por_alvo`, que so vale contra o inimigo marcado.
@@ -333,6 +338,11 @@ class Combatente:
     def ameaca_total(self) -> int:
         """A ameaça que conta no sorteio: a da classe mais a das habilidades."""
         return max(0, self.ameaca + self.ameaca_extra)
+
+    @property
+    def e_invocacao(self) -> bool:
+        """Se é um aliado conjurado, e não um jogador que clica."""
+        return self.dono is not None
 
     @property
     def tem_thp(self) -> bool:
@@ -458,6 +468,8 @@ class Inimigo:
     hp_atual: int
     # Perde a vez na proxima rodada: Stunning Strike e afins.
     atordoado: bool = False
+    # Quanto desconta do ataque dela: o Synaptic Static do bruxo.
+    penalidade_ataque: int = 0
     # Resistencias da criatura: {atributo: modificador}. O que nao vier aqui
     # cai no padrao de DEFASAGEM_DE_SAVE.
     saves: dict = field(default_factory=dict)
@@ -735,6 +747,8 @@ def contra_atacar(
     Sem `golpe_do_monstro`, bate com o ataque e o dano da criatura.
     """
     bonus = golpe_do_monstro.ataque if golpe_do_monstro else inimigo.ataque
+    # Synaptic Static e afins: a criatura atrapalhada erra mais.
+    bonus -= inimigo.penalidade_ataque
     dano = golpe_do_monstro.dano if golpe_do_monstro else inimigo.dano
     golpe = atacar(
         inimigo.nome, bonus, dano, alvo.nome, alvo.ca_efetiva, rng, vantagem=vantagem

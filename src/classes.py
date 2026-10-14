@@ -273,6 +273,24 @@ CLASSES: dict[str, Classe] = {
                 (63, 17, 6, 5, 11, 11, "4d10"),
             ]),
         ),
+        # Classe de d8, então o HP é o do Clérigo e do Artífice. A CA fica
+        # entre o Mago (13, sem armadura) e o Clérigo (15): o bruxo veste
+        # couro. E a coluna de dano é o Eldritch Blast, o cantrip mais famoso
+        # do jogo — cresce em raios, não em raios maiores, e para em 3d10,
+        # abaixo dos 4d10 do Mago. O que o separa não é o número: é que as
+        # magias dele são todas 1x por incursão, poucas e grandes.
+        Classe(
+            "bruxo",
+            "Bruxo",
+            "Trocou algo por poder: poucos favores do pacto, e cada um grande.",
+            _tabela([
+                (19, 14, 4, 3, 5, 5, "1d10"),
+                (31, 15, 4, 4, 7, 7, "1d10"),
+                (45, 16, 5, 4, 8, 8, "2d10"),
+                (59, 17, 5, 5, 10, 9, "2d10"),
+                (73, 18, 6, 5, 11, 11, "3d10"),
+            ]),
+        ),
     )
 }
 
