@@ -1133,6 +1133,165 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "efeitos": {"ameaca_fator": 0.0}},
                        exige_escolha=("magia_feit_t5", "dimension_door"))],
     },
+    # O bardo e o dono do socorro. Cinco habilidades de outras classes ja usam
+    # a maquina dele (Sobrevivente, Lider Sagrado, Flash of Genius, Own Luck,
+    # Pressagio), todas com numero fixo e UM uso. A versao dele e a melhor:
+    # DADO, varios usos, e o jogador escolhe em que tipo de rolagem ela entra.
+    #
+    # Com dado o socorro pode nao bastar — entra quando o teto cobriria, e so
+    # depois rola. E o que acontece na mesa, e e o que torna o dado um dado.
+    "bardo": {
+        1: [Habilidade("magia_bardo_t1", "Cancao de abertura", ESCOLHA,
+                       "Escolhe uma: Healing Word, Dissonant Whispers ou "
+                       "Charm Person.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "healing_word", "nome": "Healing Word",
+                            "texto": "Cura 2d4+3 de um aliado"},
+                           {"id": "dissonant_whispers_bardo", "nome": "Dissonant Whispers",
+                            "texto": "3d6 num alvo, e ele perde a vez"},
+                           {"id": "charm_person_bardo", "nome": "Charm Person",
+                            "texto": "Um inimigo perde as duas proximas vezes"},
+                       ]}),
+            Habilidade("healing_word", "Healing Word", ATIVA,
+                       "1x por descanso: cura 2d4+3 de um aliado.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "cura", "dado": "2d4+3", "alvo": "aliado"},
+                       exige_escolha=("magia_bardo_t1", "healing_word")),
+            Habilidade("dissonant_whispers_bardo", "Dissonant Whispers", ATIVA,
+                       "1x por descanso: um inimigo faz save de SAB; falhando, "
+                       "leva 3d6 e perde a proxima vez.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "dano": "3d6", "atordoa": 1},
+                       exige_escolha=("magia_bardo_t1", "dissonant_whispers_bardo")),
+            Habilidade("charm_person_bardo", "Charm Person", ATIVA,
+                       "1x por descanso: um inimigo faz save de SAB; falhando, "
+                       "perde as duas proximas vezes.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "atordoa": 2},
+                       exige_escolha=("magia_bardo_t1", "charm_person_bardo"))],
+        # A Inspiracao e passiva porque dispara sozinha: o bardo nao clica, ela
+        # entra quando alguem falha. A escolha e ONDE ela alcanca.
+        2: [Habilidade("inspiracao_t2", "Inspiracao Bardica", ESCOLHA,
+                       "O dado que ele sopra em quem falha. Escolhe em que "
+                       "rolagem ele entra: ataque, resistencia ou pericia.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "inspira_ataque", "nome": "No ataque",
+                            "texto": "O golpe de um aliado que errou por pouco acerta"},
+                           {"id": "inspira_save", "nome": "Na resistencia",
+                            "texto": "O save falhado de um aliado passa a resistir"},
+                           {"id": "inspira_pericia", "nome": "Na pericia",
+                            "texto": "O teste de sala falhado de um aliado passa"},
+                       ]}),
+            Habilidade("inspira_ataque", "Inspiracao — no ataque", ATIVA,
+                       "3x por descanso: quando um aliado erra o golpe por "
+                       "pouco, o dado dele sobe no acerto.",
+                       usos=_usos("descanso", 3),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "inspira": "ataque", "dado": "1d6"},
+                       exige_escolha=("inspiracao_t2", "inspira_ataque")),
+            Habilidade("inspira_save", "Inspiracao — na resistencia", ATIVA,
+                       "3x por descanso: quando um aliado falha o save de uma "
+                       "criatura por pouco, o dado o faz resistir.",
+                       usos=_usos("descanso", 3),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "inspira": "save", "dado": "1d6"},
+                       exige_escolha=("inspiracao_t2", "inspira_save")),
+            Habilidade("inspira_pericia", "Inspiracao — na pericia", ATIVA,
+                       "3x por descanso: quando alguem falha o teste da sala "
+                       "por pouco, o dado o faz passar.",
+                       usos=_usos("descanso", 3),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "inspira": "pericia", "dado": "1d6"},
+                       exige_escolha=("inspiracao_t2", "inspira_pericia"))],
+        3: [Habilidade("magia_bardo_t3", "Cancao da faculdade", ESCOLHA,
+                       "Escolhe uma: Hypnotic Pattern, Aid ou Invisibility.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "hypnotic_pattern_bardo", "nome": "Hypnotic Pattern",
+                            "texto": "Os inimigos que falharem perdem a vez"},
+                           {"id": "aid", "nome": "Aid",
+                            "texto": "O grupo ganha vida temporaria e cura"},
+                           {"id": "invisibility", "nome": "Invisibility",
+                            "texto": "Um aliado sai da mira por 3 rodadas"},
+                       ]}),
+            Habilidade("hypnotic_pattern_bardo", "Hypnotic Pattern", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de SAB; "
+                       "quem falha perde as duas proximas vezes.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": "todos",
+                             "atordoa": 2},
+                       exige_escolha=("magia_bardo_t3", "hypnotic_pattern_bardo")),
+            Habilidade("aid", "Aid", ATIVA,
+                       "1x por descanso: o grupo inteiro ganha 3d8 de vida "
+                       "temporaria e cura o mesmo.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "thp": "3d8", "cura_dado": "3d8"},
+                       exige_escolha=("magia_bardo_t3", "aid")),
+            # Invisibilidade e furtividade, e o bot nao tem nem uma nem outra.
+            # O que sobra dela e "nao te acham": mesmo caminho do Fly e do
+            # Antilife Shell, com o fator de ameaca.
+            Habilidade("invisibility", "Invisibility", ATIVA,
+                       "1x por descanso: um aliado desaparece por 3 rodadas — "
+                       "os inimigos quase deixam de mira-lo.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "duracao", "turnos": 3, "alvo": "aliados",
+                             "alvos": 1, "efeitos": {"ameaca_fator": 0.1}},
+                       exige_escolha=("magia_bardo_t3", "invisibility"))],
+        # Duas coisas no tier: o dado cresce de graca, e ele escolhe uma
+        # passiva de pericia. O bardo do livro e metade recurso, metade saber.
+        4: [Habilidade("inspiracao_maior", "Inspiracao maior", PASSIVA,
+                       "O dado da Inspiracao dele passa de d6 para d10.",
+                       {"dado_inspiracao": "1d10"}),
+            Habilidade("saber_t4", "Repertorio", ESCOLHA,
+                       "Escolhe uma: Expertise, Jack of All Trades ou "
+                       "Versatilidade.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "expertise_bardo", "nome": "Expertise",
+                            "texto": "Dobra o bonus de Atuacao e Persuasao",
+                            "efeito": {"expertise": ["Atuação", "Persuasão"]}},
+                           # Ele e razoavel em TUDO: o unico bonus do bot que
+                           # vale so no que o personagem nao treinou.
+                           {"id": "jack_of_all_trades", "nome": "Jack of All Trades",
+                            "texto": "+3 nos testes que ele NAO treinou",
+                            "efeito": {"bonus_sem_treino": 3}},
+                           {"id": "versatilidade", "nome": "Versatilidade",
+                            "texto": "+2 em todo teste de pericia",
+                            "efeito": {"bonus_teste": 2}},
+                       ]})],
+        5: [Habilidade("magia_bardo_t5", "Cancao maior", ESCOLHA,
+                       "Escolhe uma: Mass Cure Wounds, Animate Objects ou "
+                       "Otto's Irresistible Dance.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "mass_cure_wounds_bardo", "nome": "Mass Cure Wounds",
+                            "texto": "O grupo inteiro cura 5d8+5"},
+                           {"id": "animate_objects", "nome": "Animate Objects",
+                            "texto": "Objetos animados entram na luta"},
+                           {"id": "ottos_dance", "nome": "Otto's Irresistible Dance",
+                            "texto": "Um inimigo danca: perde a vez e erra mais"},
+                       ]}),
+            Habilidade("mass_cure_wounds_bardo", "Mass Cure Wounds", ATIVA,
+                       "1x por descanso: o grupo inteiro cura 5d8+5.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "cura_dado": "5d8+5"},
+                       exige_escolha=("magia_bardo_t5", "mass_cure_wounds_bardo")),
+            Habilidade("animate_objects", "Animate Objects", ATIVA,
+                       "1x por descanso: objetos animados entram na sala, agem "
+                       "na vez deles e batem no inimigo mais ferido.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "invocar", "nome": "Objetos animados",
+                             "ca": 14, "ataque": 8, "dano": "3d6+2", "hp": 50,
+                             "ameaca": 3, "iniciativa": 1},
+                       exige_escolha=("magia_bardo_t5", "animate_objects")),
+            Habilidade("ottos_dance", "Otto's Irresistible Dance", ATIVA,
+                       "1x por descanso: um inimigo faz save de SAB; falhando, "
+                       "danca por 3 rodadas — perde a vez e tira 5 do ataque.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "SAB", "alvos": 1,
+                             "atordoa": 3, "turnos": 3,
+                             "penalidade_ataque": 5},
+                       exige_escolha=("magia_bardo_t5", "ottos_dance"))],
+    },
 }
 
 
@@ -1192,10 +1351,14 @@ NEUTRO: dict = {
     "save_com_desvantagem": False,
     "cd_magia": 0,
     "magia_rapida": 0,
+    # Inspiracao Bardica: o dado que o tier 4 substitui pelo maior.
+    "dado_inspiracao": "",
+    # Jack of All Trades: vale SO nas pericias que o personagem nao treinou.
+    "bonus_sem_treino": 0,
 }
 
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.
-DADOS = ("dano_bonus", "bonus_cura", "dano_magia")
+DADOS = ("dano_bonus", "bonus_cura", "dano_magia", "dado_inspiracao")
 
 
 def media_do_dado(expressao: str) -> float:

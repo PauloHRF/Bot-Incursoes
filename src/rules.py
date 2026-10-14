@@ -129,6 +129,11 @@ def mod_pericia(
     if efeitos:
         total += efeitos.get("bonus_teste", 0)
         total += (efeitos.get("bonus_pericia") or {}).get(pericia, 0)
+        # Jack of All Trades: vale só no que o personagem NÃO treinou. É o
+        # único bônus do bot que depende de faltar proficiência — o bardo é
+        # razoável em tudo, inclusive no que nunca estudou.
+        if not tem_proficiencia:
+            total += efeitos.get("bonus_sem_treino", 0)
     return total
 
 

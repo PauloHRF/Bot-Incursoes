@@ -127,6 +127,25 @@ def vale_ajudar(resultado: "ResultadoTeste", bonus: int) -> bool:
     return resultado.total + bonus >= resultado.cd
 
 
+def maior_do_dado(expressao: str) -> int:
+    """O melhor resultado possível de '1d8' ou '2d6+3'. Zero sem expressão."""
+    total = 0
+    for sinal, quantas, faces in termos_de_dano(expressao or ""):
+        total += sinal * quantas * (faces if faces else 1)
+    return total
+
+
+def pode_virar(falta: int, dado: str) -> bool:
+    """Se o dado AINDA PODE cobrir aquela diferença.
+
+    A Inspiração Bárdica é um dado, não um número: quem socorre não sabe se
+    vai bastar. O critério é o teto — entra quando o melhor resultado
+    cobriria, e aí rola. Às vezes não dá, e o uso se perde: é o que acontece
+    na mesa, e é o que torna o dado um dado.
+    """
+    return 0 < falta <= maior_do_dado(dado)
+
+
 def testar(
     ficha: dict[str, Any],
     sala: Sala,

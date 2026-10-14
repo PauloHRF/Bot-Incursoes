@@ -1667,6 +1667,9 @@ class Incursoes(commands.Cog):
             )
             indice += 1
 
+        # Inspiracao no ataque: o golpe que errou por pouco passa a acertar,
+        # antes de o HP ir para o banco.
+        await self._inspirar_o_golpe(run, estado, atacante, golpes)
         await db.definir_hp_inimigos(
             self.bot.db,
             run["id"],
@@ -1905,6 +1908,10 @@ class Incursoes(commands.Cog):
             await db.definir_hp_inimigos(
                 self.bot.db, run["id"], self._passo(run), {inimigo.indice: inimigo.hp_atual}
             )
+        # Inspiracao no save: antes de gravar qualquer coisa. Mexer aqui evita
+        # escrever no banco o dano, o atordoamento e a condicao que o bardo
+        # acabou de impedir — e so depois apaga-los.
+        await self._inspirar_o_save(run, estado, feito.investidas)
         for atingido in feito.atingidos:
             await self._gravar_hp_do_combatente(run, atingido)
         if inimigo.habilidade:
@@ -3020,6 +3027,110 @@ class Incursoes(commands.Cog):
             [f"👹 **{aliado.nome}** · {E.texto_do_contra_ataque(golpe, alvo.nome)}"],
         )
 
+    async def _inspiracao_de(self, run: dict[str, Any], onde: str):
+        """Quem no grupo socorre aquele tipo de falha, e com que dado.
+
+        Devolve (personagem, habilidade, dado) do primeiro que serve, ou
+        (None, None, ""). `onde` é "ataque", "save" ou "pericia": a escolha do
+        tier 2 do bardo decide qual rolagem a Inspiração dele alcança.
+        """
+        for p in await db.personagens_da_run(self.bot.db, run["id"]):
+            habilidade, acao = self._reacao_de(p, "falhou_teste")
+            if habilidade is None or acao.get("inspira") != onde:
+                continue
+            dado = self._dado_de_inspiracao(p, acao)
+            if dado:
+                return p, habilidade, dado
+        return None, None, ""
+
+    async def _inspirar_o_golpe(
+        self, run: dict[str, Any], estado, atacante, golpes
+    ) -> None:
+        """Inspiração no ataque: o golpe que errou por pouco passa a acertar.
+
+        Roda depois de a sequência resolver, e refaz só o que mudou — o d20 do
+        golpe sobe, e se agora alcança a CA o dano é rolado e descontado. Quem
+        chama grava o HP dos inimigos em seguida.
+        """
+        passo = self._passo(run)
+        for golpe, inimigo in golpes:
+            if golpe.acertou or atacante is None:
+                continue
+            p, habilidade, dado = await self._inspiracao_de(run, "ataque")
+            if p is None:
+                return
+            falta = golpe.ca_alvo - golpe.total
+            if not motor.pode_virar(falta, dado):
+                continue
+            if not await db.gastar_uso(
+                self.bot.db, run["id"], p["user_id"], habilidade.chave_de_uso,
+                self._chave_de_recarga(habilidade, run, passo), habilidade.vezes,
+            ):
+                return
+            ajuda = motor.rolar_dano(dado)
+            golpe.bonus += ajuda
+            if not golpe.acertou:
+                self._registrar(
+                    run, estado.rodada,
+                    [f"🎵 **{habilidade.nome}**: {p['nome']} sopra **+{ajuda}** "
+                     f"no golpe de {golpe.atacante} — e nao basta"],
+                )
+                continue
+            golpe.dano = motor.rolar_dano(
+                atacante.dano_arma, critico=golpe.critico
+            ) + atacante.dano_extra
+            inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
+            self._registrar(
+                run, estado.rodada,
+                [f"🎵 **{habilidade.nome}**: {p['nome']} sopra **+{ajuda}** no "
+                 f"golpe de {golpe.atacante} — acerta por **{golpe.dano}**"],
+            )
+
+    async def _inspirar_o_save(self, run: dict[str, Any], estado, investidas) -> None:
+        """Inspiração no save: quem falhou por pouco passa a resistir.
+
+        Desfaz o que a falha custou, como o Uncanny Dodge já faz com o dano:
+        devolve o HP, limpa o atordoamento e a condição. Mexer antes seria
+        melhor, mas `impor_save` é do motor puro e não conhece o bardo.
+        """
+        passo = self._passo(run)
+        for investida in investidas:
+            if investida.save is None or investida.save.passou:
+                continue
+            p, habilidade, dado = await self._inspiracao_de(run, "save")
+            if p is None:
+                return
+            falta = investida.save.cd - investida.save.total
+            if not motor.pode_virar(falta, dado):
+                continue
+            if not await db.gastar_uso(
+                self.bot.db, run["id"], p["user_id"], habilidade.chave_de_uso,
+                self._chave_de_recarga(habilidade, run, passo), habilidade.vezes,
+            ):
+                return
+            ajuda = motor.rolar_dano(dado)
+            if ajuda < falta:
+                self._registrar(
+                    run, estado.rodada,
+                    [f"🎵 **{habilidade.nome}**: {p['nome']} sopra **+{ajuda}** "
+                     f"no save de {investida.alvo.nome} — e nao basta"],
+                )
+                continue
+            alvo = investida.alvo
+            # A metade que o efeito daria a quem resiste continua valendo.
+            devolvido = investida.dano
+            alvo.hp_atual = min(alvo.hp_max, alvo.hp_atual + devolvido)
+            investida.dano = 0
+            if investida.atordoou:
+                investida.atordoou = False
+                alvo.atordoado = False
+            investida.debuffs = []
+            self._registrar(
+                run, estado.rodada,
+                [f"🎵 **{habilidade.nome}**: {p['nome']} sopra **+{ajuda}** no "
+                 f"save de {alvo.nome} — resiste, e devolve **{devolvido}** de dano"],
+            )
+
     async def _socorrer_o_teste(self, run: dict[str, Any], resultado) -> None:
         """Flash of Genius: quem tem a reação salva o teste falhado de alguém.
 
@@ -3037,10 +3148,25 @@ class Incursoes(commands.Cog):
             # DELE: não socorre o teste de mais ninguém.
             if acao.get("so_em_si") and p["user_id"] != resultado.user_id:
                 continue
-            # O tier 5 sobe o bonus de 5 para 10, por passiva.
-            bonus = ((p.get("efeitos") or {}).get("flash_bonus")) or acao.get("bonus", 0)
-            if not motor.vale_ajudar(resultado, bonus):
-                continue
+            # A Inspiracao Bardica socorre com DADO, nao com numero: entra se
+            # o teto do dado cobriria a falha, e so depois rola. As outras
+            # cinco reacoes de socorro somam um numero fixo e nunca falham.
+            dado = self._dado_de_inspiracao(p, acao)
+            if dado:
+                if (
+                    acao.get("inspira") != "pericia"
+                    or not motor.pode_virar(resultado.cd - resultado.total, dado)
+                ):
+                    continue
+                bonus = motor.rolar_dano(dado)
+            else:
+                # O tier 5 sobe o bonus de 5 para 10, por passiva.
+                bonus = (
+                    ((p.get("efeitos") or {}).get("flash_bonus"))
+                    or acao.get("bonus", 0)
+                )
+                if not motor.vale_ajudar(resultado, bonus):
+                    continue
             if not await db.gastar_uso(
                 self.bot.db, run["id"], p["user_id"], habilidade.chave_de_uso,
                 self._chave_de_recarga(habilidade, run, passo), habilidade.vezes,
@@ -3048,12 +3174,28 @@ class Incursoes(commands.Cog):
                 continue
             resultado.ajuda = bonus
             resultado.quem_ajudou = p["nome"]
+            # Com dado, o socorro pode nao bastar: o teto cobria, a rolagem
+            # nao. O uso sai de qualquer forma, como na mesa.
+            fecho = "o teste passa" if resultado.passou else "e nao basta"
             await self._anunciar_habilidade(
                 run,
                 f"✨ **{habilidade.nome}**: {p['nome']} socorre "
-                f"{resultado.personagem} com **+{bonus}** — o teste passa.",
+                f"{resultado.personagem} com **+{bonus}** — {fecho}.",
             )
             return
+
+    @staticmethod
+    def _dado_de_inspiracao(personagem: dict[str, Any], acao: dict) -> str:
+        """O dado da Inspiração daquele bardo, ou "" se a reação é de número.
+
+        O dado base é o da habilidade; a passiva do tier 4 o substitui por um
+        maior. Quem não tem Inspiração (o artífice, o paladino) devolve vazio
+        e segue pelo caminho do bônus fixo.
+        """
+        if not acao.get("inspira"):
+            return ""
+        melhor = ((personagem.get("efeitos") or {}).get("dado_inspiracao")) or ""
+        return melhor or acao.get("dado", "")
 
     @staticmethod
     def _reacao_de(personagem: dict[str, Any], quando: str):

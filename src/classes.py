@@ -323,6 +323,22 @@ CLASSES: dict[str, Classe] = {
                 (63, 17, 6, 5, 11, 11, "4d10"),
             ]),
         ),
+        # Suporte puro. HP e CA do Bruxo (d8, couro), e o cantrip no piso: o
+        # Vicious Mockery e um insulto, nao um raio. O que ele tem de sobra e
+        # USO — a Inspiracao sai tres vezes por descanso, onde as outras cinco
+        # reacoes de socorro do bot tem uma.
+        Classe(
+            "bardo",
+            "Bardo",
+            "Sopra o dado em quem falhou: a classe que faz o grupo acertar.",
+            _tabela([
+                (19, 14, 4, 3, 5, 5, "1d6"),
+                (31, 15, 4, 4, 7, 7, "1d8"),
+                (45, 16, 5, 4, 8, 8, "1d8"),
+                (59, 17, 5, 5, 10, 9, "2d8"),
+                (73, 18, 6, 5, 11, 11, "2d8"),
+            ]),
+        ),
     )
 }
 
