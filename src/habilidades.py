@@ -380,6 +380,12 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                            {"id": "hypnotic_pattern", "nome": "Hypnotic Pattern",
                             "texto": "Os inimigos que falharem perdem a vez"},
                        ]}),
+            # No livro a aura tambem corta o movimento de quem esta dentro.
+            # Aqui nao entra, e por decisao: a traducao seria mexer na ordem
+            # da iniciativa no meio do combate, e `posicao` e a chave da ordem
+            # E o ponteiro da vez (ver `acrescentar_iniciativa`). Reordenar
+            # custaria reescrever todas as linhas e consertar o `vez`, por um
+            # -2 que move a criatura um slot. A magia fica so no estouro.
             Habilidade("spirit_guardians", "Spirit Guardians", ATIVA,
                        "1x por incursao: todos os inimigos fazem save de SAB; "
                        "quem falha leva 3d8.",
@@ -581,32 +587,23 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        acao={"tipo": "save", "save": "CON", "alvos": "todos",
                              "dano": "2d8", "metade": True},
                        exige_escolha=("magia_mago_t1", "thunderwave_mago"))],
-        # Scholar: Expertise numa pericia de saber, escolhida pelo jogador. O
-        # `expertise` ja existe (o ladino usa), entao cada opcao so declara a
-        # pericia que dobra.
-        2: [Habilidade("scholar", "Scholar", ESCOLHA,
-                       "Especializou-se num campo de estudo: o bonus daquela "
-                       "pericia dobra.",
-                       escolha={"tipo": "opcao", "opcoes": [
-                           {"id": "arcanismo", "nome": "Arcanismo",
-                            "texto": "O bonus de Arcanismo dobra",
-                            "efeito": {"expertise": ["Arcanismo"]}},
-                           {"id": "historia", "nome": "Historia",
-                            "texto": "O bonus de Historia dobra",
-                            "efeito": {"expertise": ["História"]}},
-                           {"id": "investigacao", "nome": "Investigacao",
-                            "texto": "O bonus de Investigacao dobra",
-                            "efeito": {"expertise": ["Investigação"]}},
-                           {"id": "medicina", "nome": "Medicina",
-                            "texto": "O bonus de Medicina dobra",
-                            "efeito": {"expertise": ["Medicina"]}},
-                           {"id": "natureza", "nome": "Natureza",
-                            "texto": "O bonus de Natureza dobra",
-                            "efeito": {"expertise": ["Natureza"]}},
-                           {"id": "religiao", "nome": "Religiao",
-                            "texto": "O bonus de Religiao dobra",
-                            "efeito": {"expertise": ["Religião"]}},
-                       ]})],
+        # Scholar: passiva, nao escolha. Era Expertise numa pericia de saber
+        # a escolher — mais forte numa (+4 a +6) e nada nas outras cinco —,
+        # mas o tier 2 e automatico por regra, e o mago era a unica classe com
+        # escolha no T2 E no T4.
+        #
+        # A forma e a das outras quatro passivas tematicas de pericia do bot
+        # (Mente e Corpo, Sobrevivente, Lider Sagrado, Guerreiros Ancioes):
+        # um numero no grupo de pericias que a classe representa. Aquelas
+        # somam +2 em 3 a 5 pericias, e todas no tier 4 — esta soma +3 em 6 e
+        # chega no tier 2, entao e a mais forte das cinco. Fica anotado para
+        # a passada de balanceamento.
+        2: [Habilidade("scholar", "Scholar", PASSIVA,
+                       "+3 em Arcanismo, Historia, Investigacao, Medicina, "
+                       "Natureza e Religiao: ele estudou todas.",
+                       {"bonus_pericia": {"Arcanismo": 3, "História": 3,
+                                          "Investigação": 3, "Medicina": 3,
+                                          "Natureza": 3, "Religião": 3}})],
         3: [Habilidade("magia_mago_t3", "Magia de 3o circulo", ESCOLHA,
                        "Escolhe uma: Fireball, Hypnotic Pattern ou Fly.",
                        escolha={"tipo": "opcao", "opcoes": [

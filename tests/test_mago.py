@@ -122,11 +122,45 @@ def caso_forma_das_classes():
                 assert h.tipo == cl.ATIVA, f"T{t}/{h.nome} devia ser ativa"
     for t in (2, 4):
         assert len(mago.habilidades[t]) == 1, f"T{t} tem uma habilidade so"
-        escolha = mago.habilidades[t][0]
-        # passiva escolhida: cada opcao soma numero, nenhuma destrava ativa
-        for o in escolha.escolha["opcoes"]:
+        unica = mago.habilidades[t][0]
+        assert unica.tipo in (cl.PASSIVA, cl.ESCOLHA), f"T{t} nao e ativa"
+        if unica.tipo == cl.PASSIVA:
+            # Passiva pura (o Scholar): ja vem com o numero no bolso.
+            assert unica.efeito, f"T{t}/{unica.nome} nao soma nada"
+            continue
+        # Passiva escolhida: cada opcao soma numero, nenhuma destrava ativa.
+        for o in unica.escolha["opcoes"]:
             assert o.get("efeito"), f"T{t}/{o['id']} nao soma nada"
     print("  tiers 1/3/5 sao ativa com tres magias; 2/4 sao passiva: ok")
+
+
+def caso_scholar_e_passiva_nas_seis_de_saber():
+    """O T2 do mago não pede clique: ele estudou as seis, e pronto."""
+    scholar = cl.CLASSES["mago"].habilidades[2][0]
+    assert scholar.id == "scholar" and scholar.tipo == cl.PASSIVA
+    # Nada a decidir: o tier 2 nao entra na fila de pendencias.
+    pendentes = {h.id for _t, h in cl.escolhas_pendentes("mago", 4, {})}
+    assert "scholar" not in pendentes, pendentes
+
+    saber = ["Arcanismo", "História", "Investigação", "Medicina",
+             "Natureza", "Religião"]
+    efeitos = cl.efeitos("mago", 4, {})
+    assert efeitos["bonus_pericia"] == {p: 3 for p in saber}, efeitos
+
+    # E o +3 chega na conta do teste, tanto na treinada como na que falta.
+    from src import rules
+    numeros = cl.numeros("mago", 4)
+    assert rules.mod_pericia("Arcanismo", numeros, ["Arcanismo"], None, efeitos) == (
+        numeros.bonus_proficiencia + 3
+    )
+    assert rules.mod_pericia("Religião", numeros, [], None, efeitos) == (
+        numeros.bonus_pericia + 3
+    )
+    # Fora do saber nao soma nada: ele estudou, nao treinou.
+    assert rules.mod_pericia("Atletismo", numeros, [], None, efeitos) == (
+        numeros.bonus_pericia
+    )
+    print("  Scholar soma 3 nas seis de saber, sem clique e sem vazar: ok")
 
 
 def caso_cantrip_e_o_ataque_basico():
@@ -314,6 +348,7 @@ async def main():
     try:
         caso_tabela_de_d6()
         caso_forma_das_classes()
+        caso_scholar_e_passiva_nas_seis_de_saber()
         caso_cantrip_e_o_ataque_basico()
         await caso_magic_missile_sempre_acerta()
         await caso_fireball_pega_todos()

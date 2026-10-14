@@ -101,7 +101,7 @@ def caso_catalogo_das_escolhas():
         "primal_knowledge", "escolha_totemica",
         "magia_t1", "dominio_t2", "magia_t3", "dominio_t4", "magia_t5",
         "ferramenta_t1", "infusao", "engenho_t3",
-        "magia_mago_t1", "scholar", "magia_mago_t3", "tradicao_arcana",
+        "magia_mago_t1", "magia_mago_t3", "tradicao_arcana",
         "magia_mago_t5",
         "pacto_t1", "invocacao_t2", "pacto_t3", "patrono_t4", "pacto_t5",
         "forma_t1", "bichinho_t2", "magia_druida_t3", "natureza_t4",
