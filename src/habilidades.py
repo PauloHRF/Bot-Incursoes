@@ -834,6 +834,158 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "ameaca": 4, "iniciativa": 2},
                        exige_escolha=("pacto_t5", "summon_greater_demon"))],
     },
+    # O druida e a unica classe com um trade de verdade: o livro diz que ele
+    # NAO conjura transformado. Entao o dano base dele e o pior do jogo (9 por
+    # rodada no tier 5, empatado com o clerigo) e a forma e que bate. Virar
+    # urso e escolher: poder agora, versatilidade depois.
+    #
+    # Os numeros da forma vem por tier, como o resto da tabela: dado fixo
+    # quebraria o tier 1 (onde a base e 1d8) ou seria inutil no 5.
+    "druida": {
+        1: [Habilidade("forma_t1", "Wild Shape", ESCOLHA,
+                       "A forma que ele veste. Escolhe uma: Urso, Lobo ou Aranha.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "urso", "nome": "Urso",
+                            "texto": "Aguenta: +3 de CA e muita vida temporaria"},
+                           {"id": "lobo", "nome": "Lobo",
+                            "texto": "Morde duas vezes por rodada"},
+                           {"id": "aranha", "nome": "Aranha",
+                            "texto": "Cada mordida atrapalha o ataque do alvo"},
+                       ]}),
+            Habilidade("forma_urso", "Wild Shape — Urso", ATIVA,
+                       "1x por descanso: vira urso por 3 rodadas. +3 de CA, "
+                       "vida temporaria igual a 3x o tier, e o dado da forma.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "forma", "nome": "Urso", "turnos": 3,
+                             "ca": 3, "ataques": 1, "thp_por_tier": 3,
+                             "dano": {1: "1d8+2", 2: "1d10+2", 3: "2d8+3",
+                                      4: "2d10+3", 5: "2d10+5"}},
+                       exige_escolha=("forma_t1", "urso")),
+            Habilidade("forma_lobo", "Wild Shape — Lobo", ATIVA,
+                       "1x por descanso: vira lobo por 3 rodadas. Dois golpes "
+                       "por rodada e vida temporaria igual a 2x o tier.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "forma", "nome": "Lobo", "turnos": 3,
+                             "ataques": 2, "thp_por_tier": 2,
+                             "dano": {1: "1d4+2", 2: "1d6+2", 3: "1d8+3",
+                                      4: "1d8+4", 5: "1d10+4"}},
+                       exige_escolha=("forma_t1", "lobo")),
+            # Condicao do catalogo e do lado do jogador (run_condicoes e por
+            # user_id); do lado do inimigo o equivalente de Envenenado e o
+            # ataque dele piorar, que e o `penalidade_ataque`.
+            Habilidade("forma_aranha", "Wild Shape — Aranha", ATIVA,
+                       "1x por descanso: vira aranha por 3 rodadas. Cada golpe "
+                       "que acerta tira 2 do ataque do alvo por 2 rodadas.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "forma", "nome": "Aranha", "turnos": 3,
+                             "ataques": 1, "thp_por_tier": 2,
+                             "veneno_no_golpe": 2,
+                             "dano": {1: "1d8+2", 2: "1d10+2", 3: "2d8+3",
+                                      4: "2d8+5", 5: "2d10+4"}},
+                       exige_escolha=("forma_t1", "aranha"))],
+        # Wild Companion do livro: o espirito que assume forma de animal e o
+        # acompanha. Passiva, nao combatente — ele ajuda, nao luta.
+        2: [Habilidade("bichinho_t2", "Companheiro selvagem", ESCOLHA,
+                       "Um espirito animal o acompanha. Escolhe o que ele faz: "
+                       "cura, morde junto, ou avisa do perigo.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "bichinho_curandeiro", "nome": "Lambe as feridas",
+                            "texto": "Cura 3 por tier ao abrir o combate",
+                            "efeito": {"bichinho_cura": 3}},
+                           {"id": "bichinho_mordedor", "nome": "Morde junto",
+                            "texto": "+2 de dano em todo golpe dele",
+                            "efeito": {"dano_extra": 2}},
+                           {"id": "bichinho_vigilante", "nome": "Avisa do perigo",
+                            "texto": "+3 em todo teste de pericia",
+                            "efeito": {"bonus_teste": 3}},
+                       ]})],
+        3: [Habilidade("magia_druida_t3", "Magia de circulo", ESCOLHA,
+                       "Escolhe uma: Aura of Vitality, Call Lightning ou "
+                       "Conjure Animals.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "aura_of_vitality", "nome": "Aura of Vitality",
+                            "texto": "O grupo regenera 10% do HP por rodada"},
+                           {"id": "call_lightning", "nome": "Call Lightning",
+                            "texto": "6d10 em todos, metade no sucesso"},
+                           {"id": "conjure_animals", "nome": "Conjure Animals",
+                            "texto": "Um bando entra na luta e bate sozinho"},
+                       ]}),
+            Habilidade("aura_of_vitality", "Aura of Vitality", ATIVA,
+                       "1x por descanso: por 3 rodadas o grupo inteiro recupera "
+                       "10% do HP maximo a cada rodada.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "turnos": 3,
+                             "efeitos": {"cura_por_turno": 0.1}},
+                       exige_escolha=("magia_druida_t3", "aura_of_vitality")),
+            Habilidade("call_lightning", "Call Lightning", ATIVA,
+                       "1x por descanso: todos os inimigos fazem save de DES; "
+                       "quem falha leva 6d10, quem passa leva metade.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "save", "save": "DES", "alvos": "todos",
+                             "dano": "6d10", "metade": True},
+                       exige_escolha=("magia_druida_t3", "call_lightning")),
+            Habilidade("conjure_animals", "Conjure Animals", ATIVA,
+                       "1x por descanso: um bando de bichos entra na sala, age "
+                       "na vez dele e bate no inimigo mais ferido.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "invocar", "nome": "Bando selvagem",
+                             "ca": 13, "ataque": 7, "dano": "2d6+3", "hp": 35,
+                             "ameaca": 3, "iniciativa": 2},
+                       exige_escolha=("magia_druida_t3", "conjure_animals"))],
+        4: [Habilidade("natureza_t4", "Dadiva da natureza", ESCOLHA,
+                       "Escolhe uma: Forma Lunar, Pressagio ou Golpe Primal.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "forma_lunar", "nome": "Forma Lunar",
+                            "texto": "A forma da o dobro de vida temporaria",
+                            "efeito": {"forma_lunar": 1}},
+                           {"id": "pressagio", "nome": "Pressagio",
+                            "texto": "Socorre o teste falhado de um aliado"},
+                           {"id": "golpe_primal", "nome": "Golpe Primal",
+                            "texto": "+1d8 de dano em todo golpe dele",
+                            "efeito": {"dano_bonus": "1d8"}},
+                       ]}),
+            Habilidade("pressagio", "Pressagio", ATIVA,
+                       "1x por descanso: quando alguem do grupo falha o teste "
+                       "da sala, soma +5 — e so dispara se o +5 fizer passar.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "reacao", "quando": "falhou_teste",
+                             "bonus": 5},
+                       exige_escolha=("natureza_t4", "pressagio"))],
+        5: [Habilidade("magia_druida_t5", "Magia maior", ESCOLHA,
+                       "Escolhe uma: Antilife Shell, Conjure Elemental ou "
+                       "Mass Cure Wounds.",
+                       escolha={"tipo": "opcao", "opcoes": [
+                           {"id": "antilife_shell", "nome": "Antilife Shell",
+                            "texto": "Os inimigos nao conseguem alcanca-lo"},
+                           {"id": "conjure_elemental", "nome": "Conjure Elemental",
+                            "texto": "Um elemental de 70 HP entra na luta"},
+                           {"id": "mass_cure_wounds_druida", "nome": "Mass Cure Wounds",
+                            "texto": "O grupo inteiro cura 5d8+5"},
+                       ]}),
+            # Voar precisou de fator porque a curva nao tinha meio-termo; aqui
+            # o extremo e o certo: no livro a esfera impede a criatura viva de
+            # entrar, e todo ataque de criatura neste bot e corpo a corpo.
+            Habilidade("antilife_shell", "Antilife Shell", ATIVA,
+                       "1x por descanso: por 3 rodadas nenhuma criatura "
+                       "consegue mira-lo.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "duracao", "turnos": 3, "alvo": "proprio",
+                             "efeitos": {"ameaca_fator": 0.0}},
+                       exige_escolha=("magia_druida_t5", "antilife_shell")),
+            Habilidade("conjure_elemental", "Conjure Elemental", ATIVA,
+                       "1x por descanso: um elemental entra na sala com 70 HP, "
+                       "age na vez dele e bate no inimigo mais ferido.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "invocar", "nome": "Elemental",
+                             "ca": 16, "ataque": 9, "dano": "2d8+5", "hp": 70,
+                             "ameaca": 5, "iniciativa": 2},
+                       exige_escolha=("magia_druida_t5", "conjure_elemental")),
+            Habilidade("mass_cure_wounds_druida", "Mass Cure Wounds", ATIVA,
+                       "1x por descanso: o grupo inteiro cura 5d8+5.",
+                       usos=_usos("descanso"),
+                       acao={"tipo": "grupo", "cura_dado": "5d8+5"},
+                       exige_escolha=("magia_druida_t5", "mass_cure_wounds_druida"))],
+    },
 }
 
 
@@ -882,6 +1034,10 @@ NEUTRO: dict = {
     # Dark One's Own Luck: so marca que ele tem a benesse; o socorro vem da
     # reacao, nao daqui.
     "sorte_do_patrono": 0,
+    # Companheiro selvagem do druida: cura por tier ao abrir o combate.
+    "bichinho_cura": 0,
+    # Forma Lunar: dobra a vida temporaria que o Wild Shape da.
+    "forma_lunar": 0,
 }
 
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.

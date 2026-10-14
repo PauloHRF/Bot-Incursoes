@@ -1220,6 +1220,7 @@ class Incursoes(commands.Cog):
         self._aplicar_infusoes(combatentes, personagens)
         self._aplicar_aura_de_save(combatentes, personagens)
         self._aplicar_escudo_arcano(combatentes, personagens, tier_atual)
+        self._aplicar_bichinho(combatentes, personagens, tier_atual)
         # Os aliados conjurados entram como combatentes comuns, com dono: assim
         # herdam ameaca, HP, iniciativa e painel sem nada de novo. O que os
         # separa e `dono`, que faz a vez deles ser resolvida sozinha.
@@ -1282,6 +1283,24 @@ class Incursoes(commands.Cog):
             return
         for c in combatentes:
             c.saves = {atributo: valor + melhor for atributo, valor in c.saves.items()}
+
+    @staticmethod
+    def _aplicar_bichinho(
+        combatentes: list[Combatente], personagens: list[dict[str, Any]], tier: int
+    ) -> None:
+        """O espírito animal do druida, que cuida dele desde o começo da luta.
+
+        É a opção de cura do Wild Companion: o bicho lambe as feridas quando o
+        combate abre. As outras duas opções (dano e teste) são número puro e
+        entram pelas chaves que já existiam.
+        """
+        for p in personagens:
+            por_tier = ((p.get("efeitos") or {}).get("bichinho_cura")) or 0
+            if not por_tier:
+                continue
+            quem = next((c for c in combatentes if c.user_id == p["user_id"]), None)
+            if quem is not None:
+                motor.curar_quanto(quem, por_tier * max(1, tier))
 
     @staticmethod
     def _aplicar_escudo_arcano(
@@ -1363,6 +1382,15 @@ class Incursoes(commands.Cog):
             # Circle of Power: passar no save passa a escapar inteiro.
             if valor.get("save_anula"):
                 quem.save_anula = True
+            # Wild Shape: o corpo dele passa a ser de outro bicho. O dado de
+            # arma e substituido, nao somado — e a forma que bate, nao ele.
+            if valor.get("dano_arma"):
+                quem.dano_arma = valor["dano_arma"]
+                quem.forma = valor.get("forma", "")
+            if valor.get("veneno_no_golpe"):
+                quem.veneno_no_golpe = max(
+                    quem.veneno_no_golpe, valor["veneno_no_golpe"]
+                )
             # A sequencia do Martial Arts nao entra aqui: ela e contada golpe a
             # golpe dentro do turno, em atacar().
             return
@@ -1645,6 +1673,21 @@ class Incursoes(commands.Cog):
             passo,
             {inimigo.indice: inimigo.hp_atual for _golpe, inimigo in golpes},
         )
+        # A forma de aranha envenena quem ela acerta: o equivalente do lado do
+        # inimigo e o ataque dele piorar, que e o que `penalidade_ataque` faz.
+        if atacante is not None and atacante.veneno_no_golpe:
+            for golpe, inimigo in golpes:
+                if not golpe.acertou or inimigo.caido:
+                    continue
+                inimigo.penalidade_ataque = max(
+                    inimigo.penalidade_ataque, atacante.veneno_no_golpe
+                )
+                await db.aplicar_efeito(
+                    self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
+                    "veneno_da_aranha",
+                    {"penalidade_ataque": atacante.veneno_no_golpe},
+                    estado.rodada + 2, dono=user_id,
+                )
         if personagem:
             await self._totem_do_golpe(run, personagem, atacante, golpes)
             await self._bencao_do_patrono(run, personagem, atacante, golpes)
@@ -2246,7 +2289,60 @@ class Incursoes(commands.Cog):
             return await self._resolver_save(run, user_id, estado, habilidade, acao, alvos)
         if acao.get("tipo") == "invocar":
             return await self._resolver_invocar(run, user_id, estado, habilidade, acao)
+        if acao.get("tipo") == "forma":
+            return await self._resolver_forma(run, user_id, estado, habilidade, acao)
         return await self._resolver_golpes(run, user_id, estado, habilidade, acao, alvos)
+
+    async def _resolver_forma(
+        self, run: dict[str, Any], user_id: int, estado, habilidade, acao
+    ) -> str:
+        """Wild Shape: o druida veste o corpo de outro bicho.
+
+        Os números da forma vêm por tier, como o resto da tabela: dado fixo
+        quebraria o tier 1 ou seria inútil no 5. A vida temporária é o corpo da
+        besta — quando ela acaba, o druida volta a sangrar no HP dele.
+        """
+        passo = self._passo(run)
+        tier_atual = max(1, self._tier_da_run(run))
+        quem = estado.combatente(user_id)
+        if quem is None:
+            return "Alvo invalido."
+
+        dano = acao["dano"][min(tier_atual, max(acao["dano"]))]
+        efeitos = {"dano_arma": dano, "forma": acao["nome"]}
+        if acao.get("ca"):
+            efeitos["ca"] = acao["ca"]
+        if acao.get("ataques"):
+            efeitos["ataques"] = acao["ataques"]
+        if acao.get("veneno_no_golpe"):
+            efeitos["veneno_no_golpe"] = acao["veneno_no_golpe"]
+        await db.aplicar_efeito(
+            self.bot.db, run["id"], passo, "personagem", user_id,
+            habilidade.id, efeitos, estado.rodada + acao.get("turnos", 3),
+        )
+
+        # Forma Lunar: a passiva do tier 4 dobra o corpo que a forma empresta.
+        dele = await self._personagem_na_run(run, user_id)
+        dobra = 2 if ((dele or {}).get("efeitos") or {}).get("forma_lunar") else 1
+        temporaria = acao.get("thp_por_tier", 0) * tier_atual * dobra
+        if temporaria:
+            motor.ganhar_thp(quem, temporaria)
+            await db.definir_thp(self.bot.db, run["id"], user_id, quem.thp)
+
+        pedacos = [f"dano {dano}"]
+        if acao.get("ataques", 1) > 1:
+            pedacos.append(f"{acao['ataques']} golpes por rodada")
+        if acao.get("ca"):
+            pedacos.append(f"+{acao['ca']} de CA")
+        if temporaria:
+            pedacos.append(f"{temporaria} de vida temporaria")
+        texto = (
+            f"\U0001f43e **{habilidade.nome}**: {quem.nome} vira "
+            f"**{acao['nome']}** — {', '.join(pedacos)}. "
+            f"Por {acao.get('turnos', 3)} rodadas."
+        )
+        await self._anunciar_habilidade(run, texto)
+        return texto
 
     async def _resolver_invocar(
         self, run: dict[str, Any], user_id: int, estado, habilidade, acao
@@ -2415,7 +2511,7 @@ class Incursoes(commands.Cog):
         # Quem nao mira ninguem: o buff de grupo, o que vale so em si, e a
         # invocacao, que traz o aliado e nao escolhe inimigo.
         if (
-            acao.get("tipo") in ("grupo", "invocar")
+            acao.get("tipo") in ("grupo", "invocar", "forma")
             or acao.get("alvo") == "proprio"
         ):
             return False

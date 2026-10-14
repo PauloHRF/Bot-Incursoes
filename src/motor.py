@@ -305,7 +305,13 @@ class Combatente:
     # x/(x+Y) e quase reta embaixo — ameaca 1 e 2 estao a 1,8x de distancia —,
     # entao mexer na ameaca so daria "modesto" ou "imune", sem meio-termo. O
     # fator e esse meio-termo: 0.2 deixa dificil de alcancar sem invulneravel.
+    # Em 0 e imunidade de verdade, que e o Antilife Shell do druida.
     ameaca_fator: float = 1.0
+    # Wild Shape: enquanto dura, o corpo dele e de outro bicho. O nome entra
+    # para o painel dizer de que forma ele esta.
+    forma: str = ""
+    # A forma de aranha: cada golpe que acerta atrapalha o ataque do alvo.
+    veneno_no_golpe: int = 0
     # Circle of Power: quem passa no save da criatura nao leva nem metade.
     save_anula: bool = False
     # Invocacao: o user_id de quem a trouxe. Preenchido, este combatente nao e

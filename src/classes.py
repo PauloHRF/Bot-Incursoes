@@ -291,6 +291,22 @@ CLASSES: dict[str, Classe] = {
                 (73, 18, 6, 5, 11, 11, "3d10"),
             ]),
         ),
+        # O quarto d8, e o unico com um trade de verdade: o livro diz que ele
+        # nao conjura transformado. Entao o dano base e o pior do jogo — o
+        # cantrip dele e para esperar — e a forma e que bate. CA de couro mais
+        # escudo, como o clerigo; metal o druida nao veste.
+        Classe(
+            "druida",
+            "Druida",
+            "Vira bicho para bater: o dano dele esta na forma, nao nele.",
+            _tabela([
+                (19, 15, 4, 3, 5, 5, "1d8"),
+                (31, 16, 4, 4, 7, 7, "1d8"),
+                (45, 17, 5, 4, 8, 8, "2d8"),
+                (59, 18, 5, 5, 10, 9, "2d8"),
+                (73, 19, 6, 5, 11, 11, "2d8"),
+            ]),
+        ),
     )
 }
 
