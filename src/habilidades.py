@@ -782,9 +782,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "Escolhe uma: Dark One's Own Luck, Dark One's Blessing "
                        "ou Radiant Soul.",
                        escolha={"tipo": "opcao", "opcoes": [
+                           # Nao soma numero: destrava a reacao logo abaixo.
                            {"id": "own_luck", "nome": "Dark One's Own Luck",
-                            "texto": "O patrono torce o destino num teste seu",
-                            "efeito": {"sorte_do_patrono": 1}},
+                            "texto": "O patrono torce o destino num teste seu"},
                            {"id": "dark_blessing", "nome": "Dark One's Blessing",
                             "texto": "Vida temporaria ao derrubar um inimigo",
                             "efeito": {"thp_ao_derrubar": 2}},
@@ -1351,9 +1351,6 @@ NEUTRO: dict = {
     "aura_save": 0,
     # Dark One's Blessing: THP por tier ao derrubar um inimigo.
     "thp_ao_derrubar": 0,
-    # Dark One's Own Luck: so marca que ele tem a benesse; o socorro vem da
-    # reacao, nao daqui.
-    "sorte_do_patrono": 0,
     # Companheiro selvagem do druida: cura por tier ao abrir o combate.
     "bichinho_cura": 0,
     # Forma Lunar: dobra a vida temporaria que o Wild Shape da.

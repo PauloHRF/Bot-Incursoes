@@ -128,9 +128,15 @@ def vale_ajudar(resultado: "ResultadoTeste", bonus: int) -> bool:
 
 
 def maior_do_dado(expressao: str) -> int:
-    """O melhor resultado possível de '1d8' ou '2d6+3'. Zero sem expressão."""
+    """O melhor resultado possível de '1d8' ou '2d6+3'. Zero sem expressão.
+
+    Sem expressão é zero, e não erro: quem pergunta o teto de um dado que não
+    existe está perguntando "dá para socorrer?", e a resposta é não.
+    """
+    if not str(expressao or "").strip():
+        return 0
     total = 0
-    for sinal, quantas, faces in termos_de_dano(expressao or ""):
+    for sinal, quantas, faces in termos_de_dano(expressao):
         total += sinal * quantas * (faces if faces else 1)
     return total
 
@@ -698,6 +704,59 @@ def salvar_inimigo(
     )
 
 
+def soma_por_golpe(combatente: Combatente, inimigo: Inimigo) -> int:
+    """O que soma de número no dano de um golpe contra aquele inimigo.
+
+    Está separado porque dois caminhos precisam da MESMA resposta: o golpe
+    normal e o golpe que a Inspiração Bárdica faz acertar depois. Duplicar a
+    conta fazia o golpe socorrido dar menos que o golpe que acertou sozinho.
+    """
+    extra = combatente.dano_extra
+    if combatente.dano_ferido and esta_ferido(inimigo):
+        extra += combatente.dano_ferido
+    return extra
+
+
+def dados_de_dano(
+    combatente: Combatente, inimigo: Inimigo, dano_bonus: Optional[str] = None
+) -> list[str]:
+    """Os dados de dano a mais daquele golpe, todos eles.
+
+    O da própria habilidade, a marca naquele inimigo e o buff curto que o
+    grupo recebeu. Mesma razão de `soma_por_golpe` para estar aqui.
+    """
+    marcado = combatente.dano_por_alvo.get(inimigo.indice)
+    return [b for b in (dano_bonus, marcado, combatente.dano_bonus) if b]
+
+
+def refazer_o_golpe(
+    combatente: Combatente,
+    inimigo: Inimigo,
+    golpe: GolpeAtaque,
+    rng: Optional[random.Random] = None,
+) -> bool:
+    """O golpe cujo bônus subiu: se agora acerta, rola o dano e desconta.
+
+    A Inspiração Bárdica é a única coisa do jogo que mexe num golpe já
+    rolado. O dano tem de sair pela mesma conta do golpe normal, e sai —
+    `soma_por_golpe` e `dados_de_dano` são as mesmas que `atacar_inimigo`
+    usa. Devolve se o golpe passou a acertar.
+
+    Um 1 natural não é socorrível: `acertou` é False para ele por maior que
+    seja o total, então quem chama perde o recurso sem mexer em nada. Por
+    isso a checagem está aqui, e não só em quem chama.
+    """
+    if golpe.falha_critica or not golpe.acertou:
+        return False
+    golpe.dano = rolar_dano(
+        combatente.dano_arma, rng, critico=golpe.critico
+    ) + soma_por_golpe(combatente, inimigo)
+    for extra_dado in dados_de_dano(combatente, inimigo):
+        golpe.dano += rolar_dano(extra_dado, rng, critico=golpe.critico)
+    inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
+    return True
+
+
 def atacar_inimigo(
     combatente: Combatente,
     inimigo: Inimigo,
@@ -708,14 +767,9 @@ def atacar_inimigo(
     bonus_extra: int = 0,
 ) -> GolpeAtaque:
     """O personagem ataca um inimigo. O dano já sai descontado do HP dele."""
-    extra = combatente.dano_extra
-    if combatente.dano_ferido and esta_ferido(inimigo):
-        extra += combatente.dano_ferido
-    marcado = combatente.dano_por_alvo.get(inimigo.indice)
+    extra = soma_por_golpe(combatente, inimigo)
     vantagem = combatente.vantagem or inimigo.indice in combatente.vantagem_contra
-    # Os dados de dano a mais somam todos: o da propria habilidade, a marca
-    # naquele inimigo e o buff curto que o grupo recebeu.
-    bonus = [b for b in (dano_bonus, marcado, combatente.dano_bonus) if b]
+    bonus = dados_de_dano(combatente, inimigo, dano_bonus)
     golpe = atacar(
         combatente.nome,
         combatente.bonus_ataque + bonus_extra,

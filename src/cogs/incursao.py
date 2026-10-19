@@ -2801,14 +2801,23 @@ class Incursoes(commands.Cog):
             # quem esta de pe, do mais exposto para o menos — o que o mago
             # faria: tirar de alcance quem esta levando pancada.
             quantos = acao.get("alvos", 1)
-            escolhidos = [
-                c for c in estado.vivos if c.user_id in set(alvos or ())
-            ] or sorted(estado.vivos, key=lambda c: -c.ameaca_total)[:quantos]
-            # Dimension Door leva quem lancou junto, sempre em primeiro.
+            escolhidos = [c for c in estado.vivos if c.user_id in set(alvos or ())]
+            # Dimension Door leva quem lancou junto, sempre em primeiro — e
+            # antes de completar, para nao gastar vaga com outro no lugar dele.
             if acao.get("inclui_quem_usou"):
                 proprio = estado.combatente(user_id)
                 if proprio is not None and proprio not in escolhidos:
                     escolhidos = [proprio] + escolhidos
+            # Escolha parcial COMPLETA, nao trunca: o menu aceita submeter um
+            # alvo so, e quem pede dois nao pode entregar um em silencio. Sem
+            # escolha nenhuma vale do mais exposto para o menos — o que o mago
+            # faria: tirar de alcance quem esta levando pancada.
+            if len(escolhidos) < quantos:
+                sobram = sorted(
+                    (c for c in estado.vivos if c not in escolhidos),
+                    key=lambda c: -c.ameaca_total,
+                )
+                escolhidos += sobram[: quantos - len(escolhidos)]
             if not escolhidos:
                 return "Nao ha ninguem de pe para a habilidade."
             for quem_recebe in escolhidos[:quantos]:
@@ -3056,6 +3065,10 @@ class Incursoes(commands.Cog):
         for golpe, inimigo in golpes:
             if golpe.acertou or atacante is None:
                 continue
+            # O 1 natural erra por maior que seja o total: nao ha o que
+            # socorrer, e gastar o dado nele seria perder a carga por nada.
+            if golpe.falha_critica:
+                continue
             p, habilidade, dado = await self._inspiracao_de(run, "ataque")
             if p is None:
                 return
@@ -3069,17 +3082,16 @@ class Incursoes(commands.Cog):
                 return
             ajuda = motor.rolar_dano(dado)
             golpe.bonus += ajuda
-            if not golpe.acertou:
+            # O dano sai do motor, pela mesma conta do golpe normal: a arma, o
+            # dano_ferido e todos os dados a mais. Recalcular aqui fazia o
+            # golpe socorrido dar um quarto do golpe que acertou sozinho.
+            if not motor.refazer_o_golpe(atacante, inimigo, golpe):
                 self._registrar(
                     run, estado.rodada,
                     [f"🎵 **{habilidade.nome}**: {p['nome']} sopra **+{ajuda}** "
                      f"no golpe de {golpe.atacante} — e nao basta"],
                 )
                 continue
-            golpe.dano = motor.rolar_dano(
-                atacante.dano_arma, critico=golpe.critico
-            ) + atacante.dano_extra
-            inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
             self._registrar(
                 run, estado.rodada,
                 [f"🎵 **{habilidade.nome}**: {p['nome']} sopra **+{ajuda}** no "
@@ -3117,10 +3129,17 @@ class Incursoes(commands.Cog):
                 )
                 continue
             alvo = investida.alvo
-            # A metade que o efeito daria a quem resiste continua valendo.
+            # Desfazer tem de devolver cada parte no lugar de onde saiu: o que
+            # a vida temporaria segurou volta para o THP, e so o resto para o
+            # HP. Somar tudo no HP gastava o THP de graca e, com a vida cheia,
+            # o min() engolia a devolucao — o save resistido nao devolvia nada.
             devolvido = investida.dano
-            alvo.hp_atual = min(alvo.hp_max, alvo.hp_atual + devolvido)
+            alvo.thp += investida.absorvido
+            alvo.hp_atual = min(
+                alvo.hp_max, alvo.hp_atual + (devolvido - investida.absorvido)
+            )
             investida.dano = 0
+            investida.absorvido = 0
             if investida.atordoou:
                 investida.atordoou = False
                 alvo.atordoado = False

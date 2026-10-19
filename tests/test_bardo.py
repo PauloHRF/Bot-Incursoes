@@ -239,6 +239,101 @@ async def caso_inspiracao_no_ataque_quando_cobre():
     print("  no ataque que errou por pouco, o dado entra e pode fazer acertar: ok")
 
 
+async def caso_o_1_natural_nao_e_socorrivel():
+    """O 1 natural erra por maior que seja o total: o dado não sai do bolso."""
+    conn, canal, cog, incursao, run_id = await preparar(
+        escolhas={"inspiracao_t2": "inspira_ataque"}, monstro=CRUEL, monstros=1
+    )
+    run = await em_combate(conn, cog, incursao, run_id)
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    atacante = estado.combatente(JOGADORES[0])
+    inimigo = estado.inimigos[0]
+
+    # Falta 3 com d20=1: o teto do d10 cobriria, mas `acertou` e False para o
+    # 1 natural, entao o uso seria queimado por nada.
+    golpe = motor.GolpeAtaque(
+        atacante.nome, inimigo.nome, d20=1, bonus=9, ca_alvo=12
+    )
+    assert motor.pode_virar(golpe.ca_alvo - golpe.total, "1d10"), "o teto cobre"
+    assert not golpe.acertou, "e ainda assim o 1 natural erra"
+
+    await cog._inspirar_o_golpe(run, estado, atacante, [(golpe, inimigo)])
+    gastos = await db.usos_da_run(conn, run_id, JOGADORES[0])
+    assert not any(c[0] == "inspira_ataque" for c in gastos), gastos
+    assert golpe.dano == 0, golpe.dano
+    print("  no 1 natural a Inspiracao nao sai do bolso: ok")
+
+
+async def caso_o_golpe_socorrido_da_o_dano_cheio():
+    """Socorrer não pode custar dano: o golpe inspirado soma tudo que o normal soma."""
+    conn, canal, cog, incursao, run_id = await preparar(
+        escolhas={"inspiracao_t2": "inspira_ataque"}, monstro=CRUEL, monstros=1
+    )
+    run = await em_combate(conn, cog, incursao, run_id)
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    atacante = estado.combatente(JOGADORES[0])
+    inimigo = estado.inimigos[0]
+    # O bardo nao tem nada disso; e o que um paladino com Golpe Divino leva
+    # para o golpe, e o que o recalculo a mao perdia.
+    atacante.dano_extra = 2
+    atacante.dano_ferido = 5
+    atacante.dano_bonus = "3d8"
+    inimigo.hp_atual = inimigo.hp_max  # sem dano_ferido, para a conta fechar
+
+    # O chao do golpe socorrido: a arma no minimo, o dano_extra e 3 dados.
+    chao = 1 + atacante.dano_extra + 3
+    socorridos = []
+    for _ in range(30):
+        golpe = motor.GolpeAtaque(
+            atacante.nome, inimigo.nome, d20=10, bonus=0, ca_alvo=12
+        )
+        inimigo.hp_atual = inimigo.hp_max
+        await cog._inspirar_o_golpe(run, estado, atacante, [(golpe, inimigo)])
+        if golpe.acertou:
+            socorridos.append(golpe.dano)
+        # devolve o uso para o proximo laco
+        await db.devolver_uso(
+            conn, run_id, JOGADORES[0], "inspira_ataque",
+            cog._chave_de_recarga(
+                cl.POR_ID["inspira_ataque"], run, cog._passo(run)
+            ),
+        )
+    assert socorridos, "nenhum dos 30 golpes virou acerto"
+    assert min(socorridos) >= chao, (min(socorridos), chao)
+    # E o dado de arma do bardo e 2d8 no tier 5: sozinho nao passaria de 16,
+    # entao qualquer coisa acima disso prova que os 3d8 entraram.
+    media = sum(socorridos) / len(socorridos)
+    assert media > 16, (media, socorridos)
+    print(f"  o golpe socorrido sai com o dano cheio (media {media:.0f}): ok")
+
+
+async def caso_o_save_desfeito_devolve_o_thp():
+    """Resistir devolve cada parte de onde saiu: o THP ao THP, o resto ao HP."""
+    conn, canal, cog, incursao, run_id = await preparar(
+        escolhas={"inspiracao_t2": "inspira_save"}, monstro=CRUEL, monstros=1
+    )
+    run = await em_combate(conn, cog, incursao, run_id)
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    alvo = estado.vivos[0]
+
+    # Vida cheia e 10 de THP: a criatura cobra 7, e tudo sai do THP.
+    motor.ganhar_thp(alvo, 10)
+    hp_cheio, thp_antes = alvo.hp_atual, alvo.thp
+    investida = motor.Investida(
+        "Algoz", "Grito", alvo,
+        save=motor.ResultadoSave(alvo.nome, "CAR", 11, 3, 15),
+    )
+    no_thp, no_hp = motor.absorver(alvo, 7)
+    investida.dano, investida.absorvido = 7, no_thp
+    assert (no_thp, no_hp) == (7, 0), (no_thp, no_hp)
+
+    await cog._inspirar_o_save(run, estado, [investida])
+    assert investida.dano == 0, "falhando por 1, o d10 sempre cobre"
+    assert alvo.thp == thp_antes, (alvo.thp, thp_antes)
+    assert alvo.hp_atual == hp_cheio, (alvo.hp_atual, hp_cheio)
+    print("  resistindo, o THP volta para o THP e o HP nao infla: ok")
+
+
 async def caso_inspiracao_no_save_devolve_o_dano():
     """A criatura cobra save de CD 99: falha sempre, e o d10 nunca cobre."""
     conn, canal, cog, incursao, run_id = await preparar(
@@ -359,6 +454,9 @@ async def main():
         await caso_inspiracao_na_pericia()
         await caso_inspiracao_no_ataque()
         await caso_inspiracao_no_ataque_quando_cobre()
+        await caso_o_1_natural_nao_e_socorrivel()
+        await caso_o_golpe_socorrido_da_o_dano_cheio()
+        await caso_o_save_desfeito_devolve_o_thp()
         await caso_inspiracao_no_save_devolve_o_dano()
         caso_jack_of_all_trades_so_no_que_falta()
         caso_as_outras_duas_do_repertorio()

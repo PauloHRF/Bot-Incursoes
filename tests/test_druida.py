@@ -315,6 +315,29 @@ async def caso_antilife_shell_protege_dois_aliados():
     print("  Antilife Shell tira dois da mira, e os outros absorvem: ok")
 
 
+async def caso_escolha_parcial_completa_a_esfera():
+    """O menu aceita submeter um alvo só; a esfera é de dois, e dois recebe."""
+    conn, canal, cog, incursao, run = await preparar(
+        escolhas={"magia_druida_t5": "antilife_shell"}
+    )
+    inter = FakeInteraction(canal, JOGADORES[0])
+    # Um alvo escolhido numa magia de dois: a vaga que sobra se completa pelo
+    # mais exposto, em vez de ser perdida em silencio.
+    await cog.usar_habilidade(
+        inter, run["id"], "OBJ", "antilife_shell", [JOGADORES[1]]
+    )
+    estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
+                                       incursao.objetivo)
+    fora = [c for c in estado.vivos if c.ameaca_fator == 0.0]
+    assert len(fora) == 2, [c.nome for c in fora]
+    # O escolhido entra de todo jeito; o segundo e o de maior ameaca que sobrou.
+    assert JOGADORES[1] in {c.user_id for c in fora}, [c.nome for c in fora]
+    restantes = [c for c in estado.vivos if c.user_id != JOGADORES[1]]
+    maior = max(restantes, key=lambda c: c.ameaca_total)
+    assert maior in fora, (maior.nome, [c.nome for c in fora])
+    print("  escolhendo um, a esfera completa o segundo pelo mais exposto: ok")
+
+
 def caso_a_esfera_nao_e_invulnerabilidade():
     """Se só sobrarem os protegidos, eles levam pancada — não há alvo melhor."""
     # Dois protegidos e um fora: a atencao inteira vai para quem esta fora.
@@ -355,6 +378,7 @@ async def main():
         await caso_aura_of_vitality_regenera_o_grupo()
         await caso_conjure_animals_traz_o_bando()
         await caso_antilife_shell_protege_dois_aliados()
+        await caso_escolha_parcial_completa_a_esfera()
         caso_a_esfera_nao_e_invulnerabilidade()
         caso_a_esfera_dura_duas_rodadas()
     finally:
