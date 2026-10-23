@@ -13,6 +13,7 @@ log = logging.getLogger("incursoes")
 COGS = (
     "src.cogs.ajuda",
     "src.cogs.ficha",
+    "src.cogs.mercado",
     "src.cogs.incursao",
     "src.cogs.organizacao",
 )

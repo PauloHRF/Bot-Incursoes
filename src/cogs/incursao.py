@@ -23,6 +23,7 @@ from .. import (
     consequencias,
     database as db,
     embeds as E,
+    mercado,
     motor,
 )
 from ..incursoes import (
@@ -1125,6 +1126,37 @@ class Incursoes(commands.Cog):
         )
         await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
 
+    async def _pagar_sala(self, run: dict[str, Any], sala: Sala) -> int:
+        """Paga o ouro da sala superada a cada personagem que estava nela.
+
+        Mesma ideia do `_creditar`: a chave identifica a sala dentro da run, e
+        o indice unico do livro-caixa garante que ela nunca pague duas vezes.
+        Por isso os dois caminhos de "Sala superada" — o combate e o teste —
+        podem chamar sem combinar entre si.
+        """
+        quanto = mercado.ouro_da_sala(self._tier_da_run(run) or 1)
+        chave = f"sala:{self._passo(run)}:{sala.id}"
+        pagos = 0
+        for p in await db.personagens_da_run(self.bot.db, run["id"]):
+            if await db.lancar_ouro(
+                self.bot.db, p["id"], quanto, f"Sala superada: {sala.nome}",
+                run_id=run["id"], chave=chave,
+            ):
+                pagos += 1
+        return pagos
+
+    async def _pagar_conclusao(self, run: dict[str, Any]) -> int:
+        """O bonus de fechar a incursao, so para quem chegou ao fim."""
+        quanto = mercado.ouro_da_incursao(self._tier_da_run(run) or 1)
+        pagos = 0
+        for p in await db.personagens_da_run(self.bot.db, run["id"]):
+            if await db.lancar_ouro(
+                self.bot.db, p["id"], quanto, "Incursao concluida",
+                run_id=run["id"], chave="conclusao",
+            ):
+                pagos += 1
+        return pagos
+
     async def _creditar(
         self, run: dict[str, Any], pontos: int, motivo: str, chave: str
     ) -> bool:
@@ -1208,7 +1240,11 @@ class Incursoes(commands.Cog):
                         atributo: valor + saldo.saves
                         for atributo, valor in (p.get("saves") or {}).items()
                     },
-                    mod_iniciativa_extra=saldo.iniciativa,
+                    # A Exaustao tira e as botas do mercado somam, no mesmo
+                    # lugar: nenhum dos dois e save de DES.
+                    mod_iniciativa_extra=(
+                        saldo.iniciativa + efeitos.get("bonus_iniciativa", 0)
+                    ),
                     cura_recebida_pct=saldo.cura_recebida_pct,
                     # A classe diz onde ele fica na sala; as passivas somam.
                     ameaca=ameaca.inicial(p.get("classe")) + efeitos.get("ameaca", 0),
@@ -3468,6 +3504,7 @@ class Incursoes(commands.Cog):
                 f"Sala superada: {sala.nome}",
                 f"sala:{self._passo(run)}:{sala.id}",
             )
+        await self._pagar_sala(run, sala)
 
         canal = await self._canal(run)
         if sala.id == incursao.objetivo.id:
@@ -3478,6 +3515,7 @@ class Incursoes(commands.Cog):
             await self._creditar(
                 run, incursao.pontos_conclusao, "Objetivo cumprido", "conclusao"
             )
+            await self._pagar_conclusao(run)
             if canal:
                 # Desfecho num embed so: vitoria, como o grupo saiu, MEs e pontos.
                 lancamentos, total = await self._balanco(run)
@@ -3630,6 +3668,8 @@ class Incursoes(commands.Cog):
                 await self._creditar(
                     run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{self._passo(run)}:{sala.id}"
                 )
+            if resolucao.superada:
+                await self._pagar_sala(run, sala)
             await self._expulsar_estourados(run)
 
         # Mímico acordado no baú: a sala vira combate em vez de devolver à votação.

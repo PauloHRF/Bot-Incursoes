@@ -288,6 +288,43 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_lancamento_unico
     ON pontos_lancamentos (run_id, chave)
     WHERE run_id IS NOT NULL AND chave IS NOT NULL;
 
+-- O ouro e um livro-caixa, nao um saldo: o saldo e a SOMA. Ganho de sala e
+-- compra entram na mesma tabela, a compra com valor negativo. Sai de graca o
+-- que um saldo pediria a mais — idempotencia por (run, chave) como o placar
+-- de pontos ja faz, e o historico de onde o ouro foi.
+CREATE TABLE IF NOT EXISTS ouro_lancamentos (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    personagem_id INTEGER NOT NULL REFERENCES personagens(id) ON DELETE CASCADE,
+    run_id        INTEGER REFERENCES runs(id) ON DELETE SET NULL,
+    chave         TEXT,
+    motivo        TEXT    NOT NULL,
+    ouro          INTEGER NOT NULL,
+    criado_em     TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- A mesma sala nunca paga duas vezes ao mesmo personagem.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ouro_unico
+    ON ouro_lancamentos (personagem_id, run_id, chave)
+    WHERE run_id IS NOT NULL AND chave IS NOT NULL;
+
+-- A bolsa: o que foi comprado e nao esta vestido. Consumivel vai viver aqui
+-- tambem, quando chegar — por isso tem quantidade.
+CREATE TABLE IF NOT EXISTS personagem_itens (
+    personagem_id INTEGER NOT NULL REFERENCES personagens(id) ON DELETE CASCADE,
+    item_id       TEXT    NOT NULL,
+    quantidade    INTEGER NOT NULL DEFAULT 1,
+    PRIMARY KEY (personagem_id, item_id)
+);
+
+-- O corpo: um item por slot, e a chave primaria e que garante isso. Nao ha
+-- regra de "no maximo uma armadura" em codigo nenhum — a tabela e a regra.
+CREATE TABLE IF NOT EXISTS personagem_equipamento (
+    personagem_id INTEGER NOT NULL REFERENCES personagens(id) ON DELETE CASCADE,
+    slot          TEXT    NOT NULL,
+    item_id       TEXT    NOT NULL,
+    PRIMARY KEY (personagem_id, slot)
+);
+
 CREATE TABLE IF NOT EXISTS config_guilda (
     guild_id          INTEGER PRIMARY KEY,
     intervalo_semanas INTEGER NOT NULL
@@ -510,13 +547,19 @@ def _normalizar_bonus(bruto: dict[str, Any]) -> dict[str, int]:
     return saida
 
 
-def _desserializar(row: aiosqlite.Row) -> dict[str, Any]:
+def _desserializar(row: aiosqlite.Row, equipados=()) -> dict[str, Any]:
     """A ficha como o resto do bot a lê: o gravado mais os números da classe.
 
     CA, acerto, dano e HP máximo não são gravados — mudam sozinhos quando o
     personagem sobe de tier, e derivar na leitura evita ficha desatualizada.
+
+    `equipados` são os ids do que está vestido. Eles entram no MESMO dicionário
+    de efeitos das passivas de classe, antes de CA e acerto serem calculados —
+    por isso o equipamento chega ao combate, ao painel e à ficha sem nenhum
+    deles saber que o mercado existe.
     """
     from . import classes  # aqui dentro: classes importa rules, nao database
+    from . import itens
 
     p = dict(row)
     # Normaliza fichas gravadas antes dos nomes de pericia ganharem acento.
@@ -526,8 +569,10 @@ def _desserializar(row: aiosqlite.Row) -> dict[str, Any]:
     numeros = classes.numeros(p.get("classe"), p["nivel"])
     if numeros:
         efeitos = classes.efeitos(p["classe"], p["nivel"], p["escolhas"])
+        itens.juntar_equipamento(efeitos, equipados)
         p["numeros"] = numeros
         p["efeitos"] = efeitos
+        p["equipados"] = list(equipados or ())
         p["habilidades"] = classes.habilidades(
             p["classe"], p["nivel"], p["escolhas"]
         )
@@ -583,12 +628,37 @@ async def criar_personagem(
     return cur.lastrowid
 
 
+async def _equipados_de(
+    conn: aiosqlite.Connection, ids: list[int]
+) -> dict[int, list[str]]:
+    """O que cada um daqueles personagens tem vestido, numa consulta só.
+
+    Uma por chamada, e não uma por personagem: um combate de cinco lê a ficha
+    de todos juntos, e cinco consultas a mais por rodada apareceriam.
+    """
+    if not ids:
+        return {}
+    marcas = ",".join("?" for _ in ids)
+    async with conn.execute(
+        f"SELECT personagem_id, item_id FROM personagem_equipamento"
+        f" WHERE personagem_id IN ({marcas}) ORDER BY slot",
+        tuple(ids),
+    ) as cur:
+        saida: dict[int, list[str]] = {}
+        for row in await cur.fetchall():
+            saida.setdefault(row["personagem_id"], []).append(row["item_id"])
+    return saida
+
+
 async def buscar_personagem(
     conn: aiosqlite.Connection, personagem_id: int
 ) -> Optional[dict[str, Any]]:
     async with conn.execute("SELECT * FROM personagens WHERE id = ?", (personagem_id,)) as cur:
         row = await cur.fetchone()
-    return _desserializar(row) if row else None
+    if not row:
+        return None
+    vestido = await _equipados_de(conn, [row["id"]])
+    return _desserializar(row, vestido.get(row["id"], ()))
 
 
 async def listar_personagens(
@@ -598,7 +668,9 @@ async def listar_personagens(
         "SELECT * FROM personagens WHERE guild_id = ? AND user_id = ? ORDER BY nome",
         (guild_id, user_id),
     ) as cur:
-        return [_desserializar(r) for r in await cur.fetchall()]
+        linhas = await cur.fetchall()
+    vestido = await _equipados_de(conn, [r["id"] for r in linhas])
+    return [_desserializar(r, vestido.get(r["id"], ())) for r in linhas]
 
 
 async def personagem_por_nome(
@@ -610,7 +682,10 @@ async def personagem_por_nome(
         (guild_id, user_id, nome.strip()),
     ) as cur:
         row = await cur.fetchone()
-    return _desserializar(row) if row else None
+    if not row:
+        return None
+    vestido = await _equipados_de(conn, [row["id"]])
+    return _desserializar(row, vestido.get(row["id"], ()))
 
 
 async def atualizar_personagem(
@@ -785,7 +860,10 @@ async def personagem_da_run(
         (run_id, user_id),
     ) as cur:
         row = await cur.fetchone()
-    return _desserializar(row) if row else None
+    if not row:
+        return None
+    vestido = await _equipados_de(conn, [row["id"]])
+    return _desserializar(row, vestido.get(row["id"], ()))
 
 
 async def personagens_da_run(conn: aiosqlite.Connection, run_id: int) -> list[dict[str, Any]]:
@@ -796,7 +874,9 @@ async def personagens_da_run(conn: aiosqlite.Connection, run_id: int) -> list[di
         " WHERE rp.run_id = ? ORDER BY rp.rowid",
         (run_id,),
     ) as cur:
-        return [_desserializar(r) for r in await cur.fetchall()]
+        linhas = await cur.fetchall()
+    vestido = await _equipados_de(conn, [r["id"] for r in linhas])
+    return [_desserializar(r, vestido.get(r["id"], ())) for r in linhas]
 
 
 async def remover_participante(conn: aiosqlite.Connection, run_id: int, user_id: int) -> bool:
@@ -1849,3 +1929,173 @@ async def pontos_da_run(conn: aiosqlite.Connection, run_id: int) -> list[dict[st
         "SELECT * FROM pontos_lancamentos WHERE run_id = ? ORDER BY id", (run_id,)
     ) as cur:
         return [dict(r) for r in await cur.fetchall()]
+
+
+# ------------------------------------------------------------------ mercado
+#
+# A economia das Incursoes, que e separada da planilha do grupo: comeca em
+# zero e vive aqui. O ouro e a SOMA do livro-caixa, nunca uma coluna de saldo
+# — assim ganho e compra entram pelo mesmo caminho e a idempotencia por
+# (run, chave) sai de graca, como no placar de pontos.
+
+
+async def ouro(conn: aiosqlite.Connection, personagem_id: int) -> int:
+    """O saldo: a soma de tudo que entrou e saiu."""
+    async with conn.execute(
+        "SELECT COALESCE(SUM(ouro), 0) AS saldo FROM ouro_lancamentos"
+        " WHERE personagem_id = ?",
+        (personagem_id,),
+    ) as cur:
+        row = await cur.fetchone()
+    return row["saldo"] if row else 0
+
+
+async def lancar_ouro(
+    conn: aiosqlite.Connection,
+    personagem_id: int,
+    quanto: int,
+    motivo: str,
+    run_id: Optional[int] = None,
+    chave: Optional[str] = None,
+) -> bool:
+    """Credita (ou debita, com valor negativo) e registra o lancamento.
+
+    `chave` identifica o motivo dentro da run — 'sala:3:C1', 'conclusao'. O
+    mesmo trio (personagem, run, chave) nunca entra duas vezes, entao
+    reprocessar uma sala nao paga de novo. Devolve False quando ja existia.
+    """
+    if not quanto:
+        return False
+    cur = await conn.execute(
+        "INSERT OR IGNORE INTO ouro_lancamentos"
+        " (personagem_id, run_id, chave, motivo, ouro) VALUES (?, ?, ?, ?, ?)",
+        (personagem_id, run_id, chave, motivo, quanto),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
+async def extrato_de_ouro(
+    conn: aiosqlite.Connection, personagem_id: int, limite: int = 10
+) -> list[dict[str, Any]]:
+    """Os ultimos lancamentos, do mais novo para o mais velho."""
+    async with conn.execute(
+        "SELECT motivo, ouro, criado_em FROM ouro_lancamentos"
+        " WHERE personagem_id = ? ORDER BY id DESC LIMIT ?",
+        (personagem_id, limite),
+    ) as cur:
+        return [dict(r) for r in await cur.fetchall()]
+
+
+async def itens_na_bolsa(
+    conn: aiosqlite.Connection, personagem_id: int
+) -> dict[str, int]:
+    """O que foi comprado e nao esta vestido: {item_id: quantidade}."""
+    async with conn.execute(
+        "SELECT item_id, quantidade FROM personagem_itens"
+        " WHERE personagem_id = ? AND quantidade > 0",
+        (personagem_id,),
+    ) as cur:
+        return {r["item_id"]: r["quantidade"] for r in await cur.fetchall()}
+
+
+async def equipamento(
+    conn: aiosqlite.Connection, personagem_id: int
+) -> dict[str, str]:
+    """O que esta vestido: {slot: item_id}."""
+    async with conn.execute(
+        "SELECT slot, item_id FROM personagem_equipamento WHERE personagem_id = ?",
+        (personagem_id,),
+    ) as cur:
+        return {r["slot"]: r["item_id"] for r in await cur.fetchall()}
+
+
+async def _por_na_bolsa(
+    conn: aiosqlite.Connection, personagem_id: int, item_id: str, quantos: int = 1
+) -> None:
+    await conn.execute(
+        "INSERT INTO personagem_itens (personagem_id, item_id, quantidade)"
+        " VALUES (?, ?, ?) ON CONFLICT (personagem_id, item_id)"
+        " DO UPDATE SET quantidade = quantidade + excluded.quantidade",
+        (personagem_id, item_id, quantos),
+    )
+
+
+async def _tirar_da_bolsa(
+    conn: aiosqlite.Connection, personagem_id: int, item_id: str
+) -> bool:
+    """Tira uma unidade. False quando nao havia nenhuma."""
+    cur = await conn.execute(
+        "UPDATE personagem_itens SET quantidade = quantidade - 1"
+        " WHERE personagem_id = ? AND item_id = ? AND quantidade > 0",
+        (personagem_id, item_id),
+    )
+    return cur.rowcount > 0
+
+
+async def comprar(
+    conn: aiosqlite.Connection, personagem_id: int, item_id: str, preco: int
+) -> bool:
+    """Debita o preco e poe o item na bolsa. False quando falta ouro.
+
+    O saldo e conferido e debitado sem commit no meio, num unico commit no
+    fim: o bot usa uma conexao so, que serializa escrita, entao dois cliques
+    ao mesmo tempo nao compram o mesmo ouro duas vezes.
+    """
+    if preco < 0:
+        return False
+    if await ouro(conn, personagem_id) < preco:
+        return False
+    await conn.execute(
+        "INSERT INTO ouro_lancamentos (personagem_id, motivo, ouro)"
+        " VALUES (?, ?, ?)",
+        (personagem_id, f"Compra: {item_id}", -preco),
+    )
+    await _por_na_bolsa(conn, personagem_id, item_id)
+    await conn.commit()
+    return True
+
+
+async def equipar(
+    conn: aiosqlite.Connection, personagem_id: int, item_id: str, slot: str
+) -> tuple[bool, Optional[str]]:
+    """Veste um item da bolsa. Devolve (deu certo, o que saiu do slot).
+
+    Duas respostas e nao uma porque `None` sozinho seria ambiguo: slot vazio e
+    item que nao estava na bolsa dariam o mesmo valor, e quem chamou nao
+    saberia se avisou o jogador ou nao.
+
+    O que estava no slot volta para a bolsa: trocar de armadura nunca perde a
+    antiga. O slot vem do item, nao de quem chamou — aceitar slot digitado
+    seria aceitar burlar o dominio que impede o stack.
+    """
+    if not await _tirar_da_bolsa(conn, personagem_id, item_id):
+        await conn.commit()
+        return False, None
+    anterior = (await equipamento(conn, personagem_id)).get(slot)
+    if anterior:
+        await _por_na_bolsa(conn, personagem_id, anterior)
+    await conn.execute(
+        "INSERT INTO personagem_equipamento (personagem_id, slot, item_id)"
+        " VALUES (?, ?, ?) ON CONFLICT (personagem_id, slot)"
+        " DO UPDATE SET item_id = excluded.item_id",
+        (personagem_id, slot, item_id),
+    )
+    await conn.commit()
+    return True, anterior
+
+
+async def desequipar(
+    conn: aiosqlite.Connection, personagem_id: int, slot: str
+) -> Optional[str]:
+    """Tira o que esta naquele slot e devolve a bolsa. Devolve o id, ou None."""
+    atual = (await equipamento(conn, personagem_id)).get(slot)
+    if not atual:
+        return None
+    await conn.execute(
+        "DELETE FROM personagem_equipamento WHERE personagem_id = ? AND slot = ?",
+        (personagem_id, slot),
+    )
+    await _por_na_bolsa(conn, personagem_id, atual)
+    await conn.commit()
+    return atual

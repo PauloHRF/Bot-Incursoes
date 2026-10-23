@@ -1366,6 +1366,9 @@ NEUTRO: dict = {
     "dado_inspiracao": "",
     # Jack of All Trades: vale SO nas pericias que o personagem nao treinou.
     "bonus_sem_treino": 0,
+    # Botas do mercado: a ordem do combate. Nao e save de DES — o save mede
+    # esquivar, e isto mede chegar antes.
+    "bonus_iniciativa": 0,
 }
 
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.
