@@ -333,11 +333,6 @@ class Incursao:
         return TAMANHOS[self.tamanho]
 
     @property
-    def nivel_maximo(self) -> int:
-        """O maior nível que ainda pode entrar: tier 3 -> nível 6."""
-        return nivel_maximo_do_tier(self.tier)
-
-    @property
     def aberta_a_todos(self) -> bool:
         return self.tier >= TIER_MAXIMO
 

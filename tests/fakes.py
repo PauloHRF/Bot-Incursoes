@@ -178,9 +178,17 @@ class FakeFollowup:
         self.interacao = interacao
         self.enviadas = []
 
-    async def send(self, content=None, *, embed=None, view=None, ephemeral=False):
+    async def send(self, content=None, *, embed=None, view=None, ephemeral=False,
+                   wait=False):
         self.enviadas.append(content or (embed.title if embed else None))
         self.interacao.seguimento = self.enviadas[-1]
+        self.interacao.view_do_seguimento = view
+        # `wait=True` pede a mensagem de volta, para editar depois.
+        mensagem = FakeMensagem(
+            self.interacao.canal, -2, content=content, embed=embed, view=view
+        )
+        self.interacao._mensagem_seguimento = mensagem
+        return mensagem if wait else None
 
 
 class FakeInteraction:
@@ -202,6 +210,8 @@ class FakeInteraction:
         # O que um clique de botao deixou: a edicao e o aviso privado.
         self.editada = None
         self.seguimento = None
+        self.view_do_seguimento = None
+        self._mensagem_seguimento = None
 
     async def original_response(self):
         return self._mensagem_resposta

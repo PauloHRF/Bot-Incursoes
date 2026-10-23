@@ -123,6 +123,46 @@ class SeletorPericiasDaEscolha(DonoDaFicha):
         )
 
 
+class SeletorPericiasDoTier(DonoDaFicha):
+    """As proficiencias novas que a subida de tier abriu.
+
+    Grava no clique, como as outras views de decisao — e nao com `view.wait()`
+    no meio do comando. Esperar ali prende o handler ate o timeout: no bot o
+    `upar` ficaria pendurado, e na suite de testes a rodada inteira parava,
+    porque ninguem responde ao menu.
+    """
+
+    def __init__(
+        self, cog: "Ficha", personagem_id: int, dono_id: int,
+        marcadas: list[str], limite: int,
+    ):
+        super().__init__(dono_id)
+        self.cog = cog
+        self.personagem_id = personagem_id
+        self.menu = discord.ui.Select(
+            placeholder=f"Escolha ate {limite} pericia(s) com proficiencia",
+            min_values=0,
+            max_values=min(limite, len(PERICIAS)),
+            options=[
+                discord.SelectOption(label=p, default=p in marcadas) for p in PERICIAS
+            ],
+        )
+        self.menu.callback = self._escolher
+        self.add_item(self.menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await db.atualizar_pericias(
+            self.cog.bot.db, self.personagem_id, list(self.menu.values)
+        )
+        atualizado = await db.buscar_personagem(self.cog.bot.db, self.personagem_id)
+        await interaction.response.edit_message(
+            content="Proficiencias atualizadas.",
+            embed=embed_ficha(atualizado, interaction.user),
+            view=None,
+        )
+
+
 async def sugerir_personagens(
     conn, interaction: discord.Interaction, atual: str
 ) -> list[app_commands.Choice[str]]:
@@ -186,7 +226,7 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
     else:
         e.add_field(
             name=f"Proficiencias (0/{numeros.pericias})",
-            value="nenhuma - use /ficha pericias",
+            value="nenhuma ainda",
             inline=False,
         )
 
@@ -401,7 +441,7 @@ class Ficha(commands.Cog):
         if len(existentes) >= LIMITE_PERSONAGENS:
             await interaction.response.send_message(
                 f"Voce ja tem {LIMITE_PERSONAGENS} personagens. "
-                "Apague um com `/ficha remover` antes de criar outro.",
+                "Suba ou use os que voce ja tem.",
                 ephemeral=True,
             )
             return
@@ -594,11 +634,14 @@ class Ficha(commands.Cog):
         ]
         sobrando = novos.pericias - len(proprias)
         if sobrando > 0:
-            linhas.append(
-                f"Voce pode escolher mais **{sobrando}** pericia(s): use `/ficha pericias`."
-            )
+            linhas.append(f"O tier novo da mais **{sobrando}** proficiencia(s).")
 
         await self._responder_com_escolha(interaction, atualizado, "\n".join(linhas))
+        # As vagas de pericia que o tier abriu: o menu vem aqui, por followup.
+        # Antes o texto mandava rodar `/ficha pericias`, e sem aquele comando
+        # as vagas novas nao teriam como ser preenchidas nunca.
+        if sobrando > 0:
+            await self._abrir_pericias_em_seguida(interaction, atualizado)
 
     @grupo.command(name="voltar", description="Desce o personagem um tier, se voce errou")
     @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
@@ -650,7 +693,7 @@ class Ficha(commands.Cog):
         if sobrando > 0:
             linhas.append(
                 f"O tier {depois} da menos proficiencias: voce tem **{sobrando}** "
-                f"a mais do que a cota. Refaca com `/ficha pericias`."
+                f"a mais do que a cota. Elas voltam a caber quando ele subir."
             )
         await interaction.response.send_message(
             "\n".join(linhas), embed=embed_ficha(atualizado, interaction.user)
@@ -673,7 +716,11 @@ class Ficha(commands.Cog):
                 if p not in (personagem["efeitos"] or {}).get("expertise", [])
             ]
             if not opcoes:
-                return "Escolha as proficiencias primeiro, com `/ficha pericias`.", None
+                return (
+                    "Este personagem ainda nao tem proficiencia nenhuma para "
+                    "dobrar. Elas sao escolhidas no registro e a cada subida.",
+                    None,
+                )
         else:
             opcoes = [p for p in PERICIAS if p not in personagem["pericias"]]
         return cabeca, SeletorPericiasDaEscolha(
@@ -708,6 +755,32 @@ class Ficha(commands.Cog):
         await self._anunciar(
             interaction, anuncio, embed=embed_ficha(personagem, interaction.user)
         )
+
+    async def _abrir_pericias_em_seguida(
+        self, interaction: discord.Interaction, personagem: dict[str, Any]
+    ) -> None:
+        """Abre o menu de proficiencias por followup, e grava o que vier.
+
+        Existe porque `/ficha pericias` saiu: a cota cresce ao subir de tier, e
+        sem um lugar para preencher as vagas novas elas ficariam perdidas. O
+        momento certo e o da subida, como ja acontece com as decisoes de tier.
+        """
+        numeros = personagem.get("numeros")
+        if numeros is None:
+            return
+        view = SeletorPericiasDoTier(
+            self, personagem["id"], interaction.user.id,
+            personagem["pericias"], numeros.pericias,
+        )
+        try:
+            await interaction.followup.send(
+                f"\U0001f393 Proficiencias de **{personagem['nome']}** "
+                f"(ate {numeros.pericias}):",
+                view=view,
+                ephemeral=True,
+            )
+        except discord.HTTPException:
+            pass
 
     async def _abrir_pendencia_em_seguida(
         self, interaction: discord.Interaction, personagem: dict[str, Any]

@@ -5,8 +5,9 @@ perícias em que tem proficiência, e todo o resto — HP, CA, acerto, dano e os
 bônus de perícia — sai da tabela da classe no tier atual.
 
 As habilidades de cada tier estão em src/habilidades.py e são penduradas aqui
-na carga. As passivas que são número puro já valem; as ativas e as escolhas
-aparecem na ficha mas ainda não mexem em conta nenhuma.
+na carga — passivas, ativas e escolhas, todas valendo. O equipamento do
+mercado entra pelo mesmo dicionário de efeitos das passivas (src/itens.py),
+então CA e acerto já saem daqui com ele somado.
 """
 from __future__ import annotations
 

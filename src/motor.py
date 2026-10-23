@@ -280,11 +280,6 @@ class ResolucaoSala:
     def quem_falhou(self) -> list[ResultadoTeste]:
         return [r for r in self.resultados if not r.passou]
 
-    @property
-    def quem_passou(self) -> list[ResultadoTeste]:
-        return [r for r in self.resultados if r.passou]
-
-
 def escalar_monstro(monstro: Monstro, niveis: list[int]) -> Monstro:
     """Ajusta o monstro à composição do grupo.
 

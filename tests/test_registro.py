@@ -235,7 +235,19 @@ async def caso_upar_avisa_pericia_nova_e_para_no_teto():
     )
     inter = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, inter)
-    assert "/ficha pericias" in inter.resposta, inter.resposta
+    assert "proficiencia" in inter.resposta, inter.resposta
+    # E o menu das vagas novas abre junto, por followup: `/ficha pericias`
+    # saiu, e sem isto as proficiencias do tier novo nao teriam onde entrar.
+    assert inter.view_do_seguimento is not None, inter.seguimento
+    menu = inter.view_do_seguimento.menu
+    assert menu.max_values == 6, menu.max_values
+
+    # e o que o jogador escolher no menu e gravado na hora
+    menu._values = ["Acrobacia", "Atletismo", "Furtividade", "Percepção"]
+    gravando = FakeInteraction(canal, dono)
+    await inter.view_do_seguimento._escolher(gravando)
+    salvo = await db.buscar_personagem(conn, pid)
+    assert "Furtividade" in salvo["pericias"], salvo["pericias"]
 
     # empurra ate o teto e confirma que o comando para por ali
     await db.atualizar_personagem(conn, pid, "nivel", NIVEL_MAXIMO)
@@ -243,7 +255,7 @@ async def caso_upar_avisa_pericia_nova_e_para_no_teto():
     await ficha.upar.callback(ficha, teto)
     assert "tier maximo" in teto.resposta, teto.resposta
     assert tier((await db.buscar_personagem(conn, pid))["nivel"]) == TIER_MAXIMO
-    print(f"  upar avisa a pericia nova e para no tier {TIER_MAXIMO}: ok")
+    print(f"  upar abre o menu da pericia nova e para no tier {TIER_MAXIMO}: ok")
 
 
 

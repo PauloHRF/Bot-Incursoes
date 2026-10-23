@@ -45,8 +45,12 @@ NIVEL_MAXIMO = 10
 TIER_MAXIMO = NIVEL_MAXIMO // NIVEIS_POR_TIER
 
 # Peso de cada tier no alvo do objetivo principal (doc: soma dos pesos + C).
-# Com o tier a cada 2 níveis o peso é o próprio tier; a constante precisa ser
-# recalibrada junto quando a regra de escala do chefe for fechada.
+#
+# ANDAIME: nada no bot usa isto ainda. `CONSTANTE_OBJETIVO` não tem leitor
+# nenhum, e `PESO_TIER` só é lido por `motor.peso_do_grupo`, que também não
+# tem chamador. Os três esperam a regra de escala do chefe, que está em
+# aberto. Ficam aqui porque a fórmula é do documento do grupo e perdê-la
+# custaria mais que mantê-la — mas não confie neles como se estivessem vivos.
 PESO_TIER = {t: t for t in range(1, TIER_MAXIMO + 1)}
 CONSTANTE_OBJETIVO = 9
 

@@ -194,11 +194,13 @@ async def caso_expertise_so_oferece_o_que_tem_proficiencia():
     assert isinstance(view, SeletorPericiasDaEscolha)
     assert {o.label for o in view.menu.options} == {"Furtividade", "Acrobacia"}
 
-    # sem nenhuma proficiencia, o bot manda escolher as pericias antes
+    # Sem nenhuma proficiencia nao ha o que dobrar, e o bot explica onde elas
+    # sao escolhidas — `/ficha pericias` saiu, entao nao da para mandar rodar.
     vazio = await db.criar_personagem(conn, GUILD, dono, "Cru", "ladino", [], nivel=4)
     inter = FakeInteraction(canal, dono)
     await cog.abrir_escolha(inter, vazio, "expertise_1")
-    assert "proficiencias primeiro" in inter.resposta, inter.resposta
+    assert "nenhuma para dobrar" in inter.resposta, inter.resposta
+    assert "/ficha" not in inter.resposta, "nao pode citar comando que saiu"
     print("  Expertise so oferece pericia com proficiencia: ok")
 
 

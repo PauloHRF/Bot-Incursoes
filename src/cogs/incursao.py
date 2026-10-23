@@ -2019,7 +2019,7 @@ class Incursoes(commands.Cog):
             lancamentos, total = await self._balanco(run)
             await canal.send(
                 embed=E.run_fracassada(
-                    incursao, estado, lancamentos, total,
+                    incursao, lancamentos, total,
                     await self._caminho(run), sala,
                     await db.ouro_da_run(self.bot.db, run["id"]),
                 )

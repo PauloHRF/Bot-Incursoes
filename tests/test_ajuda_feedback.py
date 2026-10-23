@@ -1,12 +1,16 @@
 """/help e o aviso publico quando alguem mexe na ficha."""
 from __future__ import annotations
 
+import ast
 import asyncio
+import re
 import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
+
+from discord import app_commands  # noqa: E402
 
 from src import config, database as db  # noqa: E402
 from src.cogs.ajuda import coletar  # noqa: E402
@@ -200,10 +204,96 @@ async def caso_atualizacoes_sao_publicas():
     print("  upar e voltar respondem no canal; ver fica privado: ok")
 
 
+async def caso_a_ordem_do_help_cobre_todo_comando():
+    """Comando fora da ORDEM_COMANDOS cai no fim do grupo, calado.
+
+    A tabela existe para pôr o essencial na frente; comando novo que ninguém
+    colocou nela não quebra nada, mas aparece no lugar errado para sempre — e
+    ninguém percebe. Este caso é o que percebe.
+    """
+    from src.cogs.ajuda import ORDEM_COMANDOS
+
+    conn, canal, _ = await preparar()
+    bot = await _arvore_completa(conn)
+    reais = {
+        c.qualified_name
+        for c in bot.tree.walk_commands()
+        if not isinstance(c, app_commands.Group)
+    }
+    assert not (reais - set(ORDEM_COMANDOS)), sorted(reais - set(ORDEM_COMANDOS))
+    assert not (set(ORDEM_COMANDOS) - reais), sorted(set(ORDEM_COMANDOS) - reais)
+
+    for cog in list(bot.extensions):
+        await bot.unload_extension(cog)
+    await bot.close()
+    print(f"  a ordem do /help cobre os {len(reais)} comandos, sem sobra: ok")
+
+
+async def caso_nenhum_texto_cita_comando_que_saiu():
+    """O bot não pode mandar rodar um comando que não existe mais.
+
+    Foi o que aconteceu ao tirar `/ficha pericias`: cinco mensagens continuaram
+    citando ele, e duas eram o único caminho para preencher as proficiências
+    que a subida de tier abre. Beco sem saída, não só texto errado.
+    """
+    conn, canal, _ = await preparar()
+    bot = await _arvore_completa(conn)
+    vivos = {
+        "/" + c.qualified_name
+        for c in bot.tree.walk_commands()
+        if not isinstance(c, app_commands.Group)
+    }
+    for cog in list(bot.extensions):
+        await bot.unload_extension(cog)
+    await bot.close()
+
+    # Só o que o bot DIZ: literais de texto, e não comentários. Um comentário
+    # que explica por que um comando saiu precisa nomeá-lo, e nomear ali não
+    # manda ninguém rodar nada.
+    padrao = re.compile(r"/(?:ficha|incursao|mercado|organizacao|config) \w+")
+    raiz = Path(__file__).resolve().parents[1]
+
+    def falas(arvore: ast.AST) -> list[str]:
+        """Os textos que o bot pode mostrar: literais que não são docstring."""
+        documentacao = set()
+        for no in ast.walk(arvore):
+            corpo = getattr(no, "body", None)
+            if not isinstance(corpo, list) or not corpo:
+                continue
+            primeiro = corpo[0]
+            if (
+                isinstance(primeiro, ast.Expr)
+                and isinstance(primeiro.value, ast.Constant)
+                and isinstance(primeiro.value.value, str)
+            ):
+                documentacao.add(id(primeiro.value))
+        return [
+            no.value
+            for no in ast.walk(arvore)
+            if isinstance(no, ast.Constant)
+            and isinstance(no.value, str)
+            and id(no) not in documentacao
+        ]
+
+    citados: set[str] = set()
+    for arquivo in (raiz / "src").rglob("*.py"):
+        for fala in falas(ast.parse(arquivo.read_text(encoding="utf-8"))):
+            citados.update(padrao.findall(fala))
+    fichas = raiz / "docs" / "FICHAS.md"
+    if fichas.exists():
+        citados.update(padrao.findall(fichas.read_text(encoding="utf-8")))
+
+    mortos = sorted(c for c in citados if c not in vivos)
+    assert not mortos, f"o bot manda rodar comando que nao existe: {mortos}"
+    print(f"  os {len(citados)} comandos citados em texto todos existem: ok")
+
+
 async def main():
     try:
         await caso_help_lista_tudo()
         await caso_help_responde_e_filtra()
+        await caso_a_ordem_do_help_cobre_todo_comando()
+        await caso_nenhum_texto_cita_comando_que_saiu()
         await caso_registrar_avisa_o_canal()
         await caso_atualizacoes_sao_publicas()
     finally:

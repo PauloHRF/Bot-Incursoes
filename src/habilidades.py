@@ -12,9 +12,12 @@
     ataques        quantos golpes por rodada
     ameaca         soma na Ameaça: o peso dele no sorteio de alvo (src/ameaca.py)
 
-Ativas e escolhas ficam sem efeito: aparecem na ficha e no aviso de nível, mas
-ainda não mexem em conta nenhuma — elas entram junto com o sistema de usos
-(por combate, por descanso, por incursão), numa fatia própria.
+`acao` é o que o jogador aciona, com `usos` dizendo quantas vezes e com que
+frequência (por combate, por descanso, por incursão). `escolha` é o que ele
+decide ao chegar no tier, e `exige_escolha` destrava a ativa que a opção dá.
+As três coisas funcionam: não há habilidade no catálogo que o bot não saiba
+executar, e o teste de ficha afirma isso — se um dia houver, ela sai marcada
+"(em breve)" por `Habilidade.pronta`.
 """
 from __future__ import annotations
 

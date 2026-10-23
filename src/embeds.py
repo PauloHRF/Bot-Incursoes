@@ -898,7 +898,6 @@ def campo_caminho(e: discord.Embed, caminho: Optional[list[Sala]]) -> None:
 
 def run_fracassada(
     incursao: Incursao,
-    estado,
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
     caminho: Optional[list[Sala]] = None,
