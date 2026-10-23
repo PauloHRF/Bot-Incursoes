@@ -182,7 +182,7 @@ def caso_passivas_de_dado_consolidam_pelo_maior():
 # ------------------------------------------------------------------- a cura
 
 
-async def caso_cure_wounds_cura_por_dado():
+async def caso_cure_wounds_cura_em_porcentagem():
     conn, canal, cog, incursao, run = await preparar(
         escolhas={"magia_t1": "cure_wounds"}
     )
@@ -192,10 +192,12 @@ async def caso_cure_wounds_cura_por_dado():
     inter = FakeInteraction(canal, JOGADORES[0])
     await cog.usar_habilidade(inter, run["id"], "OBJ", "cure_wounds", [ferido])
     depois = await db.personagens_da_run(conn, run["id"])
-    hp = next(p["hp_atual"] for p in depois if p["user_id"] == ferido)
-    # 2d8+3 vai de 5 a 19
-    assert 15 <= hp <= 29, hp
-    print(f"  Cure Wounds cura 2d8+3 (foi de 10 para {hp}): ok")
+    alvo = next(p for p in depois if p["user_id"] == ferido)
+    hp = alvo["hp_atual"]
+    # 30% do maximo, e nao mais 2d8+3: a cura acompanha o tier do alvo.
+    esperado = min(alvo["hp_max"], 10 + int(alvo["hp_max"] * 0.3))
+    assert hp == esperado, (hp, esperado)
+    print(f"  Cure Wounds cura 30% do maximo (foi de 10 para {hp}): ok")
 
 
 async def caso_curandeiro_soma_na_cura():
@@ -207,10 +209,13 @@ async def caso_curandeiro_soma_na_cura():
     inter = FakeInteraction(canal, JOGADORES[0])
     await cog.usar_habilidade(inter, run["id"], "OBJ", "cure_wounds", [ferido])
     depois = await db.personagens_da_run(conn, run["id"])
-    hp = next(p["hp_atual"] for p in depois if p["user_id"] == ferido)
-    # 2d8+3 mais 1d6: de 6 a 25 em cima do 1
-    assert 7 <= hp <= 26, hp
-    print(f"  Curandeiro soma 1d6 na cura (foi de 1 para {hp}): ok")
+    alvo = next(p for p in depois if p["user_id"] == ferido)
+    hp = alvo["hp_atual"]
+    # A cura base virou 30% do maximo; o Curandeiro continua somando 1d6 por
+    # cima, entao o resultado fica entre a base e a base mais 6.
+    base = 1 + int(alvo["hp_max"] * 0.3)
+    assert base + 1 <= hp <= min(alvo["hp_max"], base + 6), (hp, base)
+    print(f"  Curandeiro soma 1d6 na cura de 30% (foi de 1 para {hp}): ok")
 
 
 async def caso_mass_healing_word_pega_o_grupo():
@@ -363,7 +368,7 @@ async def main():
         caso_escolha_destrava_uma_magia_so()
         caso_taumaturgo_abre_a_escolha_encadeada()
         caso_passivas_de_dado_consolidam_pelo_maior()
-        await caso_cure_wounds_cura_por_dado()
+        await caso_cure_wounds_cura_em_porcentagem()
         await caso_curandeiro_soma_na_cura()
         await caso_mass_healing_word_pega_o_grupo()
         await caso_restauracao_tira_o_atordoamento()

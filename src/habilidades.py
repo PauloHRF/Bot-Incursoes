@@ -284,9 +284,10 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        acao={"tipo": "golpes", "quantidade": 1, "dano_bonus": "1d6",
                              "thp_proprio": "1d6"}),
             Habilidade("tradicao_espiritual", "Tradicao xamanica — espiritual", ATIVA,
-                       "1x por descanso: cura 2d8+3 de um aliado; voce ganha 1d6+3 de THP.",
+                       "1x por descanso: cura um aliado em 30% do HP maximo "
+                       "dele; voce ganha 1d6+3 de THP.",
                        usos=_usos("descanso"), recarga_com="tradicao_xamanica",
-                       acao={"tipo": "cura", "dado": "2d8+3", "alvo": "aliado",
+                       acao={"tipo": "cura", "fracao": 0.3, "alvo": "aliado",
                              "thp_proprio": "1d6+3"})],
         2: [Habilidade("espirito_guardiao", "Espirito Guardiao", PASSIVA,
                        "Com 19+ no d20 ganha 5 THP; com THP, o grupo ganha +1 em tudo.",
@@ -347,9 +348,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "4d6 e o grupo ataca ele com vantagem"},
                        ]}),
             Habilidade("cure_wounds", "Cure Wounds", ATIVA,
-                       "1x por descanso: cura 2d8+3 de um aliado.",
+                       "1x por descanso: cura um aliado em 30% do HP maximo dele.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "cura", "dado": "2d8+3", "alvo": "aliado"},
+                       acao={"tipo": "cura", "fracao": 0.3, "alvo": "aliado"},
                        exige_escolha=("magia_t1", "cure_wounds")),
             Habilidade("command", "Command", ATIVA,
                        "1x por descanso: um inimigo faz save de SAB; falhando, "
@@ -412,9 +413,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "dano": "3d8"},
                        exige_escolha=("magia_t3", "spirit_guardians")),
             Habilidade("mass_healing_word", "Mass Healing Word", ATIVA,
-                       "1x por descanso: o grupo inteiro cura 2d4+4.",
+                       "1x por descanso: o grupo inteiro cura 15% do HP maximo.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "grupo", "cura_dado": "2d4+4"},
+                       acao={"tipo": "grupo", "cura_fracao": 0.15},
                        exige_escolha=("magia_t3", "mass_healing_word")),
             Habilidade("hypnotic_pattern", "Hypnotic Pattern", ATIVA,
                        "1x por incursao: todos os inimigos fazem save de SAB; "
@@ -456,9 +457,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "dano": "10d6", "metade": True},
                        exige_escolha=("magia_t5", "flame_strike")),
             Habilidade("mass_cure_wounds", "Mass Cure Wounds", ATIVA,
-                       "1x por descanso: o grupo inteiro cura 5d8+5.",
+                       "1x por descanso: o grupo inteiro cura 35% do HP maximo.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "grupo", "cura_dado": "5d8+5"},
+                       acao={"tipo": "grupo", "cura_fracao": 0.35},
                        exige_escolha=("magia_t5", "mass_cure_wounds")),
             Habilidade("dominate_person", "Dominate Person", ATIVA,
                        "1x por descanso: um inimigo faz save de SAB; falhando, "
@@ -487,9 +488,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "O grupo ataca o alvo com vantagem"},
                        ]}),
             Habilidade("cure_wounds_art", "Cure Wounds", ATIVA,
-                       "1x por descanso: cura 2d8+3 de um aliado.",
+                       "1x por descanso: cura um aliado em 30% do HP maximo dele.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "cura", "dado": "2d8+3", "alvo": "aliado"},
+                       acao={"tipo": "cura", "fracao": 0.3, "alvo": "aliado"},
                        exige_escolha=("ferramenta_t1", "cure_wounds_art")),
             Habilidade("thunderwave", "Thunderwave", ATIVA,
                        "1x por descanso: todos os inimigos fazem save de CON; "
@@ -559,9 +560,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        acao={"tipo": "golpes", "quantidade": 1,
                              "dano_bonus": "2d6"}),
             Habilidade("arcane_jolt_cura", "Arcane Jolt — restaurador", ATIVA,
-                       "1x por combate: cura 2d6 de um aliado.",
+                       "1x por combate: cura um aliado em 15% do HP maximo dele.",
                        usos=_usos("combate"), recarga_com="arcane_jolt",
-                       acao={"tipo": "cura", "dado": "2d6", "alvo": "aliado"}),
+                       acao={"tipo": "cura", "fracao": 0.15, "alvo": "aliado"}),
             Habilidade("genio_refinado", "Genio refinado", PASSIVA,
                        "O Flash of Genius dele soma +10 em vez de +5.",
                        {"flash_bonus": 10})],
@@ -785,9 +786,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "dano": "6d6", "atordoa": 1},
                        exige_escolha=("pacto_t3", "hunger_of_hadar")),
             Habilidade("healing_light", "Healing Light", ATIVA,
-                       "1x por incursao: cura 6d6 de um aliado.",
+                       "1x por incursao: cura um aliado em 40% do HP maximo dele.",
                        usos=_usos("incursao"),
-                       acao={"tipo": "cura", "dado": "6d6", "alvo": "aliado"},
+                       acao={"tipo": "cura", "fracao": 0.4, "alvo": "aliado"},
                        exige_escolha=("pacto_t3", "healing_light")),
             Habilidade("hypnotic_pattern_bruxo", "Hypnotic Pattern", ATIVA,
                        "1x por incursao: todos os inimigos fazem save de SAB; "
@@ -1013,9 +1014,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "ameaca": 5, "iniciativa": 2},
                        exige_escolha=("magia_druida_t5", "conjure_elemental")),
             Habilidade("mass_cure_wounds_druida", "Mass Cure Wounds", ATIVA,
-                       "1x por descanso: o grupo inteiro cura 5d8+5.",
+                       "1x por descanso: o grupo inteiro cura 35% do HP maximo.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "grupo", "cura_dado": "5d8+5"},
+                       acao={"tipo": "grupo", "cura_fracao": 0.35},
                        exige_escolha=("magia_druida_t5", "mass_cure_wounds_druida"))],
     },
     # Mesmo corpo do mago, de proposito: os dois sao d6 e conjuram. O que os
@@ -1073,16 +1074,18 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "efeito": {"save_com_desvantagem": True}},
                        ]})],
         3: [Habilidade("magia_feit_t3", "Magia da origem", ESCOLHA,
-                       "Escolhe uma: Fireball, Haste ou Grilhoes Planares.",
+                       "Escolhe uma: Lightning Bolt, Haste ou Grilhoes Planares.",
                        escolha={"tipo": "opcao", "opcoes": [
-                           {"id": "fireball_feit", "nome": "Fireball",
+                           {"id": "fireball_feit", "nome": "Lightning Bolt",
                             "texto": "8d6 em todos, metade no sucesso"},
                            {"id": "haste", "nome": "Haste",
                             "texto": "Um aliado ataca 2x e ganha +2 de CA"},
                            {"id": "grilhoes_planares", "nome": "Grilhoes Planares",
                             "texto": "4d8 e o alvo sangra 2d8 por rodada"},
                        ]}),
-            Habilidade("fireball_feit", "Fireball", ATIVA,
+            # O id continua `fireball_feit`: ele esta gravado na escolha de
+            # quem ja decidiu, e trocar id apagaria a decisao do jogador.
+            Habilidade("fireball_feit", "Lightning Bolt", ATIVA,
                        "1x por descanso: todos os inimigos fazem save de DES; "
                        "quem falha leva 8d6, quem passa leva metade.",
                        usos=_usos("descanso"),
@@ -1184,10 +1187,12 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                            {"id": "charm_person_bardo", "nome": "Charm Person",
                             "texto": "Um inimigo perde as duas proximas vezes"},
                        ]}),
+            # 20%, e nao os 30% do clerigo: a cura do bardo sempre foi a
+            # menor do jogo de proposito — ele socorre com dado, nao com cura.
             Habilidade("healing_word", "Healing Word", ATIVA,
-                       "1x por descanso: cura 2d4+3 de um aliado.",
+                       "1x por descanso: cura um aliado em 20% do HP maximo dele.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "cura", "dado": "2d4+3", "alvo": "aliado"},
+                       acao={"tipo": "cura", "fracao": 0.2, "alvo": "aliado"},
                        exige_escolha=("magia_bardo_t1", "healing_word")),
             Habilidade("dissonant_whispers_bardo", "Dissonant Whispers", ATIVA,
                        "1x por descanso: um inimigo faz save de SAB; falhando, "
@@ -1256,9 +1261,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        exige_escolha=("magia_bardo_t3", "hypnotic_pattern_bardo")),
             Habilidade("aid", "Aid", ATIVA,
                        "1x por descanso: o grupo inteiro ganha 3d8 de vida "
-                       "temporaria e cura o mesmo.",
+                       "temporaria e cura 20% do HP maximo.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "grupo", "thp": "3d8", "cura_dado": "3d8"},
+                       acao={"tipo": "grupo", "thp": "3d8", "cura_fracao": 0.2},
                        exige_escolha=("magia_bardo_t3", "aid")),
             # Invisibilidade e furtividade, e o bot nao tem nem uma nem outra.
             # O que sobra dela e "nao te acham": mesmo caminho do Fly e do
@@ -1303,9 +1308,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "Um inimigo danca: perde a vez e erra mais"},
                        ]}),
             Habilidade("mass_cure_wounds_bardo", "Mass Cure Wounds", ATIVA,
-                       "1x por descanso: o grupo inteiro cura 5d8+5.",
+                       "1x por descanso: o grupo inteiro cura 35% do HP maximo.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "grupo", "cura_dado": "5d8+5"},
+                       acao={"tipo": "grupo", "cura_fracao": 0.35},
                        exige_escolha=("magia_bardo_t5", "mass_cure_wounds_bardo")),
             Habilidade("animate_objects", "Animate Objects", ATIVA,
                        "1x por descanso: objetos animados entram na sala, agem "
@@ -1317,11 +1322,12 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        exige_escolha=("magia_bardo_t5", "animate_objects")),
             Habilidade("ottos_dance", "Otto's Irresistible Dance", ATIVA,
                        "1x por descanso: um inimigo faz save de SAB; falhando, "
-                       "danca por 3 rodadas — perde a vez e tira 5 do ataque.",
+                       "danca por 3 rodadas e perde a vez.",
                        usos=_usos("descanso"),
+                       # Sem penalidade de ataque: quem perde a vez nao ataca,
+                       # entao tirar 5 do ataque dele nao mexia em nada.
                        acao={"tipo": "save", "save": "SAB", "alvos": 1,
-                             "atordoa": 3, "turnos": 3,
-                             "penalidade_ataque": 5},
+                             "atordoa": 3, "turnos": 3},
                        exige_escolha=("magia_bardo_t5", "ottos_dance"))],
     },
 }

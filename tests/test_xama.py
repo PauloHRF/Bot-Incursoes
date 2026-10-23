@@ -116,8 +116,12 @@ def caso_sintonizacao_mantem_as_pericias():
 # ------------------------------------------------------ a tradicao espiritual
 
 
-async def caso_espiritual_cura_por_dado_e_o_thp_e_do_xama():
-    """O documento: cura 2d8+3 do aliado, e **você** ganha 1d6+3 de THP."""
+async def caso_espiritual_cura_em_porcentagem_e_o_thp_e_do_xama():
+    """Cura 30% do HP máximo do aliado, e **você** ganha 1d6+3 de THP.
+
+    A cura virou porcentagem para acompanhar o tier: 2d8+3 era metade da vida
+    de um tier 1 e um sexto da de um tier 5.
+    """
     conn, canal, cog, incursao, run = await preparar()
     curador, ferido = JOGADORES[0], JOGADORES[1]
     await db.definir_hp(conn, run["id"], ferido, 10)
@@ -127,12 +131,17 @@ async def caso_espiritual_cura_por_dado_e_o_thp_e_do_xama():
         inter, run["id"], "OBJ", "tradicao_espiritual", [ferido]
     )
     pessoas = {p["user_id"]: p for p in await db.personagens_da_run(conn, run["id"])}
-    # 2d8+3 vai de 5 a 19 em cima de 10
-    assert 15 <= pessoas[ferido]["hp_atual"] <= 29, pessoas[ferido]["hp_atual"]
+    # 30% do maximo em cima dos 10 que sobraram, e sem passar do teto.
+    esperado = min(
+        pessoas[ferido]["hp_max"], 10 + int(pessoas[ferido]["hp_max"] * 0.3)
+    )
+    assert pessoas[ferido]["hp_atual"] == esperado, (
+        pessoas[ferido]["hp_atual"], esperado
+    )
     # e o THP ficou com quem curou, nao com quem foi curado
     assert pessoas[curador]["thp"] >= 4, pessoas[curador]["thp"]
     assert not pessoas[ferido]["thp"], "o aliado nao leva o THP"
-    print("  o caminho espiritual cura por dado e o THP fica com o xama: ok")
+    print("  o caminho espiritual cura 30% e o THP fica com o xama: ok")
 
 
 # ----------------------------------------------------- os Guerreiros ancioes
@@ -204,7 +213,7 @@ async def main():
         caso_so_o_teto_de_20_era_inalcancavel_antes()
         caso_gatilho_cai_no_tier_4()
         caso_sintonizacao_mantem_as_pericias()
-        await caso_espiritual_cura_por_dado_e_o_thp_e_do_xama()
+        await caso_espiritual_cura_em_porcentagem_e_o_thp_e_do_xama()
         await caso_guerreiros_ancioes_versao_normal()
         await caso_guerreiros_ancioes_versao_de_20_thp()
         await caso_sem_thp_sai_a_versao_normal()

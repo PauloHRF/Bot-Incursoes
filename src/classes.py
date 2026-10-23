@@ -331,12 +331,14 @@ CLASSES: dict[str, Classe] = {
             "bardo",
             "Bardo",
             "Sopra o dado em quem falhou: a classe que faz o grupo acertar.",
+            # +13 de vida em TODO tier, e nao 12/14/14/14: o bardo e a unica
+            # classe com o passo parelho, por pedido do grupo.
             _tabela([
                 (19, 14, 4, 3, 5, 5, "1d6"),
-                (31, 15, 4, 4, 7, 7, "1d8"),
+                (32, 15, 4, 4, 7, 7, "1d8"),
                 (45, 16, 5, 4, 8, 8, "1d8"),
-                (59, 17, 5, 5, 10, 9, "2d8"),
-                (73, 18, 6, 5, 11, 11, "2d8"),
+                (58, 17, 5, 5, 10, 9, "2d8"),
+                (71, 18, 6, 5, 11, 11, "2d8"),
             ]),
         ),
     )

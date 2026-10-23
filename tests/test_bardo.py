@@ -88,7 +88,12 @@ async def em_combate(conn, cog, incursao, run_id):
 
 def caso_tabela_de_suporte():
     bardo = cl.CLASSES["bardo"]
-    assert [bardo.tiers[t].hp for t in range(1, 6)] == [19, 31, 45, 59, 73]
+    # +13 em todo tier, e nao 12/14/14/14: o bardo e a unica classe com o
+    # passo parelho, por pedido do grupo.
+    vida = [bardo.tiers[t].hp for t in range(1, 6)]
+    assert vida == [19, 32, 45, 58, 71], vida
+    passos = [vida[i + 1] - vida[i] for i in range(4)]
+    assert passos == [13, 13, 13, 13], passos
     assert [bardo.tiers[t].ca for t in range(1, 6)] == [14, 15, 16, 17, 18]
     assert bardo.tiers[1].dano == "1d6" and bardo.tiers[5].dano == "2d8"
     assert bardo.saves == ("DES", "CAR")
@@ -408,7 +413,7 @@ def caso_as_outras_duas_do_repertorio():
 # ------------------------------------------------------------------ o T5
 
 
-async def caso_ottos_dance_prende_e_atrapalha():
+async def caso_ottos_dance_so_prende():
     conn, canal, cog, incursao, run_id = await preparar(
         escolhas={"magia_bardo_t5": "ottos_dance"}, monstros=1
     )
@@ -420,12 +425,14 @@ async def caso_ottos_dance_prende_e_atrapalha():
     estado = await cog._estado_combate(await db.buscar_run(conn, run_id),
                                        incursao.objetivo)
     inimigo = estado.inimigo(alvo)
-    if inimigo.penalidade_ataque:
-        assert inimigo.penalidade_ataque == 5, inimigo.penalidade_ataque
+    # Nao ha mais penalidade de ataque: quem perde a vez nao ataca, entao
+    # tirar 5 do ataque dele nao mexia em nada.
+    assert not inimigo.penalidade_ataque, inimigo.penalidade_ataque
+    if inimigo.atordoado:
         assert "perde a vez" in inter.resposta, inter.resposta
     else:
-        assert "resistiu" in inter.resposta, inter.resposta
-    print("  Otto's prende e tira 5 do ataque de quem dança: ok")
+        assert "resisti" in inter.resposta.lower(), inter.resposta
+    print("  Otto's prende quem danca, e so isso: ok")
 
 
 async def caso_aid_da_thp_e_cura():
@@ -460,7 +467,7 @@ async def main():
         await caso_inspiracao_no_save_devolve_o_dano()
         caso_jack_of_all_trades_so_no_que_falta()
         caso_as_outras_duas_do_repertorio()
-        await caso_ottos_dance_prende_e_atrapalha()
+        await caso_ottos_dance_so_prende()
         await caso_aid_da_thp_e_cura()
     finally:
         for conn in _ABERTAS:

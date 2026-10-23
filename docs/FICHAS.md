@@ -648,7 +648,7 @@ Um ataque com +1d6 de dano; você ganha 1d6 de THP.
 
 **1x por descanso.** O uso é o mesmo das outras opções deste tier: escolhe uma.
 
-Cura 2d8+3 de um aliado; você ganha 1d6+3 de THP.
+Cura um aliado em 30% do HP máximo dele; você ganha 1d6+3 de THP.
 
 ---
 
@@ -750,7 +750,7 @@ Os próximos dois ataques dos aliados levam +1d6+5 de dano e critam com 15+, e o
 
 Escolhe uma: Cure Wounds, Command ou Guiding Bolt.
 
-* **Cure Wounds** (1x por descanso) — cura 2d8+3 de um aliado.
+* **Cure Wounds** (1x por descanso) — cura um aliado em 30% do HP máximo dele.
 * **Command** (1x por descanso) — um inimigo faz save de SAB; falhando, perde a próxima vez.
 * **Guiding Bolt** (1x por descanso) — 4d6 de dano num inimigo; o grupo ataca ele com vantagem na próxima rodada.
 
@@ -789,7 +789,7 @@ Escolhe um: Protetor, Taumaturgo ou Curandeiro.
 Escolhe uma: Spirit Guardians, Mass Healing Word ou Hypnotic Pattern.
 
 * **Spirit Guardians** (1x por incursão) — todos os inimigos fazem save de SAB; quem falha leva 3d8.
-* **Mass Healing Word** (1x por descanso) — o grupo inteiro cura 2d4+4.
+* **Mass Healing Word** (1x por descanso) — o grupo inteiro cura 15% do HP máximo.
 * **Hypnotic Pattern** (1x por incursão) — todos os inimigos fazem save de SAB; quem falha perde a próxima vez.
 
 ---
@@ -827,7 +827,7 @@ Escolhe um: Ataques abençoados, Especialista em cura ou Restauração.
 Escolhe uma: Flame Strike, Mass Cure Wounds ou Dominate Person.
 
 * **Flame Strike** (1x por incursão) — todos os inimigos fazem save de DES; quem falha leva 10d6, quem passa leva metade.
-* **Mass Cure Wounds** (1x por descanso) — o grupo inteiro cura 5d8+5.
+* **Mass Cure Wounds** (1x por descanso) — o grupo inteiro cura 35% do HP máximo.
 * **Dominate Person** (1x por descanso) — um inimigo faz save de SAB; falhando, ataca outra criatura dele.
 
 ---
@@ -855,7 +855,7 @@ Escolhe uma: Flame Strike, Mass Cure Wounds ou Dominate Person.
 
 Escolhe uma: Cure Wounds, Thunderwave ou Faerie Fire.
 
-* **Cure Wounds** (1x por descanso) — cura 2d8+3 de um aliado.
+* **Cure Wounds** (1x por descanso) — cura um aliado em 30% do HP máximo dele.
 * **Thunderwave** (1x por descanso) — todos os inimigos fazem save de CON; quem falha leva 2d8, quem passa leva metade.
 * **Faerie Fire** (1x por descanso) — um inimigo fica delineado; o grupo ataca ele com vantagem na próxima rodada.
 
@@ -935,7 +935,7 @@ Um golpe com +2d6 de dano.
 
 **1x por combate.** O uso é o mesmo das outras opções deste tier: escolhe uma.
 
-Cura 2d6 de um aliado.
+Cura um aliado em 15% do HP máximo dele.
 
 ### **Passiva — Gênio refinado**
 
@@ -1106,7 +1106,7 @@ Conhecimento proibido que fica ligado. Escolhe uma: Agonizing Blast, Fiendish Vi
 Escolhe uma: Hunger of Hadar, Healing Light ou Hypnotic Pattern.
 
 * **Hunger of Hadar** (1x por incursão) — todos os inimigos fazem save de DES; quem falha leva 6d6 e perde a próxima vez.
-* **Healing Light** (1x por incursão) — cura 6d6 de um aliado.
+* **Healing Light** (1x por incursão) — cura um aliado em 40% do HP máximo dele.
 * **Hypnotic Pattern** (1x por incursão) — todos os inimigos fazem save de SAB; quem falha perde as duas próximas vezes.
 
 ---
@@ -1250,7 +1250,7 @@ Escolhe uma: Antilife Shell, Conjure Elemental ou Mass Cure Wounds.
 
 * **Antilife Shell** (1x por descanso) — dois aliados ficam 2 rodadas fora do alcance — as criaturas batem em quem sobrou, e só neles se não houver mais ninguém.
 * **Conjure Elemental** (1x por descanso) — um elemental entra na sala com 70 HP, age na vez dele e bate no inimigo mais ferido.
-* **Mass Cure Wounds** (1x por descanso) — o grupo inteiro cura 5d8+5.
+* **Mass Cure Wounds** (1x por descanso) — o grupo inteiro cura 35% do HP máximo.
 
 ---
 
@@ -1313,9 +1313,9 @@ Ele torce as próprias magias, para sempre. Escolhe uma: Empowered, Twinned ou H
 
 ### **Escolha — Magia da origem**
 
-Escolhe uma: Fireball, Haste ou Grilhões Planares.
+Escolhe uma: Lightning Bolt, Haste ou Grilhões Planares.
 
-* **Fireball** (1x por descanso) — todos os inimigos fazem save de DES; quem falha leva 8d6, quem passa leva metade.
+* **Lightning Bolt** (1x por descanso) — todos os inimigos fazem save de DES; quem falha leva 8d6, quem passa leva metade.
 * **Haste** (1x por descanso) — um aliado ataca duas vezes por rodada e ganha +2 de CA, por 3 rodadas.
 * **Grilhões Planares** (1x por descanso) — um inimigo faz save de DES e leva 4d8 (metade no sucesso). Falhando, fica acorrentado: sangra 2d8 no fim de cada rodada e refaz o save para escapar.
 
@@ -1364,7 +1364,7 @@ Escolhe uma: Polymorph, Cone of Cold ou Dimension Door.
 
 *Sopra o dado em quem falhou: a classe que faz o grupo acertar.*
 
-**Vida:** 19 a 73, +13,5 por tier  
+**Vida:** 19 a 71, +13 por tier  
 **Saves fortes:** Destreza e Carisma  
 **Ameaça inicial:** 2 — o peso dele no sorteio de alvo das criaturas
 
@@ -1383,7 +1383,7 @@ Escolhe uma: Polymorph, Cone of Cold ou Dimension Door.
 
 Escolhe uma: Healing Word, Dissonant Whispers ou Charm Person.
 
-* **Healing Word** (1x por descanso) — cura 2d4+3 de um aliado.
+* **Healing Word** (1x por descanso) — cura um aliado em 20% do HP máximo dele.
 * **Dissonant Whispers** (1x por descanso) — um inimigo faz save de SAB; falhando, leva 3d6 e perde a próxima vez.
 * **Charm Person** (1x por descanso) — um inimigo faz save de SAB; falhando, perde as duas próximas vezes.
 
@@ -1391,7 +1391,7 @@ Escolhe uma: Healing Word, Dissonant Whispers ou Charm Person.
 
 ## **Tier 2**
 
-**HP:** 31  
+**HP:** 32  
 **AC:** 15  
 **Skills:** 4  
 **Bônus de Skills:** +4 / +7 com Prof.  
@@ -1422,14 +1422,14 @@ O dado que ele sopra em quem falha. Escolhe em que rolagem ele entra: ataque, re
 Escolhe uma: Hypnotic Pattern, Aid ou Invisibility.
 
 * **Hypnotic Pattern** (1x por descanso) — todos os inimigos fazem save de SAB; quem falha perde as duas próximas vezes.
-* **Aid** (1x por descanso) — o grupo inteiro ganha 3d8 de vida temporária e cura o mesmo.
+* **Aid** (1x por descanso) — o grupo inteiro ganha 3d8 de vida temporária e cura 20% do HP máximo.
 * **Invisibility** (1x por descanso) — um aliado desaparece por 3 rodadas — os inimigos quase deixam de mirá-lo.
 
 ---
 
 ## **Tier 4**
 
-**HP:** 59  
+**HP:** 58  
 **AC:** 17  
 **Skills:** 5  
 **Bônus de Skills:** +5 / +10 com Prof.  
@@ -1452,7 +1452,7 @@ Escolhe uma: Expertise, Jack of All Trades ou Versatilidade.
 
 ## **Tier 5**
 
-**HP:** 73  
+**HP:** 71  
 **AC:** 18  
 **Skills:** 6  
 **Bônus de Skills:** +5 / +11 com Prof.  
@@ -1463,8 +1463,8 @@ Escolhe uma: Expertise, Jack of All Trades ou Versatilidade.
 
 Escolhe uma: Mass Cure Wounds, Animate Objects ou Otto's Irresistible Dance.
 
-* **Mass Cure Wounds** (1x por descanso) — o grupo inteiro cura 5d8+5.
+* **Mass Cure Wounds** (1x por descanso) — o grupo inteiro cura 35% do HP máximo.
 * **Animate Objects** (1x por descanso) — objetos animados entram na sala, agem na vez deles e batem no inimigo mais ferido.
-* **Otto's Irresistible Dance** (1x por descanso) — um inimigo faz save de SAB; falhando, dança por 3 rodadas — perde a vez e tira 5 do ataque.
+* **Otto's Irresistible Dance** (1x por descanso) — um inimigo faz save de SAB; falhando, dança por 3 rodadas e perde a vez.
 
 ---
