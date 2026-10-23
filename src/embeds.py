@@ -306,9 +306,14 @@ def sala_aberta(
 
 def resultado_sala(
     resolucao: ResolucaoSala,
-    apelidos: dict[int, str],
     desfecho: Optional[Any] = None,
 ) -> discord.Embed:
+    """O que a sala cobrou e quem respondeu.
+
+    Os nomes aqui sao dos PERSONAGENS, e nao os apelidos de Discord: a sala e
+    a ficha que entrou nela, nao a conta que clicou. Quem joga com dois
+    personagens nao conseguiria distinguir as rolagens de outra forma.
+    """
     sala = resolucao.sala
     e = discord.Embed(
         title=f"{EMOJI_TIPO.get(sala.tipo, '•')} {sala.nome} — {'superada' if resolucao.superada else 'atravessada a duras penas'}",
@@ -316,7 +321,7 @@ def resultado_sala(
     )
     linhas = []
     for r in resolucao.resultados:
-        quem = apelidos.get(r.user_id, r.personagem)
+        quem = r.personagem
         dado = f"🎲 {r.d20} {fmt(r.modificador)} = **{r.total}**"
         if r.passou:
             linhas.append(f"✅ {quem} · {r.pericia} · {dado} → +{r.margem} de progresso")
@@ -332,7 +337,7 @@ def resultado_sala(
     falharam = resolucao.quem_falhou
     if falharam:
         consequencia = CONSEQUENCIA_FALHA.get(sala.tipo, "não contribui")
-        nomes = ", ".join(apelidos.get(r.user_id, r.personagem) for r in falharam)
+        nomes = ", ".join(r.personagem for r in falharam)
         e.add_field(name="Quem falhou", value=f"{nomes} — {consequencia}.", inline=False)
 
     if resolucao.superada and sala.recompensa:
@@ -878,13 +883,19 @@ def run_fracassada(
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
     caminho: Optional[list[Sala]] = None,
+    sala: Optional[Sala] = None,
 ) -> discord.Embed:
+    """O fecho de uma run perdida: onde o grupo caiu.
+
+    A sala, e nao a lista de criaturas de pe: "caiu em Ninho dos Cães" conta
+    a historia, e "caiu diante de Cão Infernal 1, Cão Infernal 2, Cão
+    Infernal 3, Cão Infernal 4" so conta o numero de cães.
+    """
+    onde = f" em **{sala.nome}**" if sala else ""
     e = discord.Embed(
         title="☠️ Incursão fracassada",
         description=(
-            "O grupo inteiro caiu diante de "
-            + ", ".join(f"**{i.nome}**" for i in estado.inimigos_vivos)
-            + ". Ninguém volta com o objetivo."
+            f"O grupo inteiro caiu{onde}. Ninguém volta com o objetivo."
         ),
         color=COR_FALHA,
     )

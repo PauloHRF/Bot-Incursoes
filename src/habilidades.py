@@ -160,22 +160,33 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "+2 de dano", "efeito": {"dano_extra": 2}},
                        ]})],
         3: [MULTIATAQUE,
+            # DUAS acoes, e nao dois golpes: a do turno mais a do Surge. Com
+            # Multiattack isso da quatro golpes, e e o que a habilidade e no
+            # livro. Com "quantidade: 1" ela dava UM golpe no lugar dos dois
+            # do turno, entao usar era pior que atacar normalmente.
             Habilidade("action_surge", "Action Surge", ATIVA,
-                       "1x por combate: um ataque adicional imediato.",
+                       "1x por combate: age duas vezes no mesmo turno.",
                        usos=_usos("combate"),
-                       acao={"tipo": "golpes", "quantidade": 1})],
+                       acao={"tipo": "golpes", "acoes": 2})],
         4: [Habilidade("improved_critical", "Improved Critical", PASSIVA,
                        "Critico com 19 ou 20 no dado.", {"critico_em": 19})],
+        # "O Fighter realiza duas acoes consecutivas", diz o documento, e o
+        # ganho do tier 5 e o USO a mais: no T5 ele tem Surge E Mastery, duas
+        # vezes por combate. Com "quantidade: 2" rendia dois golpes, que e
+        # exatamente o que um turno comum dele ja rende — zero ganho.
         5: [Habilidade("action_mastery", "Action Mastery", ATIVA,
-                       "1x por combate: dois ataques consecutivos.",
+                       "1x por combate: age duas vezes no mesmo turno.",
                        usos=_usos("combate"),
-                       acao={"tipo": "golpes", "quantidade": 2})],
+                       acao={"tipo": "golpes", "acoes": 2})],
     },
     "monge": {
+        # "Apos realizar um ataque, o Monk pode realizar um segundo ataque
+        # imediatamente" — ou seja, dois no turno. Com "quantidade: 1" dava UM,
+        # que e o turno comum do monge no tier 1: a habilidade nao fazia nada.
         1: [Habilidade("flurry_of_blows", "Flurry of Blows", ATIVA,
-                       "1x por descanso: um ataque adicional imediato.",
+                       "1x por descanso: golpeia duas vezes no mesmo turno.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "golpes", "quantidade": 1})],
+                       acao={"tipo": "golpes", "acoes": 2})],
         2: [Habilidade("martial_arts", "Martial Arts", PASSIVA,
                        "Ao acertar, o proximo ataque ganha +1 acerto, ate +2; errar zera.",
                        {"sequencia": {"por_acerto": 1, "teto": 2}})],

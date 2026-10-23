@@ -2019,7 +2019,8 @@ class Incursoes(commands.Cog):
             lancamentos, total = await self._balanco(run)
             await canal.send(
                 embed=E.run_fracassada(
-                    incursao, estado, lancamentos, total, await self._caminho(run)
+                    incursao, estado, lancamentos, total,
+                    await self._caminho(run), sala,
                 )
             )
 
@@ -2931,8 +2932,26 @@ class Incursoes(commands.Cog):
         indice = await db.proximo_indice_de_ataque(
             self.bot.db, run["id"], passo, estado.rodada, user_id
         )
+        # `quantidade` conta GOLPES e `acoes` conta ACOES. A diferenca importa
+        # para quem tem Multiattack: uma acao dele sao dois golpes, entao o
+        # Action Surge com "quantidade: 1" trocava os dois golpes do turno por
+        # um — usar era pior que nao usar. Com `acoes` a conta sai certa
+        # sozinha, e continua certa quando o Multiattack mudar.
+        por_alvo = acao.get("quantidade")
+        if por_alvo is None:
+            por_alvo = max(1, acao.get("acoes", 1)) * max(1, atacante.ataques)
+        # Alvo unico: se ele cair no meio, os golpes que faltam vao para o
+        # proximo de pe, como o ataque comum do turno ja faz. Com varios alvos
+        # escolhidos (a Rajada do Cacador) cada um leva o seu, e trocar seria
+        # bater duas vezes no mesmo.
+        reapontar = len(escolhidos) == 1
         for alvo in escolhidos:
-            for _ in range(acao.get("quantidade", 1)):
+            for _ in range(por_alvo):
+                if alvo.caido and reapontar:
+                    proximo = estado.alvo_preferido()
+                    if proximo is None:
+                        break
+                    alvo = proximo
                 if alvo.caido:
                     break
                 golpe = motor.atacar_inimigo(
@@ -3661,9 +3680,8 @@ class Incursoes(commands.Cog):
 
         desfecho = None
         if resolucao is not None:
-            apelidos = await self._apelidos(run)
             desfecho = await self._consequencias_da_sala(run, sala, resolucao)
-            await canal.send(embed=E.resultado_sala(resolucao, apelidos, desfecho))
+            await canal.send(embed=E.resultado_sala(resolucao, desfecho))
             if resolucao.superada and sala.pontos_organizacao:
                 await self._creditar(
                     run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{self._passo(run)}:{sala.id}"

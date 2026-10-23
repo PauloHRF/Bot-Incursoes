@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import sys
 from pathlib import Path
 
@@ -163,8 +164,13 @@ async def caso_habilidade_gasta_o_turno():
     inter = await usar(cog, canal, run, dono, "action_surge", msg=msg)
     assert "Action Surge" in inter.resposta
 
+    # O Action Surge vale DUAS acoes, e uma acao de quem tem Multiattack sao
+    # dois golpes: quatro no total, todos da habilidade.
+    ficha = await db.personagem_da_run(conn, run["id"], dono)
+    por_acao = ficha["efeitos"].get("ataques", 1)
     ataques = await db.ataques_da_rodada(conn, run["id"], passo, 1)
-    assert len(ataques) == 1 and ataques[0]["origem"] == "habilidade"
+    assert len(ataques) == 2 * por_acao, (len(ataques), por_acao)
+    assert all(a["origem"] == "habilidade" for a in ataques)
     # o turno foi gasto na habilidade, entao o ataque e recusado
     assert await db.acao_do_turno(conn, run["id"], passo, 1, dono) == "action_surge"
     assert dono in await db.quem_agiu(conn, run["id"], passo, 1)
@@ -172,7 +178,7 @@ async def caso_habilidade_gasta_o_turno():
     ataque = FakeInteraction(canal, dono, msg)
     await cog.atacar(ataque, run["id"], "OBJ")
     assert "Action Surge" in ataque.resposta, ataque.resposta
-    assert len(await db.ataques_da_rodada(conn, run["id"], passo, 1)) == 1
+    assert len(await db.ataques_da_rodada(conn, run["id"], passo, 1)) == 2 * por_acao
 
     # nem outra habilidade entra no mesmo turno
     outra = await usar(cog, canal, run, dono, "second_wind", msg=msg)
@@ -315,12 +321,96 @@ async def caso_painel_tem_o_botao():
     print("  o painel de combate traz o botao de habilidade: ok")
 
 
+
+
+async def caso_o_surge_vale_mais_que_atacar():
+    """A regra que faltava: usar o Action Surge tem de ser melhor que não usar.
+
+    Ele gasta o turno, então o que importa não é "um golpe a mais" — é quantos
+    golpes o turno rende com ele contra quantos rende sem. Com `quantidade: 1`
+    o guerreiro trocava os dois golpes do Multiattack por um, e a habilidade
+    era uma armadilha.
+    """
+    conn, canal, cog, incursao = await preparar(classe="guerreiro", nivel=8)
+
+    # Quantos golpes um turno normal rende.
+    run = await abrir_combate(conn, canal, cog, incursao)
+    passo = cog._passo(run)
+    dono = JOGADORES[0]
+    await cog.atacar(FakeInteraction(canal, dono), run["id"], "OBJ")
+    normais = len(await db.ataques_da_rodada(conn, run["id"], passo, 1))
+    assert normais >= 2, normais
+
+    # E quantos rende gastando o turno no Surge.
+    conn, canal, cog, incursao = await preparar(classe="guerreiro", nivel=8)
+    run = await abrir_combate(conn, canal, cog, incursao)
+    passo = cog._passo(run)
+    await usar(cog, canal, run, dono, "action_surge")
+    com_surge = len(await db.ataques_da_rodada(conn, run["id"], passo, 1))
+
+    assert com_surge == 2 * normais, (normais, com_surge)
+    print(f"  o Surge rende {com_surge} golpes contra {normais} de um turno comum: ok")
+
+
+async def caso_o_surge_nunca_bate_em_defunto():
+    """Quatro golpes num alvo só: o que cai sai da mira, e nada se perde.
+
+    A contagem de golpes NÃO pode depender de acerto — o 1 natural erra
+    sempre, então "cada golpe mata um" é falso uma vez em vinte. O que vale
+    como invariante é o outro lado: com cinco inimigos de 1 HP, o orçamento
+    de quatro golpes sai inteiro, e nenhum alvo leva dois golpes que ACERTAM,
+    porque depois do primeiro ele está no chão.
+    """
+    conn, canal, cog, incursao = await preparar(
+        classe="guerreiro", nivel=8, monstro=INDEFESO, inimigos=5
+    )
+    run = await abrir_combate(conn, canal, cog, incursao)
+    passo = cog._passo(run)
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    await usar(
+        cog, canal, run, JOGADORES[0], "action_surge",
+        alvos=[estado.inimigos[0].indice],
+    )
+
+    ataques = await db.ataques_da_rodada(conn, run["id"], passo, 1)
+    # Cinco inimigos para quatro golpes: sempre ha alvo de pe, entao o
+    # orcamento sai inteiro, acerte ou erre.
+    assert len(ataques) == 4, len(ataques)
+    # E cada inimigo leva no maximo UM golpe que acerta: com 1 HP, o primeiro
+    # acerto o derruba, e o golpe seguinte muda de alvo.
+    acertos = collections.Counter(a["alvo"] for a in ataques if a["dano"] > 0)
+    assert acertos and max(acertos.values()) == 1, dict(acertos)
+    print("  os quatro golpes do Surge saem, e nenhum repete um alvo caido: ok")
+
+
+async def caso_o_surge_nao_golpeia_o_vazio():
+    """Sala vazia no meio do Surge: o que sobra do orçamento não sai."""
+    conn, canal, cog, incursao = await preparar(
+        classe="guerreiro", nivel=8, monstro=INDEFESO, inimigos=1
+    )
+    run = await abrir_combate(conn, canal, cog, incursao)
+    passo = cog._passo(run)
+    await usar(cog, canal, run, JOGADORES[0], "action_surge")
+
+    ataques = await db.ataques_da_rodada(conn, run["id"], passo, 1)
+    # Um inimigo de 1 HP para quatro golpes: assim que ele cai o resto para.
+    # Quantos saem antes disso depende de erro, entao o que se afirma e o
+    # teto — e que o orcamento nao foi gasto no ar.
+    assert 1 <= len(ataques) <= 4, len(ataques)
+    acertos = [a for a in ataques if a["dano"] > 0]
+    assert len(acertos) <= 1, len(acertos)
+    print(f"  com um inimigo so, o Surge para quando ele cai ({len(ataques)} golpes): ok")
+
+
 async def main():
     try:
         caso_catalogo_das_ativas()
         await caso_cura_em_si_mesmo()
         await caso_uso_volta_no_proximo_combate()
         await caso_habilidade_gasta_o_turno()
+        await caso_o_surge_vale_mais_que_atacar()
+        await caso_o_surge_nunca_bate_em_defunto()
+        await caso_o_surge_nao_golpeia_o_vazio()
         await caso_habilidade_sem_golpe_fecha_a_rodada()
         await caso_perfect_strike_acerta_sempre()
         await caso_golpe_divino_soma_dados()
