@@ -176,11 +176,20 @@ async def main():
         await bot.load_extension(cog)
     nomes = sorted(c.qualified_name for c in bot.tree.walk_commands())
     for grupo in (
-        "ficha registrar", "ficha listar", "incursao entrar", "incursao teste",
-        "incursao atacar", "config intervalo", "organizacao placar",
+        "ficha registrar", "ficha listar", "ficha upar", "incursao entrar",
+        "incursao votar", "mercado vitrine", "mercado equipar",
+        "config intervalo", "organizacao placar",
     ):
         assert grupo in nomes, f"comando {grupo} não foi registrado"
-    assert "ficha listar" in nomes and "ficha remover" in nomes
+    # O que saiu de propósito: combate é por botão (o painel tem Atacar,
+    # Habilidade e Rolar teste), a bolsa absorveu o ouro, e trocar de
+    # equipamento no mesmo slot dispensa desequipar.
+    for fora in (
+        "ficha pericias", "ficha remover", "incursao atacar",
+        "incursao habilidade", "incursao sala", "incursao teste",
+        "mercado ouro", "mercado desequipar",
+    ):
+        assert fora not in nomes, f"comando {fora} deveria ter saido"
     for cog in COGS:
         await bot.unload_extension(cog)
     await bot.close()

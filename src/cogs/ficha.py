@@ -656,50 +656,6 @@ class Ficha(commands.Cog):
             "\n".join(linhas), embed=embed_ficha(atualizado, interaction.user)
         )
 
-    @grupo.command(
-        name="pericias", description="Escolhe as pericias com proficiencia"
-    )
-    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
-    @app_commands.autocomplete(personagem=_sugerir_personagens)
-    async def pericias(
-        self, interaction: discord.Interaction, personagem: Optional[str] = None
-    ) -> None:
-        escolhido = await self._resolver(interaction, personagem)
-        if not escolhido:
-            return
-        numeros = escolhido.get("numeros")
-        if numeros is None:
-            await interaction.response.send_message(
-                "Nao reconheco a classe desta ficha.", ephemeral=True
-            )
-            return
-        view = SeletorPericias(interaction.user.id, escolhido["pericias"], numeros.pericias)
-        await interaction.response.send_message(
-            f"Proficiencias de **{escolhido['nome']}** "
-            f"({escolhido['classe']}, ate {numeros.pericias}):",
-            view=view,
-            ephemeral=True,
-        )
-        await view.wait()
-        if view.escolhidas is None:
-            await interaction.edit_original_response(
-                content="Tempo esgotado - nada foi alterado.", view=None
-            )
-            return
-        await db.atualizar_pericias(self.bot.db, escolhido["id"], view.escolhidas)
-        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
-        await interaction.edit_original_response(
-            content="Pericias atualizadas.",
-            embed=embed_ficha(atualizado, interaction.user),
-            view=None,
-        )
-        await self._anunciar(
-            interaction,
-            f"🎓 {interaction.user.mention} atualizou as proficiencias de "
-            f"**{atualizado['nome']}** ({len(atualizado['pericias'])}/{numeros.pericias}).",
-            embed=embed_ficha(atualizado, interaction.user),
-        )
-
     # ------------------------------------------------------- escolhas
 
     def _seletor_da_escolha(self, personagem: dict[str, Any], habilidade):
@@ -864,29 +820,6 @@ class Ficha(commands.Cog):
         await interaction.response.send_message(
             aviso, embed=embed_ficha(atualizado, interaction.user)
         )
-
-    @grupo.command(name="remover", description="Apaga um personagem seu")
-    @app_commands.describe(personagem="Qual personagem apagar")
-    @app_commands.autocomplete(personagem=_sugerir_personagens)
-    async def remover(self, interaction: discord.Interaction, personagem: str) -> None:
-        escolhido = await self._resolver(interaction, personagem)
-        if not escolhido:
-            return
-        em_run = await db.run_viva_do_jogador(
-            self.bot.db, interaction.guild_id, interaction.user.id
-        )
-        if em_run:
-            await interaction.response.send_message(
-                f"Voce esta na run #{em_run['id']}. Termine ou desista dela antes de apagar "
-                "um personagem.",
-                ephemeral=True,
-            )
-            return
-        await db.remover_personagem(self.bot.db, escolhido["id"])
-        await interaction.response.send_message(
-            f"🗑️ {interaction.user.mention} apagou o personagem **{escolhido['nome']}**."
-        )
-
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Ficha(bot))

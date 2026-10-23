@@ -25,12 +25,16 @@ class Organizacao(commands.Cog):
 
     @grupo.command(name="placar", description="Pontos de cada Organização no servidor")
     async def placar(self, interaction: discord.Interaction) -> None:
+        # Efemero: o placar e consulta, e consulta repetida no canal empurra
+        # para cima o que o grupo precisa ver — a sala e o combate.
         pontos = await db.placar(self.bot.db, interaction.guild_id)
         await interaction.response.send_message(
-            embed=E.placar_organizacoes(pontos, ORGANIZACOES)
+            embed=E.placar_organizacoes(pontos, ORGANIZACOES), ephemeral=True
         )
 
-    @grupo.command(name="extrato", description="Últimos pontos lançados")
+    # So admin: o extrato e ferramenta de conferencia, nao de mesa.
+    @grupo.command(name="extrato", description="(admin) Últimos pontos lançados")
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.describe(
         organizacao="Filtra por uma Organização (opcional)",
         quantidade="Quantos lançamentos mostrar (padrão 10)",

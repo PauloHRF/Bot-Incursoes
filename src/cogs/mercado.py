@@ -128,7 +128,14 @@ def embed_bolsa(
     saldo: int,
     vestido: dict[str, str],
     bolsa: dict[str, int],
+    extrato: Optional[list] = None,
 ) -> discord.Embed:
+    """A bolsa, o corpo e o ouro numa tela só.
+
+    Eram dois comandos, `bolsa` e `ouro`, e as duas perguntas são a mesma:
+    "com o que eu estou e quanto me sobra". Separar obrigava a abrir os dois
+    para decidir uma compra.
+    """
     e = discord.Embed(
         title=f"Bolsa e equipamento · {personagem['nome']}",
         description=(
@@ -164,7 +171,16 @@ def embed_bolsa(
         value="\n".join(guardados) if guardados else "Nada guardado.",
         inline=False,
     )
-    e.set_footer(text="/mercado equipar para vestir · /mercado desequipar para tirar")
+    if extrato:
+        linhas = [f"`{l['ouro']:+5d}` {l['motivo']}" for l in extrato]
+        e.add_field(
+            name="Últimos lançamentos de ouro",
+            value="\n".join(linhas),
+            inline=False,
+        )
+    e.set_footer(
+        text="/mercado equipar para vestir · equipar outro no mesmo slot troca"
+    )
     return e
 
 
@@ -383,7 +399,9 @@ class Mercado(commands.Cog):
         except (discord.HTTPException, AttributeError):
             pass
 
-    @grupo.command(name="bolsa", description="O que você tem vestido e guardado")
+    @grupo.command(
+        name="bolsa", description="Seu ouro, o que está vestido e o que está guardado"
+    )
     @app_commands.describe(personagem="Qual personagem (opcional se você só tem um)")
     @app_commands.autocomplete(personagem=_sugerir_personagens)
     async def bolsa(
@@ -398,31 +416,10 @@ class Mercado(commands.Cog):
                 await db.ouro(self.bot.db, escolhido["id"]),
                 await db.equipamento(self.bot.db, escolhido["id"]),
                 await db.itens_na_bolsa(self.bot.db, escolhido["id"]),
+                await db.extrato_de_ouro(self.bot.db, escolhido["id"], 5),
             ),
             ephemeral=True,
         )
-
-    @grupo.command(name="ouro", description="Seu saldo e de onde ele veio")
-    @app_commands.describe(personagem="Qual personagem (opcional se você só tem um)")
-    @app_commands.autocomplete(personagem=_sugerir_personagens)
-    async def ouro(
-        self, interaction: discord.Interaction, personagem: Optional[str] = None
-    ) -> None:
-        escolhido = await self._resolver(interaction, personagem)
-        if not escolhido:
-            return
-        saldo = await db.ouro(self.bot.db, escolhido["id"])
-        extrato = await db.extrato_de_ouro(self.bot.db, escolhido["id"])
-        linhas = [
-            f"`{lanc['ouro']:+5d}` {lanc['motivo']}" for lanc in extrato
-        ] or ["Nenhum lançamento ainda. Ouro vem de sala superada e de incursão fechada."]
-        e = discord.Embed(
-            title=f"Ouro · {escolhido['nome']}",
-            description=f"**{saldo}** de ouro.",
-            color=COR,
-        )
-        e.add_field(name="Últimos lançamentos", value="\n".join(linhas), inline=False)
-        await interaction.response.send_message(embed=e, ephemeral=True)
 
     # --------------------------------------------------------------- comprar
 
@@ -534,43 +531,6 @@ class Mercado(commands.Cog):
             f"({itens.NOME_DO_SLOT[peca.slot]}).{troca}\n"
             f"CA **{atualizado['ca']}** · acerto **{atualizado['bonus_ataque']:+d}**"
         )
-
-    @grupo.command(name="desequipar", description="Tira o item de um slot")
-    @app_commands.describe(
-        slot="Qual lugar do corpo",
-        personagem="Qual personagem (opcional se você só tem um)",
-    )
-    @app_commands.choices(
-        slot=[
-            app_commands.Choice(name=itens.NOME_DO_SLOT[s], value=s)
-            for s in itens.SLOTS
-        ]
-    )
-    @app_commands.autocomplete(personagem=_sugerir_personagens)
-    async def desequipar(
-        self,
-        interaction: discord.Interaction,
-        slot: app_commands.Choice[str],
-        personagem: Optional[str] = None,
-    ) -> None:
-        if not await self._fora_de_incursao(interaction):
-            return
-        escolhido = await self._resolver(interaction, personagem)
-        if not escolhido:
-            return
-        saiu = await db.desequipar(self.bot.db, escolhido["id"], slot.value)
-        peca = itens.item(saiu)
-        if peca is None:
-            await interaction.response.send_message(
-                f"Não há nada em {itens.NOME_DO_SLOT[slot.value]}.", ephemeral=True
-            )
-            return
-        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
-        await interaction.response.send_message(
-            f"**{atualizado['nome']}** tira **{peca.nome}** e guarda na bolsa.\n"
-            f"CA **{atualizado['ca']}** · acerto **{atualizado['bonus_ataque']:+d}**"
-        )
-
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Mercado(bot))

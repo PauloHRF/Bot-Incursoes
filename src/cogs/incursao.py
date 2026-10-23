@@ -4054,68 +4054,6 @@ class Incursoes(commands.Cog):
 
     # ---------------------------------------------------------- comandos
 
-    @grupo.command(name="sala", description="Reenvia a mensagem da sala atual")
-    async def sala(self, interaction: discord.Interaction) -> None:
-        run = await self._run_do_contexto(interaction, exigir_participante=False)
-        if not run:
-            return
-        incursao = self._incursao_da_run(run)
-        if run["status"] == "escolhendo":
-            await interaction.response.send_message(
-                "O grupo está votando a próxima sala.", ephemeral=True
-            )
-            return
-        sala = await self._sala_corrente(run)
-        if not sala:
-            await interaction.response.send_message("A run ainda não entrou numa sala.", ephemeral=True)
-            return
-        if sala.e_combate:
-            estado = await self._estado_combate(run, sala)
-            if estado is None:
-                await interaction.response.send_message(
-                    "Este combate já terminou.", ephemeral=True
-                )
-                return
-            embed, arquivo = await self._embed_do_painel(run, sala, estado)
-            await interaction.response.send_message(
-                embed=embed,
-                view=ViewCombate(self, run["id"], sala.id, estado.inimigos),
-                file=arquivo or discord.utils.MISSING,
-            )
-            mensagem = await interaction.original_response()
-            await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
-            return
-
-        registros = await db.testes_da_sala(self.bot.db, run["id"], self._passo(run))
-        total = len(await db.participantes(self.bot.db, run["id"]))
-        embed, arquivo = E.sala_aberta(
-            sala, run["linha_atual"], len(registros), total, incursao.passos
-        )
-        view = ViewSala(self, run["id"], sala.id) if sala.tem_teste else None
-        await interaction.response.send_message(
-            embed=embed, view=view, file=arquivo or discord.utils.MISSING
-        )
-        mensagem = await interaction.original_response()
-        await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
-
-    @grupo.command(name="teste", description="Rola o teste da sala atual (mesmo efeito do botão)")
-    async def teste(self, interaction: discord.Interaction) -> None:
-        run = await self._run_do_contexto(interaction)
-        if not run:
-            return
-        if run["status"] != "em_sala" or not run["sala_atual"]:
-            await interaction.response.send_message("Não há teste aberto agora.", ephemeral=True)
-            return
-        incursao = self._incursao_da_run(run)
-        sala = await self._sala_corrente(run)
-        if sala and sala.e_combate:
-            await interaction.response.send_message(
-                "Sala de combate não usa teste de perícia — use `/incursao atacar`.",
-                ephemeral=True,
-            )
-            return
-        await self.rolar(interaction, run["id"], run["sala_atual"])
-
     @grupo.command(name="votar", description="Vota por comando, caso os botões falhem")
     @app_commands.describe(opcao="1, 2 ou 3 — a opção mostrada na votação")
     async def votar_comando(
@@ -4134,39 +4072,6 @@ class Incursoes(commands.Cog):
             )
             return
         await self.votar(interaction, run["id"], run["linha_atual"], opcoes[opcao - 1].id)
-
-    @grupo.command(
-        name="habilidade", description="Usa uma habilidade ativa do seu personagem"
-    )
-    async def habilidade_comando(self, interaction: discord.Interaction) -> None:
-        run = await self._run_do_contexto(interaction)
-        if not run:
-            return
-        if run["status"] not in ("em_sala", "objetivo") or not run["sala_atual"]:
-            await interaction.response.send_message(
-                "Só dentro de uma sala.", ephemeral=True
-            )
-            return
-        await self.abrir_habilidades(interaction, run["id"], run["sala_atual"])
-
-    @grupo.command(
-        name="atacar", description="Ataca o primeiro inimigo de pé, na sua vez da iniciativa"
-    )
-    async def atacar_comando(self, interaction: discord.Interaction) -> None:
-        run = await self._run_do_contexto(interaction)
-        if not run:
-            return
-        if run["status"] not in ("em_sala", "objetivo") or not run["sala_atual"]:
-            await interaction.response.send_message("Não há combate aberto agora.", ephemeral=True)
-            return
-        incursao = self._incursao_da_run(run)
-        sala = await self._sala_corrente(run)
-        if not (sala and sala.e_combate):
-            await interaction.response.send_message(
-                "Esta sala não é de combate.", ephemeral=True
-            )
-            return
-        await self.atacar(interaction, run["id"], run["sala_atual"])
 
     @grupo.command(name="status", description="Estado atual da run neste canal")
     async def status(self, interaction: discord.Interaction) -> None:

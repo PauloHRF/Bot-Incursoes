@@ -310,24 +310,6 @@ async def caso_so_cabe_um_por_slot():
     print("  tres armaduras, um slot: so a ultima fica vestida: ok")
 
 
-async def caso_desequipar_devolve_para_a_bolsa():
-    conn, _canal, _cog, ids = await preparar()
-    heroi = ids[JOGADORES[0]]
-    await db.lancar_ouro(conn, heroi, 500, "teste")
-    peca = itens.item("gibao_de_couro")
-    await db.comprar(conn, heroi, peca.id, peca.custo)
-    await db.equipar(conn, heroi, peca.id, peca.slot)
-    assert await db.desequipar(conn, heroi, "armadura") == peca.id
-    assert await db.equipamento(conn, heroi) == {}
-    assert (await db.itens_na_bolsa(conn, heroi))[peca.id] == 1
-    # Slot vazio devolve None em vez de estourar.
-    assert await db.desequipar(conn, heroi, "armadura") is None
-    print("  desequipar devolve para a bolsa: ok")
-
-
-# ------------------------------------------- o equipamento chega na ficha
-
-
 async def caso_o_equipamento_entra_na_ca_e_no_acerto():
     conn, _canal, _cog, ids = await preparar(classe="guerreiro")
     heroi = ids[JOGADORES[0]]
@@ -672,7 +654,6 @@ async def main():
         await caso_comprar_debita_e_guarda()
         await caso_equipar_tira_da_bolsa_e_troca_sem_perder()
         await caso_so_cabe_um_por_slot()
-        await caso_desequipar_devolve_para_a_bolsa()
         await caso_o_equipamento_entra_na_ca_e_no_acerto()
         await caso_o_item_nao_soma_com_a_passiva_da_classe()
         await caso_as_botas_entram_na_ordem_do_combate()

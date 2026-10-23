@@ -64,14 +64,17 @@ async def caso_help_lista_tudo():
     todos = [c for lista in grupos.values() for c in lista]
 
     # os grupos todos aparecem
-    assert set(grupos) >= {"ficha", "incursao", "organizacao", "config", "help"}, set(grupos)
+    assert set(grupos) >= {
+        "ficha", "incursao", "mercado", "organizacao", "config", "help"
+    }, set(grupos)
     # nenhum grupo entra como se fosse comando
-    assert all(desc for _, desc, _ in todos), "todo comando precisa de descricao"
+    assert all(c[1] for c in todos), "todo comando precisa de descricao"
 
     achatado = " ".join(c[0] for c in todos)
     for esperado in (
         "/ficha registrar", "/ficha voltar", "/ficha imagem", "/ficha upar",
-        "/incursao entrar", "/incursao atacar",
+        "/incursao entrar", "/incursao votar",
+        "/mercado vitrine", "/mercado bolsa",
         "/organizacao placar", "/config intervalo", "/help",
     ):
         assert esperado in achatado, esperado
@@ -83,6 +86,7 @@ async def caso_help_lista_tudo():
     assert any("incursao recarregar" in a for a in admins), admins
     assert not any("ficha registrar" in a for a in admins)
     assert not any("organizacao placar" in a for a in admins)
+    assert any("organizacao extrato" in a for a in admins), admins
 
     # o cadastro virou nome + classe: nao ha mais numero para digitar
     registrar = next(c for c in todos if c[0].startswith("/ficha registrar"))
@@ -161,7 +165,7 @@ async def caso_registrar_avisa_o_canal():
 
 
 async def caso_atualizacoes_sao_publicas():
-    """Upar, voltar e remover respondem no canal, sem ephemeral."""
+    """Upar e voltar respondem no canal, sem ephemeral; ver fica privado."""
     conn, canal, ficha = await preparar()
     dono = JOGADORES[0]
     await db.criar_personagem(
@@ -193,11 +197,7 @@ async def caso_atualizacoes_sao_publicas():
     await ficha.ver.callback(ficha, ver)
     assert not publica(ver), "/ficha ver deveria continuar privado"
 
-    remover = FakeInteraction(canal, dono)
-    await ficha.remover.callback(ficha, remover, "Vhalor")
-    assert publica(remover) and "apagou" in remover.resposta
-    assert await db.personagem_por_nome(conn, GUILD, dono, "Vhalor") is None
-    print("  atualizacoes da ficha aparecem no canal: ok")
+    print("  upar e voltar respondem no canal; ver fica privado: ok")
 
 
 async def main():

@@ -2085,22 +2085,6 @@ async def equipar(
     return True, anterior
 
 
-async def desequipar(
-    conn: aiosqlite.Connection, personagem_id: int, slot: str
-) -> Optional[str]:
-    """Tira o que esta naquele slot e devolve a bolsa. Devolve o id, ou None."""
-    atual = (await equipamento(conn, personagem_id)).get(slot)
-    if not atual:
-        return None
-    await conn.execute(
-        "DELETE FROM personagem_equipamento WHERE personagem_id = ? AND slot = ?",
-        (personagem_id, slot),
-    )
-    await _por_na_bolsa(conn, personagem_id, atual)
-    await conn.commit()
-    return atual
-
-
 async def ouro_da_run(
     conn: aiosqlite.Connection, run_id: int
 ) -> list[tuple[str, int]]:
