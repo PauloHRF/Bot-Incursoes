@@ -2751,7 +2751,9 @@ class Incursoes(commands.Cog):
             if curados:
                 await db.definir_hp_varios(self.bot.db, run["id"], curados)
             total = acao["cura_fracao"] + max(0.0, bonus or 0.0)
-            linhas.append(f"**{int(total * 100)}%** do HP maximo de volta")
+            # `round`, e nao `int`: 0.35 + 0.10 da 0.44999999999999996 em
+            # float, e truncar mostraria "44%" numa cura de 45%.
+            linhas.append(f"**{round(total * 100)}%** do HP maximo de volta")
 
         if pago:
             novos[pago[0]] = pago[1]

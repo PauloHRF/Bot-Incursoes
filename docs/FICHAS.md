@@ -687,7 +687,7 @@ Escolhe entre atacar 2x por rodada ou dar 4 THP extra ao curar.
 
 **1x por descanso.**
 
-O grupo ganha 4d6+4 de THP e +1d6+4 no próximo ataque.
+O grupo cura 1% da vida, ganha 4d6 de THP e +1d6+4 no próximo ataque.
 
 ---
 

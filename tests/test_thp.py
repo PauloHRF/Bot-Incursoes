@@ -117,10 +117,18 @@ async def caso_tradicao_marcial_da_thp():
 async def caso_danca_totemica_cobre_o_grupo():
     conn, canal, cog, incursao, run = await preparar(classe="xama", nivel=8)
     dono = JOGADORES[0]
+    # Alguem ferido, para a cura de 1% ter onde entrar.
+    ferido = JOGADORES[1]
+    await db.definir_hp(conn, run["id"], ferido, 10)
 
     inter = FakeInteraction(canal, dono)
     await cog.usar_habilidade(inter, run["id"], "OBJ", "danca_totemica")
     assert "vida temporaria para o grupo" in inter.resposta, inter.resposta
+    # A cura e simbolica, mas sai no texto e entra no HP: 1% com piso de 1 da
+    # exatamente 1 de vida em qualquer tier do jogo.
+    assert "1%" in inter.resposta, inter.resposta
+    hp = (await db.hp_dos_participantes(conn, run["id"]))[ferido]
+    assert hp == 11, hp
 
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     assert all(c.tem_thp for c in estado.vivos), [c.thp for c in estado.vivos]
@@ -130,7 +138,15 @@ async def caso_danca_totemica_cobre_o_grupo():
     ]
     ligados = await db.efeitos_ativos(conn, run["id"], cog._passo(run), 0)
     assert len(ligados) == len(estado.vivos), ligados
-    print("  Danca totemica da THP e bonus de dano ao grupo inteiro: ok")
+    print("  Danca totemica cura 1%, da THP e bonus de dano ao grupo: ok")
+
+
+def caso_a_porcentagem_de_cura_arredonda_certo():
+    """0.35 + 0.10 e 0.44999999999999996 em float: truncar mostraria 44%."""
+    assert round((0.35 + 0.10) * 100) == 45
+    assert int((0.35 + 0.10) * 100) == 44, "a armadilha que o round evita"
+    assert round(0.01 * 100) == 1
+    print("  a cura de 45% nao aparece como 44% por causa do float: ok")
 
 
 async def caso_aura_totemica_depende_do_thp():
@@ -236,6 +252,7 @@ async def main():
         caso_painel_mostra_thp()
         await caso_tradicao_marcial_da_thp()
         await caso_danca_totemica_cobre_o_grupo()
+        caso_a_porcentagem_de_cura_arredonda_certo()
         await caso_aura_totemica_depende_do_thp()
         await caso_relentless_segura_a_queda()
         await caso_thp_some_no_proximo_combate()

@@ -301,10 +301,15 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "Curar da +4 de THP ao alvo",
                             "efeito": {"thp_na_cura": 4}},
                        ]}),
+            # A cura de 1% e simbolica de proposito: com o piso de 1 em
+            # `motor.curar`, ela sai como 1 de vida em qualquer tier. O que a
+            # habilidade entrega e o THP e o bonus de ataque.
             Habilidade("danca_totemica", "Danca totemica", ATIVA,
-                       "1x por descanso: o grupo ganha 4d6+4 de THP e +1d6+4 no proximo ataque.",
+                       "1x por descanso: o grupo cura 1% da vida, ganha 4d6 de "
+                       "THP e +1d6+4 no proximo ataque.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "grupo", "thp": "4d6+4", "turnos": 1,
+                       acao={"tipo": "grupo", "thp": "4d6", "turnos": 1,
+                             "cura_fracao": 0.01,
                              "efeitos": {"dano_bonus": "1d6+4"}})],
         # O gatilho do Espirito Guardiao cai de 19 para 15: a Sintonizacao
         # substitui o totem inteiro, porque `juntar_efeito` guarda o de maior
