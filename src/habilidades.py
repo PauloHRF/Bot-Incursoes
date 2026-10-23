@@ -137,12 +137,19 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        usos=_usos("combate"),
                        acao={"tipo": "reacao", "quando": "caiu", "hp": 1,
                              "thp": "1d12+7"})],
+        # O golpe inteiro MAIS 1d10, e nao um golpe no lugar dos dois: com
+        # "quantidade: 1" o barbaro trocava um golpe de ~15 por um de ~5 mais
+        # o d10, e o capstone dele rendia menos que atacar. `acoes: 1` da a
+        # acao cheia, e `bonus_uma_vez` poe o d10 num golpe so — somar em cada
+        # um dobraria o que a habilidade promete.
         5: [Habilidade("brutal_strike", "Brutal Strike", ATIVA,
-                       "1x por incursao: com Reckless Attack ligado, +1d10 de dano e o "
-                       "mesmo em THP.",
+                       "1x por incursao: com Reckless Attack ligado, o ataque "
+                       "sai com +1d10 de dano, e ele ganha o mesmo em THP.",
                        usos=_usos("incursao"),
-                       acao={"tipo": "golpes", "quantidade": 1, "dano_bonus": "1d10",
-                             "thp_igual_ao_bonus": True, "exige": "reckless_attack"})],
+                       acao={"tipo": "golpes", "acoes": 1,
+                             "bonus_uma_vez": "1d10",
+                             "thp_igual_ao_bonus": True,
+                             "exige": "reckless_attack"})],
     },
     "guerreiro": {
         1: [Habilidade("second_wind", "Second Wind", ATIVA,

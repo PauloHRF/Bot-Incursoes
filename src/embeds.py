@@ -858,6 +858,25 @@ def _campo_pontos(e: discord.Embed, lancamentos: list[dict], total: int, organiz
     e.add_field(name=f"Pontos de Organização (+{ganho})", value="\n".join(linhas), inline=False)
 
 
+def campo_ouro(e: discord.Embed, ouro: Optional[list[tuple[str, int]]]) -> None:
+    """O ouro que a incursao pagou, uma linha por personagem.
+
+    So aqui, no fecho: por sala seria uma linha a cada passo, e o grupo nao
+    precisa acompanhar centavo por centavo — precisa saber com quanto saiu.
+    """
+    if not ouro:
+        return
+    linhas = [f"**+{quanto}** · {nome}" for nome, quanto in ouro if quanto]
+    if not linhas:
+        return
+    total = sum(q for _n, q in ouro)
+    e.add_field(
+        name=f"Ouro da incursao (+{total})",
+        value="\n".join(linhas) + "\nGaste com `/mercado vitrine`.",
+        inline=False,
+    )
+
+
 def campo_caminho(e: discord.Embed, caminho: Optional[list[Sala]]) -> None:
     """O histórico da run: por onde o grupo passou, na ordem.
 
@@ -884,6 +903,7 @@ def run_fracassada(
     total_org: int = 0,
     caminho: Optional[list[Sala]] = None,
     sala: Optional[Sala] = None,
+    ouro: Optional[list[tuple[str, int]]] = None,
 ) -> discord.Embed:
     """O fecho de uma run perdida: onde o grupo caiu.
 
@@ -900,6 +920,7 @@ def run_fracassada(
         color=COR_FALHA,
     )
     campo_caminho(e, caminho)
+    campo_ouro(e, ouro)
     _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
     return e
 
@@ -911,6 +932,7 @@ def run_concluida(
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
     caminho: Optional[list[Sala]] = None,
+    ouro: Optional[list[tuple[str, int]]] = None,
 ) -> discord.Embed:
     """O desfecho da run: vitória, como o grupo saiu, recompensa e pontos."""
     e = discord.Embed(
@@ -931,8 +953,11 @@ def run_concluida(
         value="\n".join(f"{m.mention} — {incursao.recompensa_mes} MEs" for m in membros),
         inline=False,
     )
+    campo_ouro(e, ouro)
     _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
-    return _rodape(e, "Anote os MEs na planilha: o bot não guarda saldo por jogador.")
+    # Os MEs sao da planilha do grupo; o ouro e do bot. Sao duas economias, e
+    # o rodape diz qual delas pede anotacao a mao.
+    return _rodape(e, "Anote os MEs na planilha; o ouro o bot já guardou.")
 
 
 # ------------------------------------------- pontos de Organizacao

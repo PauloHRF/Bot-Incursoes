@@ -10,6 +10,8 @@ from __future__ import annotations
 import asyncio
 import collections
 import sys
+
+import discord
 from datetime import date, datetime
 from pathlib import Path
 
@@ -600,6 +602,59 @@ async def caso_a_mesma_peca_nao_e_comprada_duas_vezes():
     print("  equipamento e unico por personagem: ok")
 
 
+
+
+async def caso_o_ouro_da_run_sai_no_fecho():
+    """O que a incursão pagou aparece no embed de desfecho, por personagem.
+
+    Por sala seria uma linha a cada passo; o grupo quer saber com quanto saiu,
+    e é no fecho que isso cabe.
+    """
+    from src import embeds as E
+
+    conn, _canal, cog, ids = await preparar()
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", JOGADORES[0])
+    for user_id in JOGADORES[:2]:
+        await db.adicionar_participante(conn, run_id, user_id, ids[user_id])
+    await db.lancar_ouro(
+        conn, ids[JOGADORES[0]], 15, "Sala superada", run_id=run_id, chave="s1"
+    )
+    await db.lancar_ouro(
+        conn, ids[JOGADORES[0]], 60, "Incursao concluida", run_id=run_id, chave="fim"
+    )
+    await db.lancar_ouro(
+        conn, ids[JOGADORES[1]], 15, "Sala superada", run_id=run_id, chave="s1"
+    )
+    # Compra depois da run NAO entra: o fecho mostra o que a incursao pagou,
+    # e nao o saldo da bolsa.
+    await db.lancar_ouro(conn, ids[JOGADORES[0]], -80, "Compra: gibao")
+
+    por_personagem = await db.ouro_da_run(conn, run_id)
+    assert dict(por_personagem) == {
+        f"Heroi{JOGADORES[0]}": 75,
+        f"Heroi{JOGADORES[1]}": 15,
+    }, por_personagem
+
+    e = discord.Embed(title="x")
+    E.campo_ouro(e, por_personagem)
+    campo = next(c for c in e.fields if "Ouro" in c.name)
+    assert "+90" in campo.name, campo.name
+    assert "+75" in campo.value and "+15" in campo.value, campo.value
+    print("  o ouro da incursao sai no fecho, por personagem: ok")
+
+
+def caso_sem_ouro_o_campo_nao_aparece():
+    """Run que não pagou nada não ganha um campo vazio no embed."""
+    from src import embeds as E
+
+    e = discord.Embed(title="x")
+    E.campo_ouro(e, [])
+    E.campo_ouro(e, None)
+    E.campo_ouro(e, [("Ninguem", 0)])
+    assert not e.fields, [c.name for c in e.fields]
+    print("  sem ouro, o campo nao entra no embed: ok")
+
+
 async def main():
     try:
         caso_todo_item_respeita_o_dominio_do_slot()
@@ -630,6 +685,8 @@ async def main():
         await caso_a_vitrine_do_outro_nao_e_clicavel()
         await caso_o_mercado_fecha_durante_a_incursao()
         await caso_a_mesma_peca_nao_e_comprada_duas_vezes()
+        await caso_o_ouro_da_run_sai_no_fecho()
+        caso_sem_ouro_o_campo_nao_aparece()
     finally:
         for conn in _ABERTAS:
             try:

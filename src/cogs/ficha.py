@@ -239,7 +239,10 @@ def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
     linhas = []
     for tier_da_habilidade, habilidade in ganhas:
         icone = ICONE_HABILIDADE.get(habilidade.tipo, "")
-        pendente = "" if habilidade.automatica else " *(em breve)*"
+        # `automatica` e so passiva: testar por ela marcava toda ativa e toda
+        # escolha como "em breve", mesmo funcionando. `pronta` e o certo —
+        # soma numero, sabe ser acionada, ou sabe conduzir a escolha.
+        pendente = "" if habilidade.pronta else " *(em breve)*"
         linhas.append(
             f"{icone} **{habilidade.nome}** (T{tier_da_habilidade}) — "
             f"{habilidade.texto}{pendente}"
@@ -453,6 +456,10 @@ class Ficha(commands.Cog):
             f"{escolhida.nome} de nivel 1.",
             embed=embed_ficha(personagem, interaction.user),
         )
+        # A decisao do tier 1 e do REGISTRO. Sem isto ela ficava pendente e
+        # aparecia na primeira subida, junto com a do tier 2 — o jogador
+        # escolhia a magia de tier 1 ao virar tier 2, sempre um tier atrasado.
+        await self._abrir_pendencia_em_seguida(interaction, personagem)
 
     @staticmethod
     def _classes_prontas() -> str:
@@ -745,6 +752,33 @@ class Ficha(commands.Cog):
         await self._anunciar(
             interaction, anuncio, embed=embed_ficha(personagem, interaction.user)
         )
+
+    async def _abrir_pendencia_em_seguida(
+        self, interaction: discord.Interaction, personagem: dict[str, Any]
+    ) -> None:
+        """Abre a proxima decisao por followup, com a resposta ja gasta.
+
+        O registro usa a resposta da interacao no seletor de pericias, entao
+        aqui nao da para responder de novo — vai por followup. Da segunda
+        decisao em diante a cadeia de `gravar_escolha` cuida, porque cada
+        clique do menu traz uma interacao nova.
+        """
+        pendencias = personagem.get("pendencias") or []
+        if not pendencias:
+            return
+        _tier_da, habilidade = pendencias[0]
+        texto, view = self._seletor_da_escolha(personagem, habilidade)
+        faltam = (
+            f"\nDepois desta ainda faltam {len(pendencias) - 1}."
+            if len(pendencias) > 1 and view is not None
+            else ""
+        )
+        try:
+            await interaction.followup.send(
+                f"🧭 Decida agora: {texto}{faltam}", view=view, ephemeral=True
+            )
+        except discord.HTTPException:
+            pass
 
     async def abrir_escolha(
         self, interaction: discord.Interaction, personagem_id: int, habilidade_id: str

@@ -218,8 +218,17 @@ async def caso_ficha_mostra_habilidades():
     assert "Marca do Cacador" in campos[titulo]
     assert "Predador" in campos[titulo]
     assert "Multiattack" in campos[titulo]
-    # a ativa aparece marcada como ainda nao implementada
-    assert "(em breve)" in campos[titulo]
+    # "(em breve)" e para o que o bot NAO sabe executar, e hoje nao ha nada
+    # assim: o marcador testava `automatica`, que e so passiva, e por isso
+    # pintava toda ativa e toda escolha de "em breve" mesmo funcionando.
+    assert "(em breve)" not in campos[titulo], campos[titulo]
+    naoprontas = [
+        h.id for classe in cl.CLASSES.values()
+        for lista in classe.habilidades.values()
+        for h in lista
+        if not h.pronta
+    ]
+    assert not naoprontas, naoprontas
 
     # e o upar conta o que o tier novo trouxe
     await db.atualizar_personagem(conn, personagem["id"], "nivel", 6)

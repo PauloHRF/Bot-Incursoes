@@ -246,10 +246,49 @@ async def caso_upar_avisa_pericia_nova_e_para_no_teto():
     print(f"  upar avisa a pericia nova e para no tier {TIER_MAXIMO}: ok")
 
 
+
+
+async def caso_a_escolha_do_tier_1_abre_no_registro():
+    """A decisão do tier 1 é do registro, não da primeira subida.
+
+    Antes ela ficava pendente e só aparecia ao virar tier 2, junto com a do
+    tier 2 — o jogador escolhia a magia de tier 1 sempre um tier atrasado.
+    """
+    conn, canal, ficha = await preparar()
+    inter = await registrar(
+        ficha, canal, JOGADORES[0], "Novato", "clerigo", ["Religião"]
+    )
+    personagem = await db.personagem_por_nome(conn, GUILD, JOGADORES[0], "Novato")
+    assert personagem is not None, "nao registrou"
+
+    pendentes = {h.id for _t, h in personagem["pendencias"]}
+    assert "magia_t1" in pendentes, pendentes
+    # E o menu dela saiu de verdade: a resposta da interacao ja tinha sido
+    # gasta no seletor de pericias, entao a decisao vai por followup.
+    assert inter.seguimento and "Decida agora" in inter.seguimento, inter.seguimento
+    print("  a escolha do tier 1 abre no registro: ok")
+
+
+async def caso_classe_sem_escolha_no_tier_1_nao_abre_nada():
+    """Quem não decide nada no tier 1 não leva menu nenhum no registro."""
+    conn, canal, ficha = await preparar()
+    # O ladino decide no tier 2 (Expertise), nao no 1.
+    inter = await registrar(
+        ficha, canal, JOGADORES[1], "Gatuno", "ladino", ["Furtividade"]
+    )
+    personagem = await db.personagem_por_nome(conn, GUILD, JOGADORES[1], "Gatuno")
+    assert personagem is not None
+    assert not personagem["pendencias"], personagem["pendencias"]
+    assert inter.seguimento is None, inter.seguimento
+    print("  classe sem decisao no tier 1 nao abre menu no registro: ok")
+
+
 async def main():
     try:
         caso_tabela_das_classes()
         await caso_registro_por_classe()
+        await caso_a_escolha_do_tier_1_abre_no_registro()
+        await caso_classe_sem_escolha_no_tier_1_nao_abre_nada()
         await caso_menu_limita_as_proficiencias()
         await caso_classe_pendente_e_recusada()
         await caso_nome_repetido_e_limite()

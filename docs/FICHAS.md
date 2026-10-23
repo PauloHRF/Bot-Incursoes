@@ -223,7 +223,7 @@ Ao cair a 0 HP fica com 1 HP e ganha 1d12+7 de THP.
 
 **1x por incursão.**
 
-Com Reckless Attack ligado, +1d10 de dano e o mesmo em THP.
+Com Reckless Attack ligado, o ataque sai com +1d10 de dano, e ele ganha o mesmo em THP.
 
 ---
 
@@ -290,7 +290,7 @@ Ataca 2x por rodada.
 
 **1x por combate.**
 
-Um ataque adicional imediato.
+Age duas vezes no mesmo turno.
 
 ---
 
@@ -322,7 +322,7 @@ Crítico com 19 ou 20 no dado.
 
 **1x por combate.**
 
-Dois ataques consecutivos.
+Age duas vezes no mesmo turno.
 
 ---
 
@@ -349,7 +349,7 @@ Dois ataques consecutivos.
 
 **1x por descanso.**
 
-Um ataque adicional imediato.
+Golpeia duas vezes no mesmo turno.
 
 ---
 

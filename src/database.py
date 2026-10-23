@@ -2099,3 +2099,21 @@ async def desequipar(
     await _por_na_bolsa(conn, personagem_id, atual)
     await conn.commit()
     return atual
+
+
+async def ouro_da_run(
+    conn: aiosqlite.Connection, run_id: int
+) -> list[tuple[str, int]]:
+    """Quanto cada personagem tirou NESTA run: [(nome, ouro)].
+
+    So os lancamentos com `run_id`, entao compra feita depois nao entra e o
+    fecho da incursao mostra o que a incursao pagou, nao o saldo da bolsa.
+    """
+    async with conn.execute(
+        "SELECT p.nome AS nome, SUM(o.ouro) AS total"
+        " FROM ouro_lancamentos o JOIN personagens p ON p.id = o.personagem_id"
+        " WHERE o.run_id = ? GROUP BY o.personagem_id, p.nome"
+        " ORDER BY p.nome",
+        (run_id,),
+    ) as cur:
+        return [(r["nome"], r["total"]) for r in await cur.fetchall()]

@@ -2021,6 +2021,7 @@ class Incursoes(commands.Cog):
                 embed=E.run_fracassada(
                     incursao, estado, lancamentos, total,
                     await self._caminho(run), sala,
+                    await db.ouro_da_run(self.bot.db, run["id"]),
                 )
             )
 
@@ -2970,6 +2971,19 @@ class Incursoes(commands.Cog):
                 )
                 indice += 1
 
+        # Bonus de uma vez so (o Brutal Strike): entra no primeiro golpe que
+        # acerta, e nao em cada um. `dano_bonus` e por golpe e dobraria num
+        # turno de dois ataques; este e o d10 que a habilidade promete, um.
+        extra = 0
+        if acao.get("bonus_uma_vez"):
+            for golpe, inimigo in golpes:
+                if not golpe.acertou:
+                    continue
+                extra = motor.rolar_dano(acao["bonus_uma_vez"])
+                golpe.dano += extra
+                inimigo.hp_atual = max(0, inimigo.hp_atual - extra)
+                break
+
         await db.definir_hp_inimigos(
             self.bot.db, run["id"], passo,
             {inimigo.indice: inimigo.hp_atual for _g, inimigo in golpes},
@@ -2977,11 +2991,10 @@ class Incursoes(commands.Cog):
         ganho = 0
         if acao.get("thp_proprio"):
             ganho = motor.ganhar_thp(atacante, motor.rolar_dano(acao["thp_proprio"]))
-        if acao.get("thp_igual_ao_bonus"):
-            # Brutal Strike: a vida temporaria acompanha o tamanho do golpe.
-            ganho = motor.ganhar_thp(
-                atacante, max(1, sum(g.dano for g, _i in golpes) // 4)
-            )
+        if acao.get("thp_igual_ao_bonus") and extra:
+            # Brutal Strike: a vida temporaria e EXATAMENTE o d10 que saiu no
+            # golpe, e nao uma fracao do dano total — "o mesmo em THP".
+            ganho = motor.ganhar_thp(atacante, extra)
         if ganho:
             await db.definir_thp(self.bot.db, run["id"], atacante.user_id, atacante.thp)
         personagem = await self._personagem_na_run(run, user_id)
@@ -3542,6 +3555,7 @@ class Incursoes(commands.Cog):
                     embed=E.run_concluida(
                         incursao, await self._membros(run), estado, lancamentos, total,
                         await self._caminho(run),
+                        await db.ouro_da_run(self.bot.db, run["id"]),
                     )
                 )
                 if incursao.lore_final:

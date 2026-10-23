@@ -402,6 +402,50 @@ async def caso_o_surge_nao_golpeia_o_vazio():
     print(f"  com um inimigo so, o Surge para quando ele cai ({len(ataques)} golpes): ok")
 
 
+
+
+async def caso_brutal_strike_soma_ao_ataque_em_vez_de_substituir():
+    """O ataque inteiro MAIS 1d10, e o THP igual a esse d10.
+
+    Com `quantidade: 1` o bárbaro trocava um golpe de ~15 por um de ~5 com o
+    d10 — o capstone dele rendia menos que atacar. E o d10 entra UMA vez: por
+    golpe, num turno de dois ataques, daria o dobro do que a habilidade diz.
+    """
+    conn, canal, cog, incursao = await preparar(classe="barbaro", nivel=10)
+    run = await abrir_combate(conn, canal, cog, incursao)
+    passo = cog._passo(run)
+    dono = JOGADORES[0]
+
+    # O Brutal Strike exige o Reckless Attack ligado, e o Reckless gasta o
+    # turno: a rodada tem de virar antes de o golpe sair.
+    await usar(cog, canal, run, dono, "reckless_attack")
+    await db.atualizar_rodada(conn, run["id"], passo, 2)
+    run = await db.buscar_run(conn, run["id"])
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    antes = estado.combatente(dono)
+    thp_antes = antes.thp
+    por_acao = antes.ataques
+    assert por_acao == 2, por_acao
+
+    inter = await usar(cog, canal, run, dono, "brutal_strike")
+    ataques = [
+        a for a in await db.ataques_da_rodada(conn, run["id"], passo, 2)
+        if a["user_id"] == dono and a["origem"] == "habilidade"
+    ]
+    # A acao cheia: dois golpes, nao um.
+    assert len(ataques) == por_acao, (len(ataques), inter.resposta)
+
+    # E o THP ganho e o proprio d10, entre 1 e 10 — nao uma fracao do dano.
+    depois = await cog._estado_combate(
+        await db.buscar_run(conn, run["id"]), incursao.objetivo
+    )
+    ganho = depois.combatente(dono).thp - thp_antes
+    if any(a["dano"] > 0 for a in ataques):
+        assert 1 <= ganho <= 10, (ganho, [a["dano"] for a in ataques])
+    else:
+        assert ganho == 0, ganho
+    print(f"  o Brutal Strike sai com {len(ataques)} golpes e {ganho} de THP: ok")
+
 async def main():
     try:
         caso_catalogo_das_ativas()
@@ -411,6 +455,7 @@ async def main():
         await caso_o_surge_vale_mais_que_atacar()
         await caso_o_surge_nunca_bate_em_defunto()
         await caso_o_surge_nao_golpeia_o_vazio()
+        await caso_brutal_strike_soma_ao_ataque_em_vez_de_substituir()
         await caso_habilidade_sem_golpe_fecha_a_rodada()
         await caso_perfect_strike_acerta_sempre()
         await caso_golpe_divino_soma_dados()
