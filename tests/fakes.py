@@ -156,6 +156,32 @@ class FakeResposta:
     async def defer(self, **kw):
         self.interacao.adiado = True
 
+    async def edit_message(self, content=None, *, embed=None, view=None):
+        """A resposta de um clique de botao: edita a mensagem da propria view."""
+        alvo = self.interacao.message or self.interacao._mensagem_resposta
+        if alvo is not None:
+            campos = {}
+            if content is not None:
+                campos["content"] = content
+            if embed is not None:
+                campos["embed"] = embed
+            if view is not None:
+                campos["view"] = view
+            await alvo.edit(**campos)
+        self.interacao.editada = {"content": content, "embed": embed, "view": view}
+
+
+class FakeFollowup:
+    """O `interaction.followup`: o que vem DEPOIS de a resposta ja ter saido."""
+
+    def __init__(self, interacao):
+        self.interacao = interacao
+        self.enviadas = []
+
+    async def send(self, content=None, *, embed=None, view=None, ephemeral=False):
+        self.enviadas.append(content or (embed.title if embed else None))
+        self.interacao.seguimento = self.enviadas[-1]
+
 
 class FakeInteraction:
     def __init__(self, canal: FakeCanal, user_id: int, mensagem: FakeMensagem | None = None):
@@ -166,12 +192,16 @@ class FakeInteraction:
         self.guild_id = GUILD
         self.message = mensagem
         self.response = FakeResposta(self)
+        self.followup = FakeFollowup(self)
         self.resposta = None
         self.view_enviada = None
         self.modal_enviado = None
         self.adiado = False
         self.efemera_apagada = False
         self._mensagem_resposta = None
+        # O que um clique de botao deixou: a edicao e o aviso privado.
+        self.editada = None
+        self.seguimento = None
 
     async def original_response(self):
         return self._mensagem_resposta

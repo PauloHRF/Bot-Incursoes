@@ -18,6 +18,12 @@ sys.path.insert(0, str(RAIZ))
 
 from src import classes as cl, config, database as db, itens, mercado, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
+from src.cogs.mercado import (  # noqa: E402
+    BotaoDeCompra,
+    Mercado,
+    ViewDaVitrine,
+    tentar_comprar,
+)
 from fakes import (  # noqa: E402
     CANAL,
     GUILD,
@@ -25,6 +31,7 @@ from fakes import (  # noqa: E402
     JOGADORES,
     FakeBot,
     FakeCanal,
+    FakeInteraction,
     criar_grupo,
     montar_conteudo,
     salas_sem_combate,
@@ -48,7 +55,10 @@ async def preparar(nivel=8, classe="guerreiro"):
     await db.criar_schema(conn)
     ids = await criar_grupo(conn, nivel=nivel, classe=classe)
     canal = FakeCanal(CANAL)
-    cog = Incursoes(FakeBot(conn, canal))
+    bot = FakeBot(conn, canal)
+    cog = Incursoes(bot)
+    # O cog do mercado divide o mesmo bot: os testes de botao precisam dos dois.
+    cog.loja = Mercado(bot)
     return conn, canal, cog, ids
 
 
@@ -423,6 +433,173 @@ async def caso_item_desconhecido_nao_derruba_a_ficha():
     print("  id de item que sumiu do catalogo e ignorado: ok")
 
 
+
+
+# -------------------------------------------------------- os botões da vitrine
+
+
+# Semana fixa para os casos que dependem do QUE esta na prateleira. Sem isso
+# eles passariam hoje e poderiam falhar na segunda — a vitrine e derivada da
+# semana corrente, e nao ha garantia de que a proxima tenha peca caia.
+SEMANA = "2026-W43"
+
+
+async def _abrir_vitrine(conn, canal, cog, personagem_id, user_id):
+    """Abre a vitrine pelo COMANDO, para provar que ele monta a view.
+
+    Usa a semana de verdade, entao nao sirva para caso que depende do que esta
+    na prateleira — para esses, `_vitrine_fixa`.
+    """
+    personagem = await db.buscar_personagem(conn, personagem_id)
+    inter = FakeInteraction(canal, user_id)
+    await cog.loja.vitrine.callback(cog.loja, inter, personagem["nome"])
+    return inter, inter.view_enviada
+
+
+async def _vitrine_fixa(conn, canal, cog, personagem_id, user_id, semana=SEMANA):
+    """A mesma view, numa semana fixa, enviada pelo mesmo caminho do comando."""
+    personagem = await db.buscar_personagem(conn, personagem_id)
+    view = ViewDaVitrine(cog.loja, personagem, semana)
+    inter = FakeInteraction(canal, user_id)
+    await inter.response.send_message(
+        embed=await view.desenhar(), view=view, ephemeral=True
+    )
+    return inter, view
+
+
+async def caso_a_vitrine_abre_com_um_botao_por_peca():
+    conn, canal, cog, ids = await preparar()
+    heroi = ids[JOGADORES[0]]
+    inter, view = await _abrir_vitrine(conn, canal, cog, heroi, JOGADORES[0])
+
+    assert isinstance(view, ViewDaVitrine), view
+    botoes = [f for f in view.children if isinstance(f, BotaoDeCompra)]
+    prateleira = mercado.vitrine(heroi, view.semana)
+    assert [b.peca.id for b in botoes] == [p.id for p in prateleira]
+    # Sem ouro nenhum, nada é clicável — e o motivo está no embed.
+    assert all(b.disabled for b in botoes), [b.label for b in botoes]
+    texto = " ".join(c.name for c in inter._mensagem_resposta.embeds[0].fields)
+    assert "faltam" in texto, texto
+    print(f"  a vitrine abre com {len(botoes)} botoes, travados sem ouro: ok")
+
+
+async def caso_o_clique_compra_e_redesenha():
+    conn, canal, cog, ids = await preparar()
+    heroi = ids[JOGADORES[0]]
+    await db.lancar_ouro(conn, heroi, 500, "teste")
+    inter, view = await _vitrine_fixa(conn, canal, cog, heroi, JOGADORES[0])
+
+    alvo = next(
+        b for b in view.children
+        if isinstance(b, BotaoDeCompra) and not b.disabled
+    )
+    peca = alvo.peca
+    clique = FakeInteraction(canal, JOGADORES[0], inter._mensagem_resposta)
+    await alvo.callback(clique)
+
+    assert await db.ouro(conn, heroi) == 500 - peca.custo
+    assert peca.id in await db.itens_na_bolsa(conn, heroi)
+    # A compra saiu no canal, para o grupo ver.
+    assert any(peca.nome in (m.content or "") for m in canal.enviadas), canal.enviadas
+    # E a tela foi redesenhada: o botão daquela peça agora está travado.
+    depois = clique.editada["view"]
+    mesmo = next(b for b in depois.children if b.peca.id == peca.id)
+    assert mesmo.disabled, "o botao do que ja e dele continuou clicavel"
+    nomes = " ".join(c.name for c in clique.editada["embed"].fields)
+    assert "já tem" in nomes, nomes
+    print(f"  o clique compra e trava o proprio botao: ok")
+
+
+async def caso_o_clique_sem_ouro_avisa_sem_cobrar():
+    conn, canal, cog, ids = await preparar()
+    heroi = ids[JOGADORES[0]]
+    # Ouro para a peça mais barata do catálogo, e só.
+    barata = min(itens.CATALOGO, key=lambda p: p.custo)
+    await db.lancar_ouro(conn, heroi, barata.custo, "teste")
+    inter, view = await _vitrine_fixa(conn, canal, cog, heroi, JOGADORES[0])
+
+    # Forçar o clique num botão travado é o que um botão velho faria, e a
+    # resposta tem de ser recusa — não compra.
+    caro = max(
+        (b for b in view.children if isinstance(b, BotaoDeCompra)),
+        key=lambda b: b.peca.custo,
+    )
+    assert caro.peca.custo > barata.custo, "semana sem peca caia, caso inutil"
+    clique = FakeInteraction(canal, JOGADORES[0], inter._mensagem_resposta)
+    await caro.callback(clique)
+    assert await db.ouro(conn, heroi) == barata.custo, "cobrou sem poder"
+    assert "Faltam" in (clique.seguimento or ""), clique.seguimento
+    print("  clicar no que nao da para pagar avisa e nao cobra: ok")
+
+
+async def caso_o_botao_velho_nao_compra_fora_de_cartaz():
+    """O Discord mantém o botão clicável; a semana virou, a peça saiu."""
+    conn, canal, cog, ids = await preparar()
+    heroi = ids[JOGADORES[0]]
+    await db.lancar_ouro(conn, heroi, 5000, "teste")
+    inter, view = await _vitrine_fixa(conn, canal, cog, heroi, JOGADORES[0])
+
+    prateleira = {p.id for p in mercado.vitrine(heroi, view.semana)}
+    sumida = next(p for p in itens.CATALOGO if p.id not in prateleira)
+    clique = FakeInteraction(canal, JOGADORES[0], inter._mensagem_resposta)
+    await view.comprar(clique, sumida.id)
+
+    assert await db.ouro(conn, heroi) == 5000
+    assert sumida.id not in await db.itens_na_bolsa(conn, heroi)
+    assert "vitrine desta semana" in (clique.seguimento or ""), clique.seguimento
+    print("  botao de peca fora de cartaz nao compra: ok")
+
+
+async def caso_a_vitrine_do_outro_nao_e_clicavel():
+    conn, canal, cog, ids = await preparar()
+    heroi = ids[JOGADORES[0]]
+    await db.lancar_ouro(conn, heroi, 500, "teste")
+    inter, view = await _vitrine_fixa(conn, canal, cog, heroi, JOGADORES[0])
+
+    intruso = FakeInteraction(canal, JOGADORES[1], inter._mensagem_resposta)
+    assert not await view.interaction_check(intruso)
+    assert "não é sua" in (intruso.resposta or ""), intruso.resposta
+    print("  a vitrine de um nao aceita o clique do outro: ok")
+
+
+async def caso_o_mercado_fecha_durante_a_incursao():
+    conn, canal, cog, ids = await preparar()
+    heroi = ids[JOGADORES[0]]
+    await db.lancar_ouro(conn, heroi, 500, "teste")
+    inter, view = await _vitrine_fixa(conn, canal, cog, heroi, JOGADORES[0])
+    alvo = next(
+        b for b in view.children
+        if isinstance(b, BotaoDeCompra) and not b.disabled
+    )
+
+    # Entra numa run: o clique guardado deixa de valer.
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", JOGADORES[0])
+    await db.adicionar_participante(conn, run_id, JOGADORES[0], heroi)
+    clique = FakeInteraction(canal, JOGADORES[0], inter._mensagem_resposta)
+    await alvo.callback(clique)
+
+    assert await db.ouro(conn, heroi) == 500, "comprou dentro da incursao"
+    assert f"#{run_id}" in (clique.resposta or ""), clique.resposta
+    print("  o botao nao compra durante a incursao: ok")
+
+
+async def caso_a_mesma_peca_nao_e_comprada_duas_vezes():
+    """Equipamento é único: a segunda cópia não faria nada e queimaria ouro."""
+    conn, canal, cog, ids = await preparar()
+    heroi = ids[JOGADORES[0]]
+    await db.lancar_ouro(conn, heroi, 5000, "teste")
+    semana = SEMANA
+    peca = mercado.vitrine(heroi, semana)[0]
+
+    comprada, _texto = await tentar_comprar(conn, heroi, semana, peca.id)
+    assert comprada is not None
+    gastou = 5000 - await db.ouro(conn, heroi)
+    repetida, texto = await tentar_comprar(conn, heroi, semana, peca.id)
+    assert repetida is None and "já tem" in texto, texto
+    assert 5000 - await db.ouro(conn, heroi) == gastou, "cobrou a segunda copia"
+    print("  equipamento e unico por personagem: ok")
+
+
 async def main():
     try:
         caso_todo_item_respeita_o_dominio_do_slot()
@@ -446,6 +623,13 @@ async def main():
         await caso_as_botas_entram_na_ordem_do_combate()
         await caso_o_anel_mexe_em_quem_a_criatura_bate()
         await caso_item_desconhecido_nao_derruba_a_ficha()
+        await caso_a_vitrine_abre_com_um_botao_por_peca()
+        await caso_o_clique_compra_e_redesenha()
+        await caso_o_clique_sem_ouro_avisa_sem_cobrar()
+        await caso_o_botao_velho_nao_compra_fora_de_cartaz()
+        await caso_a_vitrine_do_outro_nao_e_clicavel()
+        await caso_o_mercado_fecha_durante_a_incursao()
+        await caso_a_mesma_peca_nao_e_comprada_duas_vezes()
     finally:
         for conn in _ABERTAS:
             try:
