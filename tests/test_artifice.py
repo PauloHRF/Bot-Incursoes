@@ -160,7 +160,7 @@ async def caso_infusao_nao_soma_entre_dois_artifices():
 def caso_engenho_usa_as_chaves_que_existem():
     for opcao, chave, valor in (
         ("arma_arcana", "dano_bonus", "1d8"),
-        ("sabedoria_alquimica", "bonus_cura", "1d6"),
+        ("sabedoria_alquimica", "bonus_cura_pct", 0.1),
         ("precisao_guiada", "dano_extra", 3),
     ):
         efeitos = cl.efeitos("artifice", 9, {"engenho_t3": opcao})

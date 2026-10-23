@@ -232,10 +232,20 @@ async def caso_rage_vale_na_rodada_que_ela_fecha():
 
     await cog.usar_habilidade(FakeInteraction(canal, dono), run["id"], "OBJ", "rage")
 
-    # a rodada fechou sozinha (grupo de um) e o Britador bateu 20 cortado ao meio
+    # A rodada fechou sozinha, porque o grupo e de um: isso e deterministico.
     combate = await db.estado_combate(conn, run["id"], cog._passo(run))
     assert combate["rodada"] == 2, combate
-    depois = (await db.hp_dos_participantes(conn, run["id"]))[dono]
+
+    # O golpe do Britador, nao. Ele tem ataque +40 contra CA 19, mas o 1
+    # natural erra SEMPRE — esperar que o primeiro golpe entre e contar com a
+    # sorte uma vez em vinte. Enquanto nao entrar, o barbaro ataca para a
+    # rodada virar; a Rage dura tres turnos e continua valendo.
+    for _ in range(6):
+        depois = (await db.hp_dos_participantes(conn, run["id"]))[dono]
+        if antes != depois:
+            break
+        await cog.atacar(FakeInteraction(canal, dono), run["id"], "OBJ")
+    # 20 de dano cortado pela metade, e nada mais.
     assert antes - depois == 10, (antes, depois)
     print("  a Rage ja vale no revide da rodada que ela fecha: ok")
 

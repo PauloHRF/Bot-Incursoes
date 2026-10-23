@@ -53,7 +53,7 @@ DOMINIO: dict[str, tuple[str, ...]] = {
     # entrasse, a consolidação é por `max()`, e num fator o melhor é o MENOR:
     # 0,33 perderia para o 1,0 neutro. Sair da mira é coisa de magia com prazo,
     # não de anel que não sai do dedo.
-    "anel": ("ameaca", "bonus_cura", "dano_ferido", "thp_ao_derrubar"),
+    "anel": ("ameaca", "bonus_cura_pct", "dano_ferido", "thp_ao_derrubar"),
 }
 
 # Quanto cada raridade custa, e quanto ela aparece na vitrine. O peso é
@@ -197,7 +197,8 @@ CATALOGO: tuple[Item, ...] = (
     _i("anel_de_lata", "Anel de lata", "anel", "comum",
        "Chama atenção à toa: +2 de ameaça.", {"ameaca": 2}),
     _i("anel_do_curativo", "Anel do curativo", "anel", "comum",
-       "As curas dele curam +1d4 a mais.", {"bonus_cura": "1d4"}),
+       "As curas dele curam 5% do HP maximo a mais.",
+       {"bonus_cura_pct": 0.05}),
     _i("anel_do_provocador", "Anel do provocador", "anel", "incomum",
        "+4 de ameaça: as criaturas vêm atrás de quem o usa.", {"ameaca": 4}),
     _i("anel_do_carrasco", "Anel do carrasco", "anel", "incomum",
@@ -207,7 +208,8 @@ CATALOGO: tuple[Item, ...] = (
        "Ao derrubar um inimigo, ganha vida temporária — 2 por tier.",
        {"thp_ao_derrubar": 2}),
     _i("anel_do_santuario", "Anel do santuário", "anel", "raro",
-       "As curas dele curam +1d8 a mais.", {"bonus_cura": "1d8"}),
+       "As curas dele curam 15% do HP maximo a mais.",
+       {"bonus_cura_pct": 0.15}),
     _i("anel_do_para_raios", "Anel do para-raios", "anel", "lendario",
        "+8 de ameaça. Quem o veste decide onde a pancada cai — nele.",
        {"ameaca": 8}),

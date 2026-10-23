@@ -374,8 +374,8 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                            {"id": "taumaturgo", "nome": "Taumaturgo",
                             "texto": "Proficiencia em 2 pericias, à escolha"},
                            {"id": "curandeiro", "nome": "Curandeiro",
-                            "texto": "As curas dele curam 1d6 a mais",
-                            "efeito": {"bonus_cura": "1d6"}},
+                            "texto": "As curas dele curam 10% a mais",
+                            "efeito": {"bonus_cura_pct": 0.1}},
                        ]}),
             # Escolha encadeada: a primeira do bot. O dominio decide o QUE ele
             # ganha, e so o Taumaturgo precisa de uma segunda pergunta — quais
@@ -432,8 +432,8 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "+1d8 de dano nos ataques",
                             "efeito": {"dano_bonus": "1d8"}},
                            {"id": "especialista_cura", "nome": "Especialista em cura",
-                            "texto": "As curas dele curam 1d6 a mais",
-                            "efeito": {"bonus_cura": "1d6"}},
+                            "texto": "As curas dele curam 10% a mais",
+                            "efeito": {"bonus_cura_pct": 0.1}},
                            {"id": "restauracao", "nome": "Restauracao",
                             "texto": "As curas dele tiram o atordoamento",
                             "efeito": {"cura_limpa_controle": True}},
@@ -532,8 +532,8 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "+1d8 de dano em todo golpe dele",
                             "efeito": {"dano_bonus": "1d8"}},
                            {"id": "sabedoria_alquimica", "nome": "Sabedoria Alquimica",
-                            "texto": "As curas dele curam 1d6 a mais",
-                            "efeito": {"bonus_cura": "1d6"}},
+                            "texto": "As curas dele curam 10% a mais",
+                            "efeito": {"bonus_cura_pct": 0.1}},
                            {"id": "precisao_guiada", "nome": "Precisao Guiada",
                             "texto": "+3 de dano em todo golpe dele",
                             "efeito": {"dano_extra": 3}},
@@ -1363,7 +1363,10 @@ NEUTRO: dict = {
     # Dados, nao numeros: entram como expressao ('1d8') e sao comparados pela
     # media, porque max() de texto compararia caractere por caractere.
     "dano_bonus": "",
-    "bonus_cura": "",
+    # O bonus de quem cura, como FRACAO do HP maximo do alvo — nao dado. Um
+    # +1d6 por cima de uma cura de 30% era metafora misturada, e encolhia
+    # pelo mesmo motivo que a cura encolhia antes de virar porcentagem.
+    "bonus_cura_pct": 0.0,
     "cura_limpa_controle": False,
     # Quanto o Flash of Genius soma. O tier 5 do artifice sobe de 5 para 10.
     "flash_bonus": 0,
@@ -1396,7 +1399,7 @@ NEUTRO: dict = {
 }
 
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.
-DADOS = ("dano_bonus", "bonus_cura", "dano_magia", "dado_inspiracao")
+DADOS = ("dano_bonus", "dano_magia", "dado_inspiracao")
 
 
 def media_do_dado(expressao: str) -> float:

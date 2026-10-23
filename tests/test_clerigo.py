@@ -125,7 +125,7 @@ def caso_taumaturgo_abre_a_escolha_encadeada():
     )
     opcoes = {o["id"]: o for o in dominio.escolha["opcoes"]}
     assert opcoes["protetor"]["efeito"] == {"ca": 2}
-    assert opcoes["curandeiro"]["efeito"] == {"bonus_cura": "1d6"}
+    assert opcoes["curandeiro"]["efeito"] == {"bonus_cura_pct": 0.1}
     # O Taumaturgo não soma número nenhum: o que ele faz é destravar a
     # pergunta seguinte.
     assert "efeito" not in opcoes["taumaturgo"]
@@ -167,16 +167,19 @@ def caso_taumaturgo_abre_a_escolha_encadeada():
     print("  Taumaturgo abre a segunda pergunta e as pericias entram: ok")
 
 
-def caso_passivas_de_dado_consolidam_pelo_maior():
+def caso_passivas_consolidam_pelo_maior():
+    """Dano em dado, cura em porcentagem, e as duas pelo maior — nunca somando."""
     efeitos = cl.efeitos("clerigo", 9, {"dominio_t2": "curandeiro",
                                         "dominio_t4": "ataques_abencoados"})
-    assert efeitos["bonus_cura"] == "1d6"
+    assert efeitos["bonus_cura_pct"] == 0.1
     assert efeitos["dano_bonus"] == "1d8"
-    # os dois que dao bonus_cura nao somam: vale o maior (a regra da casa)
+    # Os dois que dao bonus de cura nao somam: vale o maior, que e a regra da
+    # casa para passiva. Com os dois em 10%, o tier 4 nao acrescenta — esta
+    # anotado para a passada de balanceamento, e nao e bug de consolidacao.
     so_cura = cl.efeitos("clerigo", 9, {"dominio_t2": "curandeiro",
                                         "dominio_t4": "especialista_cura"})
-    assert so_cura["bonus_cura"] == "1d6"
-    print("  as passivas de dado entram e consolidam pelo maior: ok")
+    assert so_cura["bonus_cura_pct"] == 0.1
+    print("  as passivas entram e consolidam pelo maior: ok")
 
 
 # ------------------------------------------------------------------- a cura
@@ -211,11 +214,12 @@ async def caso_curandeiro_soma_na_cura():
     depois = await db.personagens_da_run(conn, run["id"])
     alvo = next(p for p in depois if p["user_id"] == ferido)
     hp = alvo["hp_atual"]
-    # A cura base virou 30% do maximo; o Curandeiro continua somando 1d6 por
-    # cima, entao o resultado fica entre a base e a base mais 6.
-    base = 1 + int(alvo["hp_max"] * 0.3)
-    assert base + 1 <= hp <= min(alvo["hp_max"], base + 6), (hp, base)
-    print(f"  Curandeiro soma 1d6 na cura de 30% (foi de 1 para {hp}): ok")
+    # Os 30% da magia mais os 10% do Curandeiro, somados ANTES de curar: 40%
+    # numa conta so. Em duas etapas o teto do HP engoliria a segunda quando a
+    # primeira ja tivesse enchido a barra, e o bonus desapareceria.
+    esperado = min(alvo["hp_max"], 1 + int(alvo["hp_max"] * 0.4))
+    assert hp == esperado, (hp, esperado, alvo["hp_max"])
+    print(f"  Curandeiro soma 10% na cura de 30% (foi de 1 para {hp}): ok")
 
 
 async def caso_mass_healing_word_pega_o_grupo():
@@ -367,7 +371,7 @@ async def main():
         caso_cd_sai_do_acerto()
         caso_escolha_destrava_uma_magia_so()
         caso_taumaturgo_abre_a_escolha_encadeada()
-        caso_passivas_de_dado_consolidam_pelo_maior()
+        caso_passivas_consolidam_pelo_maior()
         await caso_cure_wounds_cura_em_porcentagem()
         await caso_curandeiro_soma_na_cura()
         await caso_mass_healing_word_pega_o_grupo()

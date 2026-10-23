@@ -310,7 +310,17 @@ async def caso_rage_guardada_vale_contra_o_monstro_seguinte():
     dono = JOGADORES[0]
     antes = (await db.hp_dos_participantes(conn, run["id"]))[dono]
     await cog.usar_habilidade(FakeInteraction(canal, dono), run["id"], "OBJ", "rage")
-    depois = (await db.hp_dos_participantes(conn, run["id"]))[dono]
+
+    # O Britador tem ataque +40 contra CA 19, mas o 1 natural erra SEMPRE —
+    # entao esperar que o primeiro golpe entre e contar com a sorte uma vez em
+    # vinte. Enquanto nao entrar, o barbaro ataca para a rodada virar e a
+    # criatura golpear de novo; a Rage dura tres turnos e continua valendo.
+    for _ in range(6):
+        depois = (await db.hp_dos_participantes(conn, run["id"]))[dono]
+        if antes != depois:
+            break
+        await cog.atacar(FakeInteraction(canal, dono), run["id"], "OBJ")
+    # 20 de dano cortado pela metade, e nada mais: o Britador bate uma vez.
     assert antes - depois == 10, (antes, depois)
     print("  a Rage ja corta o golpe do monstro que vem depois na ordem: ok")
 

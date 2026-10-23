@@ -2649,20 +2649,16 @@ class Incursoes(commands.Cog):
         return True
 
     @staticmethod
-    def _quanto_cura(alvo, acao: dict, bonus_cura: Optional[str]) -> int:
+    def _quanto_cura(alvo, acao: dict, bonus_pct: float = 0.0) -> int:
         """Cura o alvo e devolve quanto entrou de HP.
 
-        Duas escritas convivem: por dado ('2d8+3', do clérigo e do xamã) e por
-        fração do HP máximo ('0.3', do guerreiro e do paladino). `bonus_cura`
-        é o que as passivas de quem cura somam — o +1d6 do Curandeiro.
+        Toda cura do jogo é fração do HP máximo — não há mais caminho por
+        dado. O bônus de quem cura (o Curandeiro, o anel do santuário) é
+        fração também, e soma ANTES de curar, numa conta só: em duas etapas o
+        teto do HP engoliria a segunda quando a primeira já tivesse enchido a
+        barra, e o bônus simplesmente desapareceria.
         """
-        extra = motor.rolar_dano(bonus_cura) if bonus_cura else 0
-        if acao.get("dado"):
-            return motor.curar_quanto(alvo, motor.rolar_dano(acao["dado"]) + extra)
-        curado = motor.curar(alvo, acao["fracao"])
-        # Na cura por fração o bônus entra depois, porque o teto do HP já
-        # pode ter engolido a primeira parte.
-        return curado + (motor.curar_quanto(alvo, extra) if extra else 0)
+        return motor.curar(alvo, acao["fracao"] + max(0.0, bonus_pct or 0.0))
 
     async def _limpar_atordoamento(self, run: dict[str, Any], alvo) -> None:
         """Tira o atordoamento de quem recebeu cura (Restauração, do clérigo)."""
@@ -2686,7 +2682,7 @@ class Incursoes(commands.Cog):
 
         quem_curou = await self._personagem_na_run(run, user_id)
         dele = ((quem_curou or {}).get("efeitos") or {})
-        curado = self._quanto_cura(alvo, acao, dele.get("bonus_cura"))
+        curado = self._quanto_cura(alvo, acao, dele.get("bonus_cura_pct"))
         await db.definir_hp(self.bot.db, run["id"], alvo.user_id, alvo.hp_atual)
         # Restauracao, do clerigo: a cura tira o atordoamento de quem recebe.
         if curado and dele.get("cura_limpa_controle"):
@@ -2742,24 +2738,20 @@ class Incursoes(commands.Cog):
         if quanto:
             linhas.append(f"**{quanto}** de vida temporaria para o grupo")
 
-        if acao.get("cura_fracao") or acao.get("cura_dado"):
-            # Mass Healing Word e Mass Cure Wounds curam por dado; os
-            # Guerreiros ancioes, por fracao do maximo. O bonus de quem cura
-            # (Curandeiro, Especialista em cura) vale aqui como na cura de um.
+        if acao.get("cura_fracao"):
+            # O bonus de quem cura (Curandeiro, Especialista em cura, o anel
+            # do santuario) vale aqui como na cura de um so.
             quem_curou = await self._personagem_na_run(run, user_id)
-            bonus = ((quem_curou or {}).get("efeitos") or {}).get("bonus_cura")
-            como = (
-                {"dado": acao["cura_dado"]} if acao.get("cura_dado")
-                else {"fracao": acao["cura_fracao"]}
-            )
+            bonus = ((quem_curou or {}).get("efeitos") or {}).get("bonus_cura_pct")
+            como = {"fracao": acao["cura_fracao"]}
             curados = {}
             for c in estado.vivos:
                 if self._quanto_cura(c, como, bonus):
                     curados[c.user_id] = c.hp_atual
             if curados:
                 await db.definir_hp_varios(self.bot.db, run["id"], curados)
-            quanto_texto = acao.get("cura_dado") or f"{int(acao['cura_fracao'] * 100)}%"
-            linhas.append(f"**{quanto_texto}** de HP de volta")
+            total = acao["cura_fracao"] + max(0.0, bonus or 0.0)
+            linhas.append(f"**{int(total * 100)}%** do HP maximo de volta")
 
         if pago:
             novos[pago[0]] = pago[1]

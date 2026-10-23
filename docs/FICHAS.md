@@ -771,7 +771,7 @@ Escolhe um: Protetor, Taumaturgo ou Curandeiro.
 
 * **Protetor** — +2 de CA
 * **Taumaturgo** — Proficiência em 2 perícias, à escolha; abre uma segunda escolha
-* **Curandeiro** — As curas dele curam 1d6 a mais
+* **Curandeiro** — As curas dele curam 10% a mais
 
 ---
 
@@ -808,7 +808,7 @@ Escolhe uma: Spirit Guardians, Mass Healing Word ou Hypnotic Pattern.
 Escolhe um: Ataques abençoados, Especialista em cura ou Restauração.
 
 * **Ataques abençoados** — +1d8 de dano nos ataques
-* **Especialista em cura** — As curas dele curam 1d6 a mais
+* **Especialista em cura** — As curas dele curam 10% a mais
 * **Restauração** — As curas dele tiram o atordoamento
 
 ---
@@ -894,7 +894,7 @@ O equipamento que ele infunde dá +1 ao grupo inteiro. Escolhe onde: acerto, CA 
 Escolhe um: Arma Arcana, Sabedoria Alquímica ou Precisão Guiada.
 
 * **Arma Arcana** — +1d8 de dano em todo golpe dele
-* **Sabedoria Alquímica** — As curas dele curam 1d6 a mais
+* **Sabedoria Alquímica** — As curas dele curam 10% a mais
 * **Precisão Guiada** — +3 de dano em todo golpe dele
 
 ---
