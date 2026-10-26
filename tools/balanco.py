@@ -558,14 +558,26 @@ def documento() -> str:
          for (cd, alvo), q in faixas],
     )
     tipico = {t: melhor_pericia("guerreiro", t) for t in range(1, 6)}
-    L += ["Chance de um grupo de cinco superar a sala, cada um rolando uma vez:", ""]
+    L += [
+        "A CD escrita é a do tier 1. A que o grupo rola sobe com o tier, pelo",
+        "mesmo passo do bônus de proficiência (`rules.AJUSTE_DE_CD_POR_TIER`),",
+        "e é por isso que a chance fica igual nos cinco tiers — uma sala",
+        "difícil quer dizer a mesma coisa em qualquer incursão.",
+        "",
+        "Chance de um grupo de cinco superar a sala, cada um rolando uma vez:",
+        "",
+    ]
     linhas = []
     for t in range(1, 6):
         mods = [tipico[t]] * 5
-        linhas.append([f"T{t}", f"{tipico[t]:+d}"]
-                      + [f"{chance_do_grupo(mods, cd, alvo):.0f}%" for (cd, alvo), _q in faixas])
-    L += tabela(["Tier", "Mod típico"] + [f"CD {cd}" for (cd, _a), _q in faixas], linhas)
-    L += ["As CDs não escalam com o tier: o mesmo banco de salas serve a todos.", ""]
+        celulas = []
+        for (cd_base, alvo), _q in faixas:
+            cd = rules.cd_no_tier(cd_base, t)
+            celulas.append(f"CD {cd} · {chance_do_grupo(mods, cd, alvo):.0f}%")
+        linhas.append([f"T{t}", f"{tipico[t]:+d}"] + celulas)
+    L += tabela(
+        ["Tier", "Mod típico"] + [f"Base {cd}" for (cd, _a), _q in faixas], linhas
+    )
 
     return "\n".join(L).rstrip() + "\n"
 

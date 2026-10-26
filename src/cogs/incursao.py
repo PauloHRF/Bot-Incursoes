@@ -3615,7 +3615,9 @@ class Incursoes(commands.Cog):
 
         personagem["user_id"] = interaction.user.id
         resultado = motor.testar(
-            personagem, sala, saldo=await self._saldo(run, interaction.user.id)
+            personagem, sala,
+            saldo=await self._saldo(run, interaction.user.id),
+            tier=self._tier_da_run(run),
         )
         # Flash of Genius: alguem do grupo socorre a falha antes de ela virar
         # consequencia. Entra no `modificador` gravado, para a margem e o

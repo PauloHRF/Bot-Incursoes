@@ -157,14 +157,20 @@ def testar(
     sala: Sala,
     rng: Optional[random.Random] = None,
     saldo: Optional[Any] = None,
+    tier: Optional[int] = None,
 ) -> ResultadoTeste:
     """Rola o teste da sala usando a melhor perícia da ficha entre as listadas.
 
     `saldo` é o `condicoes.Penalidades` do personagem: Envenenamento, Exaustão,
     as maldições de perícia e a Orientação entram por aqui, na escolha da
     perícia e no modificador.
+
+    `tier` é o da incursão, e sobe a CD no mesmo passo em que o bônus de
+    proficiência sobe — sem ele a mesma sala é impossível no tier 1 e fácil no
+    tier 5.
     """
-    if not sala.tem_teste or sala.cd_efetiva is None:
+    cd = sala.cd_efetiva(tier)
+    if not sala.tem_teste or cd is None:
         raise ValueError(f"a sala {sala.id} ({sala.tipo}) não é resolvida por teste de perícia")
     efeitos = ficha.get("efeitos") or {}
     ajuste = {p: saldo.no_teste(p) for p in sala.pericias} if saldo else None
@@ -182,7 +188,7 @@ def testar(
         pericia=pericia,
         d20=rolar_d20(rng),
         modificador=modificador,
-        cd=sala.cd_efetiva,
+        cd=cd,
     )
 
 

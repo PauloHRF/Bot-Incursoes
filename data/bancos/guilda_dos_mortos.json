@@ -406,8 +406,8 @@
       "tipo": "Evento",
       "descricao": "Paredes de lápides sem corpo, só nome e data. Uma delas tem o nome do mensageiro que a Guilda mandou aqui — com a data de três dias antes de ele descer.",
       "dificuldade": "Fácil",
-      "cd": 10,
-      "alvo_progresso": 5,
+      "cd": 12,
+      "alvo_progresso": 10,
       "pericias": [
         "História",
         "Intuição"
@@ -530,8 +530,8 @@
       "tipo": "Armadilha",
       "descricao": "Faltam onze degraus no meio, e o vão dá direto no nível de baixo do ossuário, onde a Guilda empilha o que não coube em caixa.",
       "dificuldade": "Difícil",
-      "cd": 20,
-      "alvo_progresso": 15,
+      "cd": 18,
+      "alvo_progresso": 10,
       "pericias": [
         "Atletismo",
         "Acrobacia"
@@ -608,8 +608,8 @@
       "tipo": "Tesouro",
       "descricao": "A porta do relicário foi lacrada por dentro, o que é uma informação em si. O lacre é de cera e osso, e a cera ainda está mole.",
       "dificuldade": "Difícil",
-      "cd": 20,
-      "alvo_progresso": 15,
+      "cd": 18,
+      "alvo_progresso": 10,
       "pericias": [
         "Arcanismo",
         "História"

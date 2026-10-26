@@ -262,7 +262,12 @@ def votacao(
 
 
 def sala_aberta(
-    sala: Sala, linha: int, ja_rolaram: int, total: int, passos: Optional[int] = None
+    sala: Sala,
+    linha: int,
+    ja_rolaram: int,
+    total: int,
+    passos: Optional[int] = None,
+    tier: Optional[int] = None,
 ) -> tuple[discord.Embed, Optional[discord.File]]:
     e = discord.Embed(
         title=f"{EMOJI_TIPO.get(sala.tipo, '•')} {sala.nome}",
@@ -273,7 +278,8 @@ def sala_aberta(
         e.add_field(
             name="Desafio",
             value=(
-                f"**CD {sala.cd_efetiva}** · progresso necessário: **{sala.alvo_progresso}**\n"
+                f"**CD {sala.cd_efetiva(tier)}** · progresso necessário: "
+                f"**{sala.alvo_progresso}**\n"
                 f"Perícias: {', '.join(sala.pericias)}"
             ),
             inline=False,

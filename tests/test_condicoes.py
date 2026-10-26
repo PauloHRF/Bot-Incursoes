@@ -228,10 +228,19 @@ def caso_armadilha_tem_cd_mais_facil():
     escrita = 15
     armadilha = Sala("A", "a", "Armadilha", "d", dificuldade="Média", cd=escrita)
     evento = Sala("E", "e", "Evento", "d", dificuldade="Média", cd=escrita)
-    assert armadilha.cd_efetiva == escrita - DESCONTO_CD_ARMADILHA
-    assert evento.cd_efetiva == escrita
+    # Sem tier é o tier 1: a CD escrita é a do tier 1, por definição.
+    assert armadilha.cd_efetiva() == escrita - DESCONTO_CD_ARMADILHA
+    assert evento.cd_efetiva() == escrita
     assert armadilha.cd == escrita, "a planilha guarda o que foi escrito"
-    print(f"  armadilha sai {DESCONTO_CD_ARMADILHA} mais fácil que o escrito: ok")
+
+    # E o tier sobe as duas no mesmo passo: o desconto da Armadilha não some
+    # nem dobra quando a incursão é mais alta.
+    from src.rules import AJUSTE_DE_CD_POR_TIER
+
+    for tier, ajuste in AJUSTE_DE_CD_POR_TIER.items():
+        assert evento.cd_efetiva(tier) == escrita + ajuste, tier
+        assert armadilha.cd_efetiva(tier) == escrita + ajuste - DESCONTO_CD_ARMADILHA
+    print(f"  armadilha sai {DESCONTO_CD_ARMADILHA} mais fácil, em todo tier: ok")
 
 
 def caso_dano_e_cura_sao_vinte_por_cento():

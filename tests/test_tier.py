@@ -8,7 +8,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db, embeds as E, motor  # noqa: E402
+from src import classes as cl, config, database as db, embeds as E, motor  # noqa: E402
 from src.cogs.incursao import Incursoes, SeletorPersonagemEntrada  # noqa: E402
 from src.rules import TIER_MAXIMO, faixa_do_tier, tier  # noqa: E402
 from fakes import (  # noqa: E402
@@ -198,9 +198,36 @@ async def caso_recrutamento_mostra_o_tier():
     print("  recrutamento e listagem dizem o tier: ok")
 
 
+
+def caso_o_ajuste_de_cd_segue_o_bonus_de_proficiencia():
+    """A CD da sala sobe no mesmo passo em que o personagem melhora.
+
+    É isso que faz a chance de superar a sala ficar igual nos cinco tiers.
+    `AJUSTE_DE_CD_POR_TIER` é escrito à mão em `rules.py` por clareza, e este
+    caso o amarra à sua origem — se o bônus de proficiência das classes mudar
+    e o ajuste não, a dificuldade por tier deixa de ser plana e ninguém
+    perceberia.
+    """
+    from src.rules import AJUSTE_DE_CD_POR_TIER, cd_no_tier
+
+    for classe in cl.CLASSES.values():
+        base = classe.tiers[1].bonus_proficiencia
+        crescimento = {t: classe.tiers[t].bonus_proficiencia - base for t in range(1, 6)}
+        assert crescimento == AJUSTE_DE_CD_POR_TIER, (classe.nome, crescimento)
+
+    assert cd_no_tier(15, 1) == 15
+    assert cd_no_tier(15, 5) == 21
+    # Sem tier devolve a base, para conteúdo antigo não estourar.
+    assert cd_no_tier(15, None) == 15
+    # E fora da faixa prende no teto, em vez de estourar.
+    assert cd_no_tier(15, 99) == cd_no_tier(15, 5)
+    print("  o ajuste de CD por tier segue o bonus de proficiencia: ok")
+
+
 async def main():
     try:
         caso_tier_a_cada_dois_niveis()
+        caso_o_ajuste_de_cd_segue_o_bonus_de_proficiencia()
         caso_so_sobe_quem_esta_abaixo()
         await caso_entrar_recusa_quem_esta_acima()
         await caso_entrar_escolhe_o_que_cabe()

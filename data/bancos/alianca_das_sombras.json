@@ -7,8 +7,8 @@
       "tipo": "Armadilha",
       "descricao": "O alçapão abre para baixo e para dentro, e quem pisa errado desce os quatro metros junto com ele. Lá embaixo há palha velha, que ajuda menos do que parece.",
       "dificuldade": "Fácil",
-      "cd": 10,
-      "alvo_progresso": 5,
+      "cd": 12,
+      "alvo_progresso": 10,
       "pericias": [
         "Acrobacia",
         "Furtividade"
@@ -429,8 +429,8 @@
       "tipo": "Evento",
       "descricao": "É aqui que a Aliança escuta a cidade: canos de bronze saem das paredes e cada um traz a conversa de um cômodo diferente. Um deles traz a conversa desta sala.",
       "dificuldade": "Difícil",
-      "cd": 20,
-      "alvo_progresso": 15,
+      "cd": 18,
+      "alvo_progresso": 10,
       "pericias": [
         "Percepção",
         "Intuição"
@@ -575,8 +575,8 @@
       "tipo": "Tesouro",
       "descricao": "O cofre não tem porta: tem a parede inteira. O segredo é qual dos tijolos é o trinco, e há oitenta tijolos, e dois deles são armadilha.",
       "dificuldade": "Difícil",
-      "cd": 20,
-      "alvo_progresso": 15,
+      "cd": 18,
+      "alvo_progresso": 10,
       "pericias": [
         "Prestidigitação",
         "Arcanismo"

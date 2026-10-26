@@ -73,8 +73,8 @@
       "tipo": "Armadilha",
       "descricao": "Cada passo volta multiplicado, e junto com o eco vem alguma coisa que anda no contratempo. O chão é feito de placas que afundam sob peso.",
       "dificuldade": "Difícil",
-      "cd": 20,
-      "alvo_progresso": 15,
+      "cd": 18,
+      "alvo_progresso": 10,
       "pericias": [
         "Percepção",
         "Acrobacia",
@@ -145,8 +145,8 @@
       "tipo": "Evento",
       "descricao": "Alguém tentou fechar a fenda daqui e parou no meio. As velas ainda queimam. Terminar o ritual enfraquece o que espera adiante; errar acorda o resto.",
       "dificuldade": "Difícil",
-      "cd": 20,
-      "alvo_progresso": 15,
+      "cd": 18,
+      "alvo_progresso": 10,
       "pericias": [
         "Religião",
         "Arcanismo",
@@ -163,8 +163,8 @@
       "tipo": "Armadilha",
       "descricao": "A fenda na parede é apertada e cortante, e alguma coisa já ficou presa aqui antes de o grupo chegar.",
       "dificuldade": "Fácil",
-      "cd": 10,
-      "alvo_progresso": 5,
+      "cd": 12,
+      "alvo_progresso": 10,
       "pericias": [
         "Acrobacia",
         "Atletismo",
@@ -246,8 +246,8 @@
       "tipo": "Tesouro",
       "descricao": "Moedas, dentes e anéis cobrem o fundo raso. Cada objeto foi deixado por alguém pedindo passagem — e a maioria não conseguiu.",
       "dificuldade": "Difícil",
-      "cd": 20,
-      "alvo_progresso": 15,
+      "cd": 18,
+      "alvo_progresso": 10,
       "pericias": [
         "Religião",
         "Investigação"

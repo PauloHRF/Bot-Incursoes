@@ -5,6 +5,7 @@ Os números de combate não estão aqui: saem da classe, em src/classes.py.
 from __future__ import annotations
 
 import unicodedata
+from typing import Optional
 
 ATRIBUTOS = {
     "FOR": "Força",
@@ -53,6 +54,30 @@ TIER_MAXIMO = NIVEL_MAXIMO // NIVEIS_POR_TIER
 # custaria mais que mantê-la — mas não confie neles como se estivessem vivos.
 PESO_TIER = {t: t for t in range(1, TIER_MAXIMO + 1)}
 CONSTANTE_OBJETIVO = 9
+
+
+# Quanto a CD de uma sala sobe por tier. É exatamente o crescimento do bônus
+# de proficiência das classes (5, 7, 8, 10, 11), e por isso a chance de o
+# grupo superar a sala fica IGUAL nos cinco tiers: a dificuldade sobe no mesmo
+# passo em que o personagem melhora. Medido em `tools/balanco.py`.
+#
+# Antes a CD era absoluta, e as classes só crescem +6 em cinco tiers contra os
+# 10 pontos de diferença entre as faixas — então a mesma sala era impossível
+# no tier 1 (0% na faixa difícil) e fácil no tier 5. `test_salas.py` amarra
+# esta tabela ao bônus de proficiência, para as duas não se separarem.
+AJUSTE_DE_CD_POR_TIER = {1: 0, 2: 2, 3: 3, 4: 5, 5: 6}
+
+
+def cd_no_tier(cd_base: int, tier_alvo: Optional[int]) -> int:
+    """A CD que o grupo daquele tier rola de fato.
+
+    `cd_base` é o número escrito no conteúdo, que vale para o tier 1. Sem tier
+    (conteúdo antigo, teste solto) devolve a base — nunca estoura.
+    """
+    if not tier_alvo:
+        return cd_base
+    limpo = max(1, min(TIER_MAXIMO, tier_alvo))
+    return cd_base + AJUSTE_DE_CD_POR_TIER[limpo]
 
 
 def chave_comparacao(texto: str) -> str:

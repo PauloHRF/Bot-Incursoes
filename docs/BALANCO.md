@@ -310,18 +310,21 @@ CD e alvo de progresso acoplados:
 
 | CD | Alvo de progresso | Salas | Fatia |
 |---|---|---|---|
-| 10 | 5 | 3 | 12% |
+| 12 | 10 | 3 | 12% |
 | 15 | 10 | 13 | 50% |
-| 20 | 15 | 10 | 38% |
+| 18 | 10 | 10 | 38% |
+
+A CD escrita é a do tier 1. A que o grupo rola sobe com o tier, pelo
+mesmo passo do bônus de proficiência (`rules.AJUSTE_DE_CD_POR_TIER`),
+e é por isso que a chance fica igual nos cinco tiers — uma sala
+difícil quer dizer a mesma coisa em qualquer incursão.
 
 Chance de um grupo de cinco superar a sala, cada um rolando uma vez:
 
-| Tier | Mod típico | CD 10 | CD 15 | CD 20 |
+| Tier | Mod típico | Base 12 | Base 15 | Base 18 |
 |---|---|---|---|---|
-| T1 | +5 | 99% | 69% | 0% |
-| T2 | +7 | 100% | 85% | 8% |
-| T3 | +8 | 100% | 91% | 18% |
-| T4 | +10 | 100% | 97% | 44% |
-| T5 | +11 | 100% | 98% | 57% |
-
-As CDs não escalam com o tier: o mesmo banco de salas serve a todos.
+| T1 | +5 | CD 12 · 91% | CD 15 · 69% | CD 18 · 29% |
+| T2 | +7 | CD 14 · 91% | CD 17 · 69% | CD 20 · 29% |
+| T3 | +8 | CD 15 · 91% | CD 18 · 69% | CD 21 · 29% |
+| T4 | +10 | CD 17 · 91% | CD 20 · 69% | CD 23 · 29% |
+| T5 | +11 | CD 18 · 90% | CD 21 · 69% | CD 24 · 29% |

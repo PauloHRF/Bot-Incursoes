@@ -17,6 +17,7 @@ from . import condicoes
 from .rules import (
     ATRIBUTOS,
     TIER_MAXIMO,
+    cd_no_tier,
     chave_comparacao,
     nivel_maximo_do_tier,
     normalizar_pericia,
@@ -251,20 +252,27 @@ class Sala:
         """O primeiro inimigo da sala, para quando basta um nome."""
         return self.monstros[0] if self.monstros else None
 
-    @property
-    def cd_efetiva(self) -> Optional[int]:
-        """A CD que o grupo rola de fato.
+    def cd_efetiva(self, tier: Optional[int] = None) -> Optional[int]:
+        """A CD que o grupo rola de fato, no tier da incursão.
+
+        Três coisas num lugar só, porque as três são regra do bot e não
+        conteúdo: a CD escrita é a do tier 1, o tier soma o ajuste
+        (`rules.cd_no_tier`), e Armadilha ganha desconto.
 
         Armadilha sai mais fácil que Evento de propósito: passar nela não dá
         nada, só evita o dano e o debuff. Sem esse desconto ela nunca
-        competiria na votação. A CD da planilha fica como foi escrita; o
-        desconto é regra do bot, num lugar só.
+        competiria na votação.
+
+        Recebe o tier em vez de guardá-lo: a mesma `Sala` do banco da
+        Organização serve incursões de tiers diferentes, e gravar o tier nela
+        daria a CD de quem passou por ali antes.
         """
         if self.cd is None:
             return None
+        base = cd_no_tier(self.cd, tier)
         if self.tipo == "Armadilha":
-            return max(1, self.cd - DESCONTO_CD_ARMADILHA)
-        return self.cd
+            return max(1, base - DESCONTO_CD_ARMADILHA)
+        return base
 
     @property
     def tem_teste(self) -> bool:

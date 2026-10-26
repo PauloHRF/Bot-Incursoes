@@ -125,7 +125,11 @@ async def main() -> None:
         registros = await db.testes_da_sala(conn, run["id"], linha)
         assert 1 <= len(registros) <= 5 and len(registros) == rolaram
         for r in registros:
-            assert 1 <= r["d20"] <= 20 and r["pericia"] in alvo.pericias and r["cd"] == alvo.cd
+            # A CD gravada é a do TIER da incursão, não a escrita no banco: a
+            # mesma sala é mais dura numa incursão mais alta.
+            esperada = alvo.cd_efetiva(incursao.tier)
+            assert 1 <= r["d20"] <= 20 and r["pericia"] in alvo.pericias
+            assert r["cd"] == esperada, (r["cd"], esperada, incursao.tier)
 
     # --- objetivo ---
     run = await db.buscar_run(conn, run["id"])
