@@ -232,10 +232,14 @@ async def caso_grilhoes_acorrenta_e_sangra():
     antes = estado.inimigos[0].hp_atual
     await cog._sangrar_acorrentados(run, estado)
     depois = estado.inimigos[0].hp_atual
-    # ou sangrou 2d8, ou arrebentou a corrente no save
-    assert depois < antes or not await db.efeitos_ativos(
-        conn, run["id"], cog._passo(run), 0
-    ), (antes, depois)
+    # Ou sangrou 2d8, ou arrebentou a corrente no save. Olhando so a
+    # CORRENTE: `run_efeitos` guarda tambem a ameaca que o feiticeiro gerou
+    # ao lancar a magia, que vale pelo combate e nao sai no escape.
+    corrente_ainda = [
+        l for l in await db.efeitos_ativos(conn, run["id"], cog._passo(run), 0)
+        if (l["valor"] or {}).get("dano_por_rodada")
+    ]
+    assert depois < antes or not corrente_ainda, (antes, depois, corrente_ainda)
     print(f"  Grilhoes acorrenta e sangra 2d8 por rodada ({antes - depois}): ok")
 
 

@@ -690,6 +690,13 @@ tools/
   simular_combate.py         calibra os números de um combate fora do Discord
   importar_bestiario.py      bestiário do 5etools -> data/bestiario.json
   bestiario_traducao.py      os nomes das criaturas e dos golpes em português
+  gerar_mecanicas_md.py      docs/mecanicas/ — as regras, uma por arquivo
+  gerar_fichas_md.py         docs/FICHAS.md — o conteúdo das 14 classes
+  balanco.py                 docs/BALANCO.md — mede o jogo e aponta desequilíbrio
+docs/
+  mecanicas/    as regras do jogo, um arquivo por mecânica
+  FICHAS.md     os números e as habilidades de cada classe, tier por tier
+  BALANCO.md    dano, durabilidade, cura e o valor de cada habilidade
 data/
   planilhas/    planilhas de autoria das incursões (.xlsx)
   incursoes/    incursões convertidas em JSON — lore, tamanho, tier e sala final

@@ -200,8 +200,14 @@ async def caso_marca_pede_alvo_e_dura():
     assert caçador.dano_por_alvo == {1: "1d6"}, caçador.dano_por_alvo
     assert 1 not in caçador.vantagem_contra, "a Marca nao da vantagem"
 
-    guardado = (await db.efeitos_ativos(conn, run["id"], passo, 0))[0]
-    assert guardado["alvo_tipo"] == "inimigo" and guardado["dono"] == dono
+    # Buscado, e nao `[0]`: a ordem de `run_efeitos` e por rowid, e a ameaca
+    # que o patrulheiro gerou ao usar a Marca tambem esta la.
+    no_inimigo = [
+        l for l in await db.efeitos_ativos(conn, run["id"], passo, 0)
+        if l["alvo_tipo"] == "inimigo"
+    ]
+    assert len(no_inimigo) == 1, no_inimigo
+    assert no_inimigo[0]["dono"] == dono
     print("  a Marca do Cacador cai no inimigo escolhido e tem dono: ok")
 
 

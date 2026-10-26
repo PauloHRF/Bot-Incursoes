@@ -440,15 +440,21 @@ async def caso_save_no_fim_do_turno():
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     estado.rodada = 3
     await cog._virar_efeitos(run, estado)
-    ativos = await db.efeitos_ativos(conn, run["id"], passo, 2)
-    assert [e["efeito"] for e in ativos] == ["atordoado"], ativos
+    # Filtrado pelo nome: `run_efeitos` guarda tambem a ameaca que os
+    # personagens geram agindo, que nao tem nada a ver com o atordoamento.
+    async def atordoados(rodada):
+        return [
+            e for e in await db.efeitos_ativos(conn, run["id"], passo, rodada)
+            if e["efeito"] == "atordoado"
+        ]
+    assert len(await atordoados(2)) == 1, await atordoados(2)
 
     # CD baixa: passa e se livra, e o grupo fica sabendo
     await prender(1, 1)
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     estado.rodada = 3
     await cog._virar_efeitos(run, estado)
-    assert not await db.efeitos_ativos(conn, run["id"], passo, 2)
+    assert not await atordoados(2)
     assert any("se livra" in (m.content or "") for m in canal.mensagens)
 
     # mas nao na mesma rodada em que foi preso: a vez perdida e cobrada
@@ -456,7 +462,7 @@ async def caso_save_no_fim_do_turno():
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     estado.rodada = 6
     await cog._virar_efeitos(run, estado)
-    assert await db.efeitos_ativos(conn, run["id"], passo, 5), "escapou antes de perder a vez"
+    assert await atordoados(5), "escapou antes de perder a vez"
     print("  quem esta preso refaz o save no fim da rodada: ok")
 
 
