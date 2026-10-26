@@ -526,7 +526,9 @@ def resumo_do_golpe(golpes: list[tuple]) -> str:
 MARCA_ALVO = "🎯"
 MARCA_PROTEGIDO = "🛡️"
 MARCA_ABENCOADO = "✨"
-# Ameaça acima da da classe: alguma habilidade está chamando a atenção.
+# Ameaça acima da da classe: alguma habilidade LIGADA está chamando a
+# atenção. Não acende pelo que o personagem gerou agindo — isso todo mundo
+# faz, e a marca em todos não diria nada (ver `Combatente.ameaca_gerada`).
 MARCA_AMEACA = "🩸"
 
 
@@ -586,6 +588,10 @@ def linha_de_ameaca(combatentes) -> str:
     É a Ameaça já passada pela curva e normalizada, que é o número que decide
     de verdade — a ameaça crua não diz nada sozinha, porque o que importa é a
     comparação com o resto do grupo.
+
+    As fatias ANDAM durante o combate: cada ação gera ameaça, então quem cura
+    e quem estoura área vai puxando atenção. É de propósito que o painel
+    mostre isso rodada a rodada.
     """
     from . import ameaca
 

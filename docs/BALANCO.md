@@ -112,24 +112,28 @@ Espalhamento por tier:
 
 Num grupo de cinco onde os outros quatro estão no piso (2).
 
-| Classe | Ameaça | Fatia |
-|---|---|---|
-| Guerreiro | 6 | 36.0% |
-| Paladino | 6 | 36.0% |
-| Bárbaro | 5 | 33.3% |
-| Monge | 4 | 30.0% |
-| Patrulheiro | 3 | 25.7% |
-| Clérigo | 3 | 25.7% |
-| Artífice | 3 | 25.7% |
-| Ladino | 2 | 20.0% |
-| Xamã | 2 | 20.0% |
-| Mago | 2 | 20.0% |
-| Bruxo | 2 | 20.0% |
-| Druida | 2 | 20.0% |
-| Feiticeiro | 2 | 20.0% |
-| Bardo | 2 | 20.0% |
+| Classe | Ameaça | Abertura | 5 rodadas, todos batendo |
+|---|---|---|---|
+| Guerreiro | 6 | 30.2% | 30.2% |
+| Paladino | 6 | 30.2% | 30.2% |
+| Bárbaro | 5 | 28.3% | 28.3% |
+| Monge | 4 | 26.1% | 26.1% |
+| Patrulheiro | 3 | 23.4% | 23.4% |
+| Clérigo | 3 | 23.4% | 23.4% |
+| Artífice | 3 | 23.4% | 23.4% |
+| Ladino | 2 | 20.0% | 20.0% |
+| Xamã | 2 | 20.0% | 20.0% |
+| Mago | 2 | 20.0% | 20.0% |
+| Bruxo | 2 | 20.0% | 20.0% |
+| Druida | 2 | 20.0% | 20.0% |
+| Feiticeiro | 2 | 20.0% | 20.0% |
+| Bardo | 2 | 20.0% | 20.0% |
 
-O uniforme seria 20%.
+O uniforme seria 20%. A coluna da direita mantém a ordem da abertura:
+a ameaça gerada é proporcional à da classe, então acumular não
+desmancha o grupo — o que desloca é a AÇÃO. O mesmo clérigo, no mesmo
+time, sai de 18.3% batendo para 23.3% curando, porque
+cura e área geram o dobro.
 
 ## Perícia: melhor modificador por tier
 

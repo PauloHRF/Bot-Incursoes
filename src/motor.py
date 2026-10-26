@@ -409,6 +409,15 @@ class Combatente:
     # enquanto estao ligadas. Ver src/ameaca.py.
     ameaca: int = 0
     ameaca_extra: int = 0
+    # O que ele GEROU agindo, acumulado desde o comeco do combate. Separado do
+    # `ameaca_extra` de proposito: a marca do painel quer dizer "tem
+    # habilidade chamando atencao", e se a acumulacao caisse no mesmo campo a
+    # marca apareceria em todo mundo que ja agiu — deixando de dizer nada.
+    ameaca_gerada: int = 0
+    # A classe por nome, que e o fator de quanto cada acao dele GERA de
+    # ameaca: o guerreiro chama o dobro do mago pelo mesmo golpe. Ver
+    # `ameaca.gerada_por`.
+    classe: str = ""
     # Fly: multiplica o PESO dele no sorteio, nao a ameaca crua. A curva
     # x/(x+Y) e quase reta embaixo — ameaca 1 e 2 estao a 1,8x de distancia —,
     # entao mexer na ameaca so daria "modesto" ou "imune", sem meio-termo. O
@@ -450,8 +459,12 @@ class Combatente:
 
     @property
     def ameaca_total(self) -> int:
-        """A ameaça que conta no sorteio: a da classe mais a das habilidades."""
-        return max(0, self.ameaca + self.ameaca_extra)
+        """A ameaça que conta no sorteio.
+
+        As três partes: a da classe, a das habilidades ligadas agora e a que
+        ele acumulou agindo. Ver src/ameaca.py.
+        """
+        return max(0, self.ameaca + self.ameaca_extra + self.ameaca_gerada)
 
     @property
     def e_invocacao(self) -> bool:

@@ -132,9 +132,16 @@ async def caso_rage_dura_tres_turnos():
     assert furioso.reducao_dano == 0.5
     assert furioso.dano_extra == 2
 
-    # o efeito dura ate a rodada 3; na 4 ja nao vale
-    assert len(await db.efeitos_ativos(conn, run["id"], passo, 3)) == 1
-    assert await db.efeitos_ativos(conn, run["id"], passo, 4) == []
+    # o efeito dura ate a rodada 3; na 4 ja nao vale. Filtrado pelo nome,
+    # porque `run_efeitos` guarda tambem a ameaca gerada no turno, que vale
+    # pelo combate inteiro e nao tem nada a ver com o prazo da Rage.
+    async def rages(rodada):
+        return [
+            l for l in await db.efeitos_ativos(conn, run["id"], passo, rodada)
+            if l["efeito"] == "rage"
+        ]
+    assert len(await rages(3)) == 1
+    assert await rages(4) == []
 
     # e o grupo viu o anuncio
     assert any("Rage" in (m.content or "") for m in canal.mensagens)
@@ -161,7 +168,12 @@ async def caso_efeito_vence_com_a_rodada():
     depois = await cog._estado_combate(atual, incursao.objetivo)
     assert depois.rodada == 2, depois.rodada
     assert not depois.combatente(dono).vantagem, "o prazo de 1 turno tinha de ter vencido"
-    assert await db.efeitos_ativos(conn, run["id"], passo, depois.rodada - 1) == []
+    # Filtrado pelo nome: `run_efeitos` guarda tambem a ameaca gerada nos
+    # ataques acima, que vale pelo combate e nao tem prazo de rodada.
+    assert [
+        l for l in await db.efeitos_ativos(conn, run["id"], passo, depois.rodada - 1)
+        if l["efeito"] == "reckless_attack"
+    ] == []
     print("  efeito de 1 turno vence quando a rodada vira: ok")
 
 

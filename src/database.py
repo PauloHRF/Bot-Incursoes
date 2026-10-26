@@ -1417,6 +1417,42 @@ async def aplicar_efeito(
     await conn.commit()
 
 
+async def somar_ameaca_gerada(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    user_id: int,
+    quanto: int,
+    expira: int,
+) -> None:
+    """Acrescenta ameaça gerada, em vez de substituir.
+
+    Mora em `run_efeitos` de propósito. A chave de lá já é
+    (run, passo, alvo, efeito), que é exatamente o escopo da acumulação — ela
+    vale pelo combate e morre quando o grupo troca de sala, porque o `passo`
+    muda —, e quem monta o estado já soma `valor["ameaca"]` em `ameaca_extra`.
+    Nenhum encanamento novo, nenhuma coluna nova.
+
+    A soma é feita DENTRO do banco, e não em Python: dois jogadores clicando
+    junto leriam o mesmo valor antes de qualquer um dos dois escrever, e um
+    dos golpes sumiria da conta.
+    """
+    if quanto <= 0:
+        return
+    await conn.execute(
+        "INSERT INTO run_efeitos"
+        " (run_id, passo, alvo_tipo, alvo_id, efeito, dono, valor, expira)"
+        " VALUES (?, ?, 'personagem', ?, 'ameaca_gerada', NULL,"
+        "         json_object('ameaca', ?), ?)"
+        " ON CONFLICT(run_id, passo, alvo_tipo, alvo_id, efeito) DO UPDATE SET"
+        "   valor = json_object('ameaca',"
+        "     json_extract(run_efeitos.valor, '$.ameaca') + ?),"
+        "   expira = max(run_efeitos.expira, excluded.expira)",
+        (run_id, passo, user_id, quanto, expira, quanto),
+    )
+    await conn.commit()
+
+
 async def efeitos_ativos(
     conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
 ) -> list[dict[str, Any]]:

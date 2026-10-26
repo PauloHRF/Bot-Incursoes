@@ -1247,7 +1247,10 @@ class Incursoes(commands.Cog):
                     ),
                     cura_recebida_pct=saldo.cura_recebida_pct,
                     # A classe diz onde ele fica na sala; as passivas somam.
+                    # O que esta ligado e o que ele gerou agindo entram depois,
+                    # em `_aplicar_ligado`, cada um no seu campo.
                     ameaca=ameaca.inicial(p.get("classe")) + efeitos.get("ameaca", 0),
+                    classe=str(p.get("classe") or ""),
                 )
             )
         for ligado in efeitos_ligados or []:
@@ -1393,7 +1396,13 @@ class Incursoes(commands.Cog):
                 return
             quem.dano_extra += valor.get("dano_extra", 0)
             quem.ca_extra += valor.get("ca", 0)
-            quem.ameaca_extra += valor.get("ameaca", 0)
+            # A acumulacao chega pelo mesmo `run_efeitos` que as habilidades,
+            # mas vai para outro campo: a marca do painel e para quem tem algo
+            # LIGADO chamando atencao, nao para quem simplesmente agiu.
+            if ligado["efeito"] == "ameaca_gerada":
+                quem.ameaca_gerada += valor.get("ameaca", 0)
+            else:
+                quem.ameaca_extra += valor.get("ameaca", 0)
             quem.reducao_dano = max(quem.reducao_dano, valor.get("reducao_dano", 0.0))
             quem.cura_por_turno = max(
                 quem.cura_por_turno, valor.get("cura_por_turno", 0.0)
@@ -1915,7 +1924,9 @@ class Incursoes(commands.Cog):
     ) -> str:
         """Faz a ação que o personagem escolheu, agora que a vez chegou."""
         if turno["acao"] == "ataque":
-            return await self._resolver_ataque(run, estado, user_id, turno["alvos"])
+            texto = await self._resolver_ataque(run, estado, user_id, turno["alvos"])
+            await self._gerar_ameaca(run, estado, user_id, None)
+            return texto
         personagem = await self._personagem_na_run(run, user_id)
         habilidade = next(
             (
@@ -1929,8 +1940,31 @@ class Incursoes(commands.Cog):
         texto = await self._resolver_habilidade(
             run, estado, user_id, habilidade, turno["alvos"]
         )
+        await self._gerar_ameaca(run, estado, user_id, habilidade.acao)
         self._registrar(run, estado.rodada, [f"✨ {estado.combatente(user_id).nome} usa **{habilidade.nome}**"])
         return texto
+
+    # A ameaca gerada vale pelo combate inteiro, e nao por um numero de
+    # rodadas. O prazo grande diz isso: quem apaga a conta e a troca de sala,
+    # porque o `passo` faz parte da chave em `run_efeitos`.
+    PRAZO_DO_COMBATE = 10 ** 6
+
+    async def _gerar_ameaca(
+        self, run: dict[str, Any], estado: EstadoCombate, user_id: int, acao
+    ) -> None:
+        """O que o personagem acabou de fazer chama atencao da criatura.
+
+        Mora aqui, no `_resolver_turno`, e nao em cada resolvedor: este e o
+        gargalo por onde o ataque e a habilidade passam os dois, e o uso FORA
+        de combate nao passa — que e o certo, nao ha criatura para chamar.
+        """
+        quem = estado.combatente(user_id)
+        if quem is None or quem.e_invocacao:
+            return
+        await db.somar_ameaca_gerada(
+            self.bot.db, run["id"], self._passo(run), user_id,
+            ameaca.gerada_por(quem.classe, acao), self.PRAZO_DO_COMBATE,
+        )
 
     async def _vez_do_inimigo(
         self,

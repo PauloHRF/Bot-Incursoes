@@ -136,7 +136,12 @@ async def caso_danca_totemica_cobre_o_grupo():
     assert all(c.dano_bonus == "1d6+4" for c in estado.vivos), [
         c.dano_bonus for c in estado.vivos
     ]
-    ligados = await db.efeitos_ativos(conn, run["id"], cog._passo(run), 0)
+    # So a Danca: `run_efeitos` guarda tambem a ameaca que o barbaro gerou ao
+    # usar a habilidade, que nao e um buff no grupo.
+    ligados = [
+        l for l in await db.efeitos_ativos(conn, run["id"], cog._passo(run), 0)
+        if l["efeito"] == "danca_totemica"
+    ]
     assert len(ligados) == len(estado.vivos), ligados
     print("  Danca totemica cura 1%, da THP e bonus de dano ao grupo: ok")
 

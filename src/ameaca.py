@@ -2,31 +2,35 @@
 
 Sem isto o alvo é sorteado uniformemente, então não existe tanque — o mago
 leva tanta pancada quanto o guerreiro de armadura pesada. A Ameaça dá a cada
-personagem um peso nesse sorteio: a classe traz um valor inicial, que é a
-posição dela na sala (quem bate de perto aparece primeiro), e habilidades
-somam por cima.
+personagem um peso nesse sorteio, e esse peso vem de três partes:
 
-O peso não é a ameaça crua. Ela passa pela curva de resistência, a mesma de
-`x / (x + Y)` que os jogos usam para armadura:
+  - a INICIAL da classe, que é a posição dela na sala: quem bate de perto
+    aparece primeiro;
+  - o que as habilidades LIGADAS somam enquanto duram;
+  - o que o personagem GEROU agindo, que acumula do primeiro golpe ao fim do
+    combate e morre com a sala.
 
-    peso = x / (x + Y)
+A terceira é a que dá história ao combate: quem bate, cura e conjura vai
+chamando atenção, e a criatura troca de alvo conforme a luta anda.
 
-Isso dá retorno decrescente: cada ponto novo vale menos que o anterior, então
-ninguém trava o combate stackando ameaça. Com Y = 10 e um grupo de cinco, o
-guerreiro (ameaça 6) sai de 29,5% da atenção e, somando +3, +6 e +9, chega a
-34,5%, 37,8% e 40,1% — os três degraus rendem +5,1, +3,3 e +2,3 pontos.
+O peso não é a ameaça crua. Ela passa por uma curva de retorno decrescente:
 
-Y é o botão de calibragem, e ele anda ao contrário do que parece: **Y pequeno
-achata** (todo mundo encosta no teto da curva) e **Y grande aproxima do stack
-simples** (a curva fica reta). No limite, Y → ∞ é exatamente somar e dividir.
+    peso = x ** K,  com K = 0.5
 
-A escolha de manter a ameaça estável — inicial da classe mais o que estiver
-ligado agora, em vez de acumular golpe a golpe — é o que deixa esta fórmula
-funcionar. Ameaça que cresce a luta inteira satura: com 100/60/40 a mesma razão
-5:3:2 daria 35,4/33,4/31,2, quase o sorteio uniforme de volta, e o tanque
-deixaria de ser tanque conforme a luta durasse. Se um dia a ameaça passar a
-acumular, a curva precisa virar `x ** k` com k < 1, que comprime igual mas não
-satura.
+Cada ponto novo vale menos que o anterior, então ninguém trava o combate
+stackando ameaça. Num grupo de cinco — guerreiro 6, paladino 6, clérigo 3,
+ladino 2, mago 2 — o guerreiro abre com 25,9% da atenção, contra os 20% do
+sorteio uniforme.
+
+É `x ** K`, e não o `x / (x + Y)` que os jogos usam para armadura, porque a
+ameaça ACUMULA. A fórmula de armadura satura: ela tem teto em 1, e com
+100/60/40 a razão 5:3:2 virava 35,4/33,4/31,2 — quase o sorteio uniforme de
+volta, e o tanque deixava de ser tanque conforme a luta durasse. A potência
+comprime igual embaixo e não tem teto: os mesmos 100/60/40 dão
+41,5/32,2/26,3, que ainda é um tanque.
+
+K é o botão de calibragem, e anda ao contrário do que parece: **K pequeno
+achata** (tudo encosta em 1) e **K = 1 é o stack simples**, somar e dividir.
 """
 from __future__ import annotations
 
@@ -35,9 +39,9 @@ from typing import Any, Iterable, Optional, Sequence, TypeVar
 
 T = TypeVar("T")
 
-# A constante da curva. Ver o cabeçalho: menor achata, maior aproxima do stack
-# simples. Em 10 um "+3 de ameaça" move a atenção do grupo em ~5 pontos.
-Y = 10
+# O expoente da curva. Ver o cabeçalho: menor achata, 1 é o stack simples.
+# Em 0,5 um "+3 de ameaça" move a atenção de um grupo de cinco em ~4 pontos.
+K = 0.5
 
 # Quanto cada classe atrai antes de qualquer habilidade. É a linha de frente
 # virando número: o guerreiro e o paladino estão na cara do inimigo, o ladino
@@ -68,10 +72,45 @@ def inicial(classe: Optional[str]) -> int:
     return AMEACA_INICIAL.get(str(classe or "").strip().lower(), PADRAO)
 
 
+# A regra cabe numa frase: **cada ação gera a ameaça da própria classe, em
+# dobro se for área ou cura**. Esta tabela é só o "em dobro" — o multiplicador
+# do valor da classe, por tipo de ação.
+#
+# Cura dobra porque é o motivo clássico de o curandeiro precisar de alguém na
+# frente dele; área dobra porque acertar cinco criaturas é mais notável que
+# acertar uma.
+#
+# Multiplicar o valor da CLASSE, em vez de somar um valor fixo igual para
+# todos, é o que mantém o tanque de pé: as razões entre o grupo quase não
+# mudam ao longo do combate, e a deriva vem só de quem faz o quê. Somar fixo
+# diluiria a inicial — em três rodadas o mago que estoura área passaria o
+# guerreiro, e o combate voltaria a focar justamente quem não aguenta.
+#
+# O valor é DECLARADO, e não o dano feito: o jogador precisa saber de antemão
+# o que chama atenção, e ameaça-por-dano faria o mesmo golpe valer o dobro só
+# por ter critado.
+DOBRA_A_AMEACA = ("cura", "grupo", "area")
+
+
+def gerada_por(classe: Optional[str], acao: Optional[dict] = None) -> int:
+    """Quanta ameaça quem acabou de agir acrescenta à conta dele.
+
+    Uma habilidade pode declarar `ameaca_gerada` e pular a regra inteira,
+    classe e tudo. É o gancho para uma provocação de verdade.
+    """
+    acao = acao or {}
+    declarada = acao.get("ameaca_gerada")
+    if declarada is not None:
+        return max(0, int(declarada))
+    tipo = acao.get("tipo") or "golpes"
+    if tipo == "save" and acao.get("alvos") == "todos":
+        tipo = "area"
+    return inicial(classe) * (2 if tipo in DOBRA_A_AMEACA else 1)
+
+
 def peso(x: int) -> float:
     """A ameaça crua na curva de retorno decrescente. Nunca negativa."""
-    bruta = max(0, x)
-    return bruta / (bruta + Y)
+    return max(0, x) ** K
 
 
 def fracoes(

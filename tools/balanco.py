@@ -440,15 +440,52 @@ def documento() -> str:
     # ----------------------------------------------------------- ameaça
     L += ["## Ameaça: fatia da atenção das criaturas", "",
           "Num grupo de cinco onde os outros quatro estão no piso (2).", ""]
+
+    def _todos_batendo(cid: str, rodadas: int = 5) -> float:
+        """A fatia depois de cinco rodadas em que TODOS atacam.
+
+        O grupo de comparação faz a mesma coisa que a classe medida, de
+        propósito: assim a coluna responde a uma pergunta só — acumular
+        desmancha a ordem? —, sem misturar o dobro que área e cura geram.
+        """
+        grupo = [cid] + ["mago"] * 4
+        crua = [ameaca.inicial(c) for c in grupo]
+        for _ in range(rodadas):
+            crua = [x + ameaca.gerada_por(c) for x, c in zip(crua, grupo)]
+        return ameaca.porcentagens(crua)[0]
+
     L += tabela(
-        ["Classe", "Ameaça", "Fatia"],
+        ["Classe", "Ameaça", "Abertura", "5 rodadas, todos batendo"],
         [
             [nome[cid], str(ameaca.inicial(cid)),
-             f"{ameaca.porcentagens([ameaca.inicial(cid), 2, 2, 2, 2])[0]:.1f}%"]
+             f"{ameaca.porcentagens([ameaca.inicial(cid), 2, 2, 2, 2])[0]:.1f}%",
+             f"{_todos_batendo(cid):.1f}%"]
             for cid in sorted(cl.CLASSES, key=lambda c: -ameaca.inicial(c))
         ],
     )
-    L += ["O uniforme seria 20%.", ""]
+
+    # Quanto a ação escolhida desloca, isolado do resto: o mesmo clérigo, cinco
+    # rodadas batendo contra cinco rodadas curando, no mesmo grupo.
+    def _cinco_rodadas(cid: str, acao, grupo: list[str]) -> float:
+        crua = [ameaca.inicial(c) for c in grupo]
+        for _ in range(5):
+            crua = [
+                x + ameaca.gerada_por(c, acao if i == 0 else None)
+                for i, (x, c) in enumerate(zip(crua, grupo))
+            ]
+        return ameaca.porcentagens(crua)[0]
+
+    time = ["clerigo", "guerreiro", "guerreiro", "ladino", "ladino"]
+    batendo = _cinco_rodadas("clerigo", None, time)
+    curando = _cinco_rodadas("clerigo", {"tipo": "cura"}, time)
+    L += [
+        "O uniforme seria 20%. A coluna da direita mantém a ordem da abertura:",
+        "a ameaça gerada é proporcional à da classe, então acumular não",
+        "desmancha o grupo — o que desloca é a AÇÃO. O mesmo clérigo, no mesmo",
+        f"time, sai de {batendo:.1f}% batendo para {curando:.1f}% curando, porque",
+        "cura e área geram o dobro.",
+        "",
+    ]
 
     # ---------------------------------------------------------- perícia
     L += ["## Perícia: melhor modificador por tier", ""]
