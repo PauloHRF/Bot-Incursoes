@@ -429,7 +429,7 @@
       "tipo": "Evento",
       "descricao": "É aqui que a Aliança escuta a cidade: canos de bronze saem das paredes e cada um traz a conversa de um cômodo diferente. Um deles traz a conversa desta sala.",
       "dificuldade": "Difícil",
-      "cd": 18,
+      "cd": 15,
       "alvo_progresso": 10,
       "pericias": [
         "Percepção",

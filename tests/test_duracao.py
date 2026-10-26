@@ -245,8 +245,20 @@ async def caso_rage_vale_na_rodada_que_ela_fecha():
         if antes != depois:
             break
         await cog.atacar(FakeInteraction(canal, dono), run["id"], "OBJ")
-    # 20 de dano cortado pela metade, e nada mais.
-    assert antes - depois == 10, (antes, depois)
+    # Cortado pela metade, e nada mais. O dano do Britador escala com o tier
+    # do grupo, entao o esperado sai do proprio golpe dele — o caso prova a
+    # METADE, nao o numero 10.
+    inimigo = (await cog._estado_combate(
+        await db.buscar_run(conn, run["id"]), incursao.objetivo
+    )).inimigos[0]
+    # O fixture usa d1, entao a rolagem e deterministica — mas o golpe pode
+    # ter saido CRITICO (5% com o d20), e o critico dobra os dados. Os dois
+    # valores possiveis entram, senao o caso falha uma vez em vinte.
+    metades = {
+        max(1, round(motor.rolar_dano(inimigo.dano, critico=c) * 0.5))
+        for c in (False, True)
+    }
+    assert antes - depois in metades, (antes, depois, sorted(metades))
     print("  a Rage ja vale no revide da rodada que ela fecha: ok")
 
 

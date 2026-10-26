@@ -234,7 +234,11 @@ async def caso_cada_inimigo_tem_o_proprio_hp():
     estado = await cog._estado_combate(atual, incursao.objetivo)
     assert estado.inimigos[0].caido, "o primeiro alvo deveria ter caído"
     assert atual["status"] == "objetivo", "a run não pode acabar com dois inimigos de pé"
-    assert [i.hp_atual for i in estado.inimigos[1:]] == [1, 1], "os outros seguem inteiros"
+    # Inteiros, e nao "com 1 de HP": o HP escala com o tier do grupo, e o
+    # que o caso prova e que o dano foi para UM alvo so.
+    assert all(
+        i.hp_atual == i.hp_max for i in estado.inimigos[1:]
+    ), "os outros seguem inteiros"
     print("  cada criatura tem o próprio HP, e uma não encerra o combate: ok")
 
 

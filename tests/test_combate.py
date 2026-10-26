@@ -108,7 +108,10 @@ async def caso_vitoria_no_objetivo():
     assert run["status"] == "objetivo" and run["sala_atual"] == "OBJ", run
     estado = await cog._estado_combate(run, incursao.objetivo)
     assert estado is not None and estado.rodada == 1
-    assert [i.hp_atual for i in estado.inimigos] == [1]
+    # O HP escrito e 1, e a escala por tier do grupo o multiplica: o que
+     # importa aqui e que o inimigo esta de pe e inteiro, nao o numero.
+    assert len(estado.inimigos) == 1 and estado.inimigos[0].hp_atual >= 1
+    assert estado.inimigos[0].hp_atual == estado.inimigos[0].hp_max
 
     # CA 1 e 1 HP caem rapido, mas o 1 natural ainda erra: ataca ate derrubar
     msg = await canal.fetch_message(run["mensagem_id"])
@@ -194,8 +197,9 @@ async def caso_rodadas_e_contra_ataque():
     assert estado.rodada == 2, f"a rodada deveria ter virado, veio {estado.rodada}"
     # o monstro tem +40 de ataque, mas um 1 natural ainda erra: 0 ou 1 caido
     assert len(estado.caidos) <= 1, estado.caidos
-    # so um 20 natural tira HP desse monstro
-    assert estado.inimigos[0].hp_atual <= 999
+    # so um 20 natural tira HP desse monstro — e o HP maximo escala com o
+    # tier do grupo, entao a comparacao e com o proprio maximo
+    assert estado.inimigos[0].hp_atual <= estado.inimigos[0].hp_max
 
     # quem caiu não ataca mais
     if estado.caidos:

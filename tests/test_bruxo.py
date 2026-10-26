@@ -270,7 +270,8 @@ async def caso_demonio_bate_sozinho():
     depois = estado.inimigo(ferido.indice).hp_atual
     # ou acertou o mais ferido, ou errou — nunca mirou o outro
     assert depois <= antes
-    assert estado.inimigo(estado.inimigos[0].indice).hp_atual == 500
+    intocado = estado.inimigo(estado.inimigos[0].indice)
+    assert intocado.hp_atual == intocado.hp_max, "o demonio nao mirou o outro"
     print("  o demonio bate sozinho, no inimigo mais ferido: ok")
 
 

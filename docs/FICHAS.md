@@ -1001,7 +1001,7 @@ Escolhe uma: Magic Missile, Sleep ou Thunderwave.
 Escolhe uma: Fireball, Hypnotic Pattern ou Fly.
 
 * **Fireball** (1x por descanso) — todos os inimigos fazem save de DES; quem falha leva 8d6, quem passa leva metade.
-* **Hypnotic Pattern** (1x por descanso) — todos os inimigos fazem save de SAB; quem falha perde a próxima vez.
+* **Hypnotic Pattern** (1x por incursão) — todos os inimigos fazem save de SAB; quem falha perde a próxima vez.
 * **Fly** (1x por descanso) — três aliados sobem fora de alcance por 3 rodadas — os inimigos quase deixam de mirá-los.
 
 ---
@@ -1038,7 +1038,7 @@ Escolhe uma: Evocação Potente, Escudo Arcano ou Sabedoria Arcana.
 
 Escolhe uma: Cone of Cold, Hold Monster ou Circle of Power.
 
-* **Cone of Cold** (1x por descanso) — todos os inimigos fazem save de CON; quem falha leva 12d8, quem passa leva metade.
+* **Cone of Cold** (1x por descanso) — todos os inimigos fazem save de CON; quem falha leva 8d8, quem passa leva metade.
 * **Hold Monster** (1x por descanso) — um inimigo faz save de SAB; falhando, perde três vezes seguidas.
 * **Circle of Power** (1x por descanso) — por 3 rodadas o grupo rola os saves com vantagem e, passando, não leva nem metade.
 
@@ -1355,7 +1355,7 @@ Mais um jeito de torcer as magias. Escolhe uma: Quickened, Empowered, Twinned ou
 Escolhe uma: Polymorph, Cone of Cold ou Dimension Door.
 
 * **Polymorph** (1x por descanso) — um aliado vira uma fera por 3 rodadas — bate com o dado dela, +2 de CA e vida temporária.
-* **Cone of Cold** (1x por descanso) — todos os inimigos fazem save de CON; quem falha leva 12d8, quem passa leva metade.
+* **Cone of Cold** (1x por descanso) — todos os inimigos fazem save de CON; quem falha leva 8d8, quem passa leva metade.
 * **Dimension Door** (1x por descanso) — ele e um aliado desaparecem por 2 rodadas — nenhuma criatura consegue mirá-los.
 
 ---
@@ -1421,8 +1421,8 @@ O dado que ele sopra em quem falha. Escolhe em que rolagem ele entra: ataque, re
 
 Escolhe uma: Hypnotic Pattern, Aid ou Invisibility.
 
-* **Hypnotic Pattern** (1x por descanso) — todos os inimigos fazem save de SAB; quem falha perde as duas próximas vezes.
-* **Aid** (1x por descanso) — o grupo inteiro ganha 3d8 de vida temporária e cura 20% do HP máximo.
+* **Hypnotic Pattern** (1x por incursão) — todos os inimigos fazem save de SAB; quem falha perde as duas próximas vezes.
+* **Aid** (1x por descanso) — o grupo inteiro ganha 2d8 de vida temporária e cura 10% do HP máximo.
 * **Invisibility** (1x por descanso) — um aliado desaparece por 3 rodadas — os inimigos quase deixam de mirá-lo.
 
 ---

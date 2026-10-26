@@ -649,9 +649,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "dano": "8d6", "metade": True},
                        exige_escolha=("magia_mago_t3", "fireball")),
             Habilidade("hypnotic_pattern_mago", "Hypnotic Pattern", ATIVA,
-                       "1x por descanso: todos os inimigos fazem save de SAB; "
+                       "1x por incursao: todos os inimigos fazem save de SAB; "
                        "quem falha perde a proxima vez.",
-                       usos=_usos("descanso"),
+                       usos=_usos("incursao"),
                        acao={"tipo": "save", "save": "SAB", "alvos": "todos",
                              "atordoa": 1},
                        exige_escolha=("magia_mago_t3", "hypnotic_pattern_mago")),
@@ -685,7 +685,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "Escolhe uma: Cone of Cold, Hold Monster ou Circle of Power.",
                        escolha={"tipo": "opcao", "opcoes": [
                            {"id": "cone_of_cold", "nome": "Cone of Cold",
-                            "texto": "12d8 em todos, metade em quem resistir"},
+                            "texto": "8d8 em todos, metade em quem resistir"},
                            {"id": "hold_monster", "nome": "Hold Monster",
                             "texto": "Um inimigo perde tres vezes seguidas"},
                            {"id": "circle_of_power", "nome": "Circle of Power",
@@ -693,10 +693,10 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        ]}),
             Habilidade("cone_of_cold", "Cone of Cold", ATIVA,
                        "1x por descanso: todos os inimigos fazem save de CON; "
-                       "quem falha leva 12d8, quem passa leva metade.",
+                       "quem falha leva 8d8, quem passa leva metade.",
                        usos=_usos("descanso"),
                        acao={"tipo": "save", "save": "CON", "alvos": "todos",
-                             "dano": "12d8", "metade": True},
+                             "dano": "8d8", "metade": True},
                        exige_escolha=("magia_mago_t5", "cone_of_cold")),
             Habilidade("hold_monster", "Hold Monster", ATIVA,
                        "1x por descanso: um inimigo faz save de SAB; falhando, "
@@ -1143,7 +1143,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                            {"id": "polymorph", "nome": "Polymorph",
                             "texto": "Um aliado vira uma fera e bate como ela"},
                            {"id": "cone_of_cold_feit", "nome": "Cone of Cold",
-                            "texto": "12d8 em todos, metade no sucesso"},
+                            "texto": "8d8 em todos, metade no sucesso"},
                            {"id": "dimension_door", "nome": "Dimension Door",
                             "texto": "Ele e um aliado saem da mira"},
                        ]}),
@@ -1160,10 +1160,10 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        exige_escolha=("magia_feit_t5", "polymorph")),
             Habilidade("cone_of_cold_feit", "Cone of Cold", ATIVA,
                        "1x por descanso: todos os inimigos fazem save de CON; "
-                       "quem falha leva 12d8, quem passa leva metade.",
+                       "quem falha leva 8d8, quem passa leva metade.",
                        usos=_usos("descanso"),
                        acao={"tipo": "save", "save": "CON", "alvos": "todos",
-                             "dano": "12d8", "metade": True},
+                             "dano": "8d8", "metade": True},
                        exige_escolha=("magia_feit_t5", "cone_of_cold_feit")),
             # Teleporte nao tem onde pegar; o que sobra dele e "sair de onde
             # estava". Mesmo caminho do Antilife Shell, em duas pessoas.
@@ -1261,17 +1261,17 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "Um aliado sai da mira por 3 rodadas"},
                        ]}),
             Habilidade("hypnotic_pattern_bardo", "Hypnotic Pattern", ATIVA,
-                       "1x por descanso: todos os inimigos fazem save de SAB; "
+                       "1x por incursao: todos os inimigos fazem save de SAB; "
                        "quem falha perde as duas proximas vezes.",
-                       usos=_usos("descanso"),
+                       usos=_usos("incursao"),
                        acao={"tipo": "save", "save": "SAB", "alvos": "todos",
                              "atordoa": 2},
                        exige_escolha=("magia_bardo_t3", "hypnotic_pattern_bardo")),
             Habilidade("aid", "Aid", ATIVA,
-                       "1x por descanso: o grupo inteiro ganha 3d8 de vida "
-                       "temporaria e cura 20% do HP maximo.",
+                       "1x por descanso: o grupo inteiro ganha 2d8 de vida "
+                       "temporaria e cura 10% do HP maximo.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "grupo", "thp": "3d8", "cura_fracao": 0.2},
+                       acao={"tipo": "grupo", "thp": "2d8", "cura_fracao": 0.1},
                        exige_escolha=("magia_bardo_t3", "aid")),
             # Invisibilidade e furtividade, e o bot nao tem nem uma nem outra.
             # O que sobra dela e "nao te acham": mesmo caminho do Fly e do
@@ -1406,6 +1406,13 @@ NEUTRO: dict = {
     "bonus_iniciativa": 0,
 }
 
+# Chaves que SOMAM em vez de valer a maior. A regra da casa para passiva e
+# `max()` — duas fontes do mesmo bonus nao empilham. O bonus de cura e a
+# excecao por decisao: o Curandeiro do tier 2 e o Especialista do tier 4 dao
+# 10% cada, e com `max()` o tier 4 nao acrescentava NADA a quem tinha pegado
+# o tier 2. Uma escolha que nao escolhe.
+SOMAM = ("bonus_cura_pct",)
+
 # Chaves cujo valor e uma expressao de dano, e nao um inteiro.
 DADOS = ("dano_bonus", "dano_magia", "dado_inspiracao")
 
@@ -1447,6 +1454,8 @@ def juntar_efeito(juntos: dict, efeito: dict) -> None:
                 juntos["totem"] = dict(valor)
         elif chave == "critico_em":
             juntos["critico_em"] = min(juntos["critico_em"], valor)
+        elif chave in SOMAM:
+            juntos[chave] = juntos.get(chave, 0) + valor
         elif chave in DADOS:
             atual = juntos.get(chave) or ""
             if media_do_dado(valor) >= media_do_dado(atual):

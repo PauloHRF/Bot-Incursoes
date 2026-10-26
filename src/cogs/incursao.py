@@ -1504,8 +1504,12 @@ class Incursoes(commands.Cog):
         canal = await self._canal(run)
         if not canal:
             return
-        niveis = await self._niveis(run)
-        inimigos = [motor.escalar_monstro(m, niveis) for m in sala.monstros]
+        # A criatura escrita no banco e a do tier 1: aqui ela vira a do tier
+        # de QUEM entrou. Pelo grupo e nao pela incursao, porque incursao sem
+        # tier declarado vale TIER_MAXIMO para liberar a entrada — e isso
+        # daria criatura de tier 5 em toda incursao aberta.
+        tier_do_grupo = motor.tier_do_grupo(await self._niveis(run))
+        inimigos = [motor.escalar_monstro(m, tier_do_grupo) for m in sala.monstros]
         await db.iniciar_combate(self.bot.db, run["id"], self._passo(run), sala.id, inimigos)
 
         incursao = self._incursao_da_run(run)

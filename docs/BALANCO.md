@@ -86,8 +86,8 @@ Espalhamento por tier:
 
 | Classe | HP por masmorra |
 |---|---|
-| Bardo | 77 |
 | Clérigo | 67 |
+| Bardo | 45 |
 | Guerreiro | 42 |
 | Xamã | 22 |
 | Paladino | 19 |
@@ -99,7 +99,7 @@ Espalhamento por tier:
 
 | Classe | HP por masmorra |
 |---|---|
-| Bardo | 306 |
+| Bardo | 254 |
 | Druida | 213 |
 | Clérigo | 213 |
 | Xamã | 73 |
@@ -196,23 +196,23 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Bardo | Inspiracao — na resistencia | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Bardo | Inspiracao — na pericia | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |
 
-### Tier 3 — mediana 40 HP-eq, 25 ativas
+### Tier 3 — mediana 39 HP-eq, 25 ativas
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
-| >> | Bardo | Aid | 160 | 112 × 1.42 | 45 de cura no grupo; 68 de THP |
-| >> | Bardo | Hypnotic Pattern | 111 | 78 × 1.42 | 78 de dano negado (6 turno(s) de criatura) |
 | >> | Druida | Call Lightning | 109 | 77 × 1.42 | 77 de dano |
 | >> | Xamã | Danca totemica | 103 | 72 × 1.42 | 2 de cura no grupo; 70 de THP |
+|  | Bardo | Aid | 96 | 68 × 1.42 | 22 de cura no grupo; 45 de THP |
 |  | Mago | Fireball | 92 | 65 × 1.42 | 65 de dano |
 |  | Feiticeiro | Lightning Bolt | 92 | 65 × 1.42 | 65 de dano |
 |  | Bruxo | Hypnotic Pattern | 78 | 78 × 1.00 | 78 de dano negado (6 turno(s) de criatura) |
+|  | Bardo | Hypnotic Pattern | 78 | 78 × 1.00 | 78 de dano negado (6 turno(s) de criatura) |
 |  | Bruxo | Hunger of Hadar | 74 | 74 × 1.00 | 35 de dano; 39 de dano negado (3 turno(s) de criatura) |
-|  | Mago | Hypnotic Pattern | 55 | 39 × 1.42 | 39 de dano negado (3 turno(s) de criatura) |
 |  | Clérigo | Mass Healing Word | 48 | 34 × 1.42 | 34 de cura no grupo |
 |  | Guerreiro | Action Surge | 43 | 14 × 3.08 | 14 de golpe a mais |
 |  | Paladino | Golpe Divino | 42 | 14 × 3.08 | 14 de golpe a mais |
 |  | Druida | Conjure Animals | 40 | 28 × 1.42 | 28 de aliado conjurado |
+|  | Mago | Hypnotic Pattern | 39 | 39 × 1.00 | 39 de dano negado (3 turno(s) de criatura) |
 |  | Clérigo | Hypnotic Pattern | 39 | 39 × 1.00 | 39 de dano negado (3 turno(s) de criatura) |
 |  | Feiticeiro | Grilhoes Planares | 39 | 27 × 1.42 | 14 de dano; 14 sangrando |
 |  | Mago | Fly | 33 | 23 × 1.42 | 23 de mira desviada |
@@ -241,11 +241,11 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
-| >> | Mago | Cone of Cold | 238 | 167 × 1.42 | 167 de dano |
-| >> | Feiticeiro | Cone of Cold | 238 | 167 × 1.42 | 167 de dano |
 | >> | Druida | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
 | >> | Clérigo | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
 | >> | Bardo | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
+| >> | Mago | Cone of Cold | 158 | 112 × 1.42 | 112 de dano |
+| >> | Feiticeiro | Cone of Cold | 158 | 112 × 1.42 | 112 de dano |
 |  | Clérigo | Flame Strike | 108 | 108 × 1.00 | 108 de dano |
 |  | Mago | Hold Monster | 89 | 63 × 1.42 | 63 de dano negado (3 turno(s) de criatura) |
 |  | Bardo | Otto's Irresistible Dance | 89 | 63 × 1.42 | 63 de dano negado (3 turno(s) de criatura) |
@@ -276,8 +276,8 @@ frequência, os três escopos encostam. Isto é desenho funcionando.
 | Escopo | Ativas | Mediana por uso | Usos/masmorra | Mediana por masmorra |
 |---|---|---|---|---|
 | combate | 8 | 12 | 3.08 | 38 |
-| descanso | 49 | 16 | 1.42 | 23 |
-| incursao | 14 | 35 | 1.00 | 35 |
+| descanso | 47 | 15 | 1.42 | 21 |
+| incursao | 16 | 38 | 1.00 | 38 |
 
 ### A mesma magia com disponibilidade diferente
 
@@ -289,10 +289,6 @@ Mesmo nome, mesmo efeito, escopo de recarga diferente entre classes:
 | Charm Person | Bruxo | T1 | 1x por incursao | 1.00 |
 | Hold Monster | Mago | T5 | 1x por descanso | 1.42 |
 | Hold Monster | Bruxo | T5 | 1x por incursao | 1.00 |
-| Hypnotic Pattern | Mago | T3 | 1x por descanso | 1.42 |
-| Hypnotic Pattern | Bardo | T3 | 1x por descanso | 1.42 |
-| Hypnotic Pattern | Clérigo | T3 | 1x por incursao | 1.00 |
-| Hypnotic Pattern | Bruxo | T3 | 1x por incursao | 1.00 |
 
 ## Tier que não melhora nada ofensivo
 
@@ -310,9 +306,9 @@ CD e alvo de progresso acoplados:
 
 | CD | Alvo de progresso | Salas | Fatia |
 |---|---|---|---|
-| 12 | 10 | 3 | 12% |
-| 15 | 10 | 13 | 50% |
-| 18 | 10 | 10 | 38% |
+| 12 | 10 | 6 | 23% |
+| 15 | 10 | 16 | 62% |
+| 18 | 10 | 4 | 15% |
 
 A CD escrita é a do tier 1. A que o grupo rola sobe com o tier, pelo
 mesmo passo do bônus de proficiência (`rules.AJUSTE_DE_CD_POR_TIER`),

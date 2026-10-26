@@ -167,19 +167,21 @@ def caso_taumaturgo_abre_a_escolha_encadeada():
     print("  Taumaturgo abre a segunda pergunta e as pericias entram: ok")
 
 
-def caso_passivas_consolidam_pelo_maior():
+def caso_passivas_consolidam_certo():
     """Dano em dado, cura em porcentagem, e as duas pelo maior — nunca somando."""
     efeitos = cl.efeitos("clerigo", 9, {"dominio_t2": "curandeiro",
                                         "dominio_t4": "ataques_abencoados"})
     assert efeitos["bonus_cura_pct"] == 0.1
     assert efeitos["dano_bonus"] == "1d8"
-    # Os dois que dao bonus de cura nao somam: vale o maior, que e a regra da
-    # casa para passiva. Com os dois em 10%, o tier 4 nao acrescenta — esta
-    # anotado para a passada de balanceamento, e nao e bug de consolidacao.
+    # O bonus de cura e a EXCECAO da regra da casa: ele soma. Com `max()` o
+    # Curandeiro do tier 2 e o Especialista do tier 4 davam 10% cada e o tier
+    # 4 nao acrescentava nada a quem pegou o tier 2 — uma escolha que nao
+    # escolhe. Ver `habilidades.SOMAM`.
     so_cura = cl.efeitos("clerigo", 9, {"dominio_t2": "curandeiro",
                                         "dominio_t4": "especialista_cura"})
-    assert so_cura["bonus_cura_pct"] == 0.1
-    print("  as passivas entram e consolidam pelo maior: ok")
+    assert abs(so_cura["bonus_cura_pct"] - 0.2) < 1e-9, so_cura["bonus_cura_pct"]
+    assert cl.efeitos("clerigo", 9, {"dominio_t2": "curandeiro"})["bonus_cura_pct"] == 0.1
+    print("  o dano consolida pelo maior; o bonus de cura soma: ok")
 
 
 # ------------------------------------------------------------------- a cura
@@ -371,7 +373,7 @@ async def main():
         caso_cd_sai_do_acerto()
         caso_escolha_destrava_uma_magia_so()
         caso_taumaturgo_abre_a_escolha_encadeada()
-        caso_passivas_consolidam_pelo_maior()
+        caso_passivas_consolidam_certo()
         await caso_cure_wounds_cura_em_porcentagem()
         await caso_curandeiro_soma_na_cura()
         await caso_mass_healing_word_pega_o_grupo()

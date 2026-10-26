@@ -162,7 +162,7 @@
       "tipo": "Armadilha",
       "descricao": "A ponte atravessa o poço do claustro e está quente o bastante para marcar a sola. O calor não vem de baixo: vem da pedra, e a pedra está lembrando de alguma coisa.",
       "dificuldade": "Difícil",
-      "cd": 18,
+      "cd": 12,
       "alvo_progresso": 10,
       "pericias": [
         "Acrobacia",
@@ -624,7 +624,7 @@
       "tipo": "Evento",
       "descricao": "Trinta cadeiras de coro, trinta hábitos dobrados em cima delas, nenhum corpo. O canto continua. Vem das cadeiras, e sabe o nome de quem entra.",
       "dificuldade": "Difícil",
-      "cd": 18,
+      "cd": 15,
       "alvo_progresso": 10,
       "pericias": [
         "Intuição",

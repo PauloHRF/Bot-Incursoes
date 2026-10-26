@@ -204,8 +204,25 @@ async def caso_grilhoes_acorrenta_e_sangra():
         if (l["valor"] or {}).get("dano_por_rodada") == "2d8"
     ]
     if not correntes:
-        assert "resistiu" in inter.resposta, inter.resposta
-        print("  Grilhoes: o alvo resistiu e nao foi acorrentado: ok")
+        # Sem corrente so ha um jeito: o save passou. Grilhoes tem `metade`,
+        # entao resistir nao e sair ileso — a criatura leva metade do 4d8, e
+        # e ISSO que o galho prova. Metade do maximo e o teto: acima dele, o
+        # `metade` nao entrou.
+        #
+        # Este galho quase nunca rodava, porque a criatura quase sempre
+        # falhava. Com os saves dela escalando por tier passou a rodar, e o
+        # que estava escrito aqui checava a palavra "resistiu" em
+        # `inter.resposta` — que no duble guarda o TITULO do embed, nao o
+        # corpo. Nunca teria pegado nada.
+        estado_apos = await cog._estado_combate(
+            await db.buscar_run(conn, run["id"]), incursao.objetivo
+        )
+        inimigo = estado_apos.inimigos[0]
+        levou = inimigo.hp_max - inimigo.hp_atual
+        teto = motor.maior_do_dado("4d8") // 2
+        assert 0 < levou <= teto, (levou, teto)
+        print(f"  Grilhoes: o alvo resistiu, levou {levou} (metade) e nao "
+              f"foi acorrentado: ok")
         return
     assert "acorrentado" in inter.resposta, inter.resposta
 

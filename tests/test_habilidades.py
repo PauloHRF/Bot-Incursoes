@@ -2,13 +2,20 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes as cl, config, database as db, motor  # noqa: E402
+from src import (  # noqa: E402
+    classes as cl,
+    config,
+    database as db,
+    habilidades as hb,
+    motor,
+)
 from src.cogs.ficha import Ficha, embed_ficha  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.rules import TIER_MAXIMO, mod_pericia  # noqa: E402
@@ -47,6 +54,51 @@ async def preparar(classe="guerreiro", nivel=8):
 
 def inimigo(hp=100, ca=1):
     return motor.Inimigo(0, "Alvo", ca, 0, "1d1", hp, hp)
+
+
+def caso_texto_bate_com_a_mecanica():
+    """Todo dado que a habilidade ROLA tem de estar escrito no texto dela.
+
+    E o erro que nenhum outro teste pega: enfraquecer o Cone of Cold de 12d8
+    para 8d8 na `acao` e deixar o texto dizendo 12d8 passa por toda a suite,
+    porque a mecanica esta certa — so a promessa ao jogador e que fica
+    mentindo. Aconteceu, e e por isso que este caso existe.
+
+    A checagem e de um lado so: o texto pode citar dado que a `acao` nao tem
+    (a descricao de uma escolha fala das opcoes), mas nao pode OMITIR nem
+    CONTRADIZER o que vai rolar.
+    """
+    DADO = re.compile(r"[0-9]+d[0-9]+")
+    ONDE_ROLA = ("dano", "thp", "cura", "dano_por_rodada", "dano_extra")
+    mudas = []
+    for classe, tiers in hb.HABILIDADES.items():
+        for tier, lista in tiers.items():
+            for h in lista:
+                acao = h.acao or {}
+                if acao.get("tipo") == "invocar":
+                    # Invocacao nao: o dado e da CRIATURA, e ela entra na sala
+                    # com a ficha dela a vista. Exigir o dado no texto da
+                    # magia seria pedir que ele repetisse a carta do bicho.
+                    continue
+                rolados = [
+                    acao[k] for k in ONDE_ROLA
+                    if isinstance(acao.get(k), str) and DADO.search(acao[k])
+                ]
+                escritos = set()
+                for texto in (h.texto, *(
+                    o.get("texto", "") for o in
+                    ((h.escolha or {}).get("opcoes") or [])
+                )):
+                    escritos |= set(DADO.findall(texto or ""))
+                for expressao in rolados:
+                    for dado in DADO.findall(expressao):
+                        if dado not in escritos:
+                            mudas.append(
+                                f"{classe} T{tier} {h.id}: rola {dado} "
+                                f"({expressao}), o texto nao diz"
+                            )
+    assert not mudas, "texto nao bate com a mecanica: " + "; ".join(mudas)
+    print("  todo dado que a habilidade rola esta escrito no texto: ok")
 
 
 def caso_catalogo_completo():
@@ -241,6 +293,7 @@ async def caso_ficha_mostra_habilidades():
 async def main():
     try:
         caso_catalogo_completo()
+        caso_texto_bate_com_a_mecanica()
         caso_efeitos_se_somam()
         caso_bonus_de_pericia()
         caso_critico_em_dezenove()

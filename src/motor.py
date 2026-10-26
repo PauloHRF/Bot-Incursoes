@@ -7,13 +7,19 @@ from __future__ import annotations
 
 import random
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import Any, Iterable, Optional, Sequence
 
 from . import ameaca
 from .incursoes import OPCOES_POR_PASSO, Monstro, Sala
-from .rules import PESO_TIER, melhor_pericia, tier
+from .rules import (
+    PESO_TIER,
+    cd_no_tier,
+    escala_do_monstro,
+    melhor_pericia,
+    tier,
+)
 
 # Uma expressao de dano e uma soma de termos: "3d8+3", "1d6", "3d8+3+2d6".
 # Cada termo e NdM ou um numero solto, com sinal opcional.
@@ -286,14 +292,79 @@ class ResolucaoSala:
     def quem_falhou(self) -> list[ResultadoTeste]:
         return [r for r in self.resultados if not r.passou]
 
-def escalar_monstro(monstro: Monstro, niveis: list[int]) -> Monstro:
-    """Ajusta o monstro à composição do grupo.
+def escalar_dano(expressao: str, fator: float) -> str:
+    """Multiplica uma expressão de dano, mantendo o formato de dado.
 
-    Hoje devolve o monstro como está: a regra de escala do chefe ainda não foi
-    definida. Este é o único ponto a mudar quando ela for — a soma de pesos por
-    tier já vem calculada em `peso_do_grupo`.
+    '2d6+3' a 2,4 vira '5d6+7': cresce a quantidade de dados e a constante,
+    e não só a constante — assim a variação do golpe acompanha o tamanho
+    dele, em vez de virar um número fixo grande com um dadinho em cima.
     """
-    return monstro
+    if fator == 1.0:
+        return expressao
+    partes = []
+    for sinal, quantas, faces in termos_de_dano(expressao):
+        marca = "-" if sinal < 0 else ("+" if partes else "")
+        if faces:
+            partes.append(f"{marca}{max(1, round(quantas * fator))}d{faces}")
+        else:
+            partes.append(f"{marca}{max(1, round(quantas * fator))}")
+    return "".join(partes)
+
+
+def tier_do_grupo(niveis: list[int]) -> Optional[int]:
+    """O tier que a criatura deve enfrentar, dado quem entrou.
+
+    A MEDIANA, e não o maior: um personagem de tier baixo pode pegar carona
+    numa incursão alta (`pode_encarar`), e escalar pelo maior esmagaria
+    justamente ele. Grupo vazio não escala.
+    """
+    if not niveis:
+        return None
+    ordenados = sorted(tier(n) for n in niveis)
+    return ordenados[len(ordenados) // 2]
+
+
+def escalar_monstro(monstro: Monstro, tier_alvo: Optional[int] = None) -> Monstro:
+    """A criatura no tier de quem a enfrenta.
+
+    A ficha escrita no banco é a do tier 1. Corpo e dano crescem pelo mesmo
+    multiplicador do HP do grupo (`rules.escala_do_monstro`); CA e ataque
+    sobem pelo ajuste do bônus de proficiência, o mesmo da CD da sala, para a
+    chance de acerto dos dois lados ficar onde está.
+
+    O tier vem do GRUPO, e não da incursão: `Incursao.tier` tem default
+    `TIER_MAXIMO` para dizer "aberta a todos" na hora de entrar, e usar isso
+    aqui daria criatura de tier 5 em toda incursão sem tier declarado.
+
+    Sem tier devolve a criatura como está — conteúdo antigo e teste solto
+    continuam valendo.
+    """
+    escala = escala_do_monstro(tier_alvo)
+    ajuste = cd_no_tier(0, tier_alvo)
+    if escala == 1.0 and ajuste == 0:
+        return monstro
+    return replace(
+        monstro,
+        ca=monstro.ca + ajuste,
+        ataque=monstro.ataque + ajuste,
+        hp=max(1, round(monstro.hp * escala)),
+        dano=escalar_dano(monstro.dano, escala),
+        # Os saves sobem com o ataque, e nao de graca: criatura sem save
+        # escrito deduz o dele do bonus de ataque (`Inimigo.save`), que acabou
+        # de subir. Sem escalar os escritos tambem, a magia de save do jogador
+        # ficaria forte contra criatura do bestiario e fraca contra a escrita a
+        # mao — a mesma criatura resistindo de dois jeitos.
+        saves={a: v + ajuste for a, v in monstro.saves.items()},
+        regeneracao=round(monstro.regeneracao * escala),
+        golpes=[
+            replace(
+                g,
+                ataque=g.ataque + ajuste,
+                dano=escalar_dano(g.dano, escala),
+            )
+            for g in monstro.golpes
+        ],
+    )
 
 
 def peso_do_grupo(niveis: list[int]) -> int:

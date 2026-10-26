@@ -73,7 +73,7 @@
       "tipo": "Armadilha",
       "descricao": "Cada passo volta multiplicado, e junto com o eco vem alguma coisa que anda no contratempo. O chão é feito de placas que afundam sob peso.",
       "dificuldade": "Difícil",
-      "cd": 18,
+      "cd": 12,
       "alvo_progresso": 10,
       "pericias": [
         "Percepção",
@@ -145,7 +145,7 @@
       "tipo": "Evento",
       "descricao": "Alguém tentou fechar a fenda daqui e parou no meio. As velas ainda queimam. Terminar o ritual enfraquece o que espera adiante; errar acorda o resto.",
       "dificuldade": "Difícil",
-      "cd": 18,
+      "cd": 15,
       "alvo_progresso": 10,
       "pericias": [
         "Religião",

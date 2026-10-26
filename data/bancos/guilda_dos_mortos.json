@@ -530,7 +530,7 @@
       "tipo": "Armadilha",
       "descricao": "Faltam onze degraus no meio, e o vão dá direto no nível de baixo do ossuário, onde a Guilda empilha o que não coube em caixa.",
       "dificuldade": "Difícil",
-      "cd": 18,
+      "cd": 12,
       "alvo_progresso": 10,
       "pericias": [
         "Atletismo",

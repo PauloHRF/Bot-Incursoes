@@ -68,6 +68,25 @@ CONSTANTE_OBJETIVO = 9
 AJUSTE_DE_CD_POR_TIER = {1: 0, 2: 2, 3: 3, 4: 5, 5: 6}
 
 
+# Quanto o corpo de uma criatura cresce por tier. É a progressão de HP da
+# família d8 (19, 31, 45, 59, 73) relativa ao tier 1 — a mesma curva que o
+# grupo segue, tanto no HP que ele tem quanto no dano que ele faz, que medem
+# quase igual (3,8x e 3,3x do tier 1 ao 5).
+#
+# É o que faltava para o combate funcionar fora do tier 1: a criatura escrita
+# no banco é a do tier 1, e os bancos são compartilhados entre incursões de
+# tiers diferentes. Sem escala, uma sala de tier 4 abria com criatura de tier
+# 1 e o combate acabava em uma rodada e meia.
+ESCALA_DE_MONSTRO_POR_TIER = {1: 1.0, 2: 1.6, 3: 2.4, 4: 3.1, 5: 3.8}
+
+
+def escala_do_monstro(tier_alvo: Optional[int]) -> float:
+    """O multiplicador de corpo e de dano da criatura naquele tier."""
+    if not tier_alvo:
+        return 1.0
+    return ESCALA_DE_MONSTRO_POR_TIER[max(1, min(TIER_MAXIMO, tier_alvo))]
+
+
 def cd_no_tier(cd_base: int, tier_alvo: Optional[int]) -> int:
     """A CD que o grupo daquele tier rola de fato.
 
