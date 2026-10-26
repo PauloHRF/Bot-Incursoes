@@ -53,7 +53,15 @@ class IncursoesBot(commands.Bot):
 def main() -> None:
     if not config.TOKEN:
         raise SystemExit("DISCORD_TOKEN ausente: copie .env.example para .env e preencha o token.")
-    IncursoesBot().run(config.TOKEN, log_level=logging.INFO)
+    # root_logger=True porque o default do discord.py e False: sem ele, o
+    # `setup_logging` configura so o logger "discord", e tudo que ESTE modulo
+    # registra em `log` — o "Conectado como", a contagem de comandos
+    # sincronizados — e escrito e descartado, sem handler nenhum.
+    #
+    # Na maquina de desenvolvimento isso passa despercebido. Num servidor e
+    # cegueira: o journalctl mostraria o bot conectando ao gateway e mais
+    # nada, nem se os comandos chegaram na guilda nem se um cog quebrou.
+    IncursoesBot().run(config.TOKEN, log_level=logging.INFO, root_logger=True)
 
 
 if __name__ == "__main__":
