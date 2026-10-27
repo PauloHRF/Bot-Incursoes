@@ -9,6 +9,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from src import classes as cl, config, database as db  # noqa: E402
+from src.rules import PERICIAS  # noqa: E402
 from src.cogs.ficha import LIMITE_PERSONAGENS, Ficha, SeletorPericias  # noqa: E402
 from src.rules import NIVEL_MAXIMO, TIER_MAXIMO, chave_comparacao, tier  # noqa: E402
 from fakes import (  # noqa: E402
@@ -408,6 +409,79 @@ async def caso_remover_respeita_run_viva():
     print("  a ficha de quem esta numa run viva nao e apagada: ok")
 
 
+async def caso_alterar_abre_as_pericias_no_tier_que_as_da():
+    """Num tier que abriu vaga de proficiencia, o alterar deixa refaze-las.
+
+    Sem isto o jogador ficava preso na escolha do dia do registro: as
+    decisoes dava para refazer, as pericias nao. O Mago ganha pericia no
+    tier 3 (de 4 para 5).
+    """
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Zarth", "mago", ["Arcanismo", "Historia"]
+    )
+    # sobe ate o tier 3, resolvendo o que aparecer pelo caminho
+    for _ in range(2):
+        subir = FakeInteraction(canal, dono)
+        await ficha.upar.callback(ficha, subir)
+        if subir.view_enviada is not None:
+            subir.view_enviada.menu._values = ["fireball_mago"]
+            await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+    personagem = await db.buscar_personagem(conn, pid)
+    assert tier(personagem["nivel"]) == 3, personagem["nivel"]
+
+    # o tier 3 do mago da pericia: de 4 para 5
+    numeros = cl.CLASSES["mago"]
+    assert numeros.numeros(5).pericias > numeros.numeros(3).pericias
+
+    inter = FakeInteraction(canal, dono)
+    await ficha.alterar.callback(ficha, inter)
+
+    # o menu de pericias veio por followup, com a cota do tier
+    assert inter.view_do_seguimento is not None, "o menu de pericias nao abriu"
+    menu = inter.view_do_seguimento.menu
+    assert menu.max_values == numeros.numeros(5).pericias, menu.max_values
+
+    # e trocar pelo menu grava de verdade
+    # Os nomes saem do catalogo: escritos a mao, um acento perdido faz o
+    # caso falhar por grafia em vez de por comportamento.
+    novas = [p for p in PERICIAS if p not in personagem["pericias"]][:2]
+    menu._values = novas
+    await inter.view_do_seguimento._escolher(FakeInteraction(canal, dono))
+    depois = await db.buscar_personagem(conn, pid)
+    assert sorted(depois["pericias"]) == sorted(novas), depois["pericias"]
+    print("  o alterar abre as pericias no tier que as da: ok")
+
+
+async def caso_alterar_nao_abre_pericia_em_tier_que_nao_da():
+    """Tier sem vaga nova nao oferece pericia — so o que ele de fato deu.
+
+    O Guerreiro tem 3 proficiencias em todos os tiers: a cota nunca cresce.
+    """
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Bram", "guerreiro", ["Atletismo"]
+    )
+    subir = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, subir)
+    if subir.view_enviada is not None:
+        opcoes = [o.value for o in subir.view_enviada.menu.options]
+        subir.view_enviada.menu._values = [opcoes[0]]
+        await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+
+    guerreiro = cl.CLASSES["guerreiro"]
+    assert guerreiro.numeros(3).pericias == guerreiro.numeros(1).pericias
+
+    inter = FakeInteraction(canal, dono)
+    await ficha.alterar.callback(ficha, inter)
+    assert inter.view_do_seguimento is None, (
+        "o tier 2 do guerreiro nao da pericia: o menu nao devia abrir"
+    )
+    print("  tier sem vaga de pericia nao oferece pericia: ok")
+
+
 async def main():
     try:
         caso_tabela_das_classes()
@@ -419,6 +493,8 @@ async def main():
         await caso_a_run_sem_tier_nao_trava()
         await caso_remover_apaga_a_ficha_de_outro()
         await caso_remover_respeita_run_viva()
+        await caso_alterar_abre_as_pericias_no_tier_que_as_da()
+        await caso_alterar_nao_abre_pericia_em_tier_que_nao_da()
         await caso_menu_limita_as_proficiencias()
         await caso_classe_pendente_e_recusada()
         await caso_nome_repetido_e_limite()

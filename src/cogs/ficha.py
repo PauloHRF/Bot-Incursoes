@@ -884,14 +884,19 @@ class Ficha(commands.Cog):
 
     @grupo.command(
         name="alterar",
-        description="Refaz as decisoes do tier atual, se voce ainda nao jogou nele",
+        description="Refaz as decisoes e pericias do tier, se voce ainda nao jogou nele",
     )
     @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
     @app_commands.autocomplete(personagem=_sugerir_personagens)
     async def alterar(
         self, interaction: discord.Interaction, personagem: Optional[str] = None
     ) -> None:
-        """Esquece as decisoes do tier de agora, para o jogador refaze-las.
+        """Esquece o que o tier de agora deu, para o jogador refazer.
+
+        Duas coisas, e nem todo tier tem as duas: as DECISOES (as magias e
+        opcoes que o `upar` pediu) e as PROFICIENCIAS, quando aquele tier
+        abriu vaga nova. A maioria das classes ganha pericia no tier 1, 3 e
+        5; Barbaro, Guerreiro e Ladino so no 1.
 
         O `/ficha voltar` ja fazia isso, mas pelo caminho longo: descer um
         tier, perder os numeros, e subir de novo. Aqui o nivel nao se mexe.
@@ -931,23 +936,44 @@ class Ficha(commands.Cog):
         apagadas = [
             h.nome for h in classe.habilidades_do_tier(atual) if h.id in guardadas
         ]
-        if not apagadas:
+
+        # O tier tambem abriu vaga de proficiencia? Ai as pericias entram no
+        # que da para refazer. A cota cresce em tiers diferentes conforme a
+        # classe — a maioria ganha no 1, no 3 e no 5, e Barbaro, Guerreiro e
+        # Ladino so no 1 —, entao a resposta sai da tabela e nao de uma lista
+        # escrita aqui.
+        cota = classe.numeros(nivel_do_tier(atual)).pericias
+        antes_dela = (
+            classe.numeros(nivel_do_tier(atual - 1)).pericias if atual > 1 else 0
+        )
+        abriu_pericia = cota > antes_dela
+
+        if not apagadas and not abriu_pericia:
             await interaction.response.send_message(
-                f"**{escolhido['nome']}** nao tem decisao tomada no tier "
-                f"{atual} para refazer.",
+                f"O tier {atual} de **{escolhido['nome']}** nao tem decisao nem "
+                f"proficiencia para refazer — ele nao abriu nenhuma das duas.",
                 ephemeral=True,
             )
             return
 
-        await db.definir_escolhas(self.bot.db, escolhido["id"], mantidas)
+        if apagadas:
+            await db.definir_escolhas(self.bot.db, escolhido["id"], mantidas)
         atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
+
+        refazendo = [f"**{n}**" for n in apagadas]
+        if abriu_pericia:
+            refazendo.append(f"as **{cota} proficiencia(s)**")
         texto = (
             f"\U0001f501 {interaction.user.mention} vai refazer no tier "
             f"{atual} de **{escolhido['nome']}**: "
-            + ", ".join(f"**{n}**" for n in apagadas)
+            + ", ".join(refazendo)
             + "."
         )
         await self._responder_com_escolha(interaction, atualizado, texto)
+        # O menu das pericias vem por followup, como no `upar`: ele precisa da
+        # resposta ja dada.
+        if abriu_pericia:
+            await self._abrir_pericias_em_seguida(interaction, atualizado)
 
     @grupo.command(
         name="remover", description="(admin) Apaga o personagem de qualquer jogador"
