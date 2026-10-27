@@ -17,6 +17,7 @@ from src.cogs.incursao import (  # noqa: E402
     ViewCombate,
 )
 from fakes import (  # noqa: E402
+    leu,
     CANAL,
     GUILD,
     INDEFESO,
@@ -115,7 +116,7 @@ async def caso_cura_em_si_mesmo():
     # machuca antes, senao nao ha o que curar
     await db.definir_hp(conn, run["id"], dono, 10)
     inter = await usar(cog, canal, run, dono, "second_wind")
-    assert "Second Wind" in inter.resposta and "recupera" in inter.resposta
+    assert "Second Wind" in leu(inter) and "recupera" in leu(inter)
 
     hp = (await db.hp_dos_participantes(conn, run["id"]))[dono]
     maximo = cl.classe("guerreiro").numeros(8).hp
@@ -123,8 +124,74 @@ async def caso_cura_em_si_mesmo():
 
     # o uso acabou: e 1x por combate
     de_novo = await usar(cog, canal, run, dono, "second_wind")
-    assert "nao esta disponivel" in de_novo.resposta, de_novo.resposta
+    assert "nao esta disponivel" in leu(de_novo), leu(de_novo)
     print("  Second Wind cura e gasta o uso do combate: ok")
+
+
+async def caso_a_habilidade_aparece_uma_vez_so():
+    """A habilidade usada sai no canal, e NAO se repete em privado.
+
+    Antes o jogador via a propria magia duas vezes: uma mensagem publica
+    para o grupo e uma efemera identica so para ele. A publica fica, porque
+    e ela que conta a historia do combate para a mesa.
+
+    Mas a interacao foi adiada (ver o `defer` do combate) e precisa ser
+    fechada de algum jeito, senao o Discord deixa o "pensando..." pendurado.
+    Por isso a efemera e APAGADA em vez de preenchida.
+    """
+    conn, canal, cog, incursao = await preparar(classe="guerreiro", nivel=8)
+    run = await abrir_combate(conn, canal, cog, incursao)
+    dono = JOGADORES[0]
+    await db.definir_hp(conn, run["id"], dono, 10)
+
+    antes = len(canal.enviadas)
+    inter = await usar(cog, canal, run, dono, "second_wind")
+
+    # 1. saiu no canal, uma vez
+    publicas = [
+        m for m in canal.enviadas[antes:]
+        if "Second Wind" in (getattr(m, "content", None) or "")
+    ]
+    assert len(publicas) == 1, publicas
+
+    # 2. e nao sobrou efemera com o mesmo texto
+    assert not inter.resposta, (
+        f"a habilidade se repetiu em privado: {inter.resposta!r}"
+    )
+
+    # 3. mas a interacao adiada foi fechada — nada de "pensando..." eterno
+    assert inter.adiado and inter.efemera_apagada, (
+        inter.adiado, inter.efemera_apagada
+    )
+    print("  a habilidade sai so no canal, e a efemera adiada e fechada: ok")
+
+
+async def caso_as_habilidades_somem_quando_o_combate_acaba():
+    """O anuncio de habilidade e narracao da luta; depois dela e ruido.
+
+    O painel fica, e ele ja guarda o desfecho. O que nao faz sentido e o
+    canal ficar com "Fulano usa Second Wind" entre uma sala e a proxima.
+    """
+    conn, canal, cog, incursao = await preparar(classe="guerreiro", nivel=8)
+    run = await abrir_combate(conn, canal, cog, incursao)
+    dono = JOGADORES[0]
+    await db.definir_hp(conn, run["id"], dono, 10)
+    await usar(cog, canal, run, dono, "second_wind")
+
+    vivas = [
+        m for m in canal.mensagens
+        if "Second Wind" in (getattr(m, "content", None) or "")
+    ]
+    assert vivas, "a habilidade nem chegou ao canal"
+
+    await cog._apagar_usadas(run["id"])
+
+    sobraram = [
+        m for m in canal.mensagens
+        if "Second Wind" in (getattr(m, "content", None) or "")
+    ]
+    assert not sobraram, sobraram
+    print("  o fim do combate tira as habilidades usadas do canal: ok")
 
 
 async def caso_uso_volta_no_proximo_combate():
@@ -162,7 +229,7 @@ async def caso_habilidade_gasta_o_turno():
     msg = await canal.fetch_message(run["mensagem_id"])
 
     inter = await usar(cog, canal, run, dono, "action_surge", msg=msg)
-    assert "Action Surge" in inter.resposta
+    assert "Action Surge" in leu(inter)
 
     # O Action Surge vale DUAS acoes, e uma acao de quem tem Multiattack sao
     # dois golpes: quatro no total, todos da habilidade.
@@ -177,12 +244,12 @@ async def caso_habilidade_gasta_o_turno():
 
     ataque = FakeInteraction(canal, dono, msg)
     await cog.atacar(ataque, run["id"], "OBJ")
-    assert "Action Surge" in ataque.resposta, ataque.resposta
+    assert "Action Surge" in leu(ataque), leu(ataque)
     assert len(await db.ataques_da_rodada(conn, run["id"], passo, 1)) == 2 * por_acao
 
     # nem outra habilidade entra no mesmo turno
     outra = await usar(cog, canal, run, dono, "second_wind", msg=msg)
-    assert "Action Surge" in outra.resposta, outra.resposta
+    assert "Action Surge" in leu(outra), leu(outra)
 
     # e quem atacou gasta o turno do mesmo jeito
     normal = FakeInteraction(canal, outro, msg)
@@ -206,7 +273,7 @@ async def caso_habilidade_sem_golpe_fecha_a_rodada():
     # Rage e "duracao" com alvo proprio: nao pede alvo, mesmo com tres criaturas
     inter = await usar(cog, canal, run, outro, "rage", msg=msg)
     assert inter.view_enviada is None, "habilidade em si mesmo nao pergunta o alvo"
-    assert "Rage" in inter.resposta, inter.resposta
+    assert "Rage" in leu(inter), leu(inter)
 
     assert await db.acao_do_turno(conn, run["id"], passo, 1, outro) == "rage"
     assert await db.quem_agiu(conn, run["id"], passo, 1) == {dono, outro}
@@ -223,7 +290,7 @@ async def caso_perfect_strike_acerta_sempre():
     passo = cog._passo(run)
 
     inter = await usar(cog, canal, run, dono, "perfect_strike")
-    assert "CRITICO" in inter.resposta, inter.resposta
+    assert "CRITICO" in leu(inter), leu(inter)
     golpe = (await db.ataques_da_rodada(conn, run["id"], passo, 1))[0]
     assert golpe["dano"] > 0, "um golpe garantido nunca sai sem dano"
     print("  Perfect Strike acerta e sai critico: ok")
@@ -261,7 +328,7 @@ async def caso_cura_em_aliado_pede_alvo():
     assert await db.usos_da_run(conn, run["id"], curandeiro) == {}
 
     inter = await usar(cog, canal, run, curandeiro, "cura_pelas_maos", [ferido])
-    assert "recupera" in inter.resposta
+    assert "recupera" in leu(inter)
     maximo = cl.classe("paladino").numeros(8).hp
     assert (await db.hp_dos_participantes(conn, run["id"]))[ferido] == 5 + int(maximo * 0.3)
     # e o grupo fica sabendo
@@ -289,7 +356,7 @@ async def caso_menu_so_mostra_o_que_da_para_usar():
     fechado = FakeInteraction(canal, dono)
     await cog.abrir_habilidades(fechado, run["id"], "OBJ")
     assert fechado.view_enviada is None
-    assert "Second Wind" in fechado.resposta, fechado.resposta
+    assert "Second Wind" in leu(fechado), leu(fechado)
 
     # na rodada seguinte da para usar a outra
     await cog.atacar(FakeInteraction(canal, JOGADORES[1]), run["id"], "OBJ")
@@ -300,7 +367,7 @@ async def caso_menu_so_mostra_o_que_da_para_usar():
     vazio = FakeInteraction(canal, dono)
     await cog.abrir_habilidades(vazio, run["id"], "OBJ")
     assert vazio.view_enviada is None
-    assert "nao tem habilidade" in vazio.resposta
+    assert "nao tem habilidade" in leu(vazio)
     print("  o menu lista so as ativas prontas e com uso: ok")
 
 
@@ -433,7 +500,7 @@ async def caso_brutal_strike_soma_ao_ataque_em_vez_de_substituir():
         if a["user_id"] == dono and a["origem"] == "habilidade"
     ]
     # A acao cheia: dois golpes, nao um.
-    assert len(ataques) == por_acao, (len(ataques), inter.resposta)
+    assert len(ataques) == por_acao, (len(ataques), leu(inter))
 
     # E o THP ganho e o proprio d10, entre 1 e 10 — nao uma fracao do dano.
     depois = await cog._estado_combate(
@@ -450,6 +517,8 @@ async def main():
     try:
         caso_catalogo_das_ativas()
         await caso_cura_em_si_mesmo()
+        await caso_a_habilidade_aparece_uma_vez_so()
+        await caso_as_habilidades_somem_quando_o_combate_acaba()
         await caso_uso_volta_no_proximo_combate()
         await caso_habilidade_gasta_o_turno()
         await caso_o_surge_vale_mais_que_atacar()

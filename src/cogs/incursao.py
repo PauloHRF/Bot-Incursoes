@@ -393,6 +393,13 @@ class Incursoes(commands.Cog):
         # coisa que so vale por 15 minutos (o prazo do token de interacao).
         self._efemeras: dict[int, list[discord.Interaction]] = {}
         self._chamadas: dict[int, Any] = {}
+        # O ultimo anuncio publico de habilidade, por run: e com ele que
+        # `_avancar` sabe que nao deve repetir a mesma frase em privado.
+        self._publicado: dict[int, str] = {}
+        # As mensagens de habilidade usada que estao no canal. Elas contam
+        # a historia do combate enquanto ele rola, e viram ruido depois que
+        # ele acaba — o painel ja guarda o desfecho.
+        self._usadas: dict[int, list[Any]] = {}
         # O log da rodada no painel, e a fila de cada run: um restart perde o
         # log (o combate continua do banco) e recria as travas.
         self._registros: dict[int, dict[str, Any]] = {}
@@ -942,7 +949,7 @@ class Incursoes(commands.Cog):
                 "Não achei as salas sorteadas para este passo. O banco da Organização mudou?"
             )
             return
-        total = len(await db.participantes(self.bot.db, run["id"]))
+        total = len(await db.participantes_de_pe(self.bot.db, run["id"]))
         votos = await db.votos_da_linha(self.bot.db, run["id"], linha)
         view = ViewVotacao(self, run["id"], linha, opcoes)
         mensagem = await canal.send(
@@ -970,6 +977,12 @@ class Incursoes(commands.Cog):
         if not await db.esta_na_run(self.bot.db, run_id, interaction.user.id):
             await interaction.response.send_message("Você não faz parte desta run.", ephemeral=True)
             return
+        if not await db.esta_de_pe(self.bot.db, run_id, interaction.user.id):
+            await interaction.response.send_message(
+                "Você está caído — quem está no chão não escolhe o caminho.",
+                ephemeral=True,
+            )
+            return
 
         await db.registrar_voto(self.bot.db, run_id, linha, interaction.user.id, sala_id)
         incursao = self._incursao_da_run(run)
@@ -981,7 +994,7 @@ class Incursoes(commands.Cog):
         self._guardar_efemera(run_id, interaction)
 
         votos = await db.votos_da_linha(self.bot.db, run_id, linha)
-        total = len(await db.participantes(self.bot.db, run_id))
+        total = len(await db.participantes_de_pe(self.bot.db, run_id))
         opcoes = await self._opcoes(run, linha)
 
         if interaction.message is not None:
@@ -1017,7 +1030,7 @@ class Incursoes(commands.Cog):
         if not contagem:
             return  # ninguem votou ainda: a votacao segue aberta
 
-        total = len(await db.participantes(self.bot.db, run["id"]))
+        total = len(await db.participantes_de_pe(self.bot.db, run["id"]))
         maioria = maioria_de(total)
         maximo = max(contagem.values())
         empatadas = [sala_id for sala_id, n in contagem.items() if n == maximo]
@@ -1061,7 +1074,7 @@ class Incursoes(commands.Cog):
             return
         # Atravessar a sala a tira do sorteio: ela nao volta a ser oferecida.
         await db.registrar_visita(self.bot.db, run["id"], self._passo(run), sala.id)
-        total = len(await db.participantes(self.bot.db, run["id"]))
+        total = len(await db.participantes_de_pe(self.bot.db, run["id"]))
 
         if sala.tipo == "Descanso":
             await db.atualizar_run(self.bot.db, run["id"], status="em_sala", sala_atual=sala.id)
@@ -1789,6 +1802,16 @@ class Incursoes(commands.Cog):
             if interaction is None or respondido:
                 return
             respondido = True
+            # Se esta exata frase ja foi para o canal, nao repete em
+            # privado: quem clicou via a propria habilidade duas vezes.
+            # Mas a interacao foi adiada e PRECISA ser fechada, senao o
+            # Discord deixa o "pensando..." pendurado para sempre.
+            if texto == self._publicado.get(run["id"]):
+                try:
+                    await interaction.delete_original_response()
+                except discord.HTTPException:
+                    pass
+                return
             await self._dizer(interaction, texto)
             # Registra na hora de mandar, nao antes: parte destas respostas sai
             # depois da trava, e a rodada pode ter virado no meio. Registrada
@@ -2043,6 +2066,7 @@ class Incursoes(commands.Cog):
         await self._atualizar_painel(run, sala, estado, encerrado=True)
         await self._limpar_efemeras(run["id"])
         await self._apagar_chamada(run["id"])
+        await self._apagar_usadas(run["id"])
         self._registros.pop(run["id"], None)
         if estado.inimigos_derrotados:
             await self._apos_combate_vencido(run, sala, estado)
@@ -2099,6 +2123,20 @@ class Incursoes(commands.Cog):
         for interaction in self._efemeras.pop(run_id, []):
             try:
                 await interaction.delete_original_response()
+            except (discord.HTTPException, AttributeError):
+                pass
+
+    async def _apagar_usadas(self, run_id: int) -> None:
+        """Tira do canal os anuncios de habilidade daquele combate.
+
+        Durante a luta eles sao a narracao: quem conjurou o que, e quando.
+        Depois dela viram rolagem morta entre uma sala e a proxima — o
+        painel, que fica, ja guarda o desfecho.
+        """
+        self._publicado.pop(run_id, None)
+        for mensagem in self._usadas.pop(run_id, []):
+            try:
+                await mensagem.delete()
             except (discord.HTTPException, AttributeError):
                 pass
 
@@ -3569,13 +3607,20 @@ class Incursoes(commands.Cog):
             )
 
     async def _anunciar_habilidade(self, run: dict[str, Any], texto: str) -> None:
-        """O grupo ve que alguem usou uma habilidade, sem detalhe de rolagem."""
+        """O grupo ve que alguem usou uma habilidade, sem detalhe de rolagem.
+
+        Guarda o que publicou: a mesma frase ia sair DE NOVO em privado
+        para quem clicou, e o jogador via a habilidade dele duas vezes na
+        tela. Quem compara e `_avancar`.
+        """
         canal = await self._canal(run)
         if canal:
             try:
-                await canal.send(texto)
+                mensagem = await canal.send(texto)
             except discord.HTTPException:
-                pass
+                return
+            self._publicado[run["id"]] = texto
+            self._usadas.setdefault(run["id"], []).append(mensagem)
 
     async def _apos_combate_vencido(
         self, run: dict[str, Any], sala: Sala, estado=None
@@ -3664,6 +3709,12 @@ class Incursoes(commands.Cog):
                 "Esta sala virou combate — não há teste para rolar.", ephemeral=True
             )
             return
+        if not await db.esta_de_pe(self.bot.db, run_id, interaction.user.id):
+            await interaction.response.send_message(
+                "Você está caído — quem está no chão não encara a sala. Espere o Descanso.",
+                ephemeral=True,
+            )
+            return
         personagem = await db.personagem_da_run(self.bot.db, run_id, interaction.user.id)
         if not personagem:
             await interaction.response.send_message(
@@ -3722,7 +3773,7 @@ class Incursoes(commands.Cog):
         )
 
         registros = await db.testes_da_sala(self.bot.db, run_id, self._passo(run))
-        total = len(await db.participantes(self.bot.db, run_id))
+        total = len(await db.participantes_de_pe(self.bot.db, run_id))
         resolucao = _resolucao(sala, registros, total)
 
         if resolucao.encerrada:

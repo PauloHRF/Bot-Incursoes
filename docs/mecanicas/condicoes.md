@@ -35,7 +35,7 @@ Os valores são **o que um stack faz**, com o sinal já dentro.
 
 |  | Condição | O que um stack faz | Fonte | Decai | Teto |
 |---|---|---|---|---|---|
-| 🥵 | Exaustão | ataque -2; testes -2; iniciativa -5 | Evento | não | 5 |
+| 🫩 | Exaustão | ataque -2; testes -2; iniciativa -5 | Evento | não | 5 |
 
 A Exaustão é a única condição com tipo próprio, e merece: ela **não decai com o combate**. Sai no Descanso, ou numa habilidade que a tire.
 

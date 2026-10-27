@@ -152,7 +152,7 @@ CATALOGO: tuple[Condicao, ...] = (
     ),
     # ----------------------------------------------------------- a Exaustão
     Condicao(
-        "exaustao", "Exaustão", EXAUSTAO, "\N{OVERHEATED FACE}",
+        "exaustao", "Exaustão", EXAUSTAO, "\U0001FAE9",  # rosto abatido: o nome unicode e novo demais para o escape N{}
         f"{EXAUSTAO_ATAQUE} nos ataques, {EXAUSTAO_TESTES} nos testes e "
         f"{EXAUSTAO_INICIATIVA} de iniciativa, por ponto. "
         f"Não passa com o combate: sai no descanso. "

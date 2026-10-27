@@ -894,6 +894,36 @@ async def participantes(conn: aiosqlite.Connection, run_id: int) -> list[int]:
         return [r["user_id"] for r in await cur.fetchall()]
 
 
+async def participantes_de_pe(conn: aiosqlite.Connection, run_id: int) -> list[int]:
+    """Quem ainda pode agir: os que nao estao caidos.
+
+    Quem esta a 0 de HP fica fora dos testes de sala e da votacao — e
+    precisa ficar fora da CONTA tambem. A sala fecha quando todos rolaram
+    e a votacao quando a maioria votou; contando quem nao pode agir, as
+    duas esperariam para sempre por alguem que nunca vai responder.
+
+    `hp_atual` e NULL antes de `inicializar_hp`: ai ninguem caiu ainda.
+    """
+    async with conn.execute(
+        "SELECT user_id FROM run_participantes WHERE run_id = ?"
+        " AND (hp_atual IS NULL OR hp_atual > 0) ORDER BY rowid",
+        (run_id,),
+    ) as cur:
+        return [r["user_id"] for r in await cur.fetchall()]
+
+
+async def esta_de_pe(conn: aiosqlite.Connection, run_id: int, user_id: int) -> bool:
+    """Se aquele jogador ainda pode agir nesta run."""
+    async with conn.execute(
+        "SELECT hp_atual FROM run_participantes WHERE run_id = ? AND user_id = ?",
+        (run_id, user_id),
+    ) as cur:
+        linha = await cur.fetchone()
+    if linha is None:
+        return False
+    return linha["hp_atual"] is None or linha["hp_atual"] > 0
+
+
 async def esta_na_run(conn: aiosqlite.Connection, run_id: int, user_id: int) -> bool:
     async with conn.execute(
         "SELECT 1 FROM run_participantes WHERE run_id = ? AND user_id = ?", (run_id, user_id)

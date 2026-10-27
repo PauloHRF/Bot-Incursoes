@@ -12,6 +12,7 @@ sys.path.insert(0, str(RAIZ))
 from src import classes as cl, config, database as db, embeds as E, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
     CANAL,
     GUILD,
     INDEFESO,
@@ -102,7 +103,7 @@ async def caso_tradicao_marcial_da_thp():
 
     inter = FakeInteraction(canal, dono)
     await cog.usar_habilidade(inter, run["id"], "OBJ", "tradicao_marcial")
-    assert "Vida temporaria" in inter.resposta, inter.resposta
+    assert "Vida temporaria" in leu(inter), leu(inter)
 
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     assert estado.combatente(dono).tem_thp
@@ -110,7 +111,7 @@ async def caso_tradicao_marcial_da_thp():
     # os dois caminhos dividem o mesmo uso: o outro ja nao esta disponivel
     outro = FakeInteraction(canal, dono)
     await cog.usar_habilidade(outro, run["id"], "OBJ", "tradicao_espiritual")
-    assert "nao esta disponivel" in outro.resposta, outro.resposta
+    assert "nao esta disponivel" in leu(outro), leu(outro)
     print("  Tradicao xamanica: caminho marcial rende THP e gasta o uso dos dois: ok")
 
 
@@ -123,10 +124,10 @@ async def caso_danca_totemica_cobre_o_grupo():
 
     inter = FakeInteraction(canal, dono)
     await cog.usar_habilidade(inter, run["id"], "OBJ", "danca_totemica")
-    assert "vida temporaria para o grupo" in inter.resposta, inter.resposta
+    assert "vida temporaria para o grupo" in leu(inter), leu(inter)
     # A cura e simbolica, mas sai no texto e entra no HP: 1% com piso de 1 da
     # exatamente 1 de vida em qualquer tier do jogo.
-    assert "1%" in inter.resposta, inter.resposta
+    assert "1%" in leu(inter), leu(inter)
     hp = (await db.hp_dos_participantes(conn, run["id"]))[ferido]
     assert hp == 11, hp
 

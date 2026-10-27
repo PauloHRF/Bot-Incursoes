@@ -273,6 +273,26 @@ class FakeInteraction:
         return alvo
 
 
+def leu(inter) -> str:
+    """O que o jogador leu por causa deste clique — privado OU publico.
+
+    A habilidade usada em combate sai no CANAL, para o grupo ver, e nao se
+    repete em privado: o jogador via a propria magia duas vezes na tela.
+    Quem clicou tem a efemera adiada apagada em vez de preenchida.
+
+    Os casos afirmam o que o jogador LEU, e isso nao deve depender de por
+    qual das duas portas o texto saiu. Devolve string vazia quando nao
+    houve nenhuma das duas, para a assercao falhar em vez de passar.
+    """
+    if inter.resposta:
+        return inter.resposta
+    for msg in reversed(getattr(inter.canal, 'enviadas', [])):
+        texto = getattr(msg, 'content', None)
+        if texto:
+            return texto
+    return ""
+
+
 class FakeBot:
     def __init__(self, conn, canal: FakeCanal):
         self.db = conn

@@ -35,13 +35,6 @@ def _icone(peca: itens.Item) -> str:
     return ICONE_DA_RARIDADE.get(peca.raridade, "·")
 
 
-def _descricao(peca: itens.Item) -> str:
-    return (
-        f"{itens.NOME_DO_SLOT[peca.slot]} · "
-        f"{itens.NOME_DA_RARIDADE[peca.raridade]}\n{peca.texto}"
-    )
-
-
 async def ja_tem(conn, personagem_id: int, item_id: str) -> bool:
     """Se o personagem já possui aquela peça, vestida ou na bolsa."""
     if item_id in (await db.equipamento(conn, personagem_id)).values():
@@ -86,7 +79,6 @@ async def tentar_comprar(
 def embed_vitrine(
     nome: str,
     saldo: int,
-    semana: str,
     prateleira: list[itens.Item],
     tendo: Optional[set] = None,
 ) -> discord.Embed:
@@ -94,27 +86,22 @@ def embed_vitrine(
 
     O embed diz o preço e o botão repete, de propósito: no celular o botão
     corta o nome longo, e no embed cabe o que a peça faz.
+
+    Mostra o STATUS da peça, e não a prosa do catálogo: na hora de comparar
+    cinco peças para decidir uma compra, a prosa atrapalha. E o número que
+    aparece é lido do efeito, então é o mesmo que o motor aplica.
     """
     ja = tendo or set()
     e = discord.Embed(
         title=f"Mercado · {nome}",
-        description=(
-            f"**{saldo}** de ouro na bolsa.\n"
-            f"A prateleira é desta semana ({semana}) e é só deste personagem. "
-            "Ela vira na segunda, junto com a vaga de incursão."
-        ),
+        description=f"**{saldo}** de ouro na bolsa.",
         color=COR,
     )
     for peca in prateleira:
-        if peca.id in ja:
-            marca = " · já tem"
-        elif peca.custo > saldo:
-            marca = f" · faltam {peca.custo - saldo}"
-        else:
-            marca = ""
+        marca = " · já tem" if peca.id in ja else ""
         e.add_field(
             name=f"{_icone(peca)} {peca.nome} — {peca.custo} de ouro{marca}",
-            value=_descricao(peca),
+            value=itens.status(peca),
             inline=False,
         )
     if not prateleira:
@@ -171,13 +158,6 @@ def embed_bolsa(
         value="\n".join(guardados) if guardados else "Nada guardado.",
         inline=False,
     )
-    if extrato:
-        linhas = [f"`{l['ouro']:+5d}` {l['motivo']}" for l in extrato]
-        e.add_field(
-            name="Últimos lançamentos de ouro",
-            value="\n".join(linhas),
-            inline=False,
-        )
     e.set_footer(
         text="/mercado equipar para vestir · equipar outro no mesmo slot troca"
     )
@@ -251,8 +231,7 @@ class ViewDaVitrine(discord.ui.View):
                 travado = ""
             self.add_item(BotaoDeCompra(self, peca, travado))
         return embed_vitrine(
-            {"nome": self.nome}, saldo, self.semana, prateleira,
-            tendo=vestido | na_bolsa,
+            self.nome, saldo, prateleira, tendo=vestido | na_bolsa
         )
 
     async def comprar(self, interaction: discord.Interaction, item_id: str) -> None:
@@ -416,7 +395,6 @@ class Mercado(commands.Cog):
                 await db.ouro(self.bot.db, escolhido["id"]),
                 await db.equipamento(self.bot.db, escolhido["id"]),
                 await db.itens_na_bolsa(self.bot.db, escolhido["id"]),
-                await db.extrato_de_ouro(self.bot.db, escolhido["id"], 5),
             ),
             ephemeral=True,
         )

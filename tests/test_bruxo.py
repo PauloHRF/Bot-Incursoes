@@ -13,6 +13,7 @@ sys.path.insert(0, str(RAIZ))
 from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
     CANAL,
     GUILD,
     INDEFESO,
@@ -180,7 +181,7 @@ async def caso_hunger_of_hadar_da_dano_e_tira_a_vez():
     levaram = [antes[i.indice] - i.hp_atual for i in estado.inimigos]
     assert any(d >= 6 for d in levaram), levaram
     # e quem falhou tambem perdeu a vez
-    assert "perde a vez" in inter.resposta or "resistiu" in inter.resposta
+    assert "perde a vez" in leu(inter) or "resistiu" in leu(inter)
     print("  Hunger of Hadar faz dano E tira a vez no mesmo lance: ok")
 
 
@@ -200,7 +201,7 @@ async def caso_synaptic_static_atrapalha_o_ataque():
         golpe = motor.contra_atacar(atrapalhados[0], alvo)
         assert golpe.bonus == atrapalhados[0].ataque - 3, golpe.bonus
     else:
-        assert "resistiu" in inter.resposta, inter.resposta
+        assert "resistiu" in leu(inter), leu(inter)
     print("  Synaptic Static desconta 3 do ataque de quem falha: ok")
 
 

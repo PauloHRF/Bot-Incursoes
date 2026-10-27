@@ -16,6 +16,7 @@ from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.rules import mod_pericia  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
     CANAL,
     GUILD,
     INDEFESO,
@@ -196,7 +197,7 @@ async def caso_inspiracao_na_pericia():
         await db.gravar_opcoes(conn, run_id, 1, ["S1", "S2", "S3"])
         inter = FakeInteraction(canal, JOGADORES[0])
         await cog.rolar(inter, run_id, "S1")
-        if "de Heroi" in (inter.resposta or ""):
+        if "de Heroi" in (leu(inter) or ""):
             socorreu = True
             # o uso saiu, e o canal contou
             anuncios = " ".join(str(m.content or "") for m in canal.enviadas)
@@ -429,9 +430,9 @@ async def caso_ottos_dance_so_prende():
     # tirar 5 do ataque dele nao mexia em nada.
     assert not inimigo.penalidade_ataque, inimigo.penalidade_ataque
     if inimigo.atordoado:
-        assert "perde a vez" in inter.resposta, inter.resposta
+        assert "perde a vez" in leu(inter), leu(inter)
     else:
-        assert "resisti" in inter.resposta.lower(), inter.resposta
+        assert "resisti" in leu(inter).lower(), leu(inter)
     print("  Otto's prende quem danca, e so isso: ok")
 
 

@@ -13,6 +13,7 @@ sys.path.insert(0, str(RAIZ))
 from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
     CANAL,
     GUILD,
     INDEFESO,
@@ -280,8 +281,8 @@ async def caso_command_atordoa_um():
     ]
     # CA 1 e save baixo: a criatura de prova quase sempre falha. Ou atordoou,
     # ou a linha diz que resistiu — as duas sao resultados legitimos.
-    assert atordoados or "resistiu" in inter.resposta, inter.resposta
-    assert "CD 19" in inter.resposta, inter.resposta
+    assert atordoados or "resistiu" in leu(inter), leu(inter)
+    assert "CD 19" in leu(inter), leu(inter)
     print("  Command cobra save de SAB de um inimigo e mostra a CD: ok")
 
 
@@ -300,7 +301,7 @@ async def caso_flame_strike_pega_todos_e_da_metade():
     for i in estado.inimigos:
         levou = antes[i.indice] - i.hp_atual
         assert levou >= 5, (i.nome, levou)
-    assert len([l for l in inter.resposta.splitlines() if l.startswith("·")]) == 3
+    assert len([l for l in leu(inter).splitlines() if l.startswith("·")]) == 3
     print("  Flame Strike cobra save de todos, e quem resiste leva metade: ok")
 
 
@@ -311,7 +312,7 @@ async def caso_spirit_guardians_nao_passa_de_quem_resiste():
     inter = FakeInteraction(canal, JOGADORES[0])
     await cog.usar_habilidade(inter, run["id"], "OBJ", "spirit_guardians")
     # sem `metade`, quem passa no save nao leva nada
-    assert "CD 19" in inter.resposta
+    assert "CD 19" in leu(inter)
     print("  Spirit Guardians cobra save de SAB de todos: ok")
 
 
@@ -351,9 +352,9 @@ async def caso_dominate_person_vira_um_contra_o_outro():
     # tres desfechos legitimos: acertou o colega, virou e errou, ou resistiu
     assert total_depois <= total_antes
     assert any(
-        marca in inter.resposta
+        marca in leu(inter)
         for marca in ("acerta Saco", "e erra", "resistiu")
-    ), inter.resposta
+    ), leu(inter)
     print("  Dominate Person vira a criatura contra as outras dela: ok")
 
 

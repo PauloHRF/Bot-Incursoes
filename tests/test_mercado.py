@@ -460,10 +460,22 @@ async def caso_a_vitrine_abre_com_um_botao_por_peca():
     botoes = [f for f in view.children if isinstance(f, BotaoDeCompra)]
     prateleira = mercado.vitrine(heroi, view.semana)
     assert [b.peca.id for b in botoes] == [p.id for p in prateleira]
-    # Sem ouro nenhum, nada é clicável — e o motivo está no embed.
+    # Sem ouro nenhum, nada é clicável.
     assert all(b.disabled for b in botoes), [b.label for b in botoes]
-    texto = " ".join(c.name for c in inter._mensagem_resposta.embeds[0].fields)
-    assert "faltam" in texto, texto
+
+    # O embed nao diz mais quanto falta — a vitrine mostra so o status da
+    # peca. Mas o motivo continua legivel: o PRECO esta em cada botao e o
+    # SALDO no topo. E o que o caso afirma agora.
+    embed = inter._mensagem_resposta.embeds[0]
+    assert "0** de ouro" in embed.description, embed.description
+    for botao in botoes:
+        assert str(botao.peca.custo) in botao.label, botao.label
+
+    # E o que cada campo mostra e o efeito, nao a prosa do catalogo.
+    valores = [c.value for c in embed.fields]
+    assert all(v and v != "sem efeito" for v in valores), valores
+    prosa = [p.texto for p in prateleira]
+    assert not any(v in prosa for v in valores), valores
     print(f"  a vitrine abre com {len(botoes)} botoes, travados sem ouro: ok")
 
 

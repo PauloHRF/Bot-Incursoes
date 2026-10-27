@@ -227,6 +227,44 @@ def do_slot(slot: str) -> list[Item]:
     return [i for i in CATALOGO if i.slot == slot]
 
 
+# Como cada chave de efeito vira texto para o jogador. O catalogo tambem tem
+# um `texto` com a prosa da peca ("Couro curtido duas vezes"), mas a vitrine
+# mostra so o que a peca FAZ: na hora de comparar cinco pecas e decidir uma
+# compra, a prosa atrapalha mais do que ajuda.
+#
+# Sair daqui, e nao do `texto`, tem uma vantagem que a prosa nao tem: o numero
+# mostrado e o numero que o motor aplica. Nao da para a descricao dizer +1 e o
+# efeito valer +2, que e o tipo de divergencia que ninguem percebe.
+ROTULO_DO_EFEITO = {
+    "ca": lambda v: f"{v:+d} de CA",
+    "acerto": lambda v: f"{v:+d} de acerto",
+    "dano_extra": lambda v: f"{v:+d} de dano",
+    "dano_bonus": lambda v: f"+{v} de dano",
+    "dano_ferido": lambda v: f"{v:+d} contra alvo ferido",
+    "critico_em": lambda v: f"crítico em {v}",
+    "bonus_iniciativa": lambda v: f"{v:+d} de iniciativa",
+    "bonus_teste": lambda v: f"{v:+d} em testes de perícia",
+    "bonus_save": lambda v: f"{v:+d} em resistências",
+    "bonus_save_atributo": lambda v: " · ".join(
+        f"{n:+d} em resistência de {a}" for a, n in sorted(v.items())
+    ),
+    "thp_na_cura": lambda v: f"{v:+d} de vida temporária ao ser curado",
+    "thp_ao_derrubar": lambda v: f"{v:+d} de vida temporária ao derrubar",
+    "bonus_cura_pct": lambda v: f"+{v:.0%} de cura",
+    "ameaca": lambda v: f"{v:+d} de ameaça",
+}
+
+
+def status(peca: "Item") -> str:
+    """O que a peça faz, em texto, lido do efeito dela."""
+    partes = [
+        ROTULO_DO_EFEITO[chave](valor)
+        for chave, valor in (peca.efeito or {}).items()
+        if chave in ROTULO_DO_EFEITO
+    ]
+    return " · ".join(partes) or "sem efeito"
+
+
 def fora_do_dominio(peca: Item) -> set[str]:
     """As chaves que aquele item mexe e que o slot dele não deveria mexer.
 

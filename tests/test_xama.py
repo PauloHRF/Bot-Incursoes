@@ -13,6 +13,7 @@ sys.path.insert(0, str(RAIZ))
 from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
     CANAL,
     GUILD,
     INDEFESO,
@@ -161,7 +162,7 @@ async def caso_guerreiros_ancioes_versao_normal():
         assert c.critico_em == 15, (c.nome, c.critico_em)
         assert c.dano_bonus == "1d6+5", (c.nome, c.dano_bonus)
         assert c.hp_atual > 20, f"{c.nome} devia ter curado 10%"
-    assert "10%" in inter.resposta, inter.resposta
+    assert "10%" in leu(inter), leu(inter)
     print("  Guerreiros ancioes: crita com 15, +1d6+5 e cura 10% do grupo: ok")
 
 
@@ -187,7 +188,7 @@ async def caso_guerreiros_ancioes_versao_de_20_thp():
     # e os inimigos levaram 8d6 cada
     depois = sum(i.hp_atual for i in estado.inimigos)
     assert antes - depois >= 16, (antes, depois)
-    assert "20%" in inter.resposta and "8d6" in inter.resposta, inter.resposta
+    assert "20%" in leu(inter) and "8d6" in leu(inter), leu(inter)
     print("  com 20 de THP a habilidade cobra 20 e sai na forma grande: ok")
 
 
@@ -203,7 +204,7 @@ async def caso_sem_thp_sai_a_versao_normal():
     )
     assert estado.combatente(dono).thp == 19, "nao cobrou nada"
     assert all(c.critico_em == 15 for c in estado.vivos)
-    assert "8d6" not in inter.resposta
+    assert "8d6" not in leu(inter)
     print("  com 19 de THP a melhoria nao sai, e nada e cobrado: ok")
 
 

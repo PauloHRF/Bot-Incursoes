@@ -264,7 +264,9 @@ def _campo_saves(e: discord.Embed, personagem: dict[str, Any]) -> None:
     e.add_field(name=nome, value=" | ".join(linhas), inline=False)
 
 
-ICONE_HABILIDADE = {cl.PASSIVA: "⚙️", cl.ATIVA: "⚡", cl.ESCOLHA: "❓"}
+# A ESCOLHA nao faz nada sozinha: ela DESTRAVA outra habilidade. O "?"
+# dizia "nao sei o que e isto"; a bifurcacao diz "aqui voce decide".
+ICONE_HABILIDADE = {cl.PASSIVA: "⚙️", cl.ATIVA: "⚡", cl.ESCOLHA: "🔀"}
 
 
 def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:

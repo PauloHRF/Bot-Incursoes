@@ -243,6 +243,72 @@ async def caso_canal_fica_com_um_cartao_so():
     print("  cada passo apaga o anterior e os botoes somem ao encerrar: ok")
 
 
+async def caso_o_caido_nao_vota_e_nao_conta():
+    """Quem está no chão não escolhe o caminho — nem atrasa quem está de pé.
+
+    O segundo ponto é o que machucaria em produção: a votação fecha na
+    MAIORIA, e a maioria é uma fração do grupo. Tirando o voto do caído sem
+    tirá-lo da conta, 2 de 5 nunca formariam a maioria de 3 e a run ficaria
+    parada esperando um voto que não pode existir.
+    """
+    conn, canal, cog = await preparar()
+    run = await montar_run_em_votacao(conn, canal, cog)
+    opcoes = await cog._opcoes(run, 1)
+    msg = await canal.fetch_message(run["mensagem_id"])
+
+    # tres dos cinco caem
+    for user_id in JOGADORES[2:5]:
+        await db.definir_hp(conn, run["id"], user_id, 0)
+    assert len(await db.participantes_de_pe(conn, run["id"])) == 2
+
+    # o caido tenta votar e e recusado
+    caido = FakeInteraction(canal, JOGADORES[4], msg)
+    await cog.votar(caido, run["id"], 1, opcoes[0].id)
+    assert "caído" in caido.resposta, caido.resposta
+    assert not await db.votos_da_linha(conn, run["id"], 1), "o voto do caido entrou"
+
+    # e os dois de pe decidem sozinhos: a maioria agora e 2
+    for user_id in JOGADORES[:2]:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, opcoes[0].id)
+
+    depois = await db.buscar_run(conn, run["id"])
+    assert depois["status"] == "em_sala", (
+        f"a run travou esperando voto de quem esta caido: {depois['status']}"
+    )
+    assert depois["sala_atual"] == opcoes[0].id
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o caido nao vota, e os de pe decidem sem esperar por ele: ok")
+
+
+async def caso_o_caido_nao_rola_o_teste_da_sala():
+    """E na sala vale o mesmo: ele não rola, e a sala não espera por ele."""
+    conn, canal, cog = await preparar()
+    run = await montar_run_em_votacao(conn, canal, cog)
+    opcoes = await cog._opcoes(run, 1)
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for user_id in JOGADORES[:3]:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, opcoes[0].id)
+    run = await db.buscar_run(conn, run["id"])
+    assert run["status"] == "em_sala", run["status"]
+
+    alvo = run["sala_atual"]
+    sala_msg = await canal.fetch_message(run["mensagem_id"])
+    await db.definir_hp(conn, run["id"], JOGADORES[4], 0)
+
+    caido = FakeInteraction(canal, JOGADORES[4], sala_msg)
+    await cog.rolar(caido, run["id"], alvo)
+    assert "caído" in caido.resposta, caido.resposta
+
+    registros = await db.testes_da_sala(conn, run["id"], run["linha_atual"])
+    assert not any(r["user_id"] == JOGADORES[4] for r in registros), registros
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o caido nao rola o teste da sala: ok")
+
+
 async def main():
     await caso_maioria_fecha_sem_esperar()
     await caso_votos_divididos_esperam()
@@ -251,6 +317,8 @@ async def main():
     await caso_restart()
     await caso_intervalo_entre_incursoes()
     await caso_canal_fica_com_um_cartao_so()
+    await caso_o_caido_nao_vota_e_nao_conta()
+    await caso_o_caido_nao_rola_o_teste_da_sala()
 
 
 async def _com_limpeza():

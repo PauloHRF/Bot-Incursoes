@@ -14,6 +14,7 @@ sys.path.insert(0, str(RAIZ))
 from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
     CANAL,
     GUILD,
     INDEFESO,
@@ -154,7 +155,7 @@ async def caso_heightened_poe_desvantagem_no_save():
     )
     inter = FakeInteraction(canal, JOGADORES[0])
     await cog.usar_habilidade(inter, run["id"], "OBJ", "burning_hands")
-    assert "desvantagem" in inter.resposta, inter.resposta
+    assert "desvantagem" in leu(inter), leu(inter)
     print("  Heightened mostra e aplica a desvantagem no save do inimigo: ok")
 
 
@@ -212,7 +213,7 @@ async def caso_grilhoes_acorrenta_e_sangra():
         # Este galho quase nunca rodava, porque a criatura quase sempre
         # falhava. Com os saves dela escalando por tier passou a rodar, e o
         # que estava escrito aqui checava a palavra "resistiu" em
-        # `inter.resposta` — que no duble guarda o TITULO do embed, nao o
+        # `leu(inter)` — que no duble guarda o TITULO do embed, nao o
         # corpo. Nunca teria pegado nada.
         estado_apos = await cog._estado_combate(
             await db.buscar_run(conn, run["id"]), incursao.objetivo
@@ -224,7 +225,7 @@ async def caso_grilhoes_acorrenta_e_sangra():
         print(f"  Grilhoes: o alvo resistiu, levou {levou} (metade) e nao "
               f"foi acorrentado: ok")
         return
-    assert "acorrentado" in inter.resposta, inter.resposta
+    assert "acorrentado" in leu(inter), leu(inter)
 
     # e a corrente sangra no virar da rodada
     run = await db.buscar_run(conn, run["id"])

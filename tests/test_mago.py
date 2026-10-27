@@ -15,6 +15,7 @@ sys.path.insert(0, str(RAIZ))
 from src import ameaca, classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
     CANAL,
     GUILD,
     INDEFESO,
@@ -192,7 +193,7 @@ async def caso_magic_missile_sempre_acerta():
     levou = antes - estado.inimigo(alvo).hp_atual
     assert 6 <= levou <= 15, levou  # 3d4+3
     # nao ha rolagem de save na linha: os dardos nao se resistem
-    assert "vs CD" not in inter.resposta, inter.resposta
+    assert "vs CD" not in leu(inter), leu(inter)
     print(f"  Magic Missile entra sem save ({levou} de dano): ok")
 
 
@@ -210,7 +211,7 @@ async def caso_fireball_pega_todos():
     for i in estado.inimigos:
         levou = antes[i.indice] - i.hp_atual
         assert levou >= 4, (i.nome, levou)  # 8d6, metade no sucesso
-    assert "CD 19" in inter.resposta
+    assert "CD 19" in leu(inter)
     print("  Fireball cobra save de DES de todos, com metade no sucesso: ok")
 
 
@@ -230,7 +231,7 @@ async def caso_hold_monster_prende_tres_rodadas():
     if presos:
         assert presos[0]["expira"] - estado.rodada == 3, presos[0]
     else:
-        assert "resistiu" in inter.resposta, inter.resposta
+        assert "resistiu" in leu(inter), leu(inter)
     print("  Hold Monster prende por tres rodadas quando pega: ok")
 
 
