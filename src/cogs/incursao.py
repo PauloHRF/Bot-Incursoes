@@ -1620,43 +1620,45 @@ class Incursoes(commands.Cog):
     ) -> None:
         """Escolhe o ataque da rodada. Ele sai quando a iniciativa chegar em você."""
         self._guardar_efemera(run_id, interaction)
+        # Avisa o Discord na hora que a resposta vem depois: isto troca os
+        # 3 segundos que ele da para a primeira resposta por 15 minutos. Sem
+        # isto, um combate grande numa maquina modesta estoura o prazo e o
+        # jogador ve "esta interacao falhou" (erro 10062). Dai em diante
+        # toda resposta tem de sair pelo `_dizer`.
+        await interaction.response.defer(ephemeral=True)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo") or run["sala_atual"] != sala_id:
-            await interaction.response.send_message("Este combate já terminou.", ephemeral=True)
+            await self._dizer(interaction, "Este combate já terminou.")
             return
         if not await db.esta_na_run(self.bot.db, run_id, interaction.user.id):
-            await interaction.response.send_message("Você não faz parte desta run.", ephemeral=True)
+            await self._dizer(interaction, "Você não faz parte desta run.")
             return
 
         incursao = self._incursao_da_run(run)
         sala = await self._sala_corrente(run)
         estado = await self._estado_combate(run, sala)
         if estado is None:
-            await interaction.response.send_message("Este combate já terminou.", ephemeral=True)
+            await self._dizer(interaction, "Este combate já terminou.")
             return
 
         atacante = estado.combatente(interaction.user.id)
         if atacante is None:
-            await interaction.response.send_message(
-                "Você não tem ficha cadastrada. Use `/ficha registrar`.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Você não tem ficha cadastrada. Use `/ficha registrar`.")
             return
         if atacante.caido:
-            await interaction.response.send_message(
-                "Você está caído — fica fora do resto deste combate.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Você está caído — fica fora do resto deste combate.")
             return
         if atacante.atordoado:
-            await interaction.response.send_message(
-                "Você está atordoado e perde esta rodada.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Você está atordoado e perde esta rodada.")
             return
 
         alvo = estado.alvo_preferido(alvo_indice)
         if alvo is None:
-            await interaction.response.send_message(
-                "Esse inimigo já caiu — escolha outro alvo.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Esse inimigo já caiu — escolha outro alvo.")
             return
 
         passo = self._passo(run)
@@ -1668,9 +1670,8 @@ class Incursoes(commands.Cog):
             alvos=[alvo.indice] if alvo_indice is not None else [],
             resolvida=False,
         ):
-            await interaction.response.send_message(
-                self._turno_gasto(gasto or "ataque"), ephemeral=True
-            )
+            await self._dizer(interaction, 
+                self._turno_gasto(gasto or "ataque"))
             return
         await self._avancar(run, sala, interaction)
 
@@ -1788,7 +1789,7 @@ class Incursoes(commands.Cog):
             if interaction is None or respondido:
                 return
             respondido = True
-            await interaction.response.send_message(texto, ephemeral=True)
+            await self._dizer(interaction, texto)
             # Registra na hora de mandar, nao antes: parte destas respostas sai
             # depois da trava, e a rodada pode ter virado no meio. Registrada
             # antes, ela seria removida da lista por _limpar_efemeras sem ter
@@ -2063,6 +2064,28 @@ class Incursoes(commands.Cog):
                 )
             )
 
+    async def _dizer(self, interaction: discord.Interaction, texto: str) -> None:
+        """Resposta privada que funciona antes e depois do `defer`.
+
+        O Discord da 3 SEGUNDOS para a primeira resposta a uma interacao.
+        Passando disso o token morre e qualquer resposta devolve
+        `10062 Unknown interaction` — o jogador ve "esta interacao falhou".
+        Tres segundos bastavam na maquina de desenvolvimento e nao bastam no
+        servidor, que e um oitavo de OCPU compartilhado.
+
+        A saida e `defer()` no inicio do comando, que troca os 3 segundos por
+        15 minutos. Mas depois dele `response.send_message` passa a ser erro:
+        a resposta ja foi dada. Este ajudante escolhe sozinho.
+
+        Edita a resposta original em vez de mandar followup de proposito:
+        `_limpar_efemeras` apaga as efemeras com `delete_original_response`,
+        que so alcanca a original. Com followup elas ficariam orfas no canal.
+        """
+        if interaction.response.is_done():
+            await interaction.edit_original_response(content=texto)
+        else:
+            await interaction.response.send_message(texto, ephemeral=True)
+
     def _guardar_efemera(self, run_id: int, interaction: discord.Interaction) -> None:
         """Marca uma resposta privada para sumir quando a rodada virar."""
         self._efemeras.setdefault(run_id, []).append(interaction)
@@ -2243,24 +2266,28 @@ class Incursoes(commands.Cog):
         na hora.
         """
         self._guardar_efemera(run_id, interaction)
+        # Avisa o Discord na hora que a resposta vem depois: isto troca os
+        # 3 segundos que ele da para a primeira resposta por 15 minutos. Sem
+        # isto, um combate grande numa maquina modesta estoura o prazo e o
+        # jogador ve "esta interacao falhou" (erro 10062). Dai em diante
+        # toda resposta tem de sair pelo `_dizer`.
+        await interaction.response.defer(ephemeral=True)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo"):
-            await interaction.response.send_message("Esta sala ja terminou.", ephemeral=True)
+            await self._dizer(interaction, "Esta sala ja terminou.")
             return
         personagem = await self._personagem_na_run(run, interaction.user.id)
         if personagem is None:
-            await interaction.response.send_message(
-                "Voce nao faz parte desta run.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Voce nao faz parte desta run.")
             return
 
         passo = self._passo(run)
         disponiveis = await self._habilidades_disponiveis(run, personagem, passo)
         habilidade = next((h for h, _r in disponiveis if h.id == habilidade_id), None)
         if habilidade is None:
-            await interaction.response.send_message(
-                "Essa habilidade nao esta disponivel agora.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Essa habilidade nao esta disponivel agora.")
             return
 
         incursao = self._incursao_da_run(run)
@@ -2271,14 +2298,12 @@ class Incursoes(commands.Cog):
         # Quem usa precisa estar de pe quando a habilidade e de combate.
         atacante = estado.combatente(interaction.user.id) if estado else None
         if estado is not None and (atacante is None or atacante.caido):
-            await interaction.response.send_message(
-                "Voce esta caido — fica fora do resto deste combate.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Voce esta caido — fica fora do resto deste combate.")
             return
         if atacante is not None and atacante.atordoado:
-            await interaction.response.send_message(
-                "Você está atordoado e perde esta rodada.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Você está atordoado e perde esta rodada.")
             return
 
         exigida = acao.get("exige")
@@ -2291,17 +2316,15 @@ class Incursoes(commands.Cog):
                 for e in ligados
             )
             if not tem:
-                await interaction.response.send_message(
+                await self._dizer(interaction, 
                     f"**{habilidade.nome}** so vale com a outra habilidade ligada.",
-                    ephemeral=True,
                 )
                 return
 
         # So a cura funciona fora do combate: o resto mexe em rodada e inimigo.
         if acao.get("tipo") != "cura" and estado is None:
-            await interaction.response.send_message(
-                "Essa habilidade so vale em combate.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Essa habilidade so vale em combate.")
             return
 
         # Em combate o personagem age uma vez por rodada: ou ataca, ou usa uma
@@ -2311,9 +2334,8 @@ class Incursoes(commands.Cog):
                 self.bot.db, run_id, passo, estado.rodada, interaction.user.id
             )
             if gasto:
-                await interaction.response.send_message(
-                    self._turno_gasto(gasto), ephemeral=True
-                )
+                await self._dizer(interaction, 
+                    self._turno_gasto(gasto))
                 return
 
         # Falta escolher em quem: abre o segundo menu antes de gastar o uso.
@@ -2331,16 +2353,15 @@ class Incursoes(commands.Cog):
             self._chave_de_recarga(habilidade, run, passo),
             habilidade.vezes,
         ):
-            await interaction.response.send_message(
-                "Os usos desta habilidade ja acabaram.", ephemeral=True
-            )
+            await self._dizer(interaction, 
+                "Os usos desta habilidade ja acabaram.")
             return
 
         if estado is None:
             texto = await self._resolver_habilidade(
                 run, None, interaction.user.id, habilidade, alvos
             )
-            await interaction.response.send_message(texto, ephemeral=True)
+            await self._dizer(interaction, texto)
             return
 
         # Quickened Spell: o feiticeiro lanca a magia como acao de bonus, e o
@@ -2351,7 +2372,7 @@ class Incursoes(commands.Cog):
             texto = await self._resolver_habilidade(
                 run, estado, interaction.user.id, habilidade, alvos or []
             )
-            await interaction.response.send_message(texto, ephemeral=True)
+            await self._dizer(interaction, texto)
             self._guardar_efemera(run_id, interaction)
             await self._atualizar_painel(run, sala, estado)
             return
@@ -2364,9 +2385,8 @@ class Incursoes(commands.Cog):
                 self.bot.db, run_id, interaction.user.id, habilidade.chave_de_uso,
                 self._chave_de_recarga(habilidade, run, passo),
             )
-            await interaction.response.send_message(
-                self._turno_gasto("ataque"), ephemeral=True
-            )
+            await self._dizer(interaction, 
+                self._turno_gasto("ataque"))
             return
         await self._avancar(run, sala, interaction)
 

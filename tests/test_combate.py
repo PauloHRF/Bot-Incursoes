@@ -432,6 +432,51 @@ async def main():
                 pass
 
 
+async def caso_o_ataque_adia_antes_de_resolver():
+    """O clique de atacar avisa o Discord ANTES de resolver o turno.
+
+    O Discord da 3 segundos para a primeira resposta a uma interacao. O
+    caminho do ataque resolve o turno, faz as criaturas agirem e redesenha o
+    painel antes de responder — numa maquina modesta isso passa dos 3
+    segundos, o token morre e o jogador ve "esta interacao falhou"
+    (erro 10062). Aconteceu em producao no primeiro dia no servidor.
+
+    O `defer` troca os 3 segundos por 15 minutos. Este caso prova as tres
+    coisas que a correcao precisa manter de pe ao mesmo tempo.
+    """
+    conn, canal, cog = await preparar()
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="adiar", monstro_objetivo=DURAO, salas=salas_sem_combate()
+    )
+    run = await montar_run(conn, canal, cog, "adiar")
+    run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
+    assert run["status"] == "objetivo"
+
+    painel = await canal.fetch_message(run["mensagem_id"])
+    inter = FakeInteraction(canal, JOGADORES[0], painel)
+    await cog.atacar(inter, run["id"], "OBJ")
+
+    # 1. adiou — e e isso que compra os 15 minutos
+    assert inter.adiado, "o ataque tem de adiar antes de resolver o turno"
+
+    # 2. o jogador continua recebendo o texto, so que por outro caminho
+    assert inter.resposta, "o jogador ficou sem resposta nenhuma"
+
+    # 3. e a efemera apagavel e a do defer, NAO o painel do combate.
+    #    `_limpar_efemeras` apaga com `delete_original_response`, que so
+    #    alcanca a resposta original — foi por isso que a correcao usou
+    #    `edit_original_response` em vez de `followup.send`. Se a original
+    #    fosse o painel, limpar as efemeras apagaria o combate da tela.
+    antes_do_painel = painel.apagada if hasattr(painel, "apagada") else None
+    await cog._limpar_efemeras(run["id"])
+    depois_do_painel = painel.apagada if hasattr(painel, "apagada") else None
+    assert depois_do_painel == antes_do_painel, "limpar as efemeras apagou o painel"
+    assert await canal.fetch_message(run["mensagem_id"]) is not None, (
+        "o painel do combate sumiu do canal"
+    )
+    print("  o ataque adia a interacao e nao sacrifica o painel: ok")
+
+
 async def _casos():
     await caso_motor_puro()
     await caso_hp_inicial()
@@ -443,6 +488,7 @@ async def _casos():
     await caso_derrota_total()
     await caso_descanso_cura()
     await caso_restart_no_combate()
+    await caso_o_ataque_adia_antes_de_resolver()
 
 
 asyncio.run(main())

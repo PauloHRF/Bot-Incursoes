@@ -145,6 +145,7 @@ class FakeResposta:
             self.interacao._mensagem_resposta = FakeMensagem(
                 self.interacao.canal, -1, content=content, embed=embed, view=view
             )
+            self.interacao._original_e_efemera = True
         else:
             self.interacao._mensagem_resposta = await self.interacao.canal.send(
                 content, embed=embed, view=view
@@ -153,8 +154,24 @@ class FakeResposta:
     async def send_modal(self, modal):
         self.interacao.modal_enviado = modal
 
-    async def defer(self, **kw):
+    def is_done(self) -> bool:
+        """Se a primeira resposta ja saiu — por `send_message` ou por `defer`."""
+        return self.interacao.adiado or self.interacao._mensagem_resposta is not None
+
+    async def defer(self, *, ephemeral=False, **kw):
+        """Adia a resposta, e registra QUAL mensagem vira a "original".
+
+        A regra do Discord, que o duble precisa imitar: `defer(ephemeral=True)`
+        cria uma efemera nova, e e ela que `edit_original_response` edita.
+        Um `defer()` simples num clique de botao nao cria nada — a original
+        continua sendo a mensagem da propria view.
+        """
         self.interacao.adiado = True
+        if ephemeral:
+            self.interacao._mensagem_resposta = FakeMensagem(
+                self.interacao.canal, -1, content=None
+            )
+            self.interacao._original_e_efemera = True
 
     async def edit_message(self, content=None, *, embed=None, view=None):
         """A resposta de um clique de botao: edita a mensagem da propria view."""
@@ -202,9 +219,14 @@ class FakeInteraction:
         self.response = FakeResposta(self)
         self.followup = FakeFollowup(self)
         self.resposta = None
+        self.resposta_atual = None
         self.view_enviada = None
         self.modal_enviado = None
         self.adiado = False
+        # Qual mensagem e a "resposta original": a efemera que o defer ou
+        # o send_message criaram, ou — quando nao houve efemera — a
+        # mensagem da view que foi clicada.
+        self._original_e_efemera = False
         self.efemera_apagada = False
         self._mensagem_resposta = None
         # O que um clique de botao deixou: a edicao e o aviso privado.
@@ -222,10 +244,32 @@ class FakeInteraction:
             await alvo.delete()
             self.efemera_apagada = True
 
+    def _original(self):
+        """A mensagem que `edit_original_response` alcanca."""
+        if self._original_e_efemera:
+            return self._mensagem_resposta
+        return self.message or self._mensagem_resposta
+
     async def edit_original_response(self, **kw):
-        alvo = self.message or self._mensagem_resposta
+        alvo = self._original()
         if alvo:
             await alvo.edit(**kw)
+        # O jogador ve UMA efemera, cujo texto pode mudar por edicao. O duble
+        # guarda as duas pontas: `resposta` e o que ele leu PRIMEIRO, e
+        # `resposta_atual` e o que esta la agora.
+        #
+        # `resposta` so e preenchida se ainda estiver vazia, e e isso que faz
+        # o `defer` ser transparente para os testes: sem defer, quem a
+        # preenche e o `send_message`; com defer, a primeira edicao. Nos dois
+        # casos ela guarda a primeira coisa dita, que e o que os casos
+        # afirmam.
+        #
+        # So com `content`: as chamadas que mandam apenas embed e view (o
+        # painel de recrutamento) nao estao falando com o jogador.
+        if kw.get("content") is not None:
+            self.resposta_atual = kw["content"]
+            if self.resposta is None:
+                self.resposta = kw["content"]
         return alvo
 
 
