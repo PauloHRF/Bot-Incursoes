@@ -179,13 +179,16 @@ async def main():
         "ficha registrar", "ficha listar", "ficha upar", "incursao entrar",
         "incursao votar", "mercado vitrine", "mercado equipar",
         "config intervalo", "organizacao placar",
+        # O remover voltou, mas so para admin: sem ele o limite de 25
+        # personagens por jogador virava parede sem saida.
+        "ficha remover", "ficha alterar",
     ):
         assert grupo in nomes, f"comando {grupo} não foi registrado"
     # O que saiu de propósito: combate é por botão (o painel tem Atacar,
     # Habilidade e Rolar teste), a bolsa absorveu o ouro, e trocar de
     # equipamento no mesmo slot dispensa desequipar.
     for fora in (
-        "ficha pericias", "ficha remover", "incursao atacar",
+        "ficha pericias", "incursao atacar",
         "incursao habilidade", "incursao sala", "incursao teste",
         "mercado ouro", "mercado desequipar",
     ):

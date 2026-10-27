@@ -125,8 +125,16 @@ async def caso_help_responde_e_filtra():
     # filtro por grupo
     so_ficha = FakeInteraction(canal, JOGADORES[0])
     await ajuda.help.callback(ajuda, so_ficha, comando="ficha")
-    campos = {f.name for f in so_ficha._mensagem_resposta.embeds[0].fields}
-    assert len(campos) == 1 and "ficha" in next(iter(campos))
+    embed = so_ficha._mensagem_resposta.embeds[0]
+    campos = {f.name for f in embed.fields}
+    # Dois campos, e os dois sao de ficha: o grupo, e o bloco de admin —
+    # que existe porque `/ficha remover` so e do mestre. Os de admin saem
+    # dos grupos de proposito, para quem abre o /help para jogar nao
+    # tropecar neles.
+    assert any("ficha" in c for c in campos), campos
+    tudo = " ".join(f.value for f in embed.fields)
+    citados = [l for l in tudo.split(chr(10)) if l.startswith('`/')]
+    assert citados and all("/ficha" in l for l in citados), citados
 
     # filtro que nao acha nada
     nada = FakeInteraction(canal, JOGADORES[0])

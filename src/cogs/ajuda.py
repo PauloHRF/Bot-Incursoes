@@ -37,6 +37,7 @@ ORDEM_COMANDOS = (
     "ficha ver",
     "ficha listar",
     "ficha voltar",
+    "ficha alterar",
     "incursao entrar",
     "incursao desistir",
     "incursao listar",
@@ -49,6 +50,7 @@ ORDEM_COMANDOS = (
     "organizacao placar",
     "help",
     # O bloco de admin, no fim e nesta ordem.
+    "ficha remover",
     "incursao recarregar",
     "organizacao ajustar",
     "organizacao extrato",

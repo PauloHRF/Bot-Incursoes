@@ -66,6 +66,18 @@ class FakeUsuario:
         self.display_avatar = _FakeAvatar()
 
 
+class FakeGuilda:
+    """A guilda que a interacao carrega. Serve o `get_member`, que e o que
+    o cog usa para citar o DONO de uma ficha — o admin apaga a ficha de
+    outra pessoa, e o anuncio precisa dizer de quem era."""
+
+    def __init__(self, guild_id: int):
+        self.id = guild_id
+
+    def get_member(self, user_id: int):
+        return FakeUsuario(user_id)
+
+
 class FakeMensagem:
     def __init__(self, canal, mensagem_id: int, **kw):
         self.id = mensagem_id
@@ -215,6 +227,7 @@ class FakeInteraction:
         self.channel = canal
         self.channel_id = canal.id
         self.guild_id = GUILD
+        self.guild = FakeGuilda(GUILD)
         self.message = mensagem
         self.response = FakeResposta(self)
         self.followup = FakeFollowup(self)

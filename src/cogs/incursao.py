@@ -705,7 +705,8 @@ class Incursoes(commands.Cog):
             self.bot.db, interaction.guild_id, interaction.channel_id, incursao.id, interaction.user.id
         )
         await db.adicionar_participante(
-            self.bot.db, run_id, interaction.user.id, escolhido["id"]
+            self.bot.db, run_id, interaction.user.id, escolhido["id"],
+            tier=tier(escolhido["nivel"]),
         )
 
         run = await db.buscar_run(self.bot.db, run_id)
@@ -802,7 +803,10 @@ class Incursoes(commands.Cog):
             )
             return
 
-        await db.adicionar_participante(self.bot.db, run_id, interaction.user.id, personagem_id)
+        await db.adicionar_participante(
+            self.bot.db, run_id, interaction.user.id, personagem_id,
+            tier=tier(personagem["nivel"]),
+        )
         await interaction.response.send_message(
             f"Voce entrou com **{personagem['nome']}** (tier {tier(personagem['nivel'])}).",
             ephemeral=True,

@@ -295,12 +295,130 @@ async def caso_classe_sem_escolha_no_tier_1_nao_abre_nada():
     print("  classe sem decisao no tier 1 nao abre menu no registro: ok")
 
 
+async def caso_alterar_refaz_a_decisao_do_tier():
+    """O /ficha alterar esquece a decisao do tier atual, sem mexer no nivel.
+
+    O /ficha voltar ja fazia isso pelo caminho longo: descer um tier, perder
+    os numeros, e subir de novo. Aqui o nivel fica onde esta.
+    """
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+
+    # sobe para o tier 2 e decide a Expertise
+    subir = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, subir)
+    subir.view_enviada.menu._values = ["Furtividade"]
+    await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+    antes = await db.buscar_personagem(conn, pid)
+    assert antes["escolhas"] == {"expertise_1": ["Furtividade"]}
+    assert tier(antes["nivel"]) == 2
+
+    # nunca jogou no tier 2: da para refazer
+    inter = FakeInteraction(canal, dono)
+    await ficha.alterar.callback(ficha, inter)
+    depois = await db.buscar_personagem(conn, pid)
+
+    assert depois["escolhas"] == {}, depois["escolhas"]
+    assert tier(depois["nivel"]) == 2, "o alterar nao pode mexer no nivel"
+    assert depois["pendencias"], "a decisao tinha de voltar a ficar pendente"
+    assert "Decida agora" in inter.resposta, inter.resposta
+    assert inter.view_enviada is not None, "o menu da decisao nao abriu"
+    print("  o alterar refaz a decisao do tier sem derrubar o nivel: ok")
+
+
+async def caso_alterar_trava_depois_de_jogar_naquele_tier():
+    """Jogou uma incursao no tier, a decisao daquele tier esta fechada."""
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    subir = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, subir)
+    subir.view_enviada.menu._values = ["Furtividade"]
+    await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+
+    # uma run no tier 2, que e onde ele esta
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
+    await db.adicionar_participante(conn, run_id, dono, pid, tier=2)
+    assert await db.tiers_jogados(conn, pid) == {2}
+
+    inter = FakeInteraction(canal, dono)
+    await ficha.alterar.callback(ficha, inter)
+    assert "ja entrou numa incursao" in inter.resposta, inter.resposta
+    intacto = await db.buscar_personagem(conn, pid)
+    assert intacto["escolhas"] == {"expertise_1": ["Furtividade"]}, intacto["escolhas"]
+    print("  jogou no tier, a decisao daquele tier nao se desfaz: ok")
+
+
+async def caso_a_run_sem_tier_nao_trava():
+    """Run antiga, anterior a coluna `tier`, nao tranca nada.
+
+    O NULL ali nao e "jogou no tier nenhum": e "nao da para saber". Chutar
+    trancaria um tier que talvez nunca tenha sido jogado.
+    """
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    subir = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, subir)
+    subir.view_enviada.menu._values = ["Furtividade"]
+    await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
+    await db.adicionar_participante(conn, run_id, dono, pid)  # sem tier
+    assert await db.tiers_jogados(conn, pid) == set()
+
+    inter = FakeInteraction(canal, dono)
+    await ficha.alterar.callback(ficha, inter)
+    assert (await db.buscar_personagem(conn, pid))["escolhas"] == {}
+    print("  run sem tier gravado nao tranca o alterar: ok")
+
+
+async def caso_remover_apaga_a_ficha_de_outro():
+    """O /ficha remover e do mestre, e alcanca a ficha de qualquer jogador."""
+    conn, canal, ficha = await preparar()
+    dono, mestre = JOGADORES[0], JOGADORES[1]
+    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+
+    inter = FakeInteraction(canal, mestre)
+    await ficha.remover.callback(ficha, inter, str(pid))
+
+    assert await db.buscar_personagem(conn, pid) is None, "a ficha nao foi apagada"
+    assert "Vhalor" in inter.resposta, inter.resposta
+    # o comando e so para admin: a permissao vem declarada, nao checada a mao
+    assert ficha.remover.default_permissions.manage_guild, (
+        "o remover tem de exigir manage_guild"
+    )
+    print("  o mestre apaga a ficha de outro jogador: ok")
+
+
+async def caso_remover_respeita_run_viva():
+    """Ninguem perde a ficha no meio de uma incursao."""
+    conn, canal, ficha = await preparar()
+    dono, mestre = JOGADORES[0], JOGADORES[1]
+    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
+    await db.adicionar_participante(conn, run_id, dono, pid, tier=1)
+
+    inter = FakeInteraction(canal, mestre)
+    await ficha.remover.callback(ficha, inter, str(pid))
+
+    assert "esta na run" in inter.resposta, inter.resposta
+    assert await db.buscar_personagem(conn, pid) is not None, "apagou mesmo assim"
+    print("  a ficha de quem esta numa run viva nao e apagada: ok")
+
+
 async def main():
     try:
         caso_tabela_das_classes()
         await caso_registro_por_classe()
         await caso_a_escolha_do_tier_1_abre_no_registro()
         await caso_classe_sem_escolha_no_tier_1_nao_abre_nada()
+        await caso_alterar_refaz_a_decisao_do_tier()
+        await caso_alterar_trava_depois_de_jogar_naquele_tier()
+        await caso_a_run_sem_tier_nao_trava()
+        await caso_remover_apaga_a_ficha_de_outro()
+        await caso_remover_respeita_run_viva()
         await caso_menu_limita_as_proficiencias()
         await caso_classe_pendente_e_recusada()
         await caso_nome_repetido_e_limite()

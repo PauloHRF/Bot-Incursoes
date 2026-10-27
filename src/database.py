@@ -69,6 +69,11 @@ CREATE TABLE IF NOT EXISTS run_participantes (
     hp_atual      INTEGER,
     -- Vida temporaria: zera quando um combate comeca.
     thp           INTEGER NOT NULL DEFAULT 0,
+    -- O tier em que o personagem ENTROU nesta run. Gravado aqui e nao
+    -- deduzido depois porque ele pode subir de tier entre uma run e
+    -- outra, e a ficha so guarda o nivel de agora. NULL nas runs
+    -- anteriores a esta coluna: ali nao da para saber, e nao travam nada.
+    tier          INTEGER,
     PRIMARY KEY (run_id, user_id)
 );
 
@@ -455,6 +460,11 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
             "ALTER TABLE run_participantes ADD COLUMN thp INTEGER NOT NULL DEFAULT 0"
         )
 
+    # O tier em que cada um entrou na run. Sem ela nao da para saber se o
+    # personagem ja jogou naquele tier, que e a trava do `/ficha alterar`.
+    if "tier" not in await _colunas(conn, "run_participantes"):
+        await conn.execute("ALTER TABLE run_participantes ADD COLUMN tier INTEGER")
+
     # Contador de descansos: e ele que zera as habilidades "1x por descanso".
     if "descansos" not in await _colunas(conn, "runs"):
         await conn.execute(
@@ -838,16 +848,57 @@ async def atualizar_run(conn: aiosqlite.Connection, run_id: int, **campos: Any) 
 
 
 async def adicionar_participante(
-    conn: aiosqlite.Connection, run_id: int, user_id: int, personagem_id: int
+    conn: aiosqlite.Connection,
+    run_id: int,
+    user_id: int,
+    personagem_id: int,
+    tier: Optional[int] = None,
 ) -> bool:
-    """False se o jogador já estava na run."""
+    """False se o jogador já estava na run.
+
+    `tier` e o do personagem AGORA, gravado na entrada: e com ele que o
+    `/ficha alterar` sabe se aquele tier ja foi jogado. Sem ele a coluna
+    fica NULL e nao trava nada.
+    """
     cur = await conn.execute(
-        "INSERT OR IGNORE INTO run_participantes (run_id, user_id, personagem_id)"
-        " VALUES (?, ?, ?)",
-        (run_id, user_id, personagem_id),
+        "INSERT OR IGNORE INTO run_participantes"
+        " (run_id, user_id, personagem_id, tier) VALUES (?, ?, ?, ?)",
+        (run_id, user_id, personagem_id, tier),
     )
     await conn.commit()
     return cur.rowcount > 0
+
+
+async def tiers_jogados(conn: aiosqlite.Connection, personagem_id: int) -> set[int]:
+    """Os tiers em que este personagem ja entrou numa incursao.
+
+    O NULL das runs anteriores a coluna fica de fora: la nao da para saber
+    em que tier ele estava, e chutar travaria um tier que talvez nunca
+    tenha sido jogado.
+    """
+    async with conn.execute(
+        "SELECT DISTINCT tier FROM run_participantes"
+        " WHERE personagem_id = ? AND tier IS NOT NULL",
+        (personagem_id,),
+    ) as cur:
+        return {r["tier"] for r in await cur.fetchall()}
+
+
+async def personagens_da_guilda(
+    conn: aiosqlite.Connection, guild_id: int
+) -> list[dict[str, Any]]:
+    """Todos os personagens do servidor, de todos os jogadores.
+
+    E a visao que o admin precisa para apagar a ficha de outra pessoa; o
+    `listar_personagens` so enxerga os de um dono.
+    """
+    async with conn.execute(
+        "SELECT * FROM personagens WHERE guild_id = ? ORDER BY user_id, nome",
+        (guild_id,),
+    ) as cur:
+        linhas = await cur.fetchall()
+    vestido = await _equipados_de(conn, [r["id"] for r in linhas])
+    return [_desserializar(r, vestido.get(r["id"], ())) for r in linhas]
 
 
 async def personagem_da_run(

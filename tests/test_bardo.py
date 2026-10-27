@@ -436,6 +436,15 @@ async def caso_ottos_dance_so_prende():
     print("  Otto's prende quem danca, e so isso: ok")
 
 
+def _habilidade(hid: str):
+    """A habilidade do catalogo, para a assercao sair do dado de verdade."""
+    for lista in cl.CLASSES["bardo"].habilidades.values():
+        for h in lista:
+            if h.id == hid:
+                return h
+    raise AssertionError(hid)
+
+
 async def caso_aid_da_thp_e_cura():
     conn, canal, cog, incursao, run_id = await preparar(
         escolhas={"magia_bardo_t3": "aid"}
@@ -446,8 +455,17 @@ async def caso_aid_da_thp_e_cura():
     inter = FakeInteraction(canal, JOGADORES[0])
     await cog.usar_habilidade(inter, run["id"], "OBJ", "aid")
     pessoas = {p["user_id"]: p for p in await db.personagens_da_run(conn, run_id)}
+    # A faixa sai do PROPRIO dado da habilidade, e nao de um numero
+    # escrito aqui: o Aid ja foi 3d8 e virou 2d8 numa recalibragem, e o
+    # minimo caiu de 3 para 2 — um `>= 3` fixo passou a falhar quando os
+    # dois dados davam 1.
+    dado = _habilidade("aid").acao["thp"]
+    quantos = int(dado.split("d")[0])
+    maximo = motor.maior_do_dado(dado)
     for uid in JOGADORES[:3]:
-        assert pessoas[uid]["thp"] >= 3, pessoas[uid]["thp"]
+        assert quantos <= pessoas[uid]["thp"] <= maximo, (
+            pessoas[uid]["thp"], dado
+        )
         assert pessoas[uid]["hp_atual"] > 20, pessoas[uid]["hp_atual"]
     print("  Aid da vida temporaria E cura o grupo no mesmo lance: ok")
 

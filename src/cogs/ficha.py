@@ -176,6 +176,32 @@ async def sugerir_personagens(
     ][:25]
 
 
+async def sugerir_do_servidor(
+    conn, interaction: discord.Interaction, atual: str
+) -> list[app_commands.Choice[str]]:
+    """Autocomplete de TODOS os personagens do servidor, com o dono no rotulo.
+
+    O `sugerir_personagens` so enxerga os de quem digita; o admin precisa
+    alcancar a ficha de outra pessoa. O valor e o id, e nao o nome, porque
+    dois jogadores podem ter personagens com o mesmo nome.
+    """
+    personagens = await db.personagens_da_guilda(conn, interaction.guild_id)
+    termo = atual.lower()
+    saida = []
+    for p in personagens:
+        if termo and termo not in p["nome"].lower():
+            continue
+        dono = interaction.guild.get_member(p["user_id"]) if interaction.guild else None
+        quem = dono.display_name if dono else f"id {p['user_id']}"
+        saida.append(
+            app_commands.Choice(
+                name=f"{p['nome']} (tier {tier(p['nivel'])}) - {quem}"[:100],
+                value=str(p["id"]),
+            )
+        )
+    return saida[:25]
+
+
 def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.Embed:
     nivel = personagem["nivel"]
     treinadas = personagem["pericias"]
@@ -850,6 +876,129 @@ class Ficha(commands.Cog):
         # Sobrando decisao, o menu da proxima ja vem junto: o jogador resolve
         # tudo numa sequencia so, sem precisar de outro comando.
         await self._responder_com_escolha(interaction, atualizado, texto)
+
+    async def _sugerir_do_servidor(
+        self, interaction: discord.Interaction, atual: str
+    ) -> list[app_commands.Choice[str]]:
+        return await sugerir_do_servidor(self.bot.db, interaction, atual)
+
+    @grupo.command(
+        name="alterar",
+        description="Refaz as decisoes do tier atual, se voce ainda nao jogou nele",
+    )
+    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
+    async def alterar(
+        self, interaction: discord.Interaction, personagem: Optional[str] = None
+    ) -> None:
+        """Esquece as decisoes do tier de agora, para o jogador refaze-las.
+
+        O `/ficha voltar` ja fazia isso, mas pelo caminho longo: descer um
+        tier, perder os numeros, e subir de novo. Aqui o nivel nao se mexe.
+
+        A trava e ter jogado: depois que o personagem entrou numa incursao
+        naquele tier, as decisoes dele valeram em mesa e nao se desfazem. As
+        runs anteriores a coluna `tier` ficam de fora da conta - nelas nao da
+        para saber em que tier ele estava, e chutar travaria um tier que
+        talvez nunca tenha sido jogado.
+        """
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
+            return
+
+        atual = tier(escolhido["nivel"])
+        if atual in await db.tiers_jogados(self.bot.db, escolhido["id"]):
+            await interaction.response.send_message(
+                f"**{escolhido['nome']}** ja entrou numa incursao no **tier "
+                f"{atual}** - as decisoes desse tier valeram em mesa e nao da "
+                f"para refazer. Elas voltam a abrir quando ele subir de tier.",
+                ephemeral=True,
+            )
+            return
+
+        classe = cl.classe(escolhido.get("classe"))
+        if classe is None:
+            await interaction.response.send_message(
+                "Nao reconheco a classe desta ficha.", ephemeral=True
+            )
+            return
+
+        # Esquece so as decisoes DESTE tier: as dos tiers abaixo ja foram
+        # jogadas e nao estao em questao.
+        deste_tier = {h.id for h in classe.habilidades_do_tier(atual)}
+        guardadas = escolhido.get("escolhas") or {}
+        mantidas = {k: v for k, v in guardadas.items() if k not in deste_tier}
+        apagadas = [
+            h.nome for h in classe.habilidades_do_tier(atual) if h.id in guardadas
+        ]
+        if not apagadas:
+            await interaction.response.send_message(
+                f"**{escolhido['nome']}** nao tem decisao tomada no tier "
+                f"{atual} para refazer.",
+                ephemeral=True,
+            )
+            return
+
+        await db.definir_escolhas(self.bot.db, escolhido["id"], mantidas)
+        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
+        texto = (
+            f"\U0001f501 {interaction.user.mention} vai refazer no tier "
+            f"{atual} de **{escolhido['nome']}**: "
+            + ", ".join(f"**{n}**" for n in apagadas)
+            + "."
+        )
+        await self._responder_com_escolha(interaction, atualizado, texto)
+
+    @grupo.command(
+        name="remover", description="(admin) Apaga o personagem de qualquer jogador"
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.describe(personagem="Qual ficha apagar (de qualquer jogador)")
+    @app_commands.autocomplete(personagem=_sugerir_do_servidor)
+    async def remover(self, interaction: discord.Interaction, personagem: str) -> None:
+        """Apaga uma ficha. So admin, e nunca a de quem esta numa run viva.
+
+        Era auto-servico e saiu numa limpeza de comandos; volta como
+        ferramenta do mestre. O limite de 25 personagens por jogador vem do
+        seletor do Discord, e sem nenhum jeito de apagar ele virava parede.
+        """
+        try:
+            alvo_id = int(personagem)
+        except ValueError:
+            await interaction.response.send_message(
+                "Escolha a ficha pela lista do autocomplete.", ephemeral=True
+            )
+            return
+
+        alvo = await db.buscar_personagem(self.bot.db, alvo_id)
+        if not alvo or alvo.get("guild_id") != interaction.guild_id:
+            await interaction.response.send_message(
+                "Nao achei essa ficha neste servidor.", ephemeral=True
+            )
+            return
+
+        em_run = await db.run_viva_do_jogador(
+            self.bot.db, interaction.guild_id, alvo["user_id"]
+        )
+        if em_run:
+            await interaction.response.send_message(
+                f"O dono de **{alvo['nome']}** esta na run #{em_run['id']}. "
+                f"Termine ou desista dela antes de apagar a ficha.",
+                ephemeral=True,
+            )
+            return
+
+        await db.remover_personagem(self.bot.db, alvo_id)
+        dono = (
+            interaction.guild.get_member(alvo["user_id"])
+            if interaction.guild
+            else None
+        )
+        quem = dono.mention if dono else f"<@{alvo['user_id']}>"
+        await interaction.response.send_message(
+            f"\U0001f5d1\ufe0f {interaction.user.mention} apagou a ficha "
+            f"**{alvo['nome']}** (tier {tier(alvo['nivel'])}), de {quem}."
+        )
 
     @grupo.command(name="imagem", description="Associa um retrato ao personagem")
     @app_commands.describe(
