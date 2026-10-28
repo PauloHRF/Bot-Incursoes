@@ -925,6 +925,28 @@ def _campo_pontos(e: discord.Embed, lancamentos: list[dict], total: int, organiz
     e.add_field(name=f"Pontos de Organização (+{ganho})", value="\n".join(linhas), inline=False)
 
 
+def descanso_fechado(
+    sala: Sala, linhas: Optional[list[str]] = None
+) -> discord.Embed:
+    """O que fica no canal depois que o descanso fecha.
+
+    O cartão do descanso tem botões, e cartão sai do canal quando o passo
+    seguinte abre — só que o passo seguinte abre no MESMO instante em que o
+    descanso fecha. Sem esta mensagem o grupo via o HP e o perdia na mesma
+    batida.
+
+    Todo outro tipo de sala já deixava um `resultado_sala` atrás de si. O
+    descanso era o único que não deixava nada, porque ele não tem rolagem e
+    chegava em `_concluir_sala` sem resolução nenhuma.
+    """
+    e = discord.Embed(
+        title=f"🏕️ {sala.nome} — o grupo descansou", color=COR_SUCESSO
+    )
+    if linhas:
+        e.add_field(name="Como o grupo saiu", value="\n".join(linhas), inline=False)
+    return e
+
+
 def campo_ouro(e: discord.Embed, ouro: Optional[list[tuple[str, int]]]) -> None:
     """O ouro que a incursao pagou, uma linha por personagem.
 

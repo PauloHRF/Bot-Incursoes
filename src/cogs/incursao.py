@@ -3961,6 +3961,15 @@ class Incursoes(commands.Cog):
                 await self._marcar_sala_superada(run, sala)
             await self._expulsar_estourados(run)
 
+        if sala.tipo == "Descanso":
+            # Pelo TIPO, e nao por `resolucao is None`: sala sem rolagem e o
+            # que o descanso tem de particular hoje, nao uma regra geral.
+            await canal.send(
+                embed=E.descanso_fechado(
+                    sala, await self._linhas_do_descanso(run)
+                )
+            )
+
         # Mímico acordado no baú: a sala vira combate em vez de devolver à votação.
         if desfecho is not None and desfecho.mimicos:
             await self._soltar_mimicos(run, sala)

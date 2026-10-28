@@ -859,6 +859,52 @@ async def caso_descanso_limpa_um_por_personagem():
     print("  o descanso limpa uma condição por personagem: ok")
 
 
+async def caso_o_descanso_deixa_o_desfecho_no_canal():
+    """O HP do grupo sobrevive à mudança de sala.
+
+    O cartão do descanso tem botões, e cartão sai do canal quando o passo
+    seguinte abre — só que o passo seguinte abre no MESMO instante em que o
+    descanso fecha. O grupo via o HP e o perdia na mesma batida.
+
+    Todo outro tipo de sala já deixava um `resultado_sala` atrás de si; o
+    descanso era o único que não deixava nada, porque não tem rolagem e
+    chega em `_concluir_sala` sem resolução nenhuma.
+    """
+    conn, canal, cog, incursao = await preparar(salas_de("Descanso", None))
+    run = await montar_run(conn, canal, cog)
+    ferido = JOGADORES[0]
+    await db.definir_hp(conn, run["id"], ferido, 5)
+
+    alvo = (await cog._opcoes(run, 1))[0]
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for user_id in JOGADORES:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
+
+    # Ninguém carrega condição, então o descanso fecha sozinho e a run já
+    # está na votação do passo 2 — a mudança de sala que apagava o cartão.
+    depois = await db.buscar_run(conn, run["id"])
+    assert depois["linha_atual"] == 2, depois["linha_atual"]
+
+    nomes = {
+        p["user_id"]: p["nome"] for p in await db.personagens_da_run(conn, run["id"])
+    }
+    desfechos = [
+        m for m in canal.mensagens
+        if m.embeds and "o grupo descansou" in (m.embeds[0].title or "")
+    ]
+    assert len(desfechos) == 1, (
+        f"esperava um desfecho de descanso VIVO no canal, achei {len(desfechos)}"
+    )
+    campos = {f.name: f.value for f in desfechos[0].embeds[0].fields}
+    valor = campos.get("Como o grupo saiu", "")
+    for nome in nomes.values():
+        assert nome in valor, f"{nome} não apareceu no desfecho: {valor}"
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o descanso deixa o desfecho no canal: ok")
+
+
 async def caso_cartao_do_descanso_mostra_o_grupo_inteiro():
     """O cartão do descanso mostra todos, e continua mostrando.
 
@@ -1103,6 +1149,7 @@ async def main():
     await caso_tesouro_falho_acorda_mimicos()
     await caso_tesouro_falho_sem_mimico_segue()
     await caso_descanso_limpa_um_por_personagem()
+    await caso_o_descanso_deixa_o_desfecho_no_canal()
     await caso_cartao_do_descanso_mostra_o_grupo_inteiro()
     await caso_descanso_e_a_saida_da_exaustao()
     await caso_descanso_sem_nada_a_limpar()
