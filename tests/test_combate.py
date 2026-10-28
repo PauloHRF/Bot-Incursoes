@@ -459,6 +459,16 @@ async def caso_o_ataque_adia_antes_de_resolver():
     # 1. adiou — e e isso que compra os 15 minutos
     assert inter.adiado, "o ataque tem de adiar antes de resolver o turno"
 
+    # 1b. e adiou do jeito CERTO. Num clique de botao, `defer(ephemeral=True)`
+    #     sozinho vira DEFERRED_MESSAGE_UPDATE e o ephemeral e ignorado: a
+    #     "resposta original" passa a ser a mensagem do botao, que aqui e o
+    #     proprio painel. So com `thinking=True` nasce uma efemera de
+    #     verdade. Isto ja foi para producao errado e apagava o painel a
+    #     cada troca de turno.
+    assert inter._original() is not painel, (
+        "a resposta adiada virou o painel: faltou thinking=True no defer"
+    )
+
     # 2. o jogador continua recebendo o texto, so que por outro caminho
     assert inter.resposta, "o jogador ficou sem resposta nenhuma"
 

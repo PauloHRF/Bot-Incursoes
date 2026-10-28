@@ -170,16 +170,23 @@ class FakeResposta:
         """Se a primeira resposta ja saiu — por `send_message` ou por `defer`."""
         return self.interacao.adiado or self.interacao._mensagem_resposta is not None
 
-    async def defer(self, *, ephemeral=False, **kw):
+    async def defer(self, *, ephemeral=False, thinking=False, **kw):
         """Adia a resposta, e registra QUAL mensagem vira a "original".
 
-        A regra do Discord, que o duble precisa imitar: `defer(ephemeral=True)`
-        cria uma efemera nova, e e ela que `edit_original_response` edita.
-        Um `defer()` simples num clique de botao nao cria nada — a original
-        continua sendo a mensagem da propria view.
+        A regra e do discord.py, e e traicoeira: num clique de BOTAO o
+        `ephemeral` so vale junto com `thinking=True`. Sem ele o defer vira
+        DEFERRED_MESSAGE_UPDATE — "vou editar a mensagem do botao" — e o
+        `ephemeral` e ignorado em silencio. A original passa a ser a
+        mensagem da view, e apagar a original apaga o PAINEL.
+
+        Este duble ja modelou o que se QUERIA que acontecesse em vez do
+        que acontece, e com isso deixou passar para producao um bug que
+        apagava o painel do combate a cada troca de turno. Imitar a regra
+        de verdade, com toda a pegadinha, e o trabalho dele.
         """
         self.interacao.adiado = True
-        if ephemeral:
+        de_componente = self.interacao.message is not None
+        if ephemeral and (thinking or not de_componente):
             self.interacao._mensagem_resposta = FakeMensagem(
                 self.interacao.canal, -1, content=None
             )
@@ -252,7 +259,13 @@ class FakeInteraction:
         return self._mensagem_resposta
 
     async def delete_original_response(self):
-        alvo = self._mensagem_resposta
+        """Apaga a resposta original — que nem sempre e a efemera.
+
+        Seguia so `_mensagem_resposta`, entao quando a original era a
+        mensagem do botao o duble simplesmente nao apagava nada. Era a
+        segunda razao de o bug do painel ter passado batido.
+        """
+        alvo = self._original()
         if alvo is not None:
             await alvo.delete()
             self.efemera_apagada = True

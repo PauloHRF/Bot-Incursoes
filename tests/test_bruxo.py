@@ -30,6 +30,12 @@ _ABERTAS = []
 
 SACO = {**INDEFESO, "hp": 500, "ataque": 1, "dano": "1d1"}
 
+# O save de uma criatura sem save escrito sai de `ataque - DEFASAGEM`, e
+# depois ganha o ajuste do tier. Com ataque -40 ele fica tao abaixo da CD
+# que nenhum d20 salva: e assim que um caso exercita o galho de QUEM
+# FALHA sem depender de sorte.
+SEM_DEFESA = {**SACO, "ataque": -40}
+
 DOC = [
     (19, 14, 4, 3, 5, 5, "1d10"),
     (31, 15, 4, 4, 7, 7, "1d10"),
@@ -39,7 +45,8 @@ DOC = [
 ]
 
 
-async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2, so_o_primeiro=False):
+async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2,
+                   so_o_primeiro=False, monstro=None):
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -56,7 +63,7 @@ async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2, so_o_primeiro=
     cog = Incursoes(FakeBot(conn, canal))
     incursao, _ = montar_conteudo(
         cog, tamanho="Curta", salas=salas_sem_combate(),
-        monstro_objetivo=SACO, inimigos_objetivo=monstros,
+        monstro_objetivo=monstro or SACO, inimigos_objetivo=monstros,
     )
     run_id = await db.criar_run(conn, GUILD, CANAL, incursao.id, JOGADORES[0])
     for user_id in JOGADORES[:quantos]:
@@ -168,8 +175,16 @@ async def caso_hex_marca_o_alvo():
 
 
 async def caso_hunger_of_hadar_da_dano_e_tira_a_vez():
+    """O dano e a perda de vez vem JUNTOS, em quem falha no save.
+
+    A criatura nao tem `metade`: quem passa leva zero. Com o SACO comum
+    os tres passavam o save em ~9% das rodadas e o caso quebrava sozinho,
+    porque ele exigia dano de alguem. Com a criatura sem defesa, os tres
+    falham sempre e o galho que importa e o que roda.
+    """
     conn, canal, cog, incursao, run = await preparar(
-        escolhas={"pacto_t3": "hunger_of_hadar"}, monstros=3
+        escolhas={"pacto_t3": "hunger_of_hadar"}, monstros=3,
+        monstro=SEM_DEFESA,
     )
     estado = await cog._estado_combate(run, incursao.objetivo)
     antes = {i.indice: i.hp_atual for i in estado.inimigos}
@@ -179,29 +194,41 @@ async def caso_hunger_of_hadar_da_dano_e_tira_a_vez():
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
                                        incursao.objetivo)
     levaram = [antes[i.indice] - i.hp_atual for i in estado.inimigos]
-    assert any(d >= 6 for d in levaram), levaram
-    # e quem falhou tambem perdeu a vez
-    assert "perde a vez" in leu(inter) or "resistiu" in leu(inter)
+    # 6d6: minimo 6, maximo 36. Todos falharam, entao todos levaram.
+    assert all(6 <= d <= 36 for d in levaram), levaram
+    # e os mesmos perderam a vez: o dano e o atordoamento andam juntos
+    assert all(i.atordoado for i in estado.inimigos), [
+        (i.nome, i.atordoado) for i in estado.inimigos
+    ]
+    assert "perde a vez" in leu(inter), leu(inter)
     print("  Hunger of Hadar faz dano E tira a vez no mesmo lance: ok")
 
 
 async def caso_synaptic_static_atrapalha_o_ataque():
+    """Quem falha no save perde 3 de ataque, e a perda chega na rolagem.
+
+    Com a criatura comum isto era um `if/else`: ou alguem foi atrapalhado,
+    ou a linha dizia "resistiu". So que resistir aqui NAO e sair ileso — a
+    magia tem `metade` —, entao o texto do galho de cima nunca trazia essa
+    palavra e o caso quebrava quando os dois passavam no save.
+    """
     conn, canal, cog, incursao, run = await preparar(
-        escolhas={"pacto_t5": "synaptic_static"}, monstros=2
+        escolhas={"pacto_t5": "synaptic_static"}, monstros=2,
+        monstro=SEM_DEFESA,
     )
     inter = FakeInteraction(canal, JOGADORES[0])
     await cog.usar_habilidade(inter, run["id"], "OBJ", "synaptic_static")
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
                                        incursao.objetivo)
     atrapalhados = [i for i in estado.inimigos if i.penalidade_ataque > 0]
-    if atrapalhados:
-        assert all(i.penalidade_ataque == 3 for i in atrapalhados)
-        # e a penalidade chega na rolagem de verdade
-        alvo = motor.Combatente(1, "X", 99, 0, "1d1", 50, 50)
-        golpe = motor.contra_atacar(atrapalhados[0], alvo)
-        assert golpe.bonus == atrapalhados[0].ataque - 3, golpe.bonus
-    else:
-        assert "resistiu" in leu(inter), leu(inter)
+    assert len(atrapalhados) == len(estado.inimigos), [
+        (i.nome, i.penalidade_ataque) for i in estado.inimigos
+    ]
+    assert all(i.penalidade_ataque == 3 for i in atrapalhados)
+    # e a penalidade chega na rolagem de verdade
+    alvo = motor.Combatente(1, "X", 99, 0, "1d1", 50, 50)
+    golpe = motor.contra_atacar(atrapalhados[0], alvo)
+    assert golpe.bonus == atrapalhados[0].ataque - 3, golpe.bonus
     print("  Synaptic Static desconta 3 do ataque de quem falha: ok")
 
 

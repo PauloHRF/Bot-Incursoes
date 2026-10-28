@@ -1642,7 +1642,13 @@ class Incursoes(commands.Cog):
         # isto, um combate grande numa maquina modesta estoura o prazo e o
         # jogador ve "esta interacao falhou" (erro 10062). Dai em diante
         # toda resposta tem de sair pelo `_dizer`.
-        await interaction.response.defer(ephemeral=True)
+        #
+        # `thinking=True` NAO e enfeite, e o que faz o `ephemeral` valer.
+        # Num clique de botao o defer simples e DEFERRED_MESSAGE_UPDATE —
+        # "vou editar a mensagem do botao" — e o ephemeral e ignorado em
+        # silencio. Dai `delete_original_response` apagava o PAINEL do
+        # combate, que e a mensagem onde os botoes moram.
+        await interaction.response.defer(ephemeral=True, thinking=True)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo") or run["sala_atual"] != sala_id:
             await self._dizer(interaction, "Este combate já terminou.")
@@ -2313,7 +2319,13 @@ class Incursoes(commands.Cog):
         # isto, um combate grande numa maquina modesta estoura o prazo e o
         # jogador ve "esta interacao falhou" (erro 10062). Dai em diante
         # toda resposta tem de sair pelo `_dizer`.
-        await interaction.response.defer(ephemeral=True)
+        #
+        # `thinking=True` NAO e enfeite, e o que faz o `ephemeral` valer.
+        # Num clique de botao o defer simples e DEFERRED_MESSAGE_UPDATE —
+        # "vou editar a mensagem do botao" — e o ephemeral e ignorado em
+        # silencio. Dai `delete_original_response` apagava o PAINEL do
+        # combate, que e a mensagem onde os botoes moram.
+        await interaction.response.defer(ephemeral=True, thinking=True)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo"):
             await self._dizer(interaction, "Esta sala ja terminou.")
