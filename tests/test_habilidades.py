@@ -290,11 +290,25 @@ async def caso_a_escolha_nao_entra_na_lista_de_habilidades():
     for h in escolhas:
         assert h.nome not in lista, (h.nome, lista)
 
-    # mas o que ela destravou esta la
+    # mas o que ela destravou esta la: e ESSA a prova de que a decisao
+    # valeu. Nao ha campo repetindo qual foi — a habilidade escolhida
+    # aparecendo na lista ja conta a historia inteira.
     assert opcao["nome"] in lista, (opcao["nome"], lista)
-    # e qual foi a decisao continua visivel, no campo proprio
-    assert campos["Escolhas"], campos
-    assert opcao["nome"] in campos["Escolhas"], campos["Escolhas"]
+    # e aparece UMA vez na ficha inteira: antes o nome saia tres vezes —
+    # na linha da escolha, na habilidade destravada e no campo Escolhas.
+    vezes = " ".join(campos.values()).count(opcao["nome"])
+    assert vezes == 1, (opcao["nome"], vezes, campos)
+
+    # o que FALTA decidir continua visivel: sem esta linha o jogador nao
+    # teria como saber que deve algo ao bot.
+    faltando = [h.nome for _t, h in personagem["pendencias"]]
+    assert faltando, "o bardo do tier 3 tem decisao pendente aqui"
+    for nome in faltando:
+        assert nome in campos["Escolhas"], (nome, campos["Escolhas"])
+
+    # e a decisao JA TOMADA nao entra ali, porque ela destravou uma
+    # habilidade e essa habilidade ja esta na lista.
+    assert cancao.nome not in campos["Escolhas"], campos["Escolhas"]
     print("  a escolha sai da lista; a habilidade escolhida fica: ok")
 
 

@@ -257,7 +257,7 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         )
 
     _campo_habilidades(e, personagem)
-    _campo_escolhas(e, personagem)
+    _campo_a_decidir(e, personagem)
 
     if bonus:
         # Uma pericia sem proficiencia tambem pode ter bonus: mostramos o total.
@@ -330,14 +330,33 @@ def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
     e.add_field(name=f"Habilidades ({len(ganhas)})", value=texto, inline=False)
 
 
-def _campo_escolhas(e: discord.Embed, personagem: dict[str, Any]) -> None:
-    """O que o jogador ja decidiu, e o que ainda falta decidir."""
+def _campo_a_decidir(e: discord.Embed, personagem: dict[str, Any]) -> None:
+    """O que falta decidir, e as decisoes que nao aparecem em outro lugar.
+
+    Uma ESCOLHA some da ficha quando ela DESTRAVA uma habilidade: a magia
+    escolhida ja esta na lista, e repetir "Cancao de abertura: Charm
+    Person" era a terceira copia da mesma informacao.
+
+    Mas 15 das 38 nao destravam nada — Fighting Style, Expertise,
+    Metamagia, Tradicao Arcana e companhia. Nelas o efeito vem da OPCAO,
+    direto nos numeros, e sem esta linha a ficha deixaria de dizer que o
+    guerreiro e Defensivo: so sobraria o +1 de CA, sem explicacao.
+
+    A distincao e derivada, nao escrita: basta ver se alguma habilidade
+    da ficha foi destravada por aquela decisao.
+    """
+    ganhas = personagem.get("habilidades") or []
     feitas = personagem.get("escolhas") or {}
-    pendencias = personagem.get("pendencias") or []
     linhas = []
-    for _tier, habilidade in personagem.get("habilidades") or []:
+
+    for _tier, habilidade in ganhas:
         valor = feitas.get(habilidade.id)
         if not valor or not habilidade.decidivel:
+            continue
+        destravou = any(
+            o.exige_escolha == (habilidade.id, valor) for _t, o in ganhas
+        )
+        if destravou:
             continue
         if isinstance(valor, list):
             escrito = ", ".join(valor)
@@ -348,10 +367,12 @@ def _campo_escolhas(e: discord.Embed, personagem: dict[str, Any]) -> None:
             )
             escrito = opcao["nome"] if opcao else str(valor)
         linhas.append(f"**{habilidade.nome}**: {escrito}")
-    for _tier, habilidade in pendencias:
+
+    for tier_da, habilidade in personagem.get("pendencias") or []:
         linhas.append(
-            f"**{habilidade.nome}**: *a decidir* — `/ficha alterar` abre o menu"
+            f"**{habilidade.nome}** (T{tier_da}) — *a decidir*, `/ficha alterar` abre o menu"
         )
+
     if linhas:
         e.add_field(name="Escolhas", value="\n".join(linhas), inline=False)
 
