@@ -259,6 +259,45 @@ async def caso_multiataque_na_run():
     print("  multiataque: dois golpes num clique, e o turno acaba: ok")
 
 
+async def caso_a_escolha_nao_entra_na_lista_de_habilidades():
+    """A ESCOLHA e rotulo de decisao, nao habilidade — e nao polui a lista.
+
+    O jogador via a mesma decisao tres vezes: a linha da ESCOLHA ("Escolhe
+    uma: Healing Word, Dissonant Whispers ou Charm Person"), a habilidade
+    que ela destravou, e o campo Escolhas. Nenhuma das 38 escolhas do
+    catalogo tem efeito ou acao propria, entao a linha delas nao carrega
+    nada que o resto ja nao diga.
+    """
+    conn, canal, cog = await preparar(classe="bardo", nivel=5)
+    dono = JOGADORES[0]
+    personagem = await db.personagem_por_nome(conn, 1, dono, f"Heroi{dono}")
+    # decide a magia do tier 1, para haver uma destravada na lista
+    cancao = next(
+        h for _t, h in personagem["habilidades"] if h.tipo == cl.ESCOLHA
+    )
+    opcao = cancao.escolha["opcoes"][0]
+    await db.definir_escolha(conn, personagem["id"], cancao.id, opcao["id"])
+    personagem = await db.buscar_personagem(conn, personagem["id"])
+
+    campos = {
+        f.name: f.value
+        for f in embed_ficha(personagem, FakeInteraction(canal, dono).user).fields
+    }
+    lista = campos[next(n for n in campos if n.startswith("Habilidades"))]
+
+    escolhas = [h for _t, h in personagem["habilidades"] if h.tipo == cl.ESCOLHA]
+    assert escolhas, "o bardo do tier 3 tem escolha: sem isso nada e provado"
+    for h in escolhas:
+        assert h.nome not in lista, (h.nome, lista)
+
+    # mas o que ela destravou esta la
+    assert opcao["nome"] in lista, (opcao["nome"], lista)
+    # e qual foi a decisao continua visivel, no campo proprio
+    assert campos["Escolhas"], campos
+    assert opcao["nome"] in campos["Escolhas"], campos["Escolhas"]
+    print("  a escolha sai da lista; a habilidade escolhida fica: ok")
+
+
 async def caso_ficha_mostra_habilidades():
     conn, canal, cog = await preparar(classe="patrulheiro", nivel=5)
     ficha_cog = Ficha(FakeBot(conn, canal))
@@ -300,6 +339,7 @@ async def main():
         caso_dano_extra_e_condicional()
         await caso_multiataque_na_run()
         await caso_ficha_mostra_habilidades()
+        await caso_a_escolha_nao_entra_na_lista_de_habilidades()
     finally:
         for conn in _ABERTAS:
             try:

@@ -298,10 +298,19 @@ ICONE_HABILIDADE = {cl.PASSIVA: "⚙️", cl.ATIVA: "⚡", cl.ESCOLHA: "🔀"}
 def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
     """As habilidades que o personagem ja tem, por tier.
 
-    O icone diz se o bot aplica sozinho, se o jogador aciona ou se ha algo a
-    decidir. O que o bot ainda nao sabe resolver sai marcado.
+    O icone diz se o bot aplica sozinho ou se o jogador aciona. O que o bot
+    ainda nao sabe resolver sai marcado.
+
+    A ESCOLHA fica de fora: ela nao e habilidade, e o rotulo de uma
+    decisao ("Escolhe uma: Healing Word, Dissonant Whispers ou Charm
+    Person"). Nenhuma das 38 tem efeito ou acao propria — elas so
+    destravam a habilidade escolhida, e e ESSA que interessa na lista.
+    Qual foi a decisao continua no campo Escolhas, logo abaixo.
     """
-    ganhas = personagem.get("habilidades") or []
+    ganhas = [
+        (t, h) for t, h in (personagem.get("habilidades") or [])
+        if h.tipo != cl.ESCOLHA
+    ]
     if not ganhas:
         return
     linhas = []
@@ -340,7 +349,9 @@ def _campo_escolhas(e: discord.Embed, personagem: dict[str, Any]) -> None:
             escrito = opcao["nome"] if opcao else str(valor)
         linhas.append(f"**{habilidade.nome}**: {escrito}")
     for _tier, habilidade in pendencias:
-        linhas.append(f"**{habilidade.nome}**: *a decidir* — use `/ficha upar`")
+        linhas.append(
+            f"**{habilidade.nome}**: *a decidir* — `/ficha alterar` abre o menu"
+        )
     if linhas:
         e.add_field(name="Escolhas", value="\n".join(linhas), inline=False)
 
