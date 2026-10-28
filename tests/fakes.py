@@ -151,6 +151,13 @@ class FakeResposta:
 
     async def send_message(self, content=None, *, embed=None, view=None, ephemeral=False,
                            file=discord.utils.MISSING):
+        # O discord.py levanta se a resposta JA saiu, e o duble precisa
+        # levantar tambem. Aceitando em silencio ele escondeu um bug que
+        # travava o bot: depois de um `defer`, um caminho que respondia
+        # por aqui estourava em producao e o "pensando..." ficava
+        # pendurado para sempre.
+        if self.is_done():
+            raise discord.InteractionResponded(self.interacao)
         self.interacao.resposta = content or (embed.title if embed else None)
         self.interacao.view_enviada = view
         if ephemeral:
@@ -261,6 +268,7 @@ class FakeInteraction:
         self.editada = None
         self.seguimento = None
         self.view_do_seguimento = None
+        self.view_editada = None
         self._mensagem_seguimento = None
 
     async def original_response(self):
@@ -288,6 +296,11 @@ class FakeInteraction:
         alvo = self._original()
         if alvo:
             await alvo.edit(**kw)
+        # Editar a original tambem troca a view dela. Sem registrar, um
+        # caso que procura o menu nao o acha quando ele chega por edicao
+        # — que e como todo menu sai depois de um `defer`.
+        if kw.get("view") is not None:
+            self.view_editada = kw["view"]
         # O jogador ve UMA efemera, cujo texto pode mudar por edicao. O duble
         # guarda as duas pontas: `resposta` e o que ele leu PRIMEIRO, e
         # `resposta_atual` e o que esta la agora.
@@ -315,7 +328,11 @@ def menu_de(inter):
     followup; o registro faz o contrario. Os casos afirmam o MENU, e
     isso nao deve depender de por qual das duas ele saiu.
     """
-    return inter.view_do_seguimento or inter.view_enviada
+    return (
+        inter.view_do_seguimento
+        or inter.view_editada
+        or inter.view_enviada
+    )
 
 
 async def resolver_fluxo(canal, dono: int, inter, limite: int = 8):

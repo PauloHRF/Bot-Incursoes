@@ -2098,7 +2098,9 @@ class Incursoes(commands.Cog):
                 )
             )
 
-    async def _dizer(self, interaction: discord.Interaction, texto: str) -> None:
+    async def _dizer(
+        self, interaction: discord.Interaction, texto: str, *, view=None
+    ) -> None:
         """Resposta privada que funciona antes e depois do `defer`.
 
         O Discord da 3 SEGUNDOS para a primeira resposta a uma interacao.
@@ -2114,11 +2116,19 @@ class Incursoes(commands.Cog):
         Edita a resposta original em vez de mandar followup de proposito:
         `_limpar_efemeras` apaga as efemeras com `delete_original_response`,
         que so alcanca a original. Com followup elas ficariam orfas no canal.
+
+        `view` existe porque nem toda resposta destes comandos e texto: a
+        habilidade que pede alvo abre um menu. Tudo que responde depois do
+        `defer` tem de passar por aqui — responder direto levanta
+        `InteractionResponded` dentro do callback, e o jogador fica com o
+        "pensando..." pendurado para sempre.
         """
         if interaction.response.is_done():
-            await interaction.edit_original_response(content=texto)
+            await interaction.edit_original_response(content=texto, view=view)
         else:
-            await interaction.response.send_message(texto, ephemeral=True)
+            await interaction.response.send_message(
+                texto, view=view, ephemeral=True
+            )
 
     def _guardar_efemera(self, run_id: int, interaction: discord.Interaction) -> None:
         """Marca uma resposta privada para sumir quando a rodada virar."""
@@ -2747,16 +2757,15 @@ class Incursoes(commands.Cog):
                 for i in vivos
             ]
         if not opcoes:
-            await interaction.response.send_message(
-                "Nao ha alvo possivel agora.", ephemeral=True
-            )
+            await self._dizer(interaction, "Nao ha alvo possivel agora.")
             return True
-        await interaction.response.send_message(
+        await self._dizer(
+            interaction,
             f"**{habilidade.nome}** — escolha o alvo:",
             view=SeletorAlvoHabilidade(
-                self, run["id"], sala_id, habilidade.id, opcoes, acao.get("alvos", 1)
+                self, run["id"], sala_id, habilidade.id, opcoes,
+                acao.get("alvos", 1)
             ),
-            ephemeral=True,
         )
         return True
 
