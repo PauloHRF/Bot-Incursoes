@@ -1,0 +1,148 @@
+{
+  "id": "vortice_agulha",
+  "nome": "A Agulha de Vidro",
+  "organizacao": "Vórtice Oculto",
+  "tamanho": "Média",
+  "tier": 1,
+  "lore_inicial": "O Vórtice não chama de fenda quando é pequena. Chama de agulha: um furo fino o bastante para passar uma coisa de cada vez, e devagar. Agulhas não interessam a ninguém — fecham sozinhas, na maioria.\n\nEsta não fechou. Está debaixo de uma vidraçaria desativada no Baixo Canal, e há duas semanas um dos nossos foi medir o furo. Mandou três relatórios. No primeiro, o furo tinha a largura de um dedo. No segundo, de um punho. O terceiro é uma folha em branco com a assinatura dele no pé.\n\nVocês vão descer, achar a medida de hoje e tapar a agulha com o que ele levou para isso. Se ele ainda estiver lá, é problema dele — a Organização quer o selo, não o homem.",
+  "lore_final": "A agulha fecha com um estalo seco, do tamanho de um graveto, e o Baixo Canal não percebe nada. Nunca percebe.\n\nO Vórtice recolhe o selo e as três folhas de relatório, inclusive a branca, e arquiva as quatro coisas juntas. Ninguém pergunta pelo homem que as escreveu, e vocês aprendem com isso o que a Organização paga e o que ela não paga.\n\nO pagamento sai no mesmo dia. É pouco, e é mais do que o último que desceu aqui recebeu.",
+  "imagem_capa": null,
+  "recompensa_mes": 10,
+  "pontos_conclusao": 10,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "O Fundo da Vidraçaria",
+    "tipo": "Combate",
+    "descricao": "O forno da vidraçaria está frio e aberto, e a agulha atravessa o fundo dele de lado a lado — larga como um braço agora, e sem nenhuma pressa. O selo do nosso homem está no chão, montado e nunca usado, a dois passos do furo.\n\nO que saiu primeiro endureceu em cima do forno e aprendeu a ficar imóvel; de longe é mais uma peça da oficina. As três que vieram depois não precisam do corredor para chegar até vocês — entram pela agulha num ponto e saem dela em outro, e é por isso que elas chegam primeiro.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "10 MEs por participante + pontos com o Vórtice Oculto",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Gárgula",
+        "ca": 15,
+        "ataque": 4,
+        "dano": "1d6+2",
+        "hp": 52,
+        "ataques": 2,
+        "saves": {
+          "FOR": 2,
+          "DES": 0,
+          "CON": 3,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d6+2"
+          },
+          {
+            "nome": "Garra",
+            "ataque": 4,
+            "dano": "1d6+2"
+          }
+        ]
+      },
+      {
+        "nome": "Aranha de Fase 1",
+        "ca": 13,
+        "ataque": 4,
+        "dano": "1d10+2",
+        "hp": 32,
+        "ataques": 1,
+        "saves": {
+          "FOR": 2,
+          "DES": 2,
+          "CON": 1,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d10+2",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "CON",
+              "cd": 13,
+              "debuff": [
+                "envenenado"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "nome": "Aranha de Fase 2",
+        "ca": 13,
+        "ataque": 4,
+        "dano": "1d10+2",
+        "hp": 32,
+        "ataques": 1,
+        "saves": {
+          "FOR": 2,
+          "DES": 2,
+          "CON": 1,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d10+2",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "CON",
+              "cd": 13,
+              "debuff": [
+                "envenenado"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "nome": "Aranha de Fase 3",
+        "ca": 13,
+        "ataque": 4,
+        "dano": "1d10+2",
+        "hp": 32,
+        "ataques": 1,
+        "saves": {
+          "FOR": 2,
+          "DES": 2,
+          "CON": 1,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d10+2",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "CON",
+              "cd": 13,
+              "debuff": [
+                "envenenado"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

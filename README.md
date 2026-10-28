@@ -542,19 +542,36 @@ reler tudo sem reiniciar.
 
 ### O que já está escrito
 
-As quatro Organizações têm banco, e cada uma tem uma incursão pronta num tier diferente,
-para o grupo testar a ficha em toda a faixa:
+As quatro Organizações têm banco. **O tier 1 tem três entradas, de três Organizações
+diferentes** — personagem novo não fica preso a uma só —, e os tiers acima têm uma cada:
 
 | Incursão | Tier | Tamanho | Organização | Objetivo |
 | --- | --- | --- | --- | --- |
+| *O Posto de Vigia Calado* | 1 | Curta | Sentinelas do Alvorecer | Senhor da Matilha Gnoll + 2 Gnolls |
 | *O Contrato Rasgado* | 1 | Média | Aliança das Sombras | Doppelganger + 2 Brutamontes |
+| *A Agulha de Vidro* | 1 | Média | Vórtice Oculto | Gárgula + 3 Aranhas de Fase |
 | *O Ossuário de Vael* | 2 | Média | Guilda dos Mortos | Múmia + 2 Ogros Zumbi + 2 Carniçais |
 | *A Cripta do Vórtice* | 4 | Média | Vórtice Oculto | Medusa + 3 Nothics |
 | *A Brecha de Fogo Pálido* | 4 | Longa | Sentinelas do Alvorecer | Diabo Ósseo + Vrock + 2 Cães Infernais + Diabo Barbado |
 
-As três incursões novas tiram **todas** as criaturas do bestiário — nas planilhas delas só
-o nome está preenchido. Entre as quatro, cada mecânica que o importador do Monster Manual
-gera aparece ao menos uma vez:
+**O tier 1 medido**, com `tools/simular_combate.py` contra um grupo misto de nível 1 e sem
+nenhuma habilidade ativa — é um piso, não um prognóstico: a mesa de verdade tem cura,
+buff e magia de dano por cima disto.
+
+| Objetivo do tier 1 | Grupo de 5 | de 4 | de 3 |
+| --- | --- | --- | --- |
+| *O Contrato Rasgado* | 37% | 4% | 0% |
+| *O Posto de Vigia Calado* | 51% | 15% | 3% |
+| *A Agulha de Vidro* | 58% | 11% | 2% |
+
+As duas novas ficam juntas na faixa do meio, e o *Contrato* é o mais duro dos três — ele
+já era, e não foi mexido. Os números das duas novas saíram da **composição**, não de
+números inventados: as criaturas são as do bestiário, com os golpes e as habilidades que
+elas têm lá. Para endurecer ou abrandar, o lever é quantas entram na sala.
+
+As incursões tiram **todas** as criaturas do bestiário — nas planilhas delas só o nome
+está preenchido. Entre elas, cada mecânica que o importador do Monster Manual gera
+aparece ao menos uma vez:
 
 | Mecânica | Onde ver |
 | --- | --- |

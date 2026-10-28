@@ -1,0 +1,119 @@
+{
+  "id": "alvorecer_vigia",
+  "nome": "O Posto de Vigia Calado",
+  "organizacao": "Sentinelas do Alvorecer",
+  "tamanho": "Curta",
+  "tier": 1,
+  "lore_inicial": "Entre um selo e outro, o Alvorecer mantém postos de estrada. Não guardam nada: só acendem o fogo ao amanhecer, para que o posto seguinte veja a fumaça e acenda o dele. Doze selos, dezenove postos, dezenove fumaças por manhã.\n\nHoje foram dezoito. O posto do Vau do Alqueire não acendeu, e não acendeu ontem também — o posto vizinho levou dois dias para contar, porque contar fumaça é trabalho de noviço e o noviço estava dormindo.\n\nA Ordem não manda veterano a posto de estrada. Manda vocês: subam até o alto do posto, vejam por que a fumaça parou e acendam o fogo antes do amanhecer. Se tiver alguém lá, tragam de volta. Se não tiver mais ninguém, tragam o sino.",
+  "lore_final": "A fumaça sobe antes do amanhecer e o posto do Vau do Alqueire volta à conta. Dezenove, como sempre foi.\n\nO Alvorecer não escreve isto em livro nenhum: posto de estrada não é selo, e acender um fogo não é fechar uma brecha. O que fica é o nome de vocês na boca do mestre dos noviços, que passou a semana explicando que o erro não foi da Ordem. Na próxima vez que faltar fumaça, vão chamar vocês primeiro — e aí já não vai ser posto de estrada.",
+  "imagem_capa": null,
+  "recompensa_mes": 10,
+  "pontos_conclusao": 10,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "O Alto do Posto",
+    "tipo": "Combate",
+    "descricao": "A escada do posto termina num alçapão aberto, e o alto é um quadrado de madeira com o sino no meio e a lenha do ano inteiro empilhada em volta. A lenha está intacta: ninguém acendeu nada aqui há três dias.\n\nO que sobrou do noviço está debaixo do sino, e o que come dele está sentado onde o fogo devia estar — com a glaive atravessada no colo e espaço de sobra para girá-la. Os dois menores dormem encostados na lenha, e acordam junto com ele, porque é assim que eles caçam.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "10 MEs por participante + pontos com as Sentinelas do Alvorecer",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Senhor da Matilha Gnoll",
+        "ca": 15,
+        "ataque": 5,
+        "dano": "1d10+3",
+        "hp": 49,
+        "ataques": 1,
+        "saves": {
+          "FOR": 3,
+          "DES": 2,
+          "CON": 1,
+          "INT": -1,
+          "SAB": 0,
+          "CAR": -1
+        },
+        "golpes": [
+          {
+            "nome": "Glaive",
+            "ataque": 5,
+            "dano": "1d10+3"
+          }
+        ],
+        "habilidade": {
+          "nome": "Golpe Poderoso",
+          "alvos": 3,
+          "save": "ATK",
+          "dano": "5d6",
+          "recarga": 5
+        }
+      },
+      {
+        "nome": "Gnoll 1",
+        "ca": 15,
+        "ataque": 4,
+        "dano": "1d4+2",
+        "hp": 22,
+        "ataques": 1,
+        "saves": {
+          "FOR": 2,
+          "DES": 1,
+          "CON": 0,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d4+2"
+          }
+        ],
+        "habilidade": {
+          "nome": "Golpe Certeiro",
+          "alvos": 1,
+          "save": "ATK",
+          "dano": "2d6",
+          "recarga": 6
+        },
+        "matilha": true
+      },
+      {
+        "nome": "Gnoll 2",
+        "ca": 15,
+        "ataque": 4,
+        "dano": "1d4+2",
+        "hp": 22,
+        "ataques": 1,
+        "saves": {
+          "FOR": 2,
+          "DES": 1,
+          "CON": 0,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d4+2"
+          }
+        ],
+        "habilidade": {
+          "nome": "Golpe Certeiro",
+          "alvos": 1,
+          "save": "ATK",
+          "dano": "2d6",
+          "recarga": 6
+        },
+        "matilha": true
+      }
+    ]
+  }
+}
