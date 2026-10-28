@@ -198,7 +198,11 @@ async def caso_marca_pede_alvo_e_dura():
 
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     caçador = estado.combatente(dono)
-    assert caçador.dano_por_alvo == {1: "1d6"}, caçador.dano_por_alvo
+    # (nome, expressao): o nome vai junto para o resumo do golpe poder
+    # dizer de qual habilidade saiu aquele dado.
+    assert caçador.dano_por_alvo == {1: ("Marca do Cacador", "1d6")}, (
+        caçador.dano_por_alvo
+    )
     assert 1 not in caçador.vantagem_contra, "a Marca nao da vantagem"
 
     # Buscado, e nao `[0]`: a ordem de `run_efeitos` e por rowid, e a ameaca

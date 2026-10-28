@@ -71,6 +71,24 @@ def termos_de_dano(expressao: str) -> list[tuple[int, int, int]]:
     return termos
 
 
+def dobrar_dados(expressao: str) -> str:
+    """A mesma expressão com os dados em dobro, para MOSTRAR um crítico.
+
+    O crítico dobra os dados e deixa os números soltos quietos, então quem
+    rolou "1d8+4" rolou de fato "2d8+4" — e é isso que o resumo tem de
+    dizer. Só para texto: a conta de verdade é a do `rolar_dano`.
+    """
+    pedacos = []
+    for peso, quantidade, faces in termos_de_dano(expressao):
+        sinal = "-" if peso < 0 else "+"
+        if faces:
+            pedacos.append(f"{sinal}{quantidade * 2}d{faces}")
+        else:
+            pedacos.append(f"{sinal}{quantidade}")
+    texto = "".join(pedacos)
+    return texto[1:] if texto.startswith("+") else texto
+
+
 def rolar_dano(
     expressao: str, rng: Optional[random.Random] = None, critico: bool = False
 ) -> int:
@@ -440,6 +458,8 @@ class Combatente:
     # (a Danca totemica). Diferente de `dano_extra`, que e numero fixo, e de
     # `dano_por_alvo`, que so vale contra o inimigo marcado.
     dano_bonus: str = ""
+    # De quem veio o `dano_bonus`, para o resumo do golpe poder nomear.
+    rotulo_dano_bonus: str = ""
     # Marca do Cacador e afins: valem so contra aquele inimigo.
     dano_por_alvo: dict = field(default_factory=dict)
     vantagem_contra: set = field(default_factory=set)
@@ -481,6 +501,20 @@ class Combatente:
 
 
 @dataclass
+class ParteDoDano:
+    """De onde saiu um pedaço do dano de um golpe.
+
+    `expressao` fica vazia quando a parte é número solto (a passiva que
+    soma +3), e é o que foi rolado quando são dados ("1d6"). Serve para o
+    resumo privado dizer quanto foi da arma e quanto foi da habilidade.
+    """
+
+    rotulo: str
+    expressao: str
+    valor: int
+
+
+@dataclass
 class GolpeAtaque:
     atacante: str
     alvo: str
@@ -497,6 +531,9 @@ class GolpeAtaque:
     arma: str = ""
     # Quanto do dano a vida temporaria do alvo segurou.
     absorvido: int = 0
+    # O dano aberto por origem, na ordem em que foi somado. A soma das
+    # partes e `dano` — o resumo privado mostra as duas coisas.
+    partes: list = field(default_factory=list)
 
     @property
     def total(self) -> int:
@@ -532,18 +569,26 @@ def atacar(
     ca_alvo: int,
     rng: Optional[random.Random] = None,
     critico_em: int = 20,
-    dano_extra: int = 0,
-    dano_bonus: Optional[str] = None,
+    somas: Sequence[tuple[str, int]] = (),
+    extras: Sequence[tuple[str, str]] = (),
     garantido: bool = False,
     critico_forcado: bool = False,
     vantagem: bool = False,
 ) -> GolpeAtaque:
     """Uma rolagem de ataque: d20 + bônus contra a CA. Acertou, rola o dano.
 
-    `dano_extra` é o que as passivas somam por golpe; entra depois do crítico,
-    porque dobra os dados, não os bônus fixos. `dano_bonus` é uma expressão a
-    mais (o +3d8 do Golpe Divino), e `garantido`/`critico_forcado` são as
-    ativas que dispensam a rolagem de acerto.
+    `somas` são os números que entram por golpe (a passiva que dá +3), e
+    `extras` as expressões a mais (o +3d8 do Golpe Divino, o 1d6 da marca).
+    Cada um vem com a origem, e o golpe guarda a conta aberta em `partes`:
+    o resumo privado precisa dizer quanto foi da arma e quanto foi da
+    habilidade, e para isso a soma pronta não serve.
+
+    Antes era um número e UMA expressão. Duas coisas davam errado: a conta
+    chegava fechada, e quem tinha duas fontes de dado extra — a marca no
+    inimigo mais um buff do grupo — perdia uma delas, porque só a primeira
+    era passada adiante.
+
+    `garantido`/`critico_forcado` são as ativas que dispensam a rolagem.
     """
     golpe = GolpeAtaque(
         atacante_nome,
@@ -556,10 +601,37 @@ def atacar(
         critico_forcado=critico_forcado,
     )
     if golpe.acertou:
-        golpe.dano = rolar_dano(dano, rng, critico=golpe.critico) + dano_extra
-        if dano_bonus:
-            golpe.dano += rolar_dano(dano_bonus, rng, critico=golpe.critico)
+        golpe.dano = _abrir_o_dano(golpe, dano, somas, extras, rng)
     return golpe
+
+
+def _abrir_o_dano(
+    golpe: GolpeAtaque,
+    dano_arma: str,
+    somas: Sequence[tuple[str, int]],
+    extras: Sequence[tuple[str, str]],
+    rng: Optional[random.Random],
+) -> int:
+    """Rola a arma e os extras, anotando cada pedaço, e devolve o total.
+
+    Dois caminhos precisam da MESMA conta: o golpe normal e o golpe que a
+    Inspiração Bárdica faz acertar depois. Quando eram dois trechos
+    parecidos, eles se separaram — um aplicava todos os dados extras e o
+    outro só o primeiro.
+    """
+    golpe.partes = []
+    total = rolar_dano(dano_arma, rng, critico=golpe.critico)
+    golpe.partes.append(ParteDoDano("arma", dano_arma, total))
+    for rotulo, quanto in somas:
+        if not quanto:
+            continue
+        golpe.partes.append(ParteDoDano(rotulo, "", quanto))
+        total += quanto
+    for rotulo, expressao in extras:
+        valor = rolar_dano(expressao, rng, critico=golpe.critico)
+        golpe.partes.append(ParteDoDano(rotulo, expressao, valor))
+        total += valor
+    return total
 
 
 def progresso_da_run(linha_atual: int, total_linhas: int = 3) -> str:
@@ -796,22 +868,45 @@ def soma_por_golpe(combatente: Combatente, inimigo: Inimigo) -> int:
     normal e o golpe que a Inspiração Bárdica faz acertar depois. Duplicar a
     conta fazia o golpe socorrido dar menos que o golpe que acertou sozinho.
     """
-    extra = combatente.dano_extra
+    return sum(quanto for _rotulo, quanto in somas_por_golpe(combatente, inimigo))
+
+
+def somas_por_golpe(
+    combatente: Combatente, inimigo: Inimigo
+) -> list[tuple[str, int]]:
+    """O mesmo que `soma_por_golpe`, mas dizendo de onde veio cada número."""
+    somas = []
+    if combatente.dano_extra:
+        somas.append(("passiva", combatente.dano_extra))
     if combatente.dano_ferido and esta_ferido(inimigo):
-        extra += combatente.dano_ferido
-    return extra
+        somas.append(("contra ferido", combatente.dano_ferido))
+    return somas
 
 
 def dados_de_dano(
-    combatente: Combatente, inimigo: Inimigo, dano_bonus: Optional[str] = None
-) -> list[str]:
-    """Os dados de dano a mais daquele golpe, todos eles.
+    combatente: Combatente,
+    inimigo: Inimigo,
+    dano_bonus: Optional[str] = None,
+    rotulo_bonus: str = "habilidade",
+) -> list[tuple[str, str]]:
+    """Os dados de dano a mais daquele golpe, todos eles, com a origem.
 
     O da própria habilidade, a marca naquele inimigo e o buff curto que o
     grupo recebeu. Mesma razão de `soma_por_golpe` para estar aqui.
     """
     marcado = combatente.dano_por_alvo.get(inimigo.indice)
-    return [b for b in (dano_bonus, marcado, combatente.dano_bonus) if b]
+    extras = []
+    if dano_bonus:
+        extras.append((rotulo_bonus, dano_bonus))
+    if marcado:
+        # {indice: (rotulo, expressao)} — o rotulo e o nome da habilidade
+        # que marcou, para o resumo poder dizer "Hunters Mark".
+        extras.append(marcado if isinstance(marcado, tuple) else ("marca", marcado))
+    if combatente.dano_bonus:
+        extras.append(
+            (combatente.rotulo_dano_bonus or "bônus", combatente.dano_bonus)
+        )
+    return extras
 
 
 def refazer_o_golpe(
@@ -833,11 +928,13 @@ def refazer_o_golpe(
     """
     if golpe.falha_critica or not golpe.acertou:
         return False
-    golpe.dano = rolar_dano(
-        combatente.dano_arma, rng, critico=golpe.critico
-    ) + soma_por_golpe(combatente, inimigo)
-    for extra_dado in dados_de_dano(combatente, inimigo):
-        golpe.dano += rolar_dano(extra_dado, rng, critico=golpe.critico)
+    golpe.dano = _abrir_o_dano(
+        golpe,
+        combatente.dano_arma,
+        somas_por_golpe(combatente, inimigo),
+        dados_de_dano(combatente, inimigo),
+        rng,
+    )
     inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
     return True
 
@@ -850,11 +947,10 @@ def atacar_inimigo(
     garantido: bool = False,
     critico_forcado: bool = False,
     bonus_extra: int = 0,
+    rotulo_bonus: str = "habilidade",
 ) -> GolpeAtaque:
     """O personagem ataca um inimigo. O dano já sai descontado do HP dele."""
-    extra = soma_por_golpe(combatente, inimigo)
     vantagem = combatente.vantagem or inimigo.indice in combatente.vantagem_contra
-    bonus = dados_de_dano(combatente, inimigo, dano_bonus)
     golpe = atacar(
         combatente.nome,
         combatente.bonus_ataque + bonus_extra,
@@ -863,15 +959,16 @@ def atacar_inimigo(
         inimigo.ca,
         rng,
         critico_em=combatente.critico_em,
-        dano_extra=extra,
-        dano_bonus=bonus[0] if bonus else None,
+        somas=somas_por_golpe(combatente, inimigo),
+        # Todos os dados extras de uma vez. Antes o primeiro ia por aqui e
+        # os outros eram somados num laco depois da chamada: o total saia
+        # certo, mas metade da conta ficava fora do golpe, e o resumo nao
+        # tinha como dizer de onde veio cada pedaco.
+        extras=dados_de_dano(combatente, inimigo, dano_bonus, rotulo_bonus),
         garantido=garantido,
         critico_forcado=critico_forcado,
         vantagem=vantagem,
     )
-    if golpe.acertou:
-        for extra_dado in bonus[1:]:
-            golpe.dano += rolar_dano(extra_dado, rng, critico=golpe.critico)
     if golpe.acertou:
         inimigo.hp_atual = max(0, inimigo.hp_atual - golpe.dano)
     return golpe
@@ -1331,23 +1428,35 @@ FRACAO_DESCANSO_CAIDO = 0.5
 FRACAO_DESCANSO = 0.5
 
 
-def aplicar_descanso(combatentes: list[Combatente]) -> list[str]:
+@dataclass
+class Recuperacao:
+    """O que o descanso fez com um personagem."""
+
+    ganho: int
+    voltou: bool  # estava caido e volta a lutar
+
+
+def aplicar_descanso(combatentes: list[Combatente]) -> dict[int, Recuperacao]:
     """Descanso: cura uma fração do HP máximo; quem caiu volta com metade.
 
     A Maldição da Debilidade corta esta cura como corta qualquer outra.
-    Devolve uma linha por personagem que mudou, para o embed da sala.
+
+    Devolve o que aconteceu com CADA UM, por user_id — e nao as frases
+    prontas de antes. Quem desenha o cartao do descanso precisa do grupo
+    inteiro, inclusive de quem ja estava com a vida cheia, e precisa poder
+    desenhar de novo (o cartao e reescrito a cada limpeza). Frase pronta
+    nao serve para nenhuma das duas coisas.
     """
-    mudancas = []
+    feito: dict[int, Recuperacao] = {}
     for c in combatentes:
         antes = c.hp_atual
         if c.caido:
             c.hp_atual = max(1, int(c.hp_max * FRACAO_DESCANSO_CAIDO))
-            mudancas.append(f"{c.nome} volta a lutar com {c.hp_atual}/{c.hp_max} de HP")
+            feito[c.user_id] = Recuperacao(c.hp_atual - antes, True)
         elif c.hp_atual < c.hp_max:
             ganho = cura_liquida(c, max(1, int(c.hp_max * FRACAO_DESCANSO)))
             c.hp_atual = min(c.hp_max, antes + ganho)
-            mudancas.append(
-                f"{c.nome} recupera {c.hp_atual - antes} de HP "
-                f"({c.hp_atual}/{c.hp_max})"
-            )
-    return mudancas
+            feito[c.user_id] = Recuperacao(c.hp_atual - antes, False)
+        else:
+            feito[c.user_id] = Recuperacao(0, False)
+    return feito

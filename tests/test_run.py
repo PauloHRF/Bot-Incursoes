@@ -84,6 +84,7 @@ async def main() -> None:
     assert all(len(set(p)) == 3 for p in mapa), "3 opcoes distintas por passo"
 
     # --- as salas do caminho ---
+    rolagens: list = []
     for linha in range(1, incursao.passos + 1):
         run = await db.buscar_run(conn, run["id"])
         assert run["status"] == "escolhendo" and run["linha_atual"] == linha
@@ -115,6 +116,7 @@ async def main() -> None:
             inter = FakeInteraction(canal, user_id, msg_sala)
             await cog.rolar(inter, run["id"], alvo.id)
             assert "🎲" in inter.resposta
+            rolagens.append((alvo.id, inter))
             rolaram += 1
 
             # ninguem rola duas vezes na mesma sala
@@ -136,6 +138,15 @@ async def main() -> None:
     assert run["status"] == "objetivo", f"esperava objetivo, veio {run['status']}"
     assert run["sala_atual"] == incursao.objetivo.id
     assert incursao.objetivo.tipo == "Combate"
+    # Toda rolagem privada de teste saiu da tela. Ela e apagada quando a
+    # SALA fecha: antes so saia quando a PROXIMA abria, e entre uma coisa e
+    # outra ha uma votacao inteira — o jogador ficava com o resultado de uma
+    # sala que ja acabou pendurado na tela.
+    pendentes = [
+        sala_id for sala_id, inter in rolagens if not inter.efemera_apagada
+    ]
+    assert not pendentes, f"rolagem ainda na tela nas salas {pendentes}"
+
     # a lore de abertura foi postada
     assert any(
         m.embeds and "Incursão t" in (m.embeds[0].title or "") for m in canal.mensagens

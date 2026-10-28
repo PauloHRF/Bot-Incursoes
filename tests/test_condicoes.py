@@ -652,6 +652,62 @@ async def caso_descanso_limpa_um_por_personagem():
     print("  o descanso limpa uma condição por personagem: ok")
 
 
+async def caso_cartao_do_descanso_mostra_o_grupo_inteiro():
+    """O cartão do descanso mostra todos, e continua mostrando.
+
+    Duas coisas davam errado. O campo listava só quem MUDOU, então quem
+    chegou inteiro simplesmente não aparecia — e quem lê o cartão quer
+    saber como o grupo vai entrar na próxima sala. E `_atualizar_descanso`
+    redesenhava o cartão passando `curas=None`, que não casava com nenhum
+    dos dois ramos do embed: o campo do HP desaparecia por inteiro no
+    primeiro clique de limpeza.
+    """
+    conn, canal, cog, incursao = await preparar(salas_de("Descanso", None))
+    run = await montar_run(conn, canal, cog)
+    ferido, caido, inteiro = JOGADORES[0], JOGADORES[1], JOGADORES[2]
+    await db.definir_hp(conn, run["id"], ferido, 5)
+    await db.definir_hp(conn, run["id"], caido, 0)
+    # o `inteiro` fica como entrou, de vida cheia
+    await db.aplicar_condicao(conn, run["id"], ferido, "exaustao")
+    # O `inteiro` carrega algo tambem, de proposito: sem um segundo pendente
+    # o descanso FECHA no primeiro clique e o cartao sai do canal — e o
+    # redesenho, que e o que este caso quer olhar, nunca acontece.
+    await db.aplicar_condicao(conn, run["id"], inteiro, "envenenado")
+
+    alvo = (await cog._opcoes(run, 1))[0]
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for user_id in JOGADORES:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
+    run = await db.buscar_run(conn, run["id"])
+
+    async def campo_do_hp():
+        cartao = await canal.fetch_message(run["mensagem_id"])
+        campos = {f.name: f.value for f in cartao.embeds[0].fields}
+        return campos.get("Como o grupo saiu")
+
+    nomes = {
+        p["user_id"]: p["nome"] for p in await db.personagens_da_run(conn, run["id"])
+    }
+    valor = await campo_do_hp()
+    assert valor is not None, "o cartão do descanso não mostrou HP nenhum"
+    for user_id, nome in nomes.items():
+        assert nome in valor, f"{nome} não apareceu no cartão: {valor}"
+    assert "de pé outra vez" in valor, f"quem caiu não foi anunciado: {valor}"
+
+    # Alguém limpa uma condição: o cartão é redesenhado — e o HP continua lá.
+    await cog.limpar_no_descanso(
+        FakeInteraction(canal, ferido, msg), run["id"], alvo.id, "exaustao"
+    )
+    depois = await campo_do_hp()
+    assert depois is not None, "o campo do HP sumiu quando alguém limpou"
+    for nome in nomes.values():
+        assert nome in depois, f"{nome} saiu do cartão no redesenho: {depois}"
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o cartão do descanso mostra o grupo inteiro, e segue mostrando: ok")
+
+
 async def caso_descanso_e_a_saida_da_exaustao():
     """A Exaustão não decai, então o descanso é a única saída dela."""
     conn, canal, cog, incursao = await preparar(salas_de("Descanso", None))
@@ -836,6 +892,7 @@ async def main():
     await caso_tesouro_falho_acorda_mimicos()
     await caso_tesouro_falho_sem_mimico_segue()
     await caso_descanso_limpa_um_por_personagem()
+    await caso_cartao_do_descanso_mostra_o_grupo_inteiro()
     await caso_descanso_e_a_saida_da_exaustao()
     await caso_descanso_sem_nada_a_limpar()
     await caso_deterioracao_corta_o_hp_do_combatente()

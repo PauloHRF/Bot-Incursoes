@@ -12,7 +12,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes, config, database as db, motor  # noqa: E402
+from src import classes, config, database as db, embeds, motor  # noqa: E402
 from src.cogs.incursao import Incursoes, ViewCombate  # noqa: E402
 from fakes import (  # noqa: E402
     CLASSE_PADRAO,
@@ -421,6 +421,89 @@ async def caso_motor_puro():
     print("  motor: HP não passa dos limites: ok")
 
 
+async def caso_o_resumo_abre_a_conta_do_dano():
+    """O resumo privado diz quanto foi da arma e quanto foi de cada extra.
+
+    Com multiataque e uma marca no inimigo, "16 de dano" não dizia de onde
+    os 16 saíram — e era a conta que o jogador queria ver. A abertura sai
+    só no resumo privado: o painel é reescrito a cada ação e carrega o
+    grupo inteiro.
+    """
+
+    def arqueiro():
+        c = motor.Combatente(
+            1, "Arqueiro", ca=15, bonus_ataque=7, dano_arma="1d8+4",
+            hp_max=60, hp_atual=60, dano_extra=3,
+        )
+        c.dano_por_alvo[0] = ("Marca do Cacador", "1d6")
+        c.dano_bonus = "1d4"
+        c.rotulo_dano_bonus = "Danca totemica"
+        return c
+
+    def ogro():
+        return motor.Inimigo(
+            0, "Ogro", ca=13, ataque=5, dano="1d10", hp_max=200, hp_atual=200
+        )
+
+    # Dado fixo no meio da faixa: sem isto um 20 natural no primeiro golpe
+    # vira critico, as expressoes saem dobradas e o caso acusa falso.
+    class DezNoDado:
+        def randint(self, a, b):
+            return 10 if b == 20 else (a + b) // 2
+
+    alvo = ogro()
+    golpe = motor.atacar_inimigo(
+        arqueiro(), alvo, rng=DezNoDado(), garantido=True
+    )
+    rotulos = [parte.rotulo for parte in golpe.partes]
+    assert rotulos == [
+        "arma", "passiva", "Marca do Cacador", "Danca totemica"
+    ], rotulos
+    # A conta fecha: as partes SÃO o dano, não uma estimativa dele.
+    assert sum(p.valor for p in golpe.partes) == golpe.dano, golpe.partes
+
+    texto = embeds.resumo_do_golpe([(golpe, alvo.nome)])
+    for parte in golpe.partes:
+        assert parte.rotulo in texto, f"{parte.rotulo} não saiu no resumo: {texto}"
+    assert "1d8+4" in texto and "1d6" in texto, texto
+
+    # No crítico, a expressão mostrada é a que foi ROLADA: dados em dobro.
+    critico = ogro()
+    g = motor.atacar_inimigo(
+        arqueiro(), critico, rng=DezNoDado(), garantido=True,
+        critico_forcado=True,
+    )
+    assert sum(p.valor for p in g.partes) == g.dano, g.partes
+    texto = embeds.resumo_do_golpe([(g, critico.nome)])
+    assert "2d8+4" in texto and "2d6" in texto, texto
+
+    # Fonte única não ganha abertura: repetir o total embaixo dele não diz nada.
+    simples = motor.Combatente(
+        2, "Bruto", ca=15, bonus_ataque=7, dano_arma="2d6+4",
+        hp_max=60, hp_atual=60,
+    )
+    so_um = ogro()
+    g = motor.atacar_inimigo(simples, so_um, rng=DezNoDado(), garantido=True)
+    assert embeds.abertura_do_dano(g) == [], g.partes
+
+    # O golpe socorrido pela Inspiração sai pela MESMA conta, aberta igual.
+    perdido = ogro()
+    quem = arqueiro()
+    g = motor.atacar(
+        quem.nome, -50, quem.dano_arma, perdido.nome, perdido.ca,
+        rng=DezNoDado(),
+    )
+    assert not g.acertou, g.total
+    g.bonus += 60
+    assert motor.refazer_o_golpe(quem, perdido, g, rng=DezNoDado())
+    rotulos = [parte.rotulo for parte in g.partes]
+    assert rotulos == [
+        "arma", "passiva", "Marca do Cacador", "Danca totemica"
+    ], rotulos
+    assert sum(p.valor for p in g.partes) == g.dano, g.partes
+    print("  o resumo abre o dano por fonte, e a conta fecha: ok")
+
+
 async def main():
     try:
         await _casos()
@@ -489,6 +572,7 @@ async def caso_o_ataque_adia_antes_de_resolver():
 
 async def _casos():
     await caso_motor_puro()
+    await caso_o_resumo_abre_a_conta_do_dano()
     await caso_hp_inicial()
     await caso_vitoria_no_objetivo()
     await caso_combate_no_meio_do_mapa()

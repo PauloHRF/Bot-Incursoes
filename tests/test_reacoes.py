@@ -121,7 +121,7 @@ async def caso_uncanny_dodge_corta_o_golpe():
         for user_id in JOGADORES[:2]:
             await db.definir_hp(conn, run["id"], user_id, maximo)
 
-    assert any("Uncanny Dodge" in (m.content or "") for m in canal.mensagens), [
+    assert any("Uncanny Dodge" in (m.content or "") for m in canal.enviadas), [
         m.content for m in canal.mensagens if m.content
     ]
     # gastou o uso do combate

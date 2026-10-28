@@ -8,7 +8,13 @@ import discord
 
 from . import config, retratos
 from .incursoes import Incursao, Sala
-from .motor import CONSEQUENCIA_FALHA, ResolucaoSala, barra, progresso_da_run
+from .motor import (
+    CONSEQUENCIA_FALHA,
+    ResolucaoSala,
+    barra,
+    dobrar_dados,
+    progresso_da_run,
+)
 from .rules import fmt, tier
 
 COR_INCURSAO = discord.Color.dark_teal()
@@ -380,10 +386,12 @@ def descanso(
     )
     if sala.recompensa:
         e.add_field(name="Recuperação", value=sala.recompensa, inline=False)
+    # `curas` agora e uma linha por personagem do grupo, montada por quem
+    # tem o banco na mao. Ela vem em TODO desenho do cartao — inclusive nos
+    # de depois de uma limpeza, que antes passavam `None` e caiam fora dos
+    # dois ramos: o campo do HP desaparecia no primeiro clique.
     if curas:
-        e.add_field(name="HP recuperado", value="\n".join(curas), inline=False)
-    elif curas is not None:
-        e.add_field(name="HP", value="Todos já estavam inteiros.", inline=False)
+        e.add_field(name="Como o grupo saiu", value="\n".join(curas), inline=False)
     if limpezas:
         restam = (
             f"\n\n**{faltam}** ainda {'precisa' if faltam == 1 else 'precisam'} escolher."
@@ -496,6 +504,33 @@ def linha_golpe(g) -> str:
     return f"💨 {g.atacante} · {rolagem} → errou"
 
 
+def abertura_do_dano(golpe) -> list[str]:
+    """De onde saiu cada pedaço do dano, uma linha por fonte.
+
+    Só no resumo privado, e não na linha do painel: o painel é reescrito a
+    cada ação e carrega o grupo inteiro — detalhe por fonte ali deixaria o
+    log duas vezes mais longo para todos.
+
+    Um golpe de fonte única não ganha abertura: repetir "arma 1d8+4 → 12"
+    embaixo de "12 de dano" não diz nada que a linha de cima já não diga.
+    """
+    partes = getattr(golpe, "partes", None) or []
+    if len(partes) < 2:
+        return []
+    linhas = []
+    for parte in partes:
+        if not parte.expressao:
+            # Numero solto: a passiva que da +3 nao tem dado para mostrar.
+            linhas.append(f"⤷ {parte.rotulo} {fmt(parte.valor)}")
+            continue
+        rolado = (
+            dobrar_dados(parte.expressao) if golpe.critico
+            else parte.expressao
+        )
+        linhas.append(f"⤷ {parte.rotulo} {rolado} → **{parte.valor}**")
+    return linhas
+
+
 def resumo_do_golpe(golpes: list[tuple]) -> str:
     """O que o atacante vê depois de clicar: uma linha por golpe do turno."""
     linhas = []
@@ -519,6 +554,7 @@ def resumo_do_golpe(golpes: list[tuple]) -> str:
                 f"💨 🎲 **{golpe.d20}** {fmt(golpe.bonus)} = **{golpe.total}** vs CA "
                 f"{golpe.ca_alvo} — errou {alvo_nome}."
             )
+        linhas += abertura_do_dano(golpe)
     return "\n".join(linhas) or "Nenhum inimigo de pé para atacar."
 
 

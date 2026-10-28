@@ -219,7 +219,9 @@ async def caso_relentless_segura_a_queda():
     assert salvo is not None, "Relentless tinha de ter segurado alguem"
     hps = await db.hp_dos_participantes(conn, run["id"])
     assert hps[salvo] >= 1, hps
-    assert any("Relentless" in (m.content or "") for m in canal.mensagens)
+    # `enviadas`, nao `mensagens`: a narracao da rodada passada e apagada
+    # ao virar a rodada. A pergunta aqui e se o grupo foi avisado.
+    assert any("Relentless" in (m.content or "") for m in canal.enviadas)
 
     # e o uso acabou: e 1x por combate
     gastos = await db.usos_da_run(conn, run["id"], salvo)

@@ -23,6 +23,7 @@ from .. import (
     consequencias,
     database as db,
     embeds as E,
+    habilidades,
     mercado,
     motor,
 )
@@ -383,6 +384,20 @@ class ViewRecrutamento(discord.ui.View):
         return callback
 
 
+def nome_do_efeito(efeito_id: str) -> str:
+    """O nome que o jogador conhece, a partir do id gravado no efeito.
+
+    Os efeitos sao gravados com `habilidade.id`, que serve ao banco e nao a
+    quem le: o resumo do golpe tem de dizer "Marca do Cacador" e nao
+    "marca_do_cacador".
+
+    Funcao de modulo porque quem precisa dela e `_aplicar_ligado`, que e
+    estatica — e porque ela nao olha para o estado de ninguem.
+    """
+    habilidade = habilidades.POR_ID.get(efeito_id)
+    return habilidade.nome if habilidade else efeito_id.replace('_', ' ')
+
+
 class Incursoes(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -400,6 +415,9 @@ class Incursoes(commands.Cog):
         # a historia do combate enquanto ele rola, e viram ruido depois que
         # ele acaba — o painel ja guarda o desfecho.
         self._usadas: dict[int, list[Any]] = {}
+        # O que o ultimo descanso deu a cada um, enquanto a sala do descanso
+        # esta aberta. {run_id: {user_id: motor.Recuperacao}}
+        self._recuperacao: dict[int, dict[int, Any]] = {}
         # O log da rodada no painel, e a fila de cada run: um restart perde o
         # log (o combate continua do banco) e recria as travas.
         self._registros: dict[int, dict[str, Any]] = {}
@@ -506,6 +524,10 @@ class Incursoes(commands.Cog):
         """
         await self._limpar_botoes(await db.buscar_run(self.bot.db, run["id"]))
         await db.atualizar_run(self.bot.db, run["id"], status=status, votacao_expira_em=None)
+        # O que era de memoria e so desta run sai com ela: um bot que fica
+        # ligado por semanas acumularia uma entrada por run encerrada.
+        self._recuperacao.pop(run["id"], None)
+        self._registros.pop(run["id"], None)
 
     async def _membros(self, run: dict[str, Any]) -> list[discord.abc.User]:
         return [
@@ -1085,10 +1107,14 @@ class Incursoes(commands.Cog):
             # O contador de descansos e o que zera as habilidades por descanso.
             await db.contar_descanso(self.bot.db, run["id"])
             combatentes = await self._combatentes(run)
-            mudancas = motor.aplicar_descanso(combatentes)
+            feito = motor.aplicar_descanso(combatentes)
             await db.definir_hp_varios(
                 self.bot.db, run["id"], {c.user_id: c.hp_atual for c in combatentes}
             )
+            # O que o descanso deu fica guardado pelo tempo da sala: o cartao
+            # e reescrito a cada limpeza, e so aqui se sabe o "antes".
+            self._recuperacao[run["id"]] = feito
+            mudancas = await self._linhas_do_descanso(run)
             # Alem de curar, o descanso deixa cada um limpar UMA condicao sua.
             # A sala fecha quando todos escolherem — e quem nao carrega nada ja
             # entra marcado, entao grupo limpo nao precisa clicar.
@@ -1432,6 +1458,7 @@ class Incursoes(commands.Cog):
                 quem.critico_em = min(quem.critico_em, valor["critico_em"])
             if valor.get("dano_bonus"):
                 quem.dano_bonus = valor["dano_bonus"]
+                quem.rotulo_dano_bonus = nome_do_efeito(ligado["efeito"])
             # Haste e afins: o segundo golpe por duracao.
             if valor.get("ataques"):
                 quem.ataques = max(quem.ataques, valor["ataques"])
@@ -1462,7 +1489,12 @@ class Incursoes(commands.Cog):
         if dono is None:
             return
         if valor.get("dano_bonus"):
-            dono.dano_por_alvo[ligado["alvo_id"]] = valor["dano_bonus"]
+            # (rotulo, expressao): o resumo do golpe diz "Marca do Cacador
+            # 1d6 -> 4", e para isso precisa do NOME de quem marcou.
+            dono.dano_por_alvo[ligado["alvo_id"]] = (
+                nome_do_efeito(ligado["efeito"]),
+                valor["dano_bonus"],
+            )
         if valor.get("vantagem"):
             dono.vantagem_contra.add(ligado["alvo_id"])
 
@@ -2060,6 +2092,7 @@ class Incursoes(commands.Cog):
         self._registrar(run, estado.rodada, [])
         await self._limpar_efemeras(run["id"])
         await self._apagar_chamada(run["id"])
+        await self._apagar_usadas(run["id"])
         # O painel e editado no lugar, e edicao nao notifica ninguem: a chamada
         # da rodada vai numa mensagem propria, para todos que podem agir.
         seguinte = await self._estado_combate(run, sala)
@@ -2147,11 +2180,14 @@ class Incursoes(commands.Cog):
                 pass
 
     async def _apagar_usadas(self, run_id: int) -> None:
-        """Tira do canal os anuncios de habilidade daquele combate.
+        """Tira do canal os anuncios de habilidade da rodada que acabou.
 
-        Durante a luta eles sao a narracao: quem conjurou o que, e quando.
-        Depois dela viram rolagem morta entre uma sala e a proxima — o
-        painel, que fica, ja guarda o desfecho.
+        Enquanto a rodada corre eles sao a narracao: quem conjurou o que,
+        e em quem. Virada a rodada viram historico, e o painel — que fica
+        e e editado no lugar — ja guarda o estado de agora.
+
+        Roda no virar da rodada E no fim do combate: a segunda chamada
+        pega o que foi usado na ultima rodada, que nao chega a virar.
         """
         self._publicado.pop(run_id, None)
         for mensagem in self._usadas.pop(run_id, []):
@@ -3075,6 +3111,7 @@ class Incursoes(commands.Cog):
                     alvo,
                     None,
                     dano_bonus=acao.get("dano_bonus"),
+                    rotulo_bonus=habilidade.nome,
                     garantido=acao.get("garantido", False),
                     critico_forcado=acao.get("critico", False),
                 )
@@ -3775,10 +3812,9 @@ class Incursoes(commands.Cog):
             )
             return
 
-        # O resumo privado da rolagem — e do dano que ela custou — sai do canal
-        # junto com os outros efemeros, quando o grupo entra na proxima sala.
-        # O resumo privado da rolagem — e do dano que ela custou — sai do canal
-        # junto com os outros efemeros, quando o grupo entra na proxima sala.
+        # O resumo privado da rolagem — e do dano que ela custou — sai do
+        # canal quando a SALA fecha, nao quando a proxima abre: entre uma
+        # coisa e outra ha uma votacao inteira.
         self._guardar_efemera(run_id, interaction)
         veredito = (
             f"passou por **{resultado.margem}** de margem"
@@ -3821,6 +3857,11 @@ class Incursoes(commands.Cog):
             return
 
         await self._limpar_botoes(await db.buscar_run(self.bot.db, run["id"]))
+        # As rolagens privadas do teste saem junto com a sala. Antes elas
+        # so sumiam quando a PROXIMA abria, e entre uma coisa e outra ha
+        # uma votacao inteira — o jogador ficava com o resultado de uma
+        # sala que ja acabou pendurado na tela.
+        await self._limpar_efemeras(run["id"])
 
         desfecho = None
         if resolucao is not None:
@@ -3967,11 +4008,44 @@ class Incursoes(commands.Cog):
         try:
             mensagem = await canal.fetch_message(atual["mensagem_id"])
             await mensagem.edit(
-                embed=E.descanso(sala, None, disponiveis, faltam=len(faltam)),
+                embed=E.descanso(
+                    sala,
+                    await self._linhas_do_descanso(atual),
+                    disponiveis,
+                    faltam=len(faltam),
+                ),
                 view=ViewDescanso(self, run["id"], sala_id, disponiveis),
             )
         except discord.HTTPException:
             pass
+
+    async def _linhas_do_descanso(self, run: dict[str, Any]) -> list[str]:
+        """Uma linha por personagem do grupo, com o HP lido do banco agora.
+
+        Do banco a cada desenho, e nao de uma lista guardada na abertura:
+        limpar Exaustao ou Debilitacao devolve HP MAXIMO, entao o "50/60"
+        da abertura vira "50/70" no meio do descanso. Lista guardada
+        mostraria o numero velho.
+
+        E o grupo INTEIRO, nao so quem mudou: quem le o cartao quer saber
+        como o grupo vai entrar na proxima sala, e "nao apareci" nao
+        responde isso.
+        """
+        feito = self._recuperacao.get(run["id"], {})
+        linhas = []
+        for c in await self._combatentes(run):
+            r = feito.get(c.user_id)
+            if r is not None and r.voltou:
+                nota = f" — de pé outra vez (+{r.ganho})"
+            elif r is not None and r.ganho:
+                nota = f" — o descanso deu **{r.ganho}**"
+            elif c.hp_atual >= c.hp_max:
+                nota = " — inteiro"
+            else:
+                # Cheio de Debilitacao, ou a fracao arredondou para nada.
+                nota = " — o descanso não rendeu nada"
+            linhas.append(f"• **{c.nome}** {c.hp_atual}/{c.hp_max}{nota}")
+        return linhas
 
     async def _nome_na_run(self, run: dict[str, Any], user_id: int) -> str:
         personagem = await db.personagem_da_run(self.bot.db, run["id"], user_id)

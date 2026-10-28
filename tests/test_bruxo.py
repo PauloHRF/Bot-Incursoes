@@ -170,7 +170,7 @@ async def caso_hex_marca_o_alvo():
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
                                        incursao.objetivo)
     dono = estado.combatente(JOGADORES[0])
-    assert dono.dano_por_alvo.get(alvo) == "1d6", dono.dano_por_alvo
+    assert dono.dano_por_alvo.get(alvo) == ("Hex", "1d6"), dono.dano_por_alvo
     print("  Hex marca o inimigo e todo golpe nele leva +1d6: ok")
 
 

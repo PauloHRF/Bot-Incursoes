@@ -247,7 +247,7 @@ async def caso_habilidade_guardada_sai_na_vez():
     await cog.atacar(FakeInteraction(canal, primeiro), run["id"], "OBJ")
     ligados = await db.efeitos_ativos(conn, run["id"], passo, 0)
     assert any(e["efeito"] == "rage" and e["alvo_id"] == segundo for e in ligados), ligados
-    assert any("Rage" in (m.content or "") for m in canal.mensagens)
+    assert any("Rage" in (m.content or "") for m in canal.enviadas)
     print("  a habilidade escolhida fora da vez sai quando a vez chega: ok")
 
 
@@ -363,6 +363,39 @@ async def caso_vencer_a_ultima_sala_abre_o_objetivo():
     print("  vencer a ultima sala abre o objetivo, com iniciativa nova: ok")
 
 
+async def caso_anuncio_da_habilidade_sai_no_fim_do_turno():
+    """A narracao da habilidade e da rodada: virada a rodada, ela sai.
+
+    Enquanto a rodada corre, "X usou Y" diz ao grupo o que esta em jogo.
+    Depois dela e rolagem morta empilhada acima do painel — e o painel, que
+    fica e e editado no lugar, ja mostra o estado de agora.
+    """
+    primeiro, segundo = JOGADORES[0], JOGADORES[1]
+    ordem_fixa(("p", primeiro), ("p", segundo), ("i", 0))
+    conn, canal, cog, incursao, run = await preparar(
+        monstro=PARADO, classe="barbaro"
+    )
+    run = await abrir(conn, cog, incursao, run)
+
+    await cog.usar_habilidade(
+        FakeInteraction(canal, primeiro), run["id"], "OBJ", "rage"
+    )
+    anuncio = next(
+        (m for m in canal.enviadas if "Rage" in (m.content or "")), None
+    )
+    assert anuncio is not None, [m.content for m in canal.enviadas]
+    # a rodada 1 ainda corre: o segundo nao agiu
+    assert anuncio in canal.mensagens, "o anuncio tem de ficar DURANTE a rodada"
+
+    # o segundo age, a estatua age, a rodada vira
+    await cog.atacar(FakeInteraction(canal, segundo), run["id"], "OBJ")
+    atual = await db.buscar_run(conn, run["id"])
+    estado = await cog._estado_combate(atual, incursao.objetivo)
+    assert estado.rodada >= 2, estado.rodada
+    assert anuncio.apagada, "o anuncio da rodada passada ficou na tela"
+    print("  o anuncio da habilidade sai quando a rodada vira: ok")
+
+
 async def main():
     try:
         caso_modificador_e_o_save_de_des()
@@ -372,6 +405,7 @@ async def main():
         await caso_acao_fora_da_vez_fica_guardada()
         await caso_monstro_entre_jogadores()
         await caso_habilidade_guardada_sai_na_vez()
+        await caso_anuncio_da_habilidade_sai_no_fim_do_turno()
         await caso_atordoado_depois_da_vez_perde_a_proxima()
         await caso_atordoado_antes_da_vez_perde_a_desta()
         await caso_guardada_de_quem_foi_preso_devolve_o_uso()
