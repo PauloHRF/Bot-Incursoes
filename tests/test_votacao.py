@@ -19,14 +19,19 @@ from fakes import (  # noqa: E402
     FakeInteraction,
     criar_grupo,
     montar_conteudo,
+    salas_de_combate,
     salas_sem_combate,
 )
 
+# Aguenta o combate inteiro: este arquivo quer a ABERTURA do combate, não o
+# desfecho dele.
+DURAO = {"nome": "Durao", "ca": 30, "ataque": -20, "dano": "1d1", "hp": 4000}
 
-async def montar_run_em_votacao(conn, canal, cog):
+
+async def montar_run_em_votacao(conn, canal, cog, incursao_id="t"):
     """Cria uma run com os 5 jogadores, já na votação da linha 1."""
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.entrar.callback(cog, inter, "t")
+    await cog.entrar.callback(cog, inter, incursao_id)
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:
@@ -309,8 +314,97 @@ async def caso_o_caido_nao_rola_o_teste_da_sala():
     print("  o caido nao rola o teste da sala: ok")
 
 
+async def caso_dois_cliques_juntos_abrem_a_sala_uma_vez():
+    """Dois cliques que fecham a maioria juntos abrem UMA sala.
+
+    Com grupo de cinco a maioria é três, então o terceiro, o quarto e o
+    quinto clique todos veem maioria formada e todos seguiam para abrir a
+    sala. Entre a conferência do status e a gravação havia dois `canal.send`
+    de rede — tempo de sobra para dois passarem juntos, e o painel do
+    combate saía duplicado.
+
+    Para a corrida aparecer os dois cliques precisam estar NO AR ao mesmo
+    tempo: conferir o status antes nao resolve nada, porque e o `await` do
+    meio que solta a vez. Chamar um depois do outro nao reproduz — o
+    segundo releria o status ja mudado e desistiria sozinho.
+    """
+    conn, canal, cog = await preparar()
+    montar_conteudo(cog, incursao_id="dupla", salas=salas_de_combate(DURAO))
+    run = await montar_run_em_votacao(conn, canal, cog, "dupla")
+    opcoes = await cog._opcoes(run, 1)
+    assert opcoes[0].e_combate, "este caso quer uma sala de COMBATE"
+    msg = await canal.fetch_message(run["mensagem_id"])
+
+    # dois votos: ainda falta um para a maioria de cinco
+    for user_id in JOGADORES[:2]:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, opcoes[0].id)
+    assert (await db.buscar_run(conn, run["id"]))["status"] == "escolhendo"
+
+    # o terceiro e o quarto clicam juntos: os DOIS veem maioria formada
+    await asyncio.gather(
+        cog.votar(FakeInteraction(canal, JOGADORES[2], msg), run["id"], 1, opcoes[0].id),
+        cog.votar(FakeInteraction(canal, JOGADORES[3], msg), run["id"], 1, opcoes[0].id),
+    )
+    depois = await db.buscar_run(conn, run["id"])
+    assert depois["status"] == "em_sala", depois["status"]
+    assert depois["sala_atual"] == opcoes[0].id
+
+    paineis = [
+        m for m in canal.enviadas
+        if m.embeds and "combate!" in (m.content or "")
+    ]
+    assert len(paineis) == 1, f"abriu {len(paineis)} paineis de combate"
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  dois cliques juntos abrem a sala uma vez: ok")
+
+
+async def caso_a_sala_fecha_uma_vez_so():
+    """Duas rolagens que resolvem a sala juntas fecham UMA vez.
+
+    Mesma corrida do outro lado: cada rolagem que chega ao alvo de
+    progresso vê a sala resolvida e segue para o passo seguinte. No fim do
+    caminho o passo seguinte é o combate do objetivo.
+    """
+    conn, canal, cog = await preparar()
+    run = await montar_run_em_votacao(conn, canal, cog)
+    opcoes = await cog._opcoes(run, 1)
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for user_id in JOGADORES:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, opcoes[0].id)
+    dentro = await db.buscar_run(conn, run["id"])
+    if dentro["status"] != "em_sala":
+        # A sala se resolveu com os testes do próprio voto: nada a fazer.
+        await conn.close()
+        config.DB_PATH.unlink(missing_ok=True)
+        print("  a sala fecha uma vez só: ok (resolvida na entrada)")
+        return
+
+    sala = cog._sala(cog._incursao_da_run(dentro), dentro["sala_atual"])
+    # `enviadas` e nao `mensagens`: abrir o passo seguinte APAGA o cartao
+    # anterior e posta outro, entao a conta liquida de mensagens vivas da
+    # zero mesmo tendo postado.
+    antes = len(canal.enviadas)
+    await cog._concluir_sala(dentro, sala, None)
+    assert len(canal.enviadas) > antes, "o fecho da sala não postou nada"
+
+    # O segundo chamador tem o mesmo `run` da corrida: não posta nada.
+    antes = len(canal.enviadas)
+    await cog._concluir_sala(dentro, sala, None)
+    assert len(canal.enviadas) == antes, (
+        "o segundo fecho da sala postou de novo"
+    )
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  a sala fecha uma vez só: ok")
+
+
 async def main():
     await caso_maioria_fecha_sem_esperar()
+    await caso_dois_cliques_juntos_abrem_a_sala_uma_vez()
+    await caso_a_sala_fecha_uma_vez_so()
     await caso_votos_divididos_esperam()
     await caso_empate_com_todos_votando()
     await caso_sem_prazo()

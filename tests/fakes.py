@@ -7,6 +7,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
+import asyncio  # noqa: E402
 import copy  # noqa: E402
 
 import discord  # noqa: E402
@@ -112,6 +113,12 @@ class FakeCanal:
 
     async def send(self, content=None, *, embed=None, embeds=None, view=None,
                    file=discord.utils.MISSING):
+        # Mandar mensagem e uma ida a rede: ela SOLTA a vez. Sem este
+        # `sleep(0)` o duble nunca cede, e dois cliques do grupo nunca se
+        # entrelacam — nenhuma corrida aparece na suite, por mais larga
+        # que seja a janela no bot de verdade. Num teste sequencial ele
+        # nao muda nada: quem espera sozinho so continua.
+        await asyncio.sleep(0)
         self._proximo_id += 1
         msg = FakeMensagem(
             self,

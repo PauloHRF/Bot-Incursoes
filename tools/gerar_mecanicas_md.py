@@ -315,13 +315,25 @@ def combate() -> str:
         "",
         "## Cair",
         "",
-        "A 0 de HP o personagem cai: sai do resto do combate e deixa de ser "
-        "sorteado como alvo. **Não há morte no bot.** O que acaba mal é a "
-        "incursão: caindo o grupo inteiro, a run encerra em fracasso — e "
-        "mesmo assim os pontos de participação entram, porque o grupo levou a "
-        "run até o fim.",
+        "A 0 de HP o personagem cai: perde a vez enquanto estiver no chão e "
+        "deixa de ser sorteado como alvo. **Não há morte no bot.** O que "
+        "acaba mal é a incursão: caindo o grupo inteiro, a run encerra em "
+        "fracasso — e mesmo assim os pontos de participação entram, porque o "
+        "grupo levou a run até o fim.",
         "",
-        "Quem caiu volta de pé no Descanso.",
+        "**Cura levanta.** Qualquer cura — a apontada em alguém, a que cai no "
+        "grupo e a que vem por turno — tira do chão quem está a 0, e ele "
+        "volta com o que a cura deu. A conta é a de sempre, de 0 para cima: "
+        "nada é somado nem descontado por o alvo estar caído, e a Debilidade "
+        "corta essa cura como corta as outras. Quem levanta volta a agir na "
+        "própria vez seguinte.",
+        "",
+        "Isso **não** desfaz uma derrota: caindo o grupo inteiro, o combate "
+        "encerra antes de a rodada virar, e a cura por turno nem chega a "
+        "rodar. Vida temporária segue sendo outra história — quem está no "
+        "chão não ganha THP, porque THP não levanta ninguém.",
+        "",
+        "Fora do combate, quem caiu também volta de pé no Descanso.",
         "",
         "## Descanso",
         "",
@@ -570,6 +582,10 @@ def incursoes_e_salas() -> str:
         "evita o dano e o debuff. Sem o desconto ela nunca competiria na "
         "votação contra um Tesouro.",
         "",
+        "Com o desconto **e** a regra de que vencer poupa o grupo, a "
+        "Armadilha é a sala mais branda do caminho — e é para ser: ela é a "
+        "única que não oferece nada em troca do risco.",
+        "",
         "As faixas, e o que cada tipo de sala pode receber:",
         "",
     ]
@@ -659,23 +675,30 @@ def consequencias_md() -> str:
         "",
         "## Por tipo de sala",
         "",
+        "**Sala vencida não castiga ninguém.** Armadilha e Evento batem em "
+        "quem falhou, mas só quando a sala foi **perdida**: vencer protege o "
+        "grupo inteiro, inclusive quem rolou mal. O \"Falhou\" de cada tipo "
+        "abaixo é o da sala perdida.",
+        "",
         "### Armadilha",
         "",
     ]
     L += lista([
-        "**Passou:** atravessa e pronto. A CD dela já vem com desconto.",
-        f"**Falhou:** **−{C.DANO_PCT}% do HP máximo** mais um debuff de "
-        "Armadilha sorteado.",
+        "**Grupo venceu:** desarmada. Ninguém se machuca nela, nem quem "
+        "falhou a própria rolagem.",
+        f"**Grupo perdeu:** quem falhou leva **−{C.DANO_PCT}% do HP máximo** "
+        "mais um debuff de Armadilha sorteado.",
     ])
     L += ["### Evento", ""]
     L += lista([
-        f"**Passou:** um prêmio sorteado. Os {len(cond.BUFFS)} buffs do "
+        f"**Grupo venceu:** um prêmio sorteado. Os {len(cond.BUFFS)} buffs do "
         f"catálogo são sempre candidatos — são o piso. A Cura "
         f"(+{C.CURA_PCT}% do HP) entra no bolo só se alguém estiver "
         f"machucado, e a {C.NOME_DA_GRACA} só se alguém carregar debuff: não "
         "faz sentido oferecer cura a um grupo inteiro nem perdão a um grupo "
         "limpo.",
-        "**Falhou:** um debuff de Evento ou um ponto de Exaustão.",
+        "**Grupo perdeu:** quem falhou pega um debuff de Evento ou um ponto "
+        "de Exaustão.",
     ])
     L += [
         f"A {C.NOME_DA_GRACA} tira **um stack de um debuff de alguém** do "
@@ -685,10 +708,10 @@ def consequencias_md() -> str:
     ]
     L += ["### Tesouro", ""]
     L += lista([
-        "**Passou:** o **texto de recompensa escrito na sala** — e não um item "
+        "**Grupo venceu:** o **texto de recompensa escrito na sala** — e não um item "
         "do mercado. Os itens de tesouro vivem na planilha do grupo, não no "
         "bot; a economia do bot é a do mercado (ver `mercado.md`).",
-        "**Falhou:** não leva nada — e tem " + pct(C.CHANCE_DE_MIMICO, 0) + " de "
+        "**Grupo perdeu:** não leva nada — e tem " + pct(C.CHANCE_DE_MIMICO, 0) + " de "
         f"chance de acordar o que fingia ser um baú. Acordando, "
         f"**{C.MIMICOS} {C.NOME_DO_MIMICO}s** entram e a sala vira combate, "
         "em vez de devolver o grupo à votação.",
@@ -1042,15 +1065,26 @@ def mercado_md() -> str:
         "",
     ]
     L += tabela(
-        ["De onde vem", "Quanto", "Por quem"],
+        ["De onde vem", "Quanto", "Quando"],
         [
-            ["Concluir uma sala", f"{mercado.OURO_POR_SALA} × tier",
-             "cada personagem, igual para todos"],
+            ["Cada sala superada", f"{mercado.OURO_POR_SALA} × tier",
+             "no fecho da incursão"],
             ["Concluir a incursão", f"{mercado.OURO_POR_INCURSAO} × tier",
-             "cada personagem"],
+             "no fecho da incursão"],
         ],
     )
     L += [
+        "**A incursão paga uma vez, no fim, e só quando é concluída.** As "
+        "salas do caminho não pagam por si: elas ficam registradas, e no "
+        "fecho de uma vitória a contagem delas vira ouro. Uma run que acaba "
+        "com o grupo inteiro no chão não rende nada — nem o das salas já "
+        "atravessadas.",
+        "",
+        "**Recebe todo mundo que passou pela run**, e não só quem estava de "
+        "pé no fim: quem caiu no objetivo e quem foi ejetado por Exaustão no "
+        "meio do caminho jogaram a incursão e levam o mesmo que os outros. "
+        "Fica de fora quem desistiu **antes** de ela começar.",
+        "",
         "Escala por tier porque os preços não escalam: um item lendário custa "
         f"{itens.PRECO_BASE['lendario']} em qualquer tier, e é o ouro que "
         "chega mais rápido lá em cima.",

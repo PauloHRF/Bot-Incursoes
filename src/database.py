@@ -112,10 +112,27 @@ CREATE TABLE IF NOT EXISTS run_mapa (
 );
 
 -- A sala que o grupo escolheu em cada passo: o sorteio nunca reoferece uma delas.
+CREATE TABLE IF NOT EXISTS run_quem_recebe (
+    run_id        INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    user_id       INTEGER NOT NULL,
+    personagem_id INTEGER NOT NULL,
+    PRIMARY KEY (run_id, personagem_id)
+);
+
 CREATE TABLE IF NOT EXISTS run_salas (
     run_id  INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
     passo   INTEGER NOT NULL,
     sala_id TEXT    NOT NULL,
+    -- O grupo ATRAVESSOU esta sala. Nao e o mesmo que ter uma linha aqui: a
+    -- linha do objetivo nasce do pagamento, e o objetivo nao e uma sala do
+    -- caminho.
+    visitada INTEGER NOT NULL DEFAULT 0,
+    -- Trava de quem fecha a sala: duas rolagens que a resolvam juntas
+    -- chegavam as duas ao passo seguinte.
+    fechada  INTEGER NOT NULL DEFAULT 0,
+    -- O grupo venceu esta sala. E a contagem destas que paga o ouro no
+    -- fecho da run — nada e pago na hora.
+    superada INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (run_id, passo)
 );
 
@@ -464,6 +481,21 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
     # personagem ja jogou naquele tier, que e a trava do `/ficha alterar`.
     if "tier" not in await _colunas(conn, "run_participantes"):
         await conn.execute("ALTER TABLE run_participantes ADD COLUMN tier INTEGER")
+
+    # A sala guarda se foi fechada (trava contra fechar duas vezes) e se foi
+    # superada (e a contagem delas que paga o ouro no fim da run).
+    colunas_das_salas = await _colunas(conn, "run_salas")
+    for coluna in ("fechada", "superada"):
+        if coluna not in colunas_das_salas:
+            await conn.execute(
+                f"ALTER TABLE run_salas ADD COLUMN {coluna} INTEGER NOT NULL DEFAULT 0"
+            )
+    if "visitada" not in colunas_das_salas:
+        # Toda linha que ja existia nasceu de uma visita: o default 1 na
+        # migracao, e 0 no schema novo, onde quem visita e que marca.
+        await conn.execute(
+            "ALTER TABLE run_salas ADD COLUMN visitada INTEGER NOT NULL DEFAULT 1"
+        )
 
     # Contador de descansos: e ele que zera as habilidades "1x por descanso".
     if "descansos" not in await _colunas(conn, "runs"):
@@ -865,6 +897,14 @@ async def adicionar_participante(
         " (run_id, user_id, personagem_id, tier) VALUES (?, ?, ?, ?)",
         (run_id, user_id, personagem_id, tier),
     )
+    # Entrar da direito ao ouro desta run, e o direito nao se perde depois:
+    # quem for ejetado por Exaustao no meio continua nesta lista. E so quem
+    # desiste ANTES de a run comecar que sai dela.
+    await conn.execute(
+        "INSERT OR IGNORE INTO run_quem_recebe (run_id, user_id, personagem_id)"
+        " VALUES (?, ?, ?)",
+        (run_id, user_id, personagem_id),
+    )
     await conn.commit()
     return cur.rowcount > 0
 
@@ -930,12 +970,100 @@ async def personagens_da_run(conn: aiosqlite.Connection, run_id: int) -> list[di
     return [_desserializar(r, vestido.get(r["id"], ())) for r in linhas]
 
 
+async def tomar_a_sala(
+    conn: aiosqlite.Connection, run_id: int, linha: int, sala_id: str
+) -> bool:
+    """Fecha a votacao e entra na sala — e so UM chamador consegue.
+
+    A votacao fecha na maioria, entao com grupo de cinco o terceiro, o
+    quarto e o quinto clique TODOS veem maioria formada e todos seguem para
+    abrir a sala. Entre a conferencia do status e a gravacao havia dois
+    `canal.send` de rede, tempo de sobra para dois cliques passarem juntos:
+    o painel do combate saia duplicado.
+
+    Checar o status antes nao resolve, porque o `await` do meio solta a vez.
+    Quem resolve e o proprio UPDATE: ele so acerta linha se o status ainda
+    for 'escolhendo' naquela linha, e o SQLite nao executa dois ao mesmo
+    tempo. Quem levou a linha abre a sala; os outros voltam de maos vazias.
+    """
+    cur = await conn.execute(
+        "UPDATE runs SET status = 'em_sala', sala_atual = ?, votacao_expira_em = NULL"
+        " WHERE id = ? AND status = 'escolhendo' AND linha_atual = ?",
+        (sala_id, run_id, linha),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
+async def tomar_o_fecho_da_sala(
+    conn: aiosqlite.Connection, run_id: int, passo: int, sala_id: str
+) -> bool:
+    """Fecha a sala do passo — e so UM chamador consegue.
+
+    Mesma corrida da votacao, do outro lado: a sala se resolve quando o
+    progresso chega ao alvo, e duas rolagens que cheguem juntas as duas
+    veem a sala resolvida. Cada uma seguia para abrir o passo seguinte, e
+    no fim do caminho o passo seguinte e o combate do objetivo — dai o
+    painel duplicado.
+
+    A trava mora na LINHA DA SALA e nao no status da run: meia duzia de
+    lugares exigem `status in ('em_sala', 'objetivo')` para aceitar um
+    clique, e um status de passagem faria todos recusarem.
+
+    O upsert cria a linha se ela faltar, para uma sala sem visita gravada
+    nao travar a run para sempre.
+    """
+    cur = await conn.execute(
+        "INSERT INTO run_salas (run_id, passo, sala_id, fechada)"
+        " VALUES (?, ?, ?, 1)"
+        " ON CONFLICT(run_id, passo) DO UPDATE SET fechada = 1"
+        " WHERE run_salas.fechada = 0",
+        (run_id, passo, sala_id),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
 async def remover_participante(conn: aiosqlite.Connection, run_id: int, user_id: int) -> bool:
     cur = await conn.execute(
         "DELETE FROM run_participantes WHERE run_id = ? AND user_id = ?", (run_id, user_id)
     )
     await conn.commit()
     return cur.rowcount > 0
+
+
+async def tirar_o_direito_ao_ouro(
+    conn: aiosqlite.Connection, run_id: int, user_id: int
+) -> None:
+    """Desistiu antes de a run comecar: nao recebe nada dela.
+
+    Separado de `remover_participante` de proposito. Sair do grupo e ser
+    ejetado no meio da incursao tiram a mesma linha de
+    `run_participantes`, mas sao coisas diferentes para o ouro: quem
+    desistiu nunca jogou, e quem foi ejetado jogou ate cair.
+    """
+    await conn.execute(
+        "DELETE FROM run_quem_recebe WHERE run_id = ? AND user_id = ?",
+        (run_id, user_id),
+    )
+    await conn.commit()
+
+
+async def quem_recebe_da_run(
+    conn: aiosqlite.Connection, run_id: int
+) -> list[dict[str, Any]]:
+    """Todos que passaram por esta run, estejam nela ainda ou nao.
+
+    `personagens_da_run` nao serve aqui: ela lista quem esta no grupo
+    AGORA, e o ouro do fecho vai tambem para quem caiu ou foi ejetado no
+    caminho.
+    """
+    async with conn.execute(
+        "SELECT p.* FROM run_quem_recebe r JOIN personagens p"
+        " ON p.id = r.personagem_id WHERE r.run_id = ? ORDER BY r.rowid",
+        (run_id,),
+    ) as cur:
+        return [_desserializar(r) for r in await cur.fetchall()]
 
 
 async def participantes(conn: aiosqlite.Connection, run_id: int) -> list[int]:
@@ -1014,16 +1142,62 @@ async def registrar_visita(
 ) -> None:
     """Marca a sala que o grupo atravessou naquele passo."""
     await conn.execute(
-        "INSERT OR REPLACE INTO run_salas (run_id, passo, sala_id) VALUES (?, ?, ?)",
+        "INSERT INTO run_salas (run_id, passo, sala_id, visitada)"
+        " VALUES (?, ?, ?, 1)"
+        " ON CONFLICT(run_id, passo) DO UPDATE SET sala_id = excluded.sala_id,"
+        " visitada = 1",
         (run_id, passo, sala_id),
     )
     await conn.commit()
 
 
+async def marcar_sala_superada(
+    conn: aiosqlite.Connection, run_id: int, passo: int, sala_id: str
+) -> None:
+    """O grupo venceu esta sala. Nada e pago aqui: so fica registrado.
+
+    O upsert cria a linha se ela faltar — o objetivo nao passa por
+    `registrar_visita`, e ele tambem conta como sala superada.
+    """
+    await conn.execute(
+        "INSERT INTO run_salas (run_id, passo, sala_id, superada)"
+        " VALUES (?, ?, ?, 1)"
+        " ON CONFLICT(run_id, passo) DO UPDATE SET superada = 1",
+        (run_id, passo, sala_id),
+    )
+    await conn.commit()
+
+
+async def salas_superadas(conn: aiosqlite.Connection, run_id: int) -> int:
+    """Quantas salas o grupo venceu nesta run, o objetivo incluido."""
+    async with conn.execute(
+        "SELECT COUNT(*) AS n FROM run_salas WHERE run_id = ? AND superada = 1",
+        (run_id,),
+    ) as cur:
+        return (await cur.fetchone())["n"]
+
+
+async def sala_fechada(conn: aiosqlite.Connection, run_id: int, passo: int) -> bool:
+    """A sala daquele passo ja foi fechada?
+
+    Serve para recusar o que chega depois do fecho. A run pode estar ainda
+    NA sala e ela estar fechada: a emboscada do Mimico reusa o id da sala do
+    Tesouro, e o combate dela corre com o status intacto.
+    """
+    async with conn.execute(
+        "SELECT fechada FROM run_salas WHERE run_id = ? AND passo = ?",
+        (run_id, passo),
+    ) as cur:
+        linha = await cur.fetchone()
+    return bool(linha and linha["fechada"])
+
+
 async def salas_visitadas(conn: aiosqlite.Connection, run_id: int) -> list[str]:
     """As salas por onde o grupo já passou nesta run."""
     async with conn.execute(
-        "SELECT sala_id FROM run_salas WHERE run_id = ? ORDER BY passo", (run_id,)
+        "SELECT sala_id FROM run_salas WHERE run_id = ? AND visitada = 1"
+        " ORDER BY passo",
+        (run_id,),
     ) as cur:
         return [r["sala_id"] for r in await cur.fetchall()]
 

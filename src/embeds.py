@@ -141,6 +141,21 @@ async def abertura_do_grupo(
     return [cartao_personagem(p, m) for p, m in zip(personagens, membros)], None
 
 
+def titulo_da_incursao(incursao: Incursao) -> str:
+    """O nome com o tier colado: `Tumba Afogada (T4)`.
+
+    O tier anda junto do nome em todo cartão porque é ele que decide o que
+    o grupo vai encontrar: quem entra, a CD das salas e o tamanho do
+    debuff. Ler o nome sem ele é ler metade.
+
+    Incursão sem tier declarado diz isso em vez de inventar um número — o
+    tier dela sai do grupo que entrar, e só na hora.
+    """
+    if incursao.tier is None:
+        return f"{incursao.nome} (tier livre)"
+    return f"{incursao.nome} (T{incursao.tier})"
+
+
 def exigencia_de_tier(incursao: Incursao) -> str:
     """A linha que diz quem pode entrar nesta incursão."""
     if incursao.aberta_a_todos:
@@ -171,7 +186,7 @@ def recrutamento(
     incursao: Incursao, membros: list[discord.abc.User], criador: discord.abc.User
 ) -> discord.Embed:
     e = discord.Embed(
-        title=f"🗺️ {incursao.nome}",
+        title=f"🗺️ {titulo_da_incursao(incursao)}",
         description=chamada(incursao.lore_inicial),
         color=COR_INCURSAO,
     )
@@ -201,7 +216,7 @@ def recrutamento(
 def lore_abertura(incursao: Incursao, quantos: int) -> discord.Embed:
     """A mensagem que abre a run, com a lore da incursão."""
     e = discord.Embed(
-        title=f"🗺️ {incursao.nome}",
+        title=f"🗺️ {titulo_da_incursao(incursao)}",
         description=incursao.lore_inicial,
         color=COR_INCURSAO,
     )
@@ -220,7 +235,7 @@ def lore_abertura(incursao: Incursao, quantos: int) -> discord.Embed:
 def lore_fecho(incursao: Incursao) -> discord.Embed:
     """O epílogo, quando o grupo cumpre o objetivo."""
     return discord.Embed(
-        title=f"📖 {incursao.nome} — epílogo",
+        title=f"📖 {titulo_da_incursao(incursao)} — epílogo",
         description=incursao.lore_final,
         color=COR_SUCESSO,
     )
@@ -440,7 +455,7 @@ def status(
         "fracasso": "fracassada",
     }
     e = discord.Embed(
-        title=f"Run #{run['id']} — {incursao.nome}",
+        title=f"Run #{run['id']} — {titulo_da_incursao(incursao)}",
         description=f"Estado: **{rotulos.get(run['status'], run['status'])}**",
         color=COR_INCURSAO,
     )
@@ -960,7 +975,7 @@ def run_fracassada(
     """
     onde = f" em **{sala.nome}**" if sala else ""
     e = discord.Embed(
-        title="☠️ Incursão fracassada",
+        title=f"☠️ {titulo_da_incursao(incursao)} — fracassada",
         description=(
             f"O grupo inteiro caiu{onde}. Ninguém volta com o objetivo."
         ),
@@ -968,6 +983,16 @@ def run_fracassada(
     )
     campo_caminho(e, caminho)
     campo_ouro(e, ouro)
+    # A incursao paga de uma vez, no fecho, e so quando e concluida. Dizer
+    # isso aqui evita a conversa de "mas eu passei quatro salas".
+    e.add_field(
+        name="Ouro",
+        value=(
+            "**Nada.** A incursao paga no fecho, e so quando e concluida — "
+            "as salas do caminho nao pagam por si."
+        ),
+        inline=False,
+    )
     _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
     return e
 
@@ -983,7 +1008,7 @@ def run_concluida(
 ) -> discord.Embed:
     """O desfecho da run: vitória, como o grupo saiu, recompensa e pontos."""
     e = discord.Embed(
-        title=f"🏆 {incursao.nome} — objetivo cumprido",
+        title=f"🏆 {titulo_da_incursao(incursao)} — objetivo cumprido",
         description=incursao.objetivo.recompensa
         or f"O grupo entrega o resultado a {incursao.organizacao}.",
         color=COR_SUCESSO,

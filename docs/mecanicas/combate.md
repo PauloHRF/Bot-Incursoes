@@ -45,9 +45,13 @@ Quem está caído não ganha THP — voltar a lutar é outra história.
 
 ## Cair
 
-A 0 de HP o personagem cai: sai do resto do combate e deixa de ser sorteado como alvo. **Não há morte no bot.** O que acaba mal é a incursão: caindo o grupo inteiro, a run encerra em fracasso — e mesmo assim os pontos de participação entram, porque o grupo levou a run até o fim.
+A 0 de HP o personagem cai: perde a vez enquanto estiver no chão e deixa de ser sorteado como alvo. **Não há morte no bot.** O que acaba mal é a incursão: caindo o grupo inteiro, a run encerra em fracasso — e mesmo assim os pontos de participação entram, porque o grupo levou a run até o fim.
 
-Quem caiu volta de pé no Descanso.
+**Cura levanta.** Qualquer cura — a apontada em alguém, a que cai no grupo e a que vem por turno — tira do chão quem está a 0, e ele volta com o que a cura deu. A conta é a de sempre, de 0 para cima: nada é somado nem descontado por o alvo estar caído, e a Debilidade corta essa cura como corta as outras. Quem levanta volta a agir na própria vez seguinte.
+
+Isso **não** desfaz uma derrota: caindo o grupo inteiro, o combate encerra antes de a rodada virar, e a cura por turno nem chega a rodar. Vida temporária segue sendo outra história — quem está no chão não ganha THP, porque THP não levanta ninguém.
+
+Fora do combate, quem caiu também volta de pé no Descanso.
 
 ## Descanso
 

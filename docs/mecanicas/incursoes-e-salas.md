@@ -42,6 +42,8 @@ Três coisas num lugar só, e as três são regra do bot e não conteúdo:
 
 O desconto da Armadilha é de propósito: passar nela não dá nada, só evita o dano e o debuff. Sem o desconto ela nunca competiria na votação contra um Tesouro.
 
+Com o desconto **e** a regra de que vencer poupa o grupo, a Armadilha é a sala mais branda do caminho — e é para ser: ela é a única que não oferece nada em troca do risco.
+
 As faixas, e o que cada tipo de sala pode receber:
 
 | Tipo de sala | CD 12 | CD 15 | CD 18 | Total |

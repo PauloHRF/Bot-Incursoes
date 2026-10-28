@@ -12,7 +12,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db  # noqa: E402
+from src import config, database as db, embeds as E  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
@@ -47,7 +47,9 @@ async def main() -> None:
     bot = FakeBot(conn, canal)
     cog = Incursoes(bot)
     # Banco só com salas de teste de perícia: o combate tem suíte própria.
-    incursao, _ = montar_conteudo(cog, tamanho="Média", salas=salas_sem_combate(8))
+    incursao, _ = montar_conteudo(
+        cog, tamanho="Média", salas=salas_sem_combate(8), tier=4
+    )
 
     # --- recrutamento ---
     inter = FakeInteraction(canal, JOGADORES[0])
@@ -106,6 +108,17 @@ async def main() -> None:
 
         # --- testes de pericia ---
         msg_sala = await canal.fetch_message(run["mensagem_id"])
+        if alvo.tem_teste:
+            # A CD do cartao e a do TIER da run. Antes o cartao nao recebia o
+            # tier e mostrava a CD escrita no banco (a do tier 1), enquanto
+            # `motor.testar` cobrava a do tier: o grupo via um numero e
+            # rolava contra outro.
+            desafio = {
+                f.name: f.value for f in msg_sala.embeds[0].fields
+            }.get("Desafio", "")
+            assert f"CD {alvo.cd_efetiva(incursao.tier)}" in desafio, (
+                f"o cartao mostra outra CD: {desafio}"
+            )
         # a sala que pede rolagem marca o grupo
         assert all(f"<@{u}>" in (msg_sala.content or "") for u in JOGADORES), msg_sala.content
         rolaram = 0
@@ -146,6 +159,17 @@ async def main() -> None:
         sala_id for sala_id, inter in rolagens if not inter.efemera_apagada
     ]
     assert not pendentes, f"rolagem ainda na tela nas salas {pendentes}"
+
+    # O tier anda junto do nome em todo cartao: e ele que decide quem entra,
+    # a CD das salas e o tamanho do debuff.
+    assert E.titulo_da_incursao(incursao) == f"{incursao.nome} (T{incursao.tier})"
+    titulos = [
+        m.embeds[0].title for m in canal.enviadas
+        if m.embeds and incursao.nome in (m.embeds[0].title or "")
+    ]
+    assert titulos, "nenhum cartao trouxe o nome da incursao"
+    for titulo in titulos:
+        assert f"(T{incursao.tier})" in titulo, titulo
 
     # a lore de abertura foi postada
     assert any(

@@ -223,27 +223,77 @@ def caso_o_ouro_escala_por_tier():
     print(f"  o tier 3 tira {rodada} de ouro por incursao Media: ok")
 
 
-async def caso_a_sala_superada_paga_o_grupo():
+async def caso_a_sala_superada_nao_paga_na_hora():
+    """A sala vencida fica registrada, e ninguem recebe nada ainda.
+
+    Antes cada sala pagava na hora, e uma run que acabasse com o grupo
+    inteiro no chao deixava o ouro do caminho na bolsa de quem chegou ate
+    ali. Agora a incursao paga de uma vez, no fecho, e so se for concluida.
+    """
     conn, canal, cog, ids = await preparar()
     montar_conteudo(cog, tamanho="Curta", salas=salas_sem_combate(), tier=3)
-    incursao = cog.conteudo[0] if hasattr(cog, "conteudo") else None
     run_id = await db.criar_run(conn, GUILD, CANAL, "t", JOGADORES[0])
     for user_id in JOGADORES[:3]:
         await db.adicionar_participante(conn, run_id, user_id, ids[user_id])
     run = await db.buscar_run(conn, run_id)
     sala = cog._sala(cog._incursao_da_run(run), "E1")
 
-    pagos = await cog._pagar_sala(run, sala)
-    assert pagos == 3, pagos
-    quanto = mercado.ouro_da_sala(cog._tier_da_run(run) or 1)
+    await cog._marcar_sala_superada(run, sala)
+    assert await db.salas_superadas(conn, run_id) == 1
     for user_id in JOGADORES[:3]:
-        assert await db.ouro(conn, ids[user_id]) == quanto
-    # Quem nao entrou nao recebe.
-    assert await db.ouro(conn, ids[JOGADORES[4]]) == 0
-    # E reprocessar a mesma sala nao paga de novo.
-    assert await cog._pagar_sala(run, sala) == 0
-    assert await db.ouro(conn, ids[JOGADORES[0]]) == quanto
-    print(f"  a sala paga {quanto} a cada um, e so uma vez: ok")
+        assert await db.ouro(conn, ids[user_id]) == 0, "a sala pagou na hora"
+
+    # Marcar de novo nao conta duas vezes: os dois caminhos de "sala
+    # superada" — o combate e o teste — chamam sem combinar entre si.
+    await cog._marcar_sala_superada(run, sala)
+    assert await db.salas_superadas(conn, run_id) == 1
+    print("  a sala vencida fica registrada e nao paga na hora: ok")
+
+
+async def caso_a_run_concluida_paga_todos_que_passaram():
+    """O fecho paga todo mundo que passou pela run, de pe ou nao.
+
+    Inclusive quem foi ejetado no meio por Exaustao: jogou a incursao. Quem
+    desistiu ANTES de ela comecar e que fica de fora.
+    """
+    conn, canal, cog, ids = await preparar()
+    montar_conteudo(cog, tamanho="Curta", salas=salas_sem_combate(), tier=3)
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", JOGADORES[0])
+    ficou, ejetado, desistiu = JOGADORES[0], JOGADORES[1], JOGADORES[2]
+    for user_id in (ficou, ejetado, desistiu):
+        await db.adicionar_participante(conn, run_id, user_id, ids[user_id])
+
+    # um sai no recrutamento (perde o direito), outro e ejetado no meio
+    await db.remover_participante(conn, run_id, desistiu)
+    await db.tirar_o_direito_ao_ouro(conn, run_id, desistiu)
+    await db.remover_participante(conn, run_id, ejetado)
+
+    run = await db.buscar_run(conn, run_id)
+    # Duas salas do caminho mais o objetivo, cada uma no passo dela. A marca
+    # e por passo: marcar duas salas no MESMO passo marca a mesma linha, que
+    # e o que acontece quando a run nao avanca.
+    objetivo = cog._incursao_da_run(run).objetivo
+    for passo, sala_id in ((1, "E1"), (2, "E2"), (3, objetivo.id)):
+        await db.marcar_sala_superada(conn, run_id, passo, sala_id)
+
+    pagos = await cog._pagar_a_run(run)
+    assert pagos == 2, f"esperava pagar 2 (o que ficou e o ejetado), pagou {pagos}"
+
+    tier = cog._tier_da_run(run) or 1
+    esperado = 3 * mercado.ouro_da_sala(tier) + mercado.ouro_da_incursao(tier)
+    assert await db.ouro(conn, ids[ficou]) == esperado
+    assert await db.ouro(conn, ids[ejetado]) == esperado, (
+        "quem foi ejetado no meio jogou a incursao e recebe igual"
+    )
+    assert await db.ouro(conn, ids[desistiu]) == 0, (
+        "quem desistiu antes de comecar nao recebe"
+    )
+    assert await db.ouro(conn, ids[JOGADORES[4]]) == 0, "quem nunca entrou"
+
+    # Pagar de novo nao paga de novo: a chave e por run.
+    assert await cog._pagar_a_run(run) == 0
+    assert await db.ouro(conn, ids[ficou]) == esperado
+    print(f"  o fecho paga {esperado} a cada um que passou, uma vez: ok")
 
 
 # ------------------------------------------------------- comprar e vestir
@@ -663,7 +713,8 @@ async def main():
         caso_o_ouro_escala_por_tier()
         await caso_o_ouro_e_a_soma_do_livro_caixa()
         await caso_a_mesma_sala_nunca_paga_duas_vezes()
-        await caso_a_sala_superada_paga_o_grupo()
+        await caso_a_sala_superada_nao_paga_na_hora()
+        await caso_a_run_concluida_paga_todos_que_passaram()
         await caso_comprar_debita_e_guarda()
         await caso_equipar_tira_da_bolsa_e_troca_sem_perder()
         await caso_so_cabe_um_por_slot()

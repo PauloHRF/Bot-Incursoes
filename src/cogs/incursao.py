@@ -895,6 +895,9 @@ class Incursoes(commands.Cog):
             if not await db.remover_participante(self.bot.db, run_id, interaction.user.id):
                 await interaction.response.send_message("Você não está no grupo.", ephemeral=True)
                 return
+            # Saiu antes de a incursao comecar: nao joga, nao recebe. Quem e
+            # ejetado no MEIO da run continua na lista de quem recebe.
+            await db.tirar_o_direito_ao_ouro(self.bot.db, run_id, interaction.user.id)
 
         elif acao == "comecar":
             if interaction.user.id != run["criador_id"]:
@@ -1077,6 +1080,13 @@ class Incursoes(commands.Cog):
         else:
             return  # ainda da para virar: espera mais votos
 
+        # A sala e tomada ANTES de qualquer mensagem: o que vem depois tem
+        # `await` de rede no meio, e e por ali que o segundo clique passava.
+        if not await db.tomar_a_sala(
+            self.bot.db, run["id"], linha, escolhida_id
+        ):
+            return  # outro clique levou esta sala; este nao abre nada
+
         faltaram = total - len(votos)
         if faltaram > 0:
             nome = self._sala(incursao, escolhida_id).nome
@@ -1086,7 +1096,10 @@ class Incursoes(commands.Cog):
             )
 
         await self._limpar_botoes(run)
-        await self._entrar_na_sala(run, self._sala(incursao, escolhida_id))
+        await self._entrar_na_sala(
+            await db.buscar_run(self.bot.db, run["id"]),
+            self._sala(incursao, escolhida_id),
+        )
 
     # -------------------------------------------------------------- salas
 
@@ -1158,7 +1171,12 @@ class Incursoes(commands.Cog):
             return
 
         embed, arquivo = E.sala_aberta(
-            sala, run["linha_atual"], 0, total, incursao.passos if incursao else None
+            sala, run["linha_atual"], 0, total,
+            incursao.passos if incursao else None,
+            # O tier, senao o cartao mostra a CD do tier 1 e `motor.testar`
+            # cobra a do tier da run: o grupo via um numero e rolava contra
+            # outro.
+            tier=self._tier_da_run(run),
         )
         view = ViewSala(self, run["id"], sala.id) if sala.tem_teste else None
         chamada = (
@@ -1169,35 +1187,49 @@ class Incursoes(commands.Cog):
         )
         await db.atualizar_run(self.bot.db, run["id"], mensagem_id=mensagem.id)
 
-    async def _pagar_sala(self, run: dict[str, Any], sala: Sala) -> int:
-        """Paga o ouro da sala superada a cada personagem que estava nela.
+    async def _marcar_sala_superada(self, run: dict[str, Any], sala: Sala) -> None:
+        """Registra a sala vencida. Nao paga ninguem: o ouro sai no fecho.
 
-        Mesma ideia do `_creditar`: a chave identifica a sala dentro da run, e
-        o indice unico do livro-caixa garante que ela nunca pague duas vezes.
-        Por isso os dois caminhos de "Sala superada" — o combate e o teste —
-        podem chamar sem combinar entre si.
+        Antes cada sala pagava na hora, e uma run que acabasse com o grupo
+        todo no chao deixava o ouro das salas do caminho na bolsa de quem
+        tinha chegado ali. Agora a incursao paga de uma vez, e so se for
+        concluida — fracasso nao rende nada.
+
+        Os dois caminhos de "sala superada", o combate e o teste, podem
+        chamar sem combinar entre si: a marca e por passo, e marcar duas
+        vezes marca a mesma linha.
         """
-        quanto = mercado.ouro_da_sala(self._tier_da_run(run) or 1)
-        chave = f"sala:{self._passo(run)}:{sala.id}"
-        pagos = 0
-        for p in await db.personagens_da_run(self.bot.db, run["id"]):
-            if await db.lancar_ouro(
-                self.bot.db, p["id"], quanto, f"Sala superada: {sala.nome}",
-                run_id=run["id"], chave=chave,
-            ):
-                pagos += 1
-        return pagos
+        await db.marcar_sala_superada(
+            self.bot.db, run["id"], self._passo(run), sala.id
+        )
 
-    async def _pagar_conclusao(self, run: dict[str, Any]) -> int:
-        """O bonus de fechar a incursao, so para quem chegou ao fim."""
-        quanto = mercado.ouro_da_incursao(self._tier_da_run(run) or 1)
+    async def _pagar_a_run(self, run: dict[str, Any]) -> int:
+        """O ouro da incursao inteira, de uma vez, no fecho de uma vitoria.
+
+        Vai para TODOS que passaram pela run, e nao so para quem estava de
+        pe no fim: quem caiu no objetivo e quem foi ejetado por Exaustao no
+        meio do caminho jogaram a incursao e levam o mesmo que os outros.
+
+        O valor sai da contagem de salas superadas, entao nao depende de
+        quem estava presente em qual sala — e o grupo que atravessou, nao
+        cada um por si.
+        """
+        tier = self._tier_da_run(run) or 1
+        superadas = await db.salas_superadas(self.bot.db, run["id"])
+        das_salas = superadas * mercado.ouro_da_sala(tier)
+        do_fecho = mercado.ouro_da_incursao(tier)
         pagos = 0
-        for p in await db.personagens_da_run(self.bot.db, run["id"]):
-            if await db.lancar_ouro(
-                self.bot.db, p["id"], quanto, "Incursao concluida",
+        for p in await db.quem_recebe_da_run(self.bot.db, run["id"]):
+            recebeu = await db.lancar_ouro(
+                self.bot.db, p["id"], das_salas,
+                f"Salas superadas ({superadas})",
+                run_id=run["id"], chave="salas",
+            )
+            recebeu |= await db.lancar_ouro(
+                self.bot.db, p["id"], do_fecho, "Incursao concluida",
                 run_id=run["id"], chave="conclusao",
-            ):
-                pagos += 1
+            )
+            pagos += 1 if recebeu else 0
         return pagos
 
     async def _creditar(
@@ -2886,6 +2918,30 @@ class Incursoes(commands.Cog):
         acao, pago = self._versao_da_habilidade(acao, estado, user_id)
         linhas: list[str] = []
 
+        # A CURA primeiro, e o THP depois. Duas razoes: ela alcanca quem esta
+        # caido (e `estado.vivos` nao), e quem ela levanta entra no THP junto
+        # com o resto — a habilidade cai no grupo, e depois de cair o grupo
+        # ja inclui quem voltou.
+        texto_da_cura = None
+        if acao.get("cura_fracao"):
+            # O bonus de quem cura (Curandeiro, Especialista em cura, o anel
+            # do santuario) vale aqui como na cura de um so.
+            quem_curou = await self._personagem_na_run(run, user_id)
+            bonus = ((quem_curou or {}).get("efeitos") or {}).get("bonus_cura_pct")
+            como = {"fracao": acao["cura_fracao"]}
+            curados = {}
+            # `combatentes` e nao `vivos`: a cura em grupo levanta os caidos,
+            # como a cura de alvo escolhido.
+            for c in estado.combatentes:
+                if self._quanto_cura(c, como, bonus):
+                    curados[c.user_id] = c.hp_atual
+            if curados:
+                await db.definir_hp_varios(self.bot.db, run["id"], curados)
+            total = acao["cura_fracao"] + max(0.0, bonus or 0.0)
+            # `round`, e nao `int`: 0.35 + 0.10 da 0.44999999999999996 em
+            # float, e truncar mostraria "44%" numa cura de 45%.
+            texto_da_cura = f"**{round(total * 100)}%** do HP maximo de volta"
+
         quanto = motor.rolar_dano(acao["thp"]) if acao.get("thp") else 0
         novos: dict[int, int] = {}
         for c in estado.vivos:
@@ -2894,23 +2950,8 @@ class Incursoes(commands.Cog):
             novos[c.user_id] = c.thp
         if quanto:
             linhas.append(f"**{quanto}** de vida temporaria para o grupo")
-
-        if acao.get("cura_fracao"):
-            # O bonus de quem cura (Curandeiro, Especialista em cura, o anel
-            # do santuario) vale aqui como na cura de um so.
-            quem_curou = await self._personagem_na_run(run, user_id)
-            bonus = ((quem_curou or {}).get("efeitos") or {}).get("bonus_cura_pct")
-            como = {"fracao": acao["cura_fracao"]}
-            curados = {}
-            for c in estado.vivos:
-                if self._quanto_cura(c, como, bonus):
-                    curados[c.user_id] = c.hp_atual
-            if curados:
-                await db.definir_hp_varios(self.bot.db, run["id"], curados)
-            total = acao["cura_fracao"] + max(0.0, bonus or 0.0)
-            # `round`, e nao `int`: 0.35 + 0.10 da 0.44999999999999996 em
-            # float, e truncar mostraria "44%" numa cura de 45%.
-            linhas.append(f"**{round(total * 100)}%** do HP maximo de volta")
+        if texto_da_cura:
+            linhas.append(texto_da_cura)
 
         if pago:
             novos[pago[0]] = pago[1]
@@ -3585,7 +3626,11 @@ class Incursoes(commands.Cog):
         """No fim da rodada: cura de quem tem cura por turno, e prazos vencidos."""
         passo = self._passo(run)
         curas = {}
-        for c in estado.vivos:
+        # `combatentes` e nao `vivos`: a cura por turno levanta caido como as
+        # outras. Grupo INTEIRO no chao nao chega aqui — o laco do `_avancar`
+        # ve `estado.encerrado` antes de virar a rodada e encerra o combate —,
+        # entao a regeneracao socorre quem caiu, mas nao desfaz uma derrota.
+        for c in estado.combatentes:
             if c.cura_por_turno:
                 ganho = motor.curar(c, c.cura_por_turno)
                 if ganho:
@@ -3695,7 +3740,7 @@ class Incursoes(commands.Cog):
                 f"Sala superada: {sala.nome}",
                 f"sala:{self._passo(run)}:{sala.id}",
             )
-        await self._pagar_sala(run, sala)
+        await self._marcar_sala_superada(run, sala)
 
         canal = await self._canal(run)
         if sala.id == incursao.objetivo.id:
@@ -3706,7 +3751,9 @@ class Incursoes(commands.Cog):
             await self._creditar(
                 run, incursao.pontos_conclusao, "Objetivo cumprido", "conclusao"
             )
-            await self._pagar_conclusao(run)
+            # Aqui, e em nenhum outro lugar: a incursao so paga quando e
+            # concluida.
+            await self._pagar_a_run(run)
             if canal:
                 # Desfecho num embed so: vitoria, como o grupo saiu, MEs e pontos.
                 lancamentos, total = await self._balanco(run)
@@ -3758,6 +3805,16 @@ class Incursoes(commands.Cog):
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] != "em_sala" or run["sala_atual"] != sala_id:
             await interaction.response.send_message("Esta sala já foi resolvida.", ephemeral=True)
+            return
+        # A sala pode estar FECHADA com a run ainda nela: a emboscada do
+        # Mimico reusa o id e o status da sala do Tesouro, e o combate corre
+        # dentro dela. Um botao antigo na tela de alguem ainda mandava a
+        # rolagem, e ela reabria o fecho da sala — a votacao do passo
+        # seguinte aparecia no meio do combate.
+        if await db.sala_fechada(self.bot.db, run_id, self._passo(run)):
+            await interaction.response.send_message(
+                "Esta sala já foi resolvida.", ephemeral=True
+            )
             return
         if not await db.esta_na_run(self.bot.db, run_id, interaction.user.id):
             await interaction.response.send_message("Você não faz parte desta run.", ephemeral=True)
@@ -3841,7 +3898,8 @@ class Incursoes(commands.Cog):
             await self._concluir_sala(run, sala, resolucao)
         else:
             embed, _ = E.sala_aberta(
-                sala, run["linha_atual"], len(registros), total, incursao.passos
+                sala, run["linha_atual"], len(registros), total, incursao.passos,
+                tier=self._tier_da_run(run),
             )
             if interaction.message is not None:
                 try:
@@ -3852,6 +3910,16 @@ class Incursoes(commands.Cog):
     async def _concluir_sala(
         self, run: dict[str, Any], sala: Sala, resolucao: Optional[ResolucaoSala]
     ) -> None:
+        """Fecha a sala e segue a run. Roda uma vez por sala, nunca duas.
+
+        Duas rolagens que resolvam a sala juntas chegavam as duas aqui, e as
+        duas seguiam para o passo seguinte — que, no fim do caminho, e o
+        combate do objetivo: o painel saia duplicado.
+        """
+        if not await db.tomar_o_fecho_da_sala(
+            self.bot.db, run["id"], self._passo(run), sala.id
+        ):
+            return
         canal = await self._canal(run)
         if not canal:
             return
@@ -3872,7 +3940,7 @@ class Incursoes(commands.Cog):
                     run, sala.pontos_organizacao, f"Sala superada: {sala.nome}", f"sala:{self._passo(run)}:{sala.id}"
                 )
             if resolucao.superada:
-                await self._pagar_sala(run, sala)
+                await self._marcar_sala_superada(run, sala)
             await self._expulsar_estourados(run)
 
         # Mímico acordado no baú: a sala vira combate em vez de devolver à votação.
@@ -4059,12 +4127,19 @@ class Incursoes(commands.Cog):
         """Aplica o que a sala faz com o grupo e devolve o texto do embed.
 
         O que cada tipo faz está em `src/consequencias.py`; aqui só persiste.
-        Armadilha e Evento batem em **quem falhou** — é a mesma regra do
-        progresso, em que cada um responde pela própria rolagem. O prêmio de um
-        Evento vencido é do grupo.
+
+        **Sala vencida não castiga ninguém.** Armadilha e Evento batem em
+        quem falhou, mas só quando a sala foi PERDIDA: vencer protege o
+        grupo inteiro, inclusive quem rolou mal. Antes a Armadilha cobrava
+        de quem falhou mesmo com o grupo desarmando a sala, e o jogador que
+        tirou 3 saía machucado de uma sala que o grupo venceu.
         """
         desfecho = consequencias.Desfecho()
-        if sala.tipo == "Armadilha" and resolucao.quem_falhou:
+        if sala.tipo == "Armadilha" and resolucao.superada:
+            desfecho.linhas.append(
+                "O grupo desarma a armadilha — ninguém se machuca nela."
+            )
+        elif sala.tipo == "Armadilha" and resolucao.quem_falhou:
             await self._castigo_de_armadilha(run, sala, resolucao, desfecho)
         elif sala.tipo == "Evento":
             if resolucao.superada:

@@ -1398,10 +1398,16 @@ def cura_liquida(combatente: Combatente, bruta: int) -> int:
 def curar_quanto(combatente: Combatente, bruta: int) -> int:
     """Cura uma quantidade já rolada, sem passar do teto. Devolve quanto curou.
 
-    Não levanta caído: quem está em 0 HP está fora do combate, e voltar é
-    assunto do descanso ou de uma habilidade que diga isso.
+    **Levanta caído.** Quem está em 0 HP volta com o que a cura der — era a
+    única coisa no jogo que o grupo não tinha como fazer por si, e deixava
+    o descanso como saída única de uma queda. A conta é a mesma de sempre,
+    de 0 para cima: a cura não ganha nem perde nada por o alvo estar no
+    chão.
+
+    Quem a cura levanta volta a contar em `vivos` na hora, porque `caido`
+    é lido do HP e não guardado — então ele age na próxima vez dele.
     """
-    if combatente.caido or bruta <= 0:
+    if bruta <= 0:
         return 0
     antes = combatente.hp_atual
     combatente.hp_atual = min(combatente.hp_max, antes + cura_liquida(combatente, bruta))
@@ -1413,10 +1419,9 @@ def curar(combatente: Combatente, fracao: float) -> int:
 
     As habilidades do clérigo e do xamã curam por dado ('2d8+3'); as do
     guerreiro e do paladino, por fração do máximo. As duas descem em
-    `curar_quanto`, que é onde a conta de verdade mora.
+    `curar_quanto`, que é onde a conta de verdade mora — inclusive a parte
+    de levantar quem está caído.
     """
-    if combatente.caido:
-        return 0
     return curar_quanto(combatente, max(1, int(combatente.hp_max * fracao)))
 
 

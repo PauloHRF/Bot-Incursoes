@@ -327,6 +327,14 @@ async def caso_derrota_total():
 
     hps = await db.hp_dos_participantes(conn, run["id"])
     assert all(hp == 0 for hp in hps.values()), hps
+
+    # E a run perdida nao rende ouro a ninguem — nem o das salas do caminho.
+    # A incursao paga de uma vez, no fecho, e so quando e concluida.
+    assert await db.ouro_da_run(conn, run["id"]) == [], (
+        await db.ouro_da_run(conn, run["id"])
+    )
+    for p in await db.quem_recebe_da_run(conn, run["id"]):
+        assert await db.ouro(conn, p["id"]) == 0, f"{p['nome']} levou ouro de uma derrota"
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print("  derrota total encerra a run: ok")

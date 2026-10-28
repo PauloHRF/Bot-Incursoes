@@ -4,10 +4,14 @@
 
 ## O ouro
 
-| De onde vem | Quanto | Por quem |
+| De onde vem | Quanto | Quando |
 |---|---|---|
-| Concluir uma sala | 5 × tier | cada personagem, igual para todos |
-| Concluir a incursão | 20 × tier | cada personagem |
+| Cada sala superada | 5 × tier | no fecho da incursão |
+| Concluir a incursão | 20 × tier | no fecho da incursão |
+
+**A incursão paga uma vez, no fim, e só quando é concluída.** As salas do caminho não pagam por si: elas ficam registradas, e no fecho de uma vitória a contagem delas vira ouro. Uma run que acaba com o grupo inteiro no chão não rende nada — nem o das salas já atravessadas.
+
+**Recebe todo mundo que passou pela run**, e não só quem estava de pé no fim: quem caiu no objetivo e quem foi ejetado por Exaustão no meio do caminho jogaram a incursão e levam o mesmo que os outros. Fica de fora quem desistiu **antes** de ela começar.
 
 Escala por tier porque os preços não escalam: um item lendário custa 900 em qualquer tier, e é o ouro que chega mais rápido lá em cima.
 

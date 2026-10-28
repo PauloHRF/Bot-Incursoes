@@ -361,6 +361,143 @@ def salas_de(tipo, cd, quantas=6):
     ]
 
 
+async def caso_sala_vencida_nao_castiga_quem_falhou():
+    """Vencer a sala protege o grupo inteiro, inclusive quem rolou mal.
+
+    A Armadilha cobrava de quem falhou mesmo com o grupo desarmando a sala:
+    o jogador que tirou 3 saía machucado e com debuff de uma sala que o
+    grupo venceu. A mesma regra vale para o Evento, que já era assim.
+
+    O caso monta a resolução à mão porque a combinação que importa — sala
+    SUPERADA com alguém que FALHOU — não sai de rolagens aleatórias quando
+    se quer ela em todas as execuções.
+    """
+    conn, canal, cog, incursao = await preparar(salas_de("Armadilha", 10))
+    run = await montar_run(conn, canal, cog)
+    sala = cog._sala(cog._incursao_da_run(run), "S1")
+
+    def rolagem(user_id, nome, total):
+        # d20 puro, para `total` sair exatamente no que o caso quer.
+        return motor.ResultadoTeste(user_id, nome, "Percepção", total, 0, 10)
+
+    vencida = motor.ResolucaoSala(
+        sala,
+        [
+            rolagem(JOGADORES[0], "Heroi101", 20),  # passou com margem 10
+            rolagem(JOGADORES[1], "Heroi102", 3),   # falhou
+        ],
+        total_participantes=2,
+    )
+    assert vencida.superada, (vencida.progresso, vencida.alvo)
+    assert vencida.quem_falhou, "o caso precisa de alguem que falhou"
+
+    antes = await db.hp_dos_participantes(conn, run["id"])
+    desfecho = await cog._consequencias_da_sala(run, sala, vencida)
+    assert not await db.condicoes_da_run(conn, run["id"]), (
+        "sala vencida nao devia deixar debuff em ninguem"
+    )
+    assert await db.hp_dos_participantes(conn, run["id"]) == antes, (
+        "sala vencida nao devia machucar ninguem"
+    )
+    assert any("desarma" in linha for linha in desfecho.linhas), desfecho.linhas
+
+    # E a sala PERDIDA segue cobrando de quem falhou.
+    perdida = motor.ResolucaoSala(
+        sala, [rolagem(JOGADORES[1], "Heroi102", 3)], total_participantes=2
+    )
+    assert not perdida.superada
+    await cog._consequencias_da_sala(run, sala, perdida)
+    carregadas = await db.condicoes_da_run(conn, run["id"])
+    assert carregadas.get(JOGADORES[1]), (
+        f"a armadilha perdida devia castigar quem falhou, veio {carregadas}"
+    )
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  sala vencida nao castiga quem falhou nela: ok")
+
+
+async def caso_a_cura_levanta_quem_caiu():
+    """Toda cura levanta: a de alvo escolhido, a de grupo e a por turno.
+
+    Era a única coisa que o grupo não tinha como fazer por si — uma queda só
+    se desfazia no descanso. A conta é a de sempre, de 0 para cima.
+    """
+    morto = motor.Combatente(
+        1, "Caido", ca=15, bonus_ataque=5, dano_arma="1d8",
+        hp_max=100, hp_atual=0,
+    )
+    assert morto.caido
+
+    # 1) a cura de quantidade rolada
+    curou = motor.curar_quanto(morto, 30)
+    assert curou == 30 and morto.hp_atual == 30, (curou, morto.hp_atual)
+    assert not morto.caido, "a cura tinha de levantar"
+
+    # 2) a cura por fração do máximo
+    outro = motor.Combatente(
+        2, "Outro", ca=15, bonus_ataque=5, dano_arma="1d8",
+        hp_max=100, hp_atual=0,
+    )
+    assert motor.curar(outro, 0.25) == 25 and outro.hp_atual == 25
+    assert not outro.caido
+
+    # 3) e a Debilidade corta a cura do caído como corta qualquer outra
+    fraco = motor.Combatente(
+        3, "Fraco", ca=15, bonus_ataque=5, dano_arma="1d8",
+        hp_max=100, hp_atual=0, cura_recebida_pct=-50,
+    )
+    assert motor.curar_quanto(fraco, 40) == 20, fraco.hp_atual
+    print("  a cura levanta quem caiu, e a Debilidade ainda corta: ok")
+
+
+async def caso_a_cura_de_grupo_e_a_por_turno_levantam():
+    """A cura em grupo e a regeneração por turno também erguem os caídos.
+
+    As duas iteravam `estado.vivos`, que exclui quem está no chão: a trava
+    não estava só no motor. Quem cai no meio da luta volta com a Canção de
+    Cura do bardo, sem ninguém precisar apontar para ele.
+    """
+    conn, canal, cog, incursao = await preparar(salas_de("Evento", 10))
+    run = await montar_run(conn, canal, cog)
+    caido = JOGADORES[1]
+    await db.definir_hp(conn, run["id"], caido, 0)
+
+    combatentes = await cog._combatentes(run)
+    estado = motor.EstadoCombate([], 1, combatentes)
+    assert any(c.user_id == caido and c.caido for c in combatentes)
+    assert not any(c.user_id == caido for c in estado.vivos), (
+        "o caido nao esta em `vivos`: e por isso que a cura de grupo o perdia"
+    )
+
+    # a regeneracao por turno levanta
+    for c in combatentes:
+        if c.user_id == caido:
+            c.cura_por_turno = 0.2
+    await cog._virar_efeitos(run, estado)
+    assert (await db.hp_dos_participantes(conn, run["id"]))[caido] > 0, (
+        "a cura por turno tinha de levantar"
+    )
+
+    # e a cura de grupo tambem
+    await db.definir_hp(conn, run["id"], caido, 0)
+    combatentes = await cog._combatentes(run)
+    estado = motor.EstadoCombate([], 1, combatentes)
+    habilidade = type("H", (), {"nome": "Cancao de Cura", "id": "teste_grupo"})()
+    await cog._resolver_grupo(
+        run, estado, habilidade,
+        {"tipo": "grupo", "cura_fracao": 0.3, "turnos": 1},
+        JOGADORES[0],
+    )
+    assert (await db.hp_dos_participantes(conn, run["id"]))[caido] > 0, (
+        "a cura de grupo tinha de levantar"
+    )
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  a cura de grupo e a por turno levantam os caidos: ok")
+
+
 async def caso_armadilha_cobra_dano_e_debuff():
     """Falhar na armadilha custa 20% do HP e deixa um debuff de Armadilha."""
     conn, canal, cog, incursao = await preparar(salas_de("Armadilha", IMPOSSIVEL))
@@ -554,6 +691,76 @@ async def caso_grupo_inteiro_fora_encerra_a_run():
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print("  grupo inteiro fora encerra a run em fracasso: ok")
+
+
+async def caso_emboscada_do_mimico_nao_deixa_avancar():
+    """A emboscada do Mímico prende o grupo até o combate acabar.
+
+    O grupo ignorou a sala: apareceu a opção de ir para a próxima antes de o
+    combate terminar. Duas rolagens que resolvem a sala juntas chegavam as
+    duas ao fecho, e a segunda sorteava `acordou_mimico()` DE NOVO — dando
+    `False` ela caía no "o grupo sai sem nada" e abria a votação do passo
+    seguinte, com os Mímicos ainda de pé no canal.
+
+    A emboscada reusa o id e o status da sala do Tesouro, então nada no
+    `rolar` recusava a segunda rolagem: é o fecho da sala que precisa ser
+    tomado uma vez só.
+    """
+    conn, canal, cog, incursao = await preparar(salas_de("Tesouro", IMPOSSIVEL))
+    run = await montar_run(conn, canal, cog)
+    alvo = (await cog._opcoes(run, 1))[0]
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for user_id in JOGADORES:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
+    dentro = await db.buscar_run(conn, run["id"])
+    assert dentro["status"] == "em_sala", dentro["status"]
+    msg_sala = await canal.fetch_message(dentro["mensagem_id"])
+
+    original = X.acordou_mimico
+    # Verdadeiro na primeira chamada, falso na segunda: e exatamente a
+    # sequencia que fazia a segunda resolucao abrir a votacao.
+    chamadas = []
+
+    def acorda(rng=None):
+        chamadas.append(1)
+        return len(chamadas) == 1
+
+    X.acordou_mimico = acorda
+    try:
+        # os tres primeiros rolam um a um: a sala so resolve com os cinco
+        for user_id in JOGADORES[:3]:
+            await cog.rolar(
+                FakeInteraction(canal, user_id, msg_sala), run["id"], alvo.id
+            )
+        # e os dois ultimos juntos: os DOIS veem a sala resolvida
+        await asyncio.gather(
+            cog.rolar(FakeInteraction(canal, JOGADORES[3], msg_sala), run["id"], alvo.id),
+            cog.rolar(FakeInteraction(canal, JOGADORES[4], msg_sala), run["id"], alvo.id),
+        )
+    finally:
+        X.acordou_mimico = original
+
+    depois = await db.buscar_run(conn, run["id"])
+    # O passo PRIMEIRO: e ele que diz o sintoma com o nome certo. Avancado o
+    # passo, o combate fica num passo que ninguem mais olha, e as outras
+    # afirmacoes falhariam por consequencia e nao pela causa.
+    assert depois["linha_atual"] == 1, (
+        f"o grupo avancou para o passo {depois['linha_atual']} com os Mimicos de pe"
+    )
+    assert depois["status"] == "em_sala", depois["status"]
+    inimigos = await db.inimigos_do_combate(conn, run["id"], cog._passo(depois))
+    assert inimigos, "a emboscada tinha de estar de pe"
+    # O estado da run e a prova: enquanto ela esta no passo 1 e `em_sala`,
+    # nao ha para onde o grupo avancar. Farejar o canal nao serve — o cartao
+    # da votacao perde a view quando a sala abre, e o painel do combate tem
+    # campo com "Sala" no nome.
+    assert not await db.votos_da_linha(conn, run["id"], 2), (
+        "abriu a votacao do passo seguinte no meio do combate"
+    )
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  a emboscada do Mimico nao deixa avancar: ok")
 
 
 async def caso_tesouro_falho_acorda_mimicos():
@@ -881,6 +1088,9 @@ async def main():
     caso_graca_sorteia_sem_reposicao()
 
     await caso_armadilha_cobra_dano_e_debuff()
+    await caso_sala_vencida_nao_castiga_quem_falhou()
+    await caso_a_cura_levanta_quem_caiu()
+    await caso_a_cura_de_grupo_e_a_por_turno_levantam()
     await caso_evento_perdido_deixa_debuff_de_evento()
     await caso_evento_vencido_premia()
     await caso_buff_chega_no_numero()
@@ -889,6 +1099,7 @@ async def main():
     await caso_teto_tira_da_incursao()
     await caso_aplicar_respeita_o_teto()
     await caso_grupo_inteiro_fora_encerra_a_run()
+    await caso_emboscada_do_mimico_nao_deixa_avancar()
     await caso_tesouro_falho_acorda_mimicos()
     await caso_tesouro_falho_sem_mimico_segue()
     await caso_descanso_limpa_um_por_personagem()

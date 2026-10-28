@@ -4,22 +4,24 @@
 
 ## Por tipo de sala
 
+**Sala vencida não castiga ninguém.** Armadilha e Evento batem em quem falhou, mas só quando a sala foi **perdida**: vencer protege o grupo inteiro, inclusive quem rolou mal. O "Falhou" de cada tipo abaixo é o da sala perdida.
+
 ### Armadilha
 
-- **Passou:** atravessa e pronto. A CD dela já vem com desconto.
-- **Falhou:** **−20% do HP máximo** mais um debuff de Armadilha sorteado.
+- **Grupo venceu:** desarmada. Ninguém se machuca nela, nem quem falhou a própria rolagem.
+- **Grupo perdeu:** quem falhou leva **−20% do HP máximo** mais um debuff de Armadilha sorteado.
 
 ### Evento
 
-- **Passou:** um prêmio sorteado. Os 12 buffs do catálogo são sempre candidatos — são o piso. A Cura (+20% do HP) entra no bolo só se alguém estiver machucado, e a Graça só se alguém carregar debuff: não faz sentido oferecer cura a um grupo inteiro nem perdão a um grupo limpo.
-- **Falhou:** um debuff de Evento ou um ponto de Exaustão.
+- **Grupo venceu:** um prêmio sorteado. Os 12 buffs do catálogo são sempre candidatos — são o piso. A Cura (+20% do HP) entra no bolo só se alguém estiver machucado, e a Graça só se alguém carregar debuff: não faz sentido oferecer cura a um grupo inteiro nem perdão a um grupo limpo.
+- **Grupo perdeu:** quem falhou pega um debuff de Evento ou um ponto de Exaustão.
 
 A Graça tira **um stack de um debuff de alguém** do grupo, sorteado entre todos. Ela não é condição: não tem stack nem prazo, acontece na hora.
 
 ### Tesouro
 
-- **Passou:** o **texto de recompensa escrito na sala** — e não um item do mercado. Os itens de tesouro vivem na planilha do grupo, não no bot; a economia do bot é a do mercado (ver `mercado.md`).
-- **Falhou:** não leva nada — e tem 35% de chance de acordar o que fingia ser um baú. Acordando, **2 Mímicos** entram e a sala vira combate, em vez de devolver o grupo à votação.
+- **Grupo venceu:** o **texto de recompensa escrito na sala** — e não um item do mercado. Os itens de tesouro vivem na planilha do grupo, não no bot; a economia do bot é a do mercado (ver `mercado.md`).
+- **Grupo perdeu:** não leva nada — e tem 35% de chance de acordar o que fingia ser um baú. Acordando, **2 Mímicos** entram e a sala vira combate, em vez de devolver o grupo à votação.
 
 ### Combate e Descanso
 
