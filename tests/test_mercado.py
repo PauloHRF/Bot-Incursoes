@@ -27,6 +27,7 @@ from src.cogs.mercado import (  # noqa: E402
     tentar_comprar,
 )
 from fakes import (  # noqa: E402
+    menu_de,
     CANAL,
     GUILD,
     INDEFESO,
@@ -437,7 +438,7 @@ async def _abrir_vitrine(conn, canal, cog, personagem_id, user_id):
     personagem = await db.buscar_personagem(conn, personagem_id)
     inter = FakeInteraction(canal, user_id)
     await cog.loja.vitrine.callback(cog.loja, inter, personagem["nome"])
-    return inter, inter.view_enviada
+    return inter, menu_de(inter)
 
 
 async def _vitrine_fixa(conn, canal, cog, personagem_id, user_id, semana=SEMANA):

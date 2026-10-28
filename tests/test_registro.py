@@ -13,6 +13,10 @@ from src.rules import PERICIAS  # noqa: E402
 from src.cogs.ficha import LIMITE_PERSONAGENS, Ficha, SeletorPericias  # noqa: E402
 from src.rules import NIVEL_MAXIMO, TIER_MAXIMO, chave_comparacao, tier  # noqa: E402
 from fakes import (  # noqa: E402
+    resolver_fluxo,
+    leu,
+    pericias_cheias,
+    menu_de,
     CANAL,
     CLASSE_PADRAO,
     GUILD,
@@ -57,9 +61,9 @@ async def registrar(ficha, canal, dono, nome, classe=CLASSE_PADRAO, pericias=(),
     # a corrotina passa pelo banco, que roda noutra thread: sleep(0) nao basta
     for _ in range(250):
         await asyncio.sleep(0.02)
-        if inter.view_enviada is not None or tarefa.done():
+        if menu_de(inter) is not None or tarefa.done():
             break
-    view = inter.view_enviada
+    view = menu_de(inter)
     if view is not None and not tarefa.done():
         view.menu._values = list(pericias)
         await view._escolher(FakeInteraction(canal, dono))
@@ -133,18 +137,26 @@ async def caso_menu_limita_as_proficiencias():
     )
     for _ in range(250):
         await asyncio.sleep(0.02)
-        if inter.view_enviada is not None or tarefa.done():
+        if menu_de(inter) is not None or tarefa.done():
             break
-    view = inter.view_enviada
+    view = menu_de(inter)
     assert isinstance(view, SeletorPericias)
-    assert view.menu.max_values == cl.CLASSES["barbaro"].numeros(1).pericias == 3
-    assert view.menu.min_values == 0, "da para deixar para escolher depois"
-    view.menu._values = ["Atletismo", "Intimidação"]
+    cota = cl.CLASSES["barbaro"].numeros(1).pericias
+    assert view.menu.max_values == cota == 3
+    # EXATAMENTE a cota, nao "ate": o menu que aceitava menos deixava o
+    # personagem nascer com 2 proficiencias de 3, e as perdidas nao
+    # voltavam — nada no bot pedia de novo.
+    assert view.menu.min_values == cota, (
+        "o menu nao pode aceitar menos que a cota"
+    )
+    view.menu._values = ["Atletismo", "Intimidação", "Sobrevivência"]
     await view._escolher(FakeInteraction(canal, dono))
     await tarefa
 
     salvo = await db.personagem_por_nome(conn, GUILD, dono, "Grog")
-    assert sorted(salvo["pericias"]) == ["Atletismo", "Intimidação"]
+    assert sorted(salvo["pericias"]) == sorted(
+        ["Atletismo", "Intimidação", "Sobrevivência"]
+    ), salvo["pericias"]
     assert salvo["pericias_permitidas"] == 3
     print("  o menu de proficiencias respeita o limite da classe: ok")
 
@@ -181,32 +193,42 @@ async def caso_nome_repetido_e_limite():
     cheio = FakeInteraction(canal, outro)
     await ficha.registrar.callback(ficha, cheio, "Mais um", Escolha("monge"))
     assert str(LIMITE_PERSONAGENS) in cheio.resposta
-    assert cheio.view_enviada is None, "nem chega a abrir o menu de pericias"
+    assert menu_de(cheio) is None, "nem chega a abrir o menu de pericias"
     print("  nome repetido e limite de personagens barram o cadastro: ok")
 
 
 async def caso_upar_sobe_um_nivel():
     conn, canal, ficha = await preparar()
     dono = JOGADORES[0]
-    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", "ladino",
+        pericias_cheias("ladino"),
+    )
 
-    # o upar anda de tier em tier: dentro de um tier nada muda, entao nao ha meio passo
+    # O upar anda de tier em tier, e o nivel so sobe depois da ultima
+    # decisao: o Ladino decide a Expertise no tier 2, entao ate ela
+    # chegar ele continua no tier 1.
     inter = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, inter)
-    atualizado = await db.buscar_personagem(conn, pid)
-    assert tier(atualizado["nivel"]) == 2
-    # o Ladino decide a Expertise no tier 2: o menu vem junto com o upar
-    assert "Decida agora" in inter.resposta and "Expertise" in inter.resposta
-    assert inter.view_enviada is not None
-    assert any("tier 2" in (m.content or "") for m in canal.mensagens), "o canal soube"
+    no_meio = await db.buscar_personagem(conn, pid)
+    assert tier(no_meio["nivel"]) == 1, "subiu antes de decidir"
+    assert "Decida agora" in leu(inter) and "Expertise" in leu(inter)
+    assert menu_de(inter) is not None
+    assert not any("tier 2" in (m.content or "") for m in canal.mensagens), (
+        "o canal soube antes de a subida acontecer"
+    )
 
-    # e a decisao vale na hora
-    inter.view_enviada.menu._values = ["Furtividade"]
+    # decidindo, o nivel sobe E o canal fica sabendo
+    menu_de(inter).menu._values = ["Furtividade", "Acrobacia"]
     gravando = FakeInteraction(canal, dono)
-    await inter.view_enviada._escolher(gravando)
-    decidido = await db.buscar_personagem(conn, pid)
-    assert decidido["escolhas"] == {"expertise_1": ["Furtividade"]}
-    assert decidido["pendencias"] == []
+    await menu_de(inter)._escolher(gravando)
+    atualizado = await db.buscar_personagem(conn, pid)
+    assert tier(atualizado["nivel"]) == 2, atualizado["nivel"]
+    assert atualizado["escolhas"] == {
+        "expertise_1": ["Furtividade", "Acrobacia"]
+    }
+    assert atualizado["pendencias"] == []
+    assert any("tier 2" in (m.content or "") for m in canal.mensagens), "o canal soube"
 
     t1, t2 = cl.CLASSES["ladino"].numeros(1), cl.CLASSES["ladino"].numeros(3)
     assert atualizado["hp_max"] == t2.hp != t1.hp
@@ -304,13 +326,16 @@ async def caso_alterar_refaz_a_decisao_do_tier():
     """
     conn, canal, ficha = await preparar()
     dono = JOGADORES[0]
-    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", "ladino",
+        pericias_cheias("ladino"),
+    )
 
     # sobe para o tier 2 e decide a Expertise
     subir = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, subir)
-    subir.view_enviada.menu._values = ["Furtividade"]
-    await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+    menu_de(subir).menu._values = ["Furtividade"]
+    await menu_de(subir)._escolher(FakeInteraction(canal, dono))
     antes = await db.buscar_personagem(conn, pid)
     assert antes["escolhas"] == {"expertise_1": ["Furtividade"]}
     assert tier(antes["nivel"]) == 2
@@ -318,25 +343,39 @@ async def caso_alterar_refaz_a_decisao_do_tier():
     # nunca jogou no tier 2: da para refazer
     inter = FakeInteraction(canal, dono)
     await ficha.alterar.callback(ficha, inter)
-    depois = await db.buscar_personagem(conn, pid)
 
-    assert depois["escolhas"] == {}, depois["escolhas"]
+    # O menu abre, mas NADA foi apagado ainda: fechar aqui deixaria a
+    # ficha como estava. Apagar antes de perguntar era o desenho velho,
+    # e ele criava um estado sem decisao nenhuma se o jogador desistisse.
+    assert "Decida agora" in leu(inter), leu(inter)
+    assert menu_de(inter) is not None, "o menu da decisao nao abriu"
+    no_meio = await db.buscar_personagem(conn, pid)
+    assert no_meio["escolhas"] == {"expertise_1": ["Furtividade"]}, (
+        no_meio["escolhas"]
+    )
+
+    # e respondendo, a decisao velha e trocada pela nova
+    menu_de(inter).menu._values = ["Acrobacia"]
+    await menu_de(inter)._escolher(FakeInteraction(canal, dono))
+    depois = await db.buscar_personagem(conn, pid)
+    assert depois["escolhas"] == {"expertise_1": ["Acrobacia"]}, depois["escolhas"]
     assert tier(depois["nivel"]) == 2, "o alterar nao pode mexer no nivel"
-    assert depois["pendencias"], "a decisao tinha de voltar a ficar pendente"
-    assert "Decida agora" in inter.resposta, inter.resposta
-    assert inter.view_enviada is not None, "o menu da decisao nao abriu"
-    print("  o alterar refaz a decisao do tier sem derrubar o nivel: ok")
+    assert not depois["pendencias"], depois["pendencias"]
+    print("  o alterar troca a decisao sem apagar antes de perguntar: ok")
 
 
 async def caso_alterar_trava_depois_de_jogar_naquele_tier():
     """Jogou uma incursao no tier, a decisao daquele tier esta fechada."""
     conn, canal, ficha = await preparar()
     dono = JOGADORES[0]
-    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", "ladino",
+        pericias_cheias("ladino"),
+    )
     subir = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, subir)
-    subir.view_enviada.menu._values = ["Furtividade"]
-    await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+    menu_de(subir).menu._values = ["Furtividade"]
+    await menu_de(subir)._escolher(FakeInteraction(canal, dono))
 
     # uma run no tier 2, que e onde ele esta
     run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
@@ -359,11 +398,14 @@ async def caso_a_run_sem_tier_nao_trava():
     """
     conn, canal, ficha = await preparar()
     dono = JOGADORES[0]
-    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", "ladino",
+        pericias_cheias("ladino"),
+    )
     subir = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, subir)
-    subir.view_enviada.menu._values = ["Furtividade"]
-    await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+    menu_de(subir).menu._values = ["Furtividade"]
+    await menu_de(subir)._escolher(FakeInteraction(canal, dono))
 
     run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
     await db.adicionar_participante(conn, run_id, dono, pid)  # sem tier
@@ -371,7 +413,9 @@ async def caso_a_run_sem_tier_nao_trava():
 
     inter = FakeInteraction(canal, dono)
     await ficha.alterar.callback(ficha, inter)
-    assert (await db.buscar_personagem(conn, pid))["escolhas"] == {}
+    # Nao travou: o menu abriu. (O alterar nao apaga antes de
+    # perguntar, entao a decisao velha continua la ate a nova chegar.)
+    assert menu_de(inter) is not None, leu(inter)
     print("  run sem tier gravado nao tranca o alterar: ok")
 
 
@@ -379,7 +423,10 @@ async def caso_remover_apaga_a_ficha_de_outro():
     """O /ficha remover e do mestre, e alcanca a ficha de qualquer jogador."""
     conn, canal, ficha = await preparar()
     dono, mestre = JOGADORES[0], JOGADORES[1]
-    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", "ladino",
+        pericias_cheias("ladino"),
+    )
 
     inter = FakeInteraction(canal, mestre)
     await ficha.remover.callback(ficha, inter, str(pid))
@@ -397,7 +444,10 @@ async def caso_remover_respeita_run_viva():
     """Ninguem perde a ficha no meio de uma incursao."""
     conn, canal, ficha = await preparar()
     dono, mestre = JOGADORES[0], JOGADORES[1]
-    pid = await db.criar_personagem(conn, GUILD, dono, "Vhalor", "ladino", ["Furtividade"])
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", "ladino",
+        pericias_cheias("ladino"),
+    )
     run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
     await db.adicionar_participante(conn, run_id, dono, pid, tier=1)
 
@@ -425,9 +475,7 @@ async def caso_alterar_abre_as_pericias_no_tier_que_as_da():
     for _ in range(2):
         subir = FakeInteraction(canal, dono)
         await ficha.upar.callback(ficha, subir)
-        if subir.view_enviada is not None:
-            subir.view_enviada.menu._values = ["fireball_mago"]
-            await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+        await resolver_fluxo(canal, dono, subir)
     personagem = await db.buscar_personagem(conn, pid)
     assert tier(personagem["nivel"]) == 3, personagem["nivel"]
 
@@ -438,19 +486,31 @@ async def caso_alterar_abre_as_pericias_no_tier_que_as_da():
     inter = FakeInteraction(canal, dono)
     await ficha.alterar.callback(ficha, inter)
 
-    # o menu de pericias veio por followup, com a cota do tier
-    assert inter.view_do_seguimento is not None, "o menu de pericias nao abriu"
-    menu = inter.view_do_seguimento.menu
-    assert menu.max_values == numeros.numeros(5).pericias, menu.max_values
+    # O alterar pergunta as DECISOES primeiro e as pericias depois, numa
+    # cadeia so. Percorrendo ate o fim, o menu de pericias tem de
+    # aparecer com a cota do tier.
+    cota = numeros.numeros(5).pericias
+    vistos = []
+    atual = inter
+    for _ in range(8):
+        view = menu_de(atual)
+        if view is None:
+            break
+        vistos.append(view.menu.max_values)
+        quantas = max(1, view.menu.min_values or 1)
+        view.menu._values = [o.value for o in view.menu.options[:quantas]]
+        seguinte = FakeInteraction(canal, dono)
+        await view._escolher(seguinte)
+        atual = seguinte
+    assert cota in vistos, (cota, vistos)
 
-    # e trocar pelo menu grava de verdade
-    # Os nomes saem do catalogo: escritos a mao, um acento perdido faz o
-    # caso falhar por grafia em vez de por comportamento.
-    novas = [p for p in PERICIAS if p not in personagem["pericias"]][:2]
-    menu._values = novas
-    await inter.view_do_seguimento._escolher(FakeInteraction(canal, dono))
+    # e o que o menu gravou e a cota CHEIA: nao da para sair com menos
     depois = await db.buscar_personagem(conn, pid)
-    assert sorted(depois["pericias"]) == sorted(novas), depois["pericias"]
+    proprias = [
+        x for x in depois["pericias"]
+        if x not in (depois.get("pericias_extras") or [])
+    ]
+    assert len(proprias) == cota, (proprias, cota)
     print("  o alterar abre as pericias no tier que as da: ok")
 
 
@@ -466,10 +526,10 @@ async def caso_alterar_nao_abre_pericia_em_tier_que_nao_da():
     )
     subir = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, subir)
-    if subir.view_enviada is not None:
-        opcoes = [o.value for o in subir.view_enviada.menu.options]
-        subir.view_enviada.menu._values = [opcoes[0]]
-        await subir.view_enviada._escolher(FakeInteraction(canal, dono))
+    if menu_de(subir) is not None:
+        opcoes = [o.value for o in menu_de(subir).menu.options]
+        menu_de(subir).menu._values = [opcoes[0]]
+        await menu_de(subir)._escolher(FakeInteraction(canal, dono))
 
     guerreiro = cl.CLASSES["guerreiro"]
     assert guerreiro.numeros(3).pericias == guerreiro.numeros(1).pericias

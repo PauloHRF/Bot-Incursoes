@@ -219,11 +219,19 @@ class FakeFollowup:
         self.enviadas.append(content or (embed.title if embed else None))
         self.interacao.seguimento = self.enviadas[-1]
         self.interacao.view_do_seguimento = view
-        # `wait=True` pede a mensagem de volta, para editar depois.
-        mensagem = FakeMensagem(
-            self.interacao.canal, -2, content=content, embed=embed, view=view
-        )
+        # Followup NAO efemero vai para o canal, como qualquer mensagem
+        # do bot — o duble so guardava na interacao, e com isso um caso
+        # que perguntava "o canal soube?" dava falso negativo.
+        if ephemeral:
+            mensagem = FakeMensagem(
+                self.interacao.canal, -2, content=content, embed=embed, view=view
+            )
+        else:
+            mensagem = await self.interacao.canal.send(
+                content, embed=embed, view=view
+            )
         self.interacao._mensagem_seguimento = mensagem
+        # `wait=True` pede a mensagem de volta, para editar depois.
         return mensagem if wait else None
 
 
@@ -299,6 +307,57 @@ class FakeInteraction:
         return alvo
 
 
+def menu_de(inter):
+    """A view que o bot abriu, venha pela resposta ou pelo followup.
+
+    O fluxo de decisao manda o menu pela porta que ainda estiver livre:
+    o `upar` gasta a resposta no aviso do que vem e o menu sai por
+    followup; o registro faz o contrario. Os casos afirmam o MENU, e
+    isso nao deve depender de por qual das duas ele saiu.
+    """
+    return inter.view_do_seguimento or inter.view_enviada
+
+
+async def resolver_fluxo(canal, dono: int, inter, limite: int = 8):
+    """Responde todos os menus que o fluxo abrir, ate ele fechar.
+
+    O `/ficha upar` e o `/ficha alterar` encadeiam: cada resposta pode
+    abrir o proximo menu, e o nivel so sobe no fim. Um caso que responde
+    um menu so para na metade e ve o personagem no tier antigo — correto,
+    mas quase nunca e o que ele quer afirmar.
+
+    Escolhe sempre as primeiras opcoes, na quantidade exata que o menu
+    pede. Devolve a ultima interacao, que e onde o anuncio final caiu.
+    """
+    atual = inter
+    for _ in range(limite):
+        view = menu_de(atual)
+        if view is None:
+            return atual
+        menu = view.menu
+        quantas = max(1, getattr(menu, 'min_values', 1) or 1)
+        menu._values = [o.value for o in menu.options[:quantas]]
+        seguinte = FakeInteraction(canal, dono)
+        await view._escolher(seguinte)
+        atual = seguinte
+    raise AssertionError("o fluxo nao fechou: menu demais, ou um laco")
+
+
+def pericias_cheias(classe: str, nivel: int = 1) -> list[str]:
+    """A cota INTEIRA de proficiencias daquela classe no nivel.
+
+    Desde que o menu passou a exigir a quantidade exata, um personagem
+    abaixo da cota e estado invalido: o `/ficha upar` cobra as que faltam
+    antes de subir o nivel. Um caso que cria a ficha direto no banco e
+    poe uma pericia so acaba testando essa cobranca sem querer.
+    """
+    from src import classes as _cl
+    from src.rules import PERICIAS as _P
+
+    quantas = _cl.CLASSES[classe].numeros(nivel).pericias
+    return list(_P)[:quantas]
+
+
 def leu(inter) -> str:
     """O que o jogador leu por causa deste clique — privado OU publico.
 
@@ -306,12 +365,18 @@ def leu(inter) -> str:
     repete em privado: o jogador via a propria magia duas vezes na tela.
     Quem clicou tem a efemera adiada apagada em vez de preenchida.
 
+    O fluxo de decisao tambem fala duas vezes no mesmo clique: a resposta
+    leva o aviso do que vem, e o menu sai por followup. As duas entram,
+    porque as duas o jogador leu.
+
     Os casos afirmam o que o jogador LEU, e isso nao deve depender de por
-    qual das duas portas o texto saiu. Devolve string vazia quando nao
-    houve nenhuma das duas, para a assercao falhar em vez de passar.
+    qual porta o texto saiu. Devolve string vazia quando nao houve
+    nenhuma, para a assercao falhar em vez de passar.
     """
-    if inter.resposta:
-        return inter.resposta
+    partes = [inter.resposta, inter.seguimento]
+    lido = " ".join(str(x) for x in partes if x)
+    if lido:
+        return lido
     for msg in reversed(getattr(inter.canal, 'enviadas', [])):
         texto = getattr(msg, 'content', None)
         if texto:

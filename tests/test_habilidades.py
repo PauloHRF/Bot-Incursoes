@@ -299,16 +299,9 @@ async def caso_a_escolha_nao_entra_na_lista_de_habilidades():
     vezes = " ".join(campos.values()).count(opcao["nome"])
     assert vezes == 1, (opcao["nome"], vezes, campos)
 
-    # o que FALTA decidir continua visivel: sem esta linha o jogador nao
-    # teria como saber que deve algo ao bot.
-    faltando = [h.nome for _t, h in personagem["pendencias"]]
-    assert faltando, "o bardo do tier 3 tem decisao pendente aqui"
-    for nome in faltando:
-        assert nome in campos["Escolhas"], (nome, campos["Escolhas"])
-
-    # e a decisao JA TOMADA nao entra ali, porque ela destravou uma
-    # habilidade e essa habilidade ja esta na lista.
-    assert cancao.nome not in campos["Escolhas"], campos["Escolhas"]
+    # e nao ha campo de Escolhas: a decisao acontece na hora, entao nao
+    # sobra estado pendente para avisar.
+    assert "Escolhas" not in campos, campos.keys()
     print("  a escolha sai da lista; a habilidade escolhida fica: ok")
 
 

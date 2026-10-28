@@ -17,6 +17,7 @@ from src.cogs.incursao import (  # noqa: E402
     ViewCombate,
 )
 from fakes import (  # noqa: E402
+    menu_de,
     leu,
     CANAL,
     GUILD,
@@ -272,7 +273,7 @@ async def caso_habilidade_sem_golpe_fecha_a_rodada():
 
     # Rage e "duracao" com alvo proprio: nao pede alvo, mesmo com tres criaturas
     inter = await usar(cog, canal, run, outro, "rage", msg=msg)
-    assert inter.view_enviada is None, "habilidade em si mesmo nao pergunta o alvo"
+    assert menu_de(inter) is None, "habilidade em si mesmo nao pergunta o alvo"
     assert "Rage" in leu(inter), leu(inter)
 
     assert await db.acao_do_turno(conn, run["id"], passo, 1, outro) == "rage"
@@ -320,8 +321,8 @@ async def caso_cura_em_aliado_pede_alvo():
     # sem alvo, o bot abre o menu em vez de curar a esmo
     pedido = FakeInteraction(canal, curandeiro)
     await cog.usar_habilidade(pedido, run["id"], "OBJ", "cura_pelas_maos")
-    assert isinstance(pedido.view_enviada, SeletorAlvoHabilidade)
-    assert {o.value for o in pedido.view_enviada.menu.options} == {
+    assert isinstance(menu_de(pedido), SeletorAlvoHabilidade)
+    assert {o.value for o in menu_de(pedido).menu.options} == {
         str(curandeiro), str(ferido)
     }
     # nada foi gasto ainda
@@ -343,7 +344,7 @@ async def caso_menu_so_mostra_o_que_da_para_usar():
 
     inter = FakeInteraction(canal, dono)
     await cog.abrir_habilidades(inter, run["id"], "OBJ")
-    view = inter.view_enviada
+    view = menu_de(inter)
     assert isinstance(view, SeletorHabilidade)
     ids = {o.value for o in view.menu.options}
     # Guerreiro nivel 8: Second Wind e Action Surge estao prontas
@@ -355,7 +356,7 @@ async def caso_menu_so_mostra_o_que_da_para_usar():
     await usar(cog, canal, run, dono, "second_wind")
     fechado = FakeInteraction(canal, dono)
     await cog.abrir_habilidades(fechado, run["id"], "OBJ")
-    assert fechado.view_enviada is None
+    assert menu_de(fechado) is None
     assert "Second Wind" in leu(fechado), leu(fechado)
 
     # na rodada seguinte da para usar a outra
@@ -366,7 +367,7 @@ async def caso_menu_so_mostra_o_que_da_para_usar():
     await cog.atacar(FakeInteraction(canal, JOGADORES[1]), run["id"], "OBJ")
     vazio = FakeInteraction(canal, dono)
     await cog.abrir_habilidades(vazio, run["id"], "OBJ")
-    assert vazio.view_enviada is None
+    assert menu_de(vazio) is None
     assert "nao tem habilidade" in leu(vazio)
     print("  o menu lista so as ativas prontas e com uso: ok")
 

@@ -16,6 +16,9 @@ from src.cogs.ficha import Ficha  # noqa: E402
 from src.cogs.incursao import Incursoes, SeletorPersonagemEntrada  # noqa: E402
 from src.rules import tier  # noqa: E402
 from fakes import (  # noqa: E402
+    resolver_fluxo,
+    pericias_cheias,
+    menu_de,
     CLASSE_PADRAO,
     CANAL,
     GUILD,
@@ -119,7 +122,8 @@ async def caso_migracao_do_banco_antigo():
 
     # o cadastro novo funciona no banco migrado
     novo_id = await db.criar_personagem(
-        conn, GUILD, JOGADORES[0], "Kaelen", CLASSE_PADRAO, ["Atletismo"]
+        conn, GUILD, JOGADORES[0], "Kaelen", CLASSE_PADRAO,
+        pericias_cheias(CLASSE_PADRAO)
     )
     assert novo_id
     kaelen = await db.buscar_personagem(conn, novo_id)
@@ -137,7 +141,7 @@ async def caso_entrar_escolhendo_personagem():
     await criar_grupo(conn)
     dono = JOGADORES[0]
     await db.criar_personagem(
-        conn, GUILD, dono, "Kaelen", "monge", ["Arcanismo"], nivel=3
+        conn, GUILD, dono, "Kaelen", "monge", pericias_cheias("monge", 3), nivel=3
     )
 
     # sem dizer qual, o bot pede para escolher e nao cria run
@@ -185,7 +189,7 @@ async def caso_botao_entrar_com_varios():
     # quem tem dois recebe o seletor e ainda nao entrou
     escolhendo = FakeInteraction(canal, convidado, msg)
     await cog.recrutar(escolhendo, run["id"], "entrar")
-    assert isinstance(escolhendo.view_enviada, SeletorPersonagemEntrada)
+    assert isinstance(menu_de(escolhendo), SeletorPersonagemEntrada)
     assert not await db.esta_na_run(conn, run["id"], convidado)
 
     # ao escolher, entra com o personagem indicado
@@ -288,9 +292,11 @@ async def caso_comandos_de_ficha():
     assert await ficha_cog._resolver(inexistente, "Zed") is None
     assert "nenhum personagem chamado" in inexistente.resposta
 
-    # upar um nao mexe no outro
+    # upar um nao mexe no outro. O nivel so sobe depois das decisoes do
+    # tier, entao o fluxo tem de ser percorrido ate o fim.
     alvo = FakeInteraction(canal, dono)
     await ficha_cog.upar.callback(ficha_cog, alvo, personagem="Kaelen")
+    await resolver_fluxo(canal, dono, alvo)
     kaelen = await db.personagem_por_nome(conn, GUILD, dono, "Kaelen")
     vhalor = await db.personagem_por_nome(conn, GUILD, dono, "Vhalor")
     assert tier(kaelen["nivel"]) == 3, "Kaelen subiu um tier"

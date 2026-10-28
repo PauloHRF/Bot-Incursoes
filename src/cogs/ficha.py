@@ -53,8 +53,11 @@ class SeletorPericias(DonoDaFicha):
             discord.SelectOption(label=p, default=p in marcadas) for p in PERICIAS
         ]
         self.menu = discord.ui.Select(
-            placeholder=f"Escolha ate {limite} pericia(s) com proficiencia",
-            min_values=0,
+            # Exatamente `limite`, nao "ate": o menu que aceita menos deixa
+            # o personagem sair do registro com 4 proficiencias de 6, e a
+            # cota perdida nao volta — nada no bot pede de novo.
+            placeholder=f"Escolha {limite} pericia(s) com proficiencia",
+            min_values=min(limite, len(opcoes)),
             max_values=min(limite, len(opcoes)),
             options=opcoes,
         )
@@ -108,7 +111,7 @@ class SeletorPericiasDaEscolha(DonoDaFicha):
         quantas = habilidade.escolha.get("quantidade", 1)
         menu = discord.ui.Select(
             placeholder=f"{habilidade.nome}: escolha {quantas}",
-            min_values=1,
+            min_values=min(quantas, len(opcoes)),
             max_values=min(quantas, len(opcoes)),
             options=[discord.SelectOption(label=p) for p in opcoes[:25]],
         )
@@ -140,8 +143,8 @@ class SeletorPericiasDoTier(DonoDaFicha):
         self.cog = cog
         self.personagem_id = personagem_id
         self.menu = discord.ui.Select(
-            placeholder=f"Escolha ate {limite} pericia(s) com proficiencia",
-            min_values=0,
+            placeholder=f"Escolha {limite} pericia(s) com proficiencia",
+            min_values=min(limite, len(PERICIAS)),
             max_values=min(limite, len(PERICIAS)),
             options=[
                 discord.SelectOption(label=p, default=p in marcadas) for p in PERICIAS
@@ -156,6 +159,14 @@ class SeletorPericiasDoTier(DonoDaFicha):
             self.cog.bot.db, self.personagem_id, list(self.menu.values)
         )
         atualizado = await db.buscar_personagem(self.cog.bot.db, self.personagem_id)
+        # Era a ultima coisa que o fluxo esperava: o upar fecha aqui.
+        if self.personagem_id in self.cog._fluxo:
+            self.cog._fluxo[self.personagem_id]["pericias"] = False
+            await interaction.response.edit_message(
+                content="Proficiencias escolhidas.", embed=None, view=None
+            )
+            await self.cog._seguir_fluxo(interaction, atualizado, por_followup=True)
+            return
         await interaction.response.edit_message(
             content="Proficiencias atualizadas.",
             embed=embed_ficha(atualizado, interaction.user),
@@ -257,7 +268,6 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         )
 
     _campo_habilidades(e, personagem)
-    _campo_a_decidir(e, personagem)
 
     if bonus:
         # Uma pericia sem proficiencia tambem pode ter bonus: mostramos o total.
@@ -290,9 +300,10 @@ def _campo_saves(e: discord.Embed, personagem: dict[str, Any]) -> None:
     e.add_field(name=nome, value=" | ".join(linhas), inline=False)
 
 
-# A ESCOLHA nao faz nada sozinha: ela DESTRAVA outra habilidade. O "?"
-# dizia "nao sei o que e isto"; a bifurcacao diz "aqui voce decide".
-ICONE_HABILIDADE = {cl.PASSIVA: "⚙️", cl.ATIVA: "⚡", cl.ESCOLHA: "🔀"}
+# A ESCOLHA so chega a ficha quando ela nao destravou habilidade nenhuma —
+# e ai o que o personagem tem e a OPCAO, que vale sempre, como uma passiva.
+# Nao ha mais escolha "a decidir" para marcar: a decisao acontece na hora.
+ICONE_HABILIDADE = {cl.PASSIVA: "⚙️", cl.ATIVA: "⚡", cl.ESCOLHA: "⚙️"}
 
 
 def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
@@ -307,74 +318,47 @@ def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
     destravam a habilidade escolhida, e e ESSA que interessa na lista.
     Qual foi a decisao continua no campo Escolhas, logo abaixo.
     """
-    ganhas = [
-        (t, h) for t, h in (personagem.get("habilidades") or [])
-        if h.tipo != cl.ESCOLHA
-    ]
+    feitas = personagem.get("escolhas") or {}
+    todas = personagem.get("habilidades") or []
+    ganhas = []
+    for tier_da, h in todas:
+        if h.tipo != cl.ESCOLHA:
+            ganhas.append((tier_da, h, h.nome, h.texto))
+            continue
+        # A ESCOLHA que DESTRAVA uma habilidade nao entra: a destravada ja
+        # esta na lista, e repetir a pergunta era a terceira copia.
+        valor = feitas.get(h.id)
+        if not valor or any(o.exige_escolha == (h.id, valor) for _t, o in todas):
+            continue
+        # A que nao destrava nada (Fighting Style, Expertise, Metamagia) entra
+        # como qualquer outra, pelo nome da OPCAO: e ela que o personagem tem.
+        if isinstance(valor, list):
+            # Escolha de pericia (Expertise, Primal Knowledge): nao ha
+            # "nome da opcao" — o que o personagem tem sao as pericias.
+            # Entao o nome e a decisao e o texto e o que ele pegou.
+            ganhas.append((tier_da, h, h.nome, ", ".join(valor)))
+        else:
+            opcao = next(
+                (o for o in h.escolha.get("opcoes", []) if o["id"] == valor), None
+            )
+            if opcao:
+                ganhas.append((tier_da, h, opcao["nome"], opcao["texto"]))
     if not ganhas:
         return
     linhas = []
-    for tier_da_habilidade, habilidade in ganhas:
+    for tier_da_habilidade, habilidade, rotulo, descricao in ganhas:
         icone = ICONE_HABILIDADE.get(habilidade.tipo, "")
         # `automatica` e so passiva: testar por ela marcava toda ativa e toda
         # escolha como "em breve", mesmo funcionando. `pronta` e o certo —
         # soma numero, sabe ser acionada, ou sabe conduzir a escolha.
         pendente = "" if habilidade.pronta else " *(em breve)*"
         linhas.append(
-            f"{icone} **{habilidade.nome}** (T{tier_da_habilidade}) — "
-            f"{habilidade.texto}{pendente}"
+            f"{icone} **{rotulo}** (T{tier_da_habilidade}) — {descricao}{pendente}"
         )
     texto = "\n".join(linhas)
     if len(texto) > 1024:
         texto = texto[:1000].rsplit("\n", 1)[0] + "\n…"
     e.add_field(name=f"Habilidades ({len(ganhas)})", value=texto, inline=False)
-
-
-def _campo_a_decidir(e: discord.Embed, personagem: dict[str, Any]) -> None:
-    """O que falta decidir, e as decisoes que nao aparecem em outro lugar.
-
-    Uma ESCOLHA some da ficha quando ela DESTRAVA uma habilidade: a magia
-    escolhida ja esta na lista, e repetir "Cancao de abertura: Charm
-    Person" era a terceira copia da mesma informacao.
-
-    Mas 15 das 38 nao destravam nada — Fighting Style, Expertise,
-    Metamagia, Tradicao Arcana e companhia. Nelas o efeito vem da OPCAO,
-    direto nos numeros, e sem esta linha a ficha deixaria de dizer que o
-    guerreiro e Defensivo: so sobraria o +1 de CA, sem explicacao.
-
-    A distincao e derivada, nao escrita: basta ver se alguma habilidade
-    da ficha foi destravada por aquela decisao.
-    """
-    ganhas = personagem.get("habilidades") or []
-    feitas = personagem.get("escolhas") or {}
-    linhas = []
-
-    for _tier, habilidade in ganhas:
-        valor = feitas.get(habilidade.id)
-        if not valor or not habilidade.decidivel:
-            continue
-        destravou = any(
-            o.exige_escolha == (habilidade.id, valor) for _t, o in ganhas
-        )
-        if destravou:
-            continue
-        if isinstance(valor, list):
-            escrito = ", ".join(valor)
-        else:
-            opcao = next(
-                (o for o in habilidade.escolha.get("opcoes", []) if o["id"] == valor),
-                None,
-            )
-            escrito = opcao["nome"] if opcao else str(valor)
-        linhas.append(f"**{habilidade.nome}**: {escrito}")
-
-    for tier_da, habilidade in personagem.get("pendencias") or []:
-        linhas.append(
-            f"**{habilidade.nome}** (T{tier_da}) — *a decidir*, `/ficha alterar` abre o menu"
-        )
-
-    if linhas:
-        e.add_field(name="Escolhas", value="\n".join(linhas), inline=False)
 
 
 def _rodape_da_ficha(e: discord.Embed, numeros, nivel: int) -> discord.Embed:
@@ -393,6 +377,14 @@ def _rodape_da_ficha(e: discord.Embed, numeros, nivel: int) -> discord.Embed:
 class Ficha(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        # O que cada personagem esta no meio de decidir, enquanto decide.
+        # {personagem_id: {"tipo": "upar"|"alterar", "nivel": int,
+        #                  "faltam": [ids], "pericias": bool}}
+        #
+        # Mora em memoria de proposito: um restart no meio do fluxo nao deixa
+        # nada pela metade, porque o que o fluxo muda (o nivel, no upar) so e
+        # gravado no fim. O jogador roda o comando de novo e recomeca.
+        self._fluxo: dict[int, dict[str, Any]] = {}
 
     grupo = app_commands.Group(name="ficha", description="Fichas dos seus personagens")
 
@@ -638,7 +630,18 @@ class Ficha(commands.Cog):
     async def upar(
         self, interaction: discord.Interaction, personagem: Optional[str] = None
     ) -> None:
-        """Sobe um tier. Se o tier novo tiver decisao, ela e tomada na hora."""
+        """Sobe um tier — mas so depois que tudo que o tier pede for decidido.
+
+        O nivel NAO sobe no comeco. Antes ele subia na hora e os menus vinham
+        depois, entao quem fechasse o menu ficava num tier sem as decisoes
+        dele: um guerreiro de tier 2 sem Fighting Style, um personagem com 4
+        proficiencias de 6. A cota perdida nao voltava, porque nada no bot
+        pedia de novo.
+
+        Agora o tier antigo continua valendo ate a ultima decisao chegar.
+        Fechar o menu no meio nao quebra nada — simplesmente nao subiu, e
+        `/ficha upar` recomeca.
+        """
         escolhido = await self._resolver(interaction, personagem)
         if not escolhido:
             return
@@ -658,15 +661,15 @@ class Ficha(commands.Cog):
             return
 
         depois = antes + 1
-        await db.atualizar_personagem(
-            self.bot.db, escolhido["id"], "nivel", nivel_do_tier(depois)
-        )
-        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
+        nivel_alvo = nivel_do_tier(depois)
+        passo = self._montar_fluxo(escolhido, classe, nivel_alvo, "upar")
+        self._fluxo[escolhido["id"]] = passo
 
-        velhos, novos = classe.numeros(nivel_do_tier(antes)), classe.numeros(nivel_do_tier(depois))
+        # O que o tier traz, antes de pedir qualquer coisa: o jogador decide
+        # sabendo o que esta ganhando.
+        velhos, novos = classe.numeros(escolhido["nivel"]), classe.numeros(nivel_alvo)
         linhas = [
-            f"📈 {interaction.user.mention} subiu **{escolhido['nome']}** "
-            f"para o **tier {depois}**."
+            f"**{escolhido['nome']}** vai para o **tier {depois}**."
         ]
         mudou = [
             f"{rotulo} {antigo} → **{novo}**"
@@ -686,22 +689,20 @@ class Ficha(commands.Cog):
                 "Habilidade(s) novas: "
                 + " | ".join(f"**{h.nome}** — {h.texto}" for h in novas)
             )
-        # As proficiencias ganhas por escolha nao contam na cota da classe.
-        proprias = [
-            pericia
-            for pericia in atualizado["pericias"]
-            if pericia not in (atualizado.get("pericias_extras") or [])
-        ]
-        sobrando = novos.pericias - len(proprias)
-        if sobrando > 0:
-            linhas.append(f"O tier novo da mais **{sobrando}** proficiencia(s).")
+        a_mais = novos.pericias - len(self._pericias_proprias(escolhido))
+        if a_mais > 0:
+            linhas.append(
+                f"Voce vai escolher **{a_mais}** proficiencia(s) a mais "
+                f"(o tier {depois} da {novos.pericias})."
+            )
 
-        await self._responder_com_escolha(interaction, atualizado, "\n".join(linhas))
-        # As vagas de pericia que o tier abriu: o menu vem aqui, por followup.
-        # Antes o texto mandava rodar `/ficha pericias`, e sem aquele comando
-        # as vagas novas nao teriam como ser preenchidas nunca.
-        if sobrando > 0:
-            await self._abrir_pericias_em_seguida(interaction, atualizado)
+        if not passo["faltam"] and not passo["pericias"]:
+            # Nada a decidir: sobe direto.
+            await self._fechar_fluxo(interaction, escolhido)
+            return
+
+        await interaction.response.send_message("\n".join(linhas), ephemeral=True)
+        await self._seguir_fluxo(interaction, escolhido, por_followup=True)
 
     @grupo.command(name="voltar", description="Desce o personagem um tier, se voce errou")
     @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
@@ -761,6 +762,135 @@ class Ficha(commands.Cog):
 
     # ------------------------------------------------------- escolhas
 
+    def _pericias_proprias(self, personagem: dict[str, Any]) -> list[str]:
+        """As proficiencias que contam na cota — as de escolha ficam de fora."""
+        extras = personagem.get("pericias_extras") or []
+        return [p for p in personagem["pericias"] if p not in extras]
+
+    def _montar_fluxo(
+        self, personagem: dict[str, Any], classe, nivel_alvo: int, tipo: str
+    ) -> dict[str, Any]:
+        """O que o personagem precisa decidir para chegar aquele nivel.
+
+        No `upar`, so o que FALTA: quem ja decidiu o tier 2 nao responde de
+        novo ao subir para o 3. No `alterar`, tudo que o tier pede, decidido
+        ou nao — refazer e o proposito do comando.
+        """
+        alvo = tier(nivel_alvo)
+        if tipo == "alterar":
+            faltam = [
+                h.id for h in classe.habilidades_do_tier(alvo) if h.decidivel
+            ]
+            cota = classe.numeros(nivel_alvo).pericias
+            anterior = (
+                classe.numeros(nivel_do_tier(alvo - 1)).pericias if alvo > 1 else 0
+            )
+            pericias = cota > anterior
+        else:
+            faltam = [
+                h.id
+                for _t, h in cl.escolhas_pendentes(
+                    personagem.get("classe"), nivel_alvo, personagem.get("escolhas")
+                )
+            ]
+            cota = classe.numeros(nivel_alvo).pericias
+            pericias = len(self._pericias_proprias(personagem)) < cota
+        return {"tipo": tipo, "nivel": nivel_alvo, "faltam": faltam,
+                "pericias": pericias}
+
+    async def _seguir_fluxo(
+        self, interaction: discord.Interaction, personagem: dict[str, Any],
+        por_followup: bool = False,
+    ) -> None:
+        """Abre o proximo menu do fluxo, ou fecha quando nao sobra nada."""
+        passo = self._fluxo.get(personagem["id"])
+        if passo is None:
+            return
+        classe = cl.classe(personagem.get("classe"))
+
+        # 1. as decisoes, uma de cada vez
+        while passo["faltam"]:
+            hid = passo["faltam"][0]
+            habilidade = next(
+                (h for _t, h in personagem["habilidades"] if h.id == hid),
+                None,
+            ) or next(
+                (h for h in classe.habilidades_do_tier(tier(passo["nivel"]))
+                 if h.id == hid),
+                None,
+            )
+            if habilidade is None:
+                passo["faltam"].pop(0)
+                continue
+            texto, view = self._seletor_da_escolha(personagem, habilidade)
+            if view is None:
+                # Decisao sem opcao possivel (Expertise sem proficiencia):
+                # nao da para exigir o que nao existe.
+                passo["faltam"].pop(0)
+                continue
+            quantas = len(passo["faltam"]) - 1 + (1 if passo["pericias"] else 0)
+            resto = f"\nDepois desta ainda faltam {quantas}." if quantas else ""
+            await self._mandar(
+                interaction, f"\U0001f9ed Decida agora: {texto}{resto}",
+                view, por_followup,
+            )
+            return
+
+        # 2. as proficiencias
+        if passo["pericias"]:
+            cota = classe.numeros(passo["nivel"]).pericias
+            view = SeletorPericiasDoTier(
+                self, personagem["id"], personagem["user_id"],
+                self._pericias_proprias(personagem), cota,
+            )
+            await self._mandar(
+                interaction,
+                f"\U0001f393 Escolha as **{cota}** proficiencias de "
+                f"**{personagem['nome']}**:",
+                view, por_followup,
+            )
+            return
+
+        # 3. nada falta: fecha o fluxo
+        await self._fechar_fluxo(interaction, personagem, por_followup)
+
+    async def _mandar(
+        self, interaction: discord.Interaction, texto: str, view, por_followup: bool
+    ) -> None:
+        """Manda o menu pela porta que ainda estiver livre nesta interacao."""
+        if por_followup or interaction.response.is_done():
+            await interaction.followup.send(texto, view=view, ephemeral=True)
+        else:
+            await interaction.response.send_message(texto, view=view, ephemeral=True)
+
+    async def _fechar_fluxo(
+        self, interaction: discord.Interaction, personagem: dict[str, Any],
+        por_followup: bool = False,
+    ) -> None:
+        """Ultimo passo: grava o que o fluxo prometia e anuncia."""
+        passo = self._fluxo.pop(personagem["id"], None)
+        if passo is None:
+            return
+        if passo["tipo"] == "upar":
+            # O nivel sobe AGORA, e nao no comeco: ate aqui o personagem
+            # continuava no tier antigo, entao fechar o menu no meio nao
+            # deixava ninguem num tier sem as decisoes dele.
+            await db.atualizar_personagem(
+                self.bot.db, personagem["id"], "nivel", passo["nivel"]
+            )
+        atualizado = await db.buscar_personagem(self.bot.db, personagem["id"])
+        alvo = tier(passo["nivel"])
+        verbo = "subiu" if passo["tipo"] == "upar" else "refez o tier"
+        texto = (
+            f"\U0001f4c8 {interaction.user.mention} {verbo} "
+            f"**{atualizado['nome']}** — **tier {alvo}**."
+        )
+        embed = embed_ficha(atualizado, interaction.user)
+        if por_followup or interaction.response.is_done():
+            await interaction.followup.send(texto, embed=embed)
+        else:
+            await interaction.response.send_message(texto, embed=embed)
+
     def _seletor_da_escolha(self, personagem: dict[str, Any], habilidade):
         """(texto, view) de uma decisao. Sem view, o texto diz o que falta fazer."""
         forma = habilidade.escolha
@@ -815,32 +945,6 @@ class Ficha(commands.Cog):
         await self._anunciar(
             interaction, anuncio, embed=embed_ficha(personagem, interaction.user)
         )
-
-    async def _abrir_pericias_em_seguida(
-        self, interaction: discord.Interaction, personagem: dict[str, Any]
-    ) -> None:
-        """Abre o menu de proficiencias por followup, e grava o que vier.
-
-        Existe porque `/ficha pericias` saiu: a cota cresce ao subir de tier, e
-        sem um lugar para preencher as vagas novas elas ficariam perdidas. O
-        momento certo e o da subida, como ja acontece com as decisoes de tier.
-        """
-        numeros = personagem.get("numeros")
-        if numeros is None:
-            return
-        view = SeletorPericiasDoTier(
-            self, personagem["id"], interaction.user.id,
-            personagem["pericias"], numeros.pericias,
-        )
-        try:
-            await interaction.followup.send(
-                f"\U0001f393 Proficiencias de **{personagem['nome']}** "
-                f"(ate {numeros.pericias}):",
-                view=view,
-                ephemeral=True,
-            )
-        except discord.HTTPException:
-            pass
 
     async def _abrir_pendencia_em_seguida(
         self, interaction: discord.Interaction, personagem: dict[str, Any]
@@ -905,8 +1009,17 @@ class Ficha(commands.Cog):
             f"\U0001f9ed {interaction.user.mention} decidiu **{habilidade.nome}** de "
             f"**{atualizado['nome']}**: {escrito}."
         )
-        # Sobrando decisao, o menu da proxima ja vem junto: o jogador resolve
-        # tudo numa sequencia so, sem precisar de outro comando.
+        # No meio de um fluxo (upar ou alterar), o proximo menu vem na
+        # sequencia e o anuncio fica para o fim — senao o canal recebe uma
+        # mensagem por decisao.
+        if atualizado["id"] in self._fluxo:
+            self._fluxo[atualizado["id"]]["faltam"] = [
+                h for h in self._fluxo[atualizado["id"]]["faltam"]
+                if h != habilidade.id
+            ]
+            await interaction.response.defer()
+            await self._seguir_fluxo(interaction, atualizado, por_followup=True)
+            return
         await self._responder_com_escolha(interaction, atualizado, texto)
 
     async def _sugerir_do_servidor(
@@ -960,27 +1073,11 @@ class Ficha(commands.Cog):
             )
             return
 
-        # Esquece so as decisoes DESTE tier: as dos tiers abaixo ja foram
-        # jogadas e nao estao em questao.
-        deste_tier = {h.id for h in classe.habilidades_do_tier(atual)}
-        guardadas = escolhido.get("escolhas") or {}
-        mantidas = {k: v for k, v in guardadas.items() if k not in deste_tier}
-        apagadas = [
-            h.nome for h in classe.habilidades_do_tier(atual) if h.id in guardadas
-        ]
-
-        # O tier tambem abriu vaga de proficiencia? Ai as pericias entram no
-        # que da para refazer. A cota cresce em tiers diferentes conforme a
-        # classe — a maioria ganha no 1, no 3 e no 5, e Barbaro, Guerreiro e
-        # Ladino so no 1 —, entao a resposta sai da tabela e nao de uma lista
-        # escrita aqui.
-        cota = classe.numeros(nivel_do_tier(atual)).pericias
-        antes_dela = (
-            classe.numeros(nivel_do_tier(atual - 1)).pericias if atual > 1 else 0
-        )
-        abriu_pericia = cota > antes_dela
-
-        if not apagadas and not abriu_pericia:
+        # Nao apaga nada antes de perguntar: os menus abrem com o que ele
+        # tem, e a decisao velha so e trocada quando a nova chega. Fechar o
+        # menu no meio deixa a ficha como estava.
+        passo = self._montar_fluxo(escolhido, classe, escolhido["nivel"], "alterar")
+        if not passo["faltam"] and not passo["pericias"]:
             await interaction.response.send_message(
                 f"O tier {atual} de **{escolhido['nome']}** nao tem decisao nem "
                 f"proficiencia para refazer — ele nao abriu nenhuma das duas.",
@@ -988,24 +1085,8 @@ class Ficha(commands.Cog):
             )
             return
 
-        if apagadas:
-            await db.definir_escolhas(self.bot.db, escolhido["id"], mantidas)
-        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
-
-        refazendo = [f"**{n}**" for n in apagadas]
-        if abriu_pericia:
-            refazendo.append(f"as **{cota} proficiencia(s)**")
-        texto = (
-            f"\U0001f501 {interaction.user.mention} vai refazer no tier "
-            f"{atual} de **{escolhido['nome']}**: "
-            + ", ".join(refazendo)
-            + "."
-        )
-        await self._responder_com_escolha(interaction, atualizado, texto)
-        # O menu das pericias vem por followup, como no `upar`: ele precisa da
-        # resposta ja dada.
-        if abriu_pericia:
-            await self._abrir_pericias_em_seguida(interaction, atualizado)
+        self._fluxo[escolhido["id"]] = passo
+        await self._seguir_fluxo(interaction, escolhido)
 
     @grupo.command(
         name="remover", description="(admin) Apaga o personagem de qualquer jogador"

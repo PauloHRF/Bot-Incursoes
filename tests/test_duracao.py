@@ -12,6 +12,7 @@ sys.path.insert(0, str(RAIZ))
 from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes, SeletorAlvoHabilidade  # noqa: E402
 from fakes import (  # noqa: E402
+    menu_de,
     CANAL,
     GUILD,
     INDEFESO,
@@ -187,8 +188,8 @@ async def caso_marca_pede_alvo_e_dura():
     # com varios inimigos, precisa escolher em quem
     pedido = FakeInteraction(canal, dono)
     await cog.usar_habilidade(pedido, run["id"], "OBJ", "marca_do_cacador")
-    assert isinstance(pedido.view_enviada, SeletorAlvoHabilidade)
-    assert {o.value for o in pedido.view_enviada.menu.options} == {"0", "1", "2"}
+    assert isinstance(menu_de(pedido), SeletorAlvoHabilidade)
+    assert {o.value for o in menu_de(pedido).menu.options} == {"0", "1", "2"}
     assert await db.usos_da_run(conn, run["id"], dono) == {}, "nao gasta antes de escolher"
 
     marcando = FakeInteraction(canal, dono)

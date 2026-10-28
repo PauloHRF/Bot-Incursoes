@@ -16,6 +16,8 @@ from src import config, database as db  # noqa: E402
 from src.cogs.ajuda import coletar  # noqa: E402
 from src.cogs.ficha import Ficha  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
+    menu_de,
     CLASSE_PADRAO,
     CANAL,
     GUILD,
@@ -180,24 +182,36 @@ async def caso_atualizacoes_sao_publicas():
     """Upar e voltar respondem no canal, sem ephemeral; ver fica privado."""
     conn, canal, ficha = await preparar()
     dono = JOGADORES[0]
+    # Cota cheia: abaixo dela o upar pede as proficiencias que faltam
+    # antes de subir, e este caso e sobre o anuncio no canal.
     await db.criar_personagem(
-        conn, GUILD, dono, "Vhalor", CLASSE_PADRAO, ["Atletismo"], nivel=5
+        conn, GUILD, dono, "Vhalor", CLASSE_PADRAO,
+        ["Atletismo", "Intimidação", "Percepção"], nivel=5
     )
 
     def publica(interacao):
         # o dublê registra a mensagem no canal quando nao e ephemeral
         return interacao._mensagem_resposta is not None and interacao._mensagem_resposta.id != -1
 
-    # O Guerreiro tem o Fighting Style pendente, entao o upar responde com o
-    # menu da decisao (so para o dono) e anuncia a subida no canal.
+    # O Guerreiro tem o Fighting Style a decidir, entao o upar responde
+    # com o menu — so para o dono — e o canal AINDA nao sabe de nada: o
+    # nivel so sobe quando a decisao chegar.
     upou = FakeInteraction(canal, dono)
     await ficha.upar.callback(ficha, upou)
     assert not publica(upou), "a decisao e do dono, nao do canal"
-    assert "Decida agora" in upou.resposta and upou.view_enviada is not None
+    assert "Decida agora" in leu(upou) and menu_de(upou) is not None
+    assert not any(
+        "tier 4" in (m.content or "") for m in canal.mensagens
+    ), "o canal soube da subida antes de ela acontecer"
+
+    # decidindo, o nivel sobe E o canal fica sabendo
+    menu = menu_de(upou)
+    menu.menu._values = [menu.menu.options[0].value]
+    await menu._escolher(FakeInteraction(canal, dono))
     assert any(
         "tier 4" in (m.content or "") and "Vhalor" in (m.content or "")
         for m in canal.mensagens
-    ), "o canal precisa saber da subida"
+    ), "depois da decisao o canal precisa saber da subida"
 
     # sem decisao pendente, o aviso e publico
     desceu = FakeInteraction(canal, dono)

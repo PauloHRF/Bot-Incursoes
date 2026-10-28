@@ -17,6 +17,8 @@ from src.cogs.ficha import (  # noqa: E402
 )
 from src.rules import mod_pericia  # noqa: E402
 from fakes import (  # noqa: E402
+    leu,
+    menu_de,
     CANAL,
     GUILD,
     JOGADORES,
@@ -47,7 +49,7 @@ async def escolher(cog, canal, dono, personagem_id, habilidade_id, valores):
     """Vai do menu de decisões até gravar, como o jogador faria."""
     abrindo = FakeInteraction(canal, dono)
     await cog.abrir_escolha(abrindo, personagem_id, habilidade_id)
-    view = abrindo.view_enviada
+    view = menu_de(abrindo)
     assert view is not None, abrindo.resposta
     view.menu._values = list(valores)
     gravando = FakeInteraction(canal, dono)
@@ -147,9 +149,13 @@ async def caso_fighting_style_muda_os_numeros():
     assert depois["pendencias"] == []
     assert depois["escolhas"] == {"fighting_style": "defensivo"}
 
-    # e a ficha mostra a decisao
+    # e a ficha mostra a decisao — na lista de habilidades, como qualquer
+    # outra: o Fighting Style nao destrava nada, entao o que o
+    # personagem TEM e a opcao escolhida.
     campos = {f.name: f.value for f in embed_ficha(depois, FakeInteraction(canal, dono).user).fields}
-    assert "Defensivo" in campos["Escolhas"]
+    lista = campos[next(n for n in campos if n.startswith("Habilidades"))]
+    assert "Defensivo" in lista, lista
+    assert "Escolhas" not in campos, campos.keys()
     assert f"CA **{ca_base + 1}**" in campos["Combate"], campos["Combate"]
     print("  Fighting Style muda CA ou acerto de verdade: ok")
 
@@ -190,7 +196,7 @@ async def caso_expertise_so_oferece_o_que_tem_proficiencia():
     )
     abrindo = FakeInteraction(canal, dono)
     await cog.abrir_escolha(abrindo, pid, "expertise_1")
-    view = abrindo.view_enviada
+    view = menu_de(abrindo)
     assert isinstance(view, SeletorPericiasDaEscolha)
     assert {o.label for o in view.menu.options} == {"Furtividade", "Acrobacia"}
 
@@ -216,7 +222,7 @@ async def caso_primal_knowledge_da_proficiencia_extra():
 
     abrindo = FakeInteraction(canal, dono)
     await cog.abrir_escolha(abrindo, pid, "primal_knowledge")
-    oferecidas = {o.label for o in abrindo.view_enviada.menu.options}
+    oferecidas = {o.label for o in menu_de(abrindo).menu.options}
     assert "Atletismo" not in oferecidas, "nao oferece o que ele ja tem"
     assert "Natureza" in oferecidas
 
@@ -264,13 +270,13 @@ async def caso_upar_conduz_a_escolha():
     )
     inter = FakeInteraction(canal, dono)
     await cog.upar.callback(cog, inter)
-    assert "Decida agora" in inter.resposta and "Fighting Style" in inter.resposta
-    assert isinstance(inter.view_enviada, SeletorOpcao)
+    assert "Decida agora" in leu(inter) and "Fighting Style" in leu(inter)
+    assert isinstance(menu_de(inter), SeletorOpcao)
 
     # decidindo ali mesmo, a ficha ja sai com o efeito valendo
-    inter.view_enviada.menu._values = ["defensivo"]
+    menu_de(inter).menu._values = ["defensivo"]
     gravando = FakeInteraction(canal, dono)
-    await inter.view_enviada._escolher(gravando)
+    await menu_de(inter)._escolher(gravando)
     decidido = await db.buscar_personagem(conn, pid)
     assert decidido["escolhas"] == {"fighting_style": "defensivo"}
     assert decidido["pendencias"] == []
@@ -282,25 +288,29 @@ async def caso_decisoes_em_fila():
     conn, canal, cog = await preparar()
     dono = JOGADORES[0]
     # Ladino no tier 3 devendo a Expertise do tier 2; ao subir para o 4, deve duas
+    # Com a cota CHEIA: um personagem abaixo dela e estado invalido desde
+    # que o menu passou a exigir a quantidade exata, e o upar cobra as
+    # que faltam antes de subir. Aqui o caso e sobre a fila de DECISOES.
     pid = await db.criar_personagem(
         conn, GUILD, dono, "Sombra", "ladino",
-        ["Furtividade", "Acrobacia", "Percepção"], nivel=5,
+        ["Furtividade", "Acrobacia", "Percepção", "Atletismo",
+         "Enganação", "Intuição"], nivel=5,
     )
     inter = FakeInteraction(canal, dono)
     await cog.upar.callback(cog, inter)
-    assert "Decida agora" in inter.resposta
-    assert "ainda faltam 1" in inter.resposta, inter.resposta
+    assert "Decida agora" in leu(inter), leu(inter)
+    assert "ainda faltam 1" in leu(inter), leu(inter)
 
     # gravando a primeira, a segunda abre sozinha
-    inter.view_enviada.menu._values = ["Furtividade", "Acrobacia"]
+    menu_de(inter).menu._values = ["Furtividade", "Acrobacia"]
     segunda = FakeInteraction(canal, dono)
-    await inter.view_enviada._escolher(segunda)
-    assert "Decida agora" in segunda.resposta, segunda.resposta
-    assert isinstance(segunda.view_enviada, SeletorPericiasDaEscolha)
+    await menu_de(inter)._escolher(segunda)
+    assert "Decida agora" in leu(segunda), leu(segunda)
+    assert isinstance(menu_de(segunda), SeletorPericiasDaEscolha)
 
-    segunda.view_enviada.menu._values = ["Percepção"]
+    menu_de(segunda).menu._values = ["Percepção"]
     fim = FakeInteraction(canal, dono)
-    await segunda.view_enviada._escolher(fim)
+    await menu_de(segunda)._escolher(fim)
     pronto = await db.buscar_personagem(conn, pid)
     assert pronto["pendencias"] == []
     assert set(pronto["efeitos"]["expertise"]) == {"Furtividade", "Acrobacia", "Percepção"}
@@ -326,9 +336,9 @@ async def caso_voltar_esquece_a_escolha_do_tier():
     # e subindo de novo ele escolhe outra coisa
     de_novo = FakeInteraction(canal, dono)
     await cog.upar.callback(cog, de_novo)
-    assert isinstance(de_novo.view_enviada, SeletorOpcao)
-    de_novo.view_enviada.menu._values = ["ofensivo"]
-    await de_novo.view_enviada._escolher(FakeInteraction(canal, dono))
+    assert isinstance(menu_de(de_novo), SeletorOpcao)
+    menu_de(de_novo).menu._values = ["ofensivo"]
+    await menu_de(de_novo)._escolher(FakeInteraction(canal, dono))
     assert (await db.buscar_personagem(conn, pid))["escolhas"] == {
         "fighting_style": "ofensivo"
     }

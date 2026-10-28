@@ -12,6 +12,7 @@ from src import classes as cl, config, database as db, embeds as E, motor  # noq
 from src.cogs.incursao import Incursoes, SeletorPersonagemEntrada  # noqa: E402
 from src.rules import TIER_MAXIMO, faixa_do_tier, tier  # noqa: E402
 from fakes import (  # noqa: E402
+    menu_de,
     CLASSE_PADRAO,
     CANAL,
     GUILD,
@@ -134,7 +135,7 @@ async def caso_botao_entrar_respeita_o_tier():
     # tem tres personagens, mas o menu so oferece os dois que cabem
     escolha = FakeInteraction(canal, misto, msg)
     await cog.recrutar(escolha, run["id"], "entrar")
-    view = escolha.view_enviada
+    view = menu_de(escolha)
     assert isinstance(view, SeletorPersonagemEntrada)
     rotulos = {o.label for o in view.menu.options}
     assert rotulos == {"Um", "Dois"}, rotulos
