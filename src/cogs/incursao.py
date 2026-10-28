@@ -618,15 +618,33 @@ class Incursoes(commands.Cog):
 
     grupo = app_commands.Group(name="incursao", description="Incursões da sua Organização")
 
+    # O Discord corta o nome de uma opcao em 100 caracteres, e corta no meio
+    # da palavra. Melhor cortar o NOME DA ORGANIZACAO, que vem por ultimo,
+    # do que deixar o tier cair fora da tela por causa de um nome longo.
+    LIMITE_DA_OPCAO = 100
+
     async def _sugerir_incursoes(
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
+        """A lista que aparece ao digitar o comando: nome, tier e Organizacao.
+
+        O tier entra aqui e nao so no cartao da run: a escolha acontece
+        NESTA lista, e e o tier que decide se o personagem pode entrar. Sem
+        ele o jogador escolhia no escuro e descobria no erro.
+        """
         termo = atual.lower()
-        return [
-            app_commands.Choice(name=f"{inc.nome} ({inc.organizacao})", value=inc.id)
-            for inc in self.incursoes.values()
-            if termo in inc.id.lower() or termo in inc.nome.lower()
-        ][:25]
+        opcoes = []
+        for inc in self.incursoes.values():
+            if termo not in inc.id.lower() and termo not in inc.nome.lower():
+                continue
+            rotulo = E.titulo_da_incursao(inc)
+            sobra = self.LIMITE_DA_OPCAO - len(rotulo) - len(" — ")
+            if sobra > 1:
+                rotulo += f" — {inc.organizacao[:sobra]}"
+            opcoes.append(
+                app_commands.Choice(name=rotulo[: self.LIMITE_DA_OPCAO], value=inc.id)
+            )
+        return opcoes[:25]
 
     @grupo.command(name="listar", description="Mostra as incursões disponíveis")
     async def listar(self, interaction: discord.Interaction) -> None:
@@ -641,7 +659,7 @@ class Incursoes(commands.Cog):
         for inc in self.incursoes.values():
             salas_no_banco = len(self.bancos[inc.organizacao].salas) if inc.organizacao in self.bancos else 0
             e.add_field(
-                name=f"{inc.nome}  ·  `{inc.id}`",
+                name=f"{E.titulo_da_incursao(inc)}  ·  `{inc.id}`",
                 value=(
                     f"{inc.organizacao} — {inc.tamanho.lower()} ({inc.passos} salas + objetivo)"
                     f" — {inc.recompensa_mes} MEs\n"

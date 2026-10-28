@@ -401,8 +401,54 @@ async def caso_a_sala_fecha_uma_vez_so():
     print("  a sala fecha uma vez só: ok")
 
 
+async def caso_o_tier_aparece_na_hora_de_escolher():
+    """A lista de incursões diz o tier, e o `/incursao listar` também.
+
+    O tier decide se o personagem pode entrar, e a escolha acontece na
+    lista do autocomplete: sem ele ali o jogador escolhia no escuro e só
+    descobria no erro. Pôr o tier no cartão da run já aberta não resolve —
+    o cartão vem depois da escolha.
+    """
+    conn, canal, cog = await preparar()
+    montar_conteudo(cog, incursao_id="t1", tier=1, salas=salas_sem_combate(8))
+    montar_conteudo(cog, incursao_id="t4", tier=4, salas=salas_sem_combate(8))
+    montar_conteudo(cog, incursao_id="livre", tier=None, salas=salas_sem_combate(8))
+
+    inter = FakeInteraction(canal, JOGADORES[0])
+    opcoes = await cog._sugerir_incursoes(inter, "")
+    por_valor = {o.value: o.name for o in opcoes}
+    assert "(T1)" in por_valor["t1"], por_valor["t1"]
+    assert "(T4)" in por_valor["t4"], por_valor["t4"]
+    # Incursão sem tier declarado diz isso em vez de inventar um número.
+    assert "tier livre" in por_valor["livre"], por_valor["livre"]
+    # E o Discord corta o nome de uma opção em 100 caracteres.
+    for nome in por_valor.values():
+        assert len(nome) <= cog.LIMITE_DA_OPCAO, (len(nome), nome)
+
+    # Nome comprido: o que cede é a Organização, não o tier.
+    comprido = "A" * 150
+    montar_conteudo(cog, incursao_id="comprido", tier=2, salas=salas_sem_combate(8))
+    cog.incursoes["comprido"].nome = comprido
+    opcoes = await cog._sugerir_incursoes(inter, "comprido")
+    assert len(opcoes) == 1, opcoes
+    assert len(opcoes[0].name) <= cog.LIMITE_DA_OPCAO, len(opcoes[0].name)
+
+    # O `/incursao listar` traz o tier no título de cada uma.
+    lista = FakeInteraction(canal, JOGADORES[0])
+    await cog.listar.callback(cog, lista)
+    cartao = await lista.original_response()
+    campos = {f.name: f.value for f in cartao.embeds[0].fields}
+    assert any("(T1)" in nome for nome in campos), list(campos)
+    assert any("(T4)" in nome for nome in campos), list(campos)
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o tier aparece na hora de escolher a incursão: ok")
+
+
 async def main():
     await caso_maioria_fecha_sem_esperar()
+    await caso_o_tier_aparece_na_hora_de_escolher()
     await caso_dois_cliques_juntos_abrem_a_sala_uma_vez()
     await caso_a_sala_fecha_uma_vez_so()
     await caso_votos_divididos_esperam()

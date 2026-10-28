@@ -148,10 +148,14 @@ def titulo_da_incursao(incursao: Incursao) -> str:
     o grupo vai encontrar: quem entra, a CD das salas e o tamanho do
     debuff. Ler o nome sem ele é ler metade.
 
-    Incursão sem tier declarado diz isso em vez de inventar um número — o
-    tier dela sai do grupo que entrar, e só na hora.
+    Incursão aberta diz isso em vez de dar um número. O campo `tier` nunca
+    vem vazio — sem valor na planilha ele fica em `TIER_MAXIMO`, para a
+    incursão aceitar todo mundo em vez de trancar o servidor —, então quem
+    responde "é aberta?" é `aberta_a_todos`, a mesma propriedade que a
+    linha de exigência usa. Comparar com `None` nunca dava certo: uma
+    incursão aberta saía rotulada "(T5)".
     """
-    if incursao.tier is None:
+    if incursao.aberta_a_todos:
         return f"{incursao.nome} (tier livre)"
     return f"{incursao.nome} (T{incursao.tier})"
 
