@@ -4,17 +4,21 @@
 
 ## Por tipo de sala
 
-**Sala vencida não castiga ninguém.** Armadilha e Evento batem em quem falhou, mas só quando a sala foi **perdida**: vencer protege o grupo inteiro, inclusive quem rolou mal. O "Falhou" de cada tipo abaixo é o da sala perdida.
+**A sala é do grupo, nos dois sentidos.** Vencida, não castiga ninguém — nem quem rolou mal. Perdida, castiga **todos que a encararam** — inclusive quem rolou bem. O dado de cada um decide o PROGRESSO da sala; o desfecho dela é do grupo.
+
+Quem encarou a sala é quem **rolou** nela. Uma sala só se perde quando todos os de pé rolaram — é a única forma de uma sala perdida fechar —, e quem está caído não encarou nada: cobrar de quem não pôde rolar seria cobrar duas vezes pela mesma queda.
+
+E é **um sorteio só para o grupo inteiro**: é uma armadilha que disparou, não cinco. O dano continua por cabeça, porque é porcentagem do máximo de cada um.
 
 ### Armadilha
 
 - **Grupo venceu:** desarmada. Ninguém se machuca nela, nem quem falhou a própria rolagem.
-- **Grupo perdeu:** quem falhou leva **−20% do HP máximo** mais um debuff de Armadilha sorteado.
+- **Grupo perdeu:** todos que rolaram levam **−20% do HP máximo** e o **mesmo** debuff de Armadilha, sorteado uma vez.
 
 ### Evento
 
 - **Grupo venceu:** um prêmio sorteado. Os 12 buffs do catálogo são sempre candidatos — são o piso. A Cura (+20% do HP) entra no bolo só se alguém estiver machucado, e a Graça só se alguém carregar debuff: não faz sentido oferecer cura a um grupo inteiro nem perdão a um grupo limpo.
-- **Grupo perdeu:** quem falhou pega um debuff de Evento ou um ponto de Exaustão.
+- **Grupo perdeu:** todos que rolaram pegam o **mesmo** castigo, sorteado uma vez: um debuff de Evento, ou um ponto de Exaustão.
 
 A Graça tira **um stack de um debuff de alguém** do grupo, sorteado entre todos. Ela não é condição: não tem stack nem prazo, acontece na hora.
 

@@ -362,6 +362,84 @@ def salas_de(tipo, cd, quantas=6):
     ]
 
 
+async def caso_sala_perdida_cobra_do_grupo():
+    """Sala perdida cobra de todos que a encararam, inclusive de quem passou.
+
+    O dado de cada um decide o PROGRESSO da sala; o desfecho dela é do
+    grupo. Deixar limpo quem tirou 18 numa sala que o grupo perdeu aponta o
+    dado em vez da decisão — é a outra metade da regra de que sala vencida
+    não castiga ninguém.
+
+    O caso monta a resolução à mão porque a combinação que importa — sala
+    PERDIDA com alguém que PASSOU — não sai de rolagens aleatórias quando
+    se quer ela em todas as execuções.
+    """
+    conn, canal, cog, incursao = await preparar(salas_de("Armadilha", 10))
+    run = await montar_run(conn, canal, cog)
+    sala = cog._sala(cog._incursao_da_run(run), "S1")
+    passou, falhou = JOGADORES[0], JOGADORES[1]
+
+    def rolagem(user_id, nome, total):
+        return motor.ResultadoTeste(user_id, nome, "Percepção", total, 0, 10)
+
+    perdida = motor.ResolucaoSala(
+        sala,
+        [
+            rolagem(passou, "Heroi101", 12),  # passou, margem 2
+            rolagem(falhou, "Heroi102", 4),   # falhou
+        ],
+        total_participantes=2,
+    )
+    assert not perdida.superada, (perdida.progresso, perdida.alvo)
+    assert perdida.quem_falhou and len(perdida.resultados) == 2
+
+    antes = await db.hp_dos_participantes(conn, run["id"])
+    maximo = classes.classe(CLASSE_PADRAO).numeros(8).hp
+    # Conta as chamadas do sorteio: comparar os debuffs dos dois nao serve,
+    # porque dois sorteios independentes coincidem de vez em quando e o
+    # caso ficaria flaky. A chamada e exata — uma, ou uma por cabeca.
+    original = X.debuff_da_armadilha
+    sorteios = []
+
+    def contando():
+        sorteios.append(1)
+        return original()
+
+    X.debuff_da_armadilha = contando
+    try:
+        desfecho = await cog._consequencias_da_sala(run, sala, perdida)
+    finally:
+        X.debuff_da_armadilha = original
+    assert len(sorteios) == 1, (
+        f"um sorteio so para o grupo, e a armadilha sorteou {len(sorteios)}"
+    )
+    carregadas = await db.condicoes_da_run(conn, run["id"])
+    depois = await db.hp_dos_participantes(conn, run["id"])
+
+    # Os DOIS pegaram, e o mesmo debuff: é uma armadilha que disparou, não duas.
+    for user_id in (passou, falhou):
+        minhas = carregadas.get(user_id, {})
+        assert minhas, f"{user_id} encarou a sala perdida e devia pegar algo"
+        assert set(minhas) <= set(C.DEBUFFS_DE_ARMADILHA), minhas
+        atual = depois[user_id] if depois[user_id] is not None else maximo
+        assert atual < maximo, f"{user_id} devia ter levado dano, está em {atual}"
+    assert carregadas[passou] == carregadas[falhou], (
+        f"o mesmo debuff nos dois: {carregadas[passou]} vs {carregadas[falhou]}"
+    )
+
+    # E quem NÃO encarou a sala não pega nada: não pôde rolar.
+    for user_id in JOGADORES[2:]:
+        assert not carregadas.get(user_id), (
+            f"{user_id} não rolou nesta sala e não devia pegar nada"
+        )
+        assert depois[user_id] == antes[user_id]
+
+    assert any("pega o grupo" in linha for linha in desfecho.linhas), desfecho.linhas
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  sala perdida cobra do grupo, num sorteio só: ok")
+
+
 async def caso_sala_vencida_nao_castiga_quem_falhou():
     """Vencer a sala protege o grupo inteiro, inclusive quem rolou mal.
 
@@ -1204,6 +1282,7 @@ async def main():
     caso_graca_sorteia_sem_reposicao()
 
     await caso_armadilha_cobra_dano_e_debuff()
+    await caso_sala_perdida_cobra_do_grupo()
     await caso_sala_vencida_nao_castiga_quem_falhou()
     await caso_voltar_do_chao_custa_exaustao()
     await caso_a_cura_levanta_quem_caiu()

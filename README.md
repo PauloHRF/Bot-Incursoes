@@ -185,15 +185,21 @@ Ele vive em `src/condicoes.py`, e quem decide o que cada sala faz é
 origem está em `data/planilhas/buffs_debuffs.xlsx`: ela não é importada (o catálogo é
 código), mas é a referência contra a qual `test_condicoes.py` confere os números.
 
-| Sala | Passando | Falhando |
+| Sala | O grupo venceu | O grupo perdeu |
 | --- | --- | --- |
-| **Armadilha** | atravessa e pronto | **Dano** (-20% do HP) + um debuff de Armadilha |
+| **Armadilha** | desarmada, ninguém se machuca | **Dano** (-20% do HP) + um debuff de Armadilha |
 | **Evento** | um **prêmio** para o grupo | um debuff de Evento ou um ponto de **Exaustão** |
 | **Tesouro** | o texto de recompensa da sala | nada — e chance de acordar **Mímicos** |
 | **Descanso** | cura metade do HP e cada um tira **uma** condição | — |
 
-Armadilha e Evento batem em **quem falhou**, não no grupo: é a mesma regra do progresso,
-em que cada um responde pela própria rolagem. O prêmio do Evento é do grupo.
+**A sala é do grupo, nos dois sentidos.** O que decide é o desfecho dela, não a rolagem de
+cada um: vencida, não castiga ninguém — nem quem rolou mal; perdida, castiga **todos que a
+encararam** — inclusive quem rolou bem. O dado de cada um decide o **progresso** da sala; o
+desfecho é do grupo. E é **um sorteio só** para todos: é uma armadilha que disparou, não
+cinco. O dano continua por cabeça, porque é porcentagem do máximo de cada um.
+
+Quem encarou a sala é quem **rolou** nela. Uma sala só se perde quando todos os de pé
+rolaram — é a única forma de uma sala perdida fechar —, e quem está caído não encarou nada.
 
 **A CD da Armadilha sai 3 mais fácil** do que a escrita na planilha. Passar nela não dá
 nada — só evita o dano e o debuff —, então sem desconto ela nunca competiria na votação.

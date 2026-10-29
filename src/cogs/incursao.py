@@ -4211,11 +4211,14 @@ class Incursoes(commands.Cog):
 
         O que cada tipo faz está em `src/consequencias.py`; aqui só persiste.
 
-        **Sala vencida não castiga ninguém.** Armadilha e Evento batem em
-        quem falhou, mas só quando a sala foi PERDIDA: vencer protege o
-        grupo inteiro, inclusive quem rolou mal. Antes a Armadilha cobrava
-        de quem falhou mesmo com o grupo desarmando a sala, e o jogador que
-        tirou 3 saía machucado de uma sala que o grupo venceu.
+        **A sala é do grupo, nos dois sentidos.** Vencida, não castiga
+        ninguém — nem quem rolou mal. Perdida, castiga todos que a
+        encararam — inclusive quem rolou bem. O dado de cada um decide o
+        PROGRESSO da sala; o desfecho dela é do grupo.
+
+        As duas metades vieram do mesmo relato da mesa: punir quem tirou 3
+        numa sala que o grupo venceu, e deixar limpo quem tirou 18 numa sala
+        que o grupo perdeu, apontavam o dado em vez da decisão.
         """
         desfecho = consequencias.Desfecho()
         if sala.tipo == "Armadilha" and resolucao.superada:
@@ -4239,6 +4242,22 @@ class Incursoes(commands.Cog):
                 desfecho.linhas.append("O grupo sai sem nada — mas sai inteiro.")
         return desfecho
 
+    @staticmethod
+    def _quem_encarou(resolucao: ResolucaoSala) -> list[ResultadoTeste]:
+        """Quem enfrentou a sala: todos que rolaram, passando ou falhando.
+
+        Sala perdida cobra do GRUPO, e não de quem tirou o dado mais baixo.
+        A outra metade da regra está em `_consequencias_da_sala`: sala
+        vencida não cobra de ninguém. Vencer protege todos, perder custa a
+        todos — e o resultado da sala deixa de depender de quem rolou mal.
+
+        É quem ROLOU, e não quem está na run: uma sala só se perde quando
+        todos os de pé rolaram (é a única forma de uma sala perdida fechar),
+        e quem está caído não encarou nada. Cobrar de quem não pôde rolar
+        seria cobrar duas vezes pela mesma queda.
+        """
+        return list(resolucao.resultados)
+
     async def _castigo_de_armadilha(
         self,
         run: dict[str, Any],
@@ -4246,27 +4265,47 @@ class Incursoes(commands.Cog):
         resolucao: ResolucaoSala,
         desfecho: consequencias.Desfecho,
     ) -> None:
-        """Quem falhou leva o Dano (-20% do HP) e um debuff de Armadilha."""
+        """A armadilha que o grupo não desarmou: -20% do HP e um debuff.
+
+        Cai em todos que encararam a sala, e não só em quem falhou a própria
+        rolagem — ver `_quem_encarou`.
+
+        **Um sorteio só para o grupo inteiro**: é uma armadilha que
+        disparou, não cinco. Cinco debuffs diferentes do mesmo alçapão não
+        contariam a mesma história, e a linha do desfecho fica legível.
+
+        O dano continua por cabeça, porque é porcentagem: 20% do máximo de
+        cada um, e quem tem mais HP perde mais.
+        """
         combatentes = {c.user_id: c for c in await self._combatentes(run)}
+        encararam = self._quem_encarou(resolucao)
+        if not encararam:
+            return
+        debuff = consequencias.debuff_da_armadilha()
         hps: dict[int, int] = {}
-        for falhou in resolucao.quem_falhou:
-            combatente = combatentes.get(falhou.user_id)
+        nomes: list[str] = []
+        stacks = 1
+        for quem in encararam:
+            combatente = combatentes.get(quem.user_id)
             if combatente is None:
                 continue
             dano = consequencias.dano_da_armadilha(combatente.hp_max)
             combatente.hp_atual = max(0, combatente.hp_atual - dano)
-            hps[falhou.user_id] = combatente.hp_atual
-            debuff = consequencias.debuff_da_armadilha()
+            hps[quem.user_id] = combatente.hp_atual
             stacks = await db.aplicar_condicao(
-                self.bot.db, run["id"], falhou.user_id, debuff
+                self.bot.db, run["id"], quem.user_id, debuff
             )
-            desfecho.linhas.append(
-                f"**{falhou.personagem}** leva **{dano}** de dano e fica com "
-                f"{condicoes.rotulo(debuff, stacks)} — "
-                f"{condicoes.descricao(debuff, stacks=stacks)}"
-            )
+            nomes.append(f"**{quem.personagem}** (-{dano})")
         if hps:
             await db.definir_hp_varios(self.bot.db, run["id"], hps)
+        if nomes:
+            desfecho.linhas.append(
+                "A armadilha pega o grupo: " + ", ".join(nomes) + "."
+            )
+            desfecho.linhas.append(
+                f"Todos ficam com {condicoes.rotulo(debuff, stacks)} — "
+                f"{condicoes.descricao(debuff, stacks=stacks)}"
+            )
 
     async def _premio_de_evento(
         self, run: dict[str, Any], desfecho: consequencias.Desfecho
@@ -4329,17 +4368,29 @@ class Incursoes(commands.Cog):
         resolucao: ResolucaoSala,
         desfecho: consequencias.Desfecho,
     ) -> None:
-        """Quem falhou pega um debuff de Evento ou um ponto de Exaustão."""
-        for falhou in resolucao.quem_falhou:
-            castigo = consequencias.castigo_do_evento()
+        """O Evento que deu errado: um debuff de Evento, ou Exaustão.
+
+        Cai em todos que encararam a sala, e num sorteio só: o Evento é um
+        acontecimento da sala, e aconteceu para o grupo inteiro.
+        """
+        encararam = self._quem_encarou(resolucao)
+        if not encararam:
+            return
+        castigo = consequencias.castigo_do_evento()
+        stacks = 1
+        for quem in encararam:
             stacks = await db.aplicar_condicao(
-                self.bot.db, run["id"], falhou.user_id, castigo
+                self.bot.db, run["id"], quem.user_id, castigo
             )
-            desfecho.linhas.append(
-                f"**{falhou.personagem}** fica com "
-                f"{condicoes.rotulo(castigo, stacks)} — "
-                f"{condicoes.descricao(castigo, stacks=stacks)}"
-            )
+        desfecho.linhas.append(
+            "O evento sai pela culatra para o grupo: "
+            + ", ".join(f"**{q.personagem}**" for q in encararam)
+            + "."
+        )
+        desfecho.linhas.append(
+            f"Todos ficam com {condicoes.rotulo(castigo, stacks)} — "
+            f"{condicoes.descricao(castigo, stacks=stacks)}"
+        )
 
     async def _expulsar_estourados(self, run: dict[str, Any]) -> None:
         """Quem bateu no teto de uma condição sai da incursão.
