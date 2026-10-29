@@ -39,6 +39,8 @@ Os valores são **o que um stack faz**, com o sinal já dentro.
 
 A Exaustão é a única condição com tipo próprio, e merece: ela **não decai com o combate**. Sai no Descanso, ou numa habilidade que a tire.
 
+A coluna **Fonte** diz de qual sorteio ela sai, e não por quantos caminhos ela chega. A Exaustão é a condição com mais entradas no jogo: o sorteio do Evento perdido, o da Armadilha perdida, o golpe ou a habilidade de uma criatura que drena, e **voltar do chão por cura** — que cobra um ponto fixo, sem sorteio nenhum (ver `combate.md`).
+
 ### Buffs (12)
 
 |  | Condição | O que um stack faz | Fonte | Decai | Teto |

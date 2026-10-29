@@ -16,6 +16,8 @@ Aceita o nome em português e o original em inglês, com ou sem acento.
 
 Os números do livro são os do tier 1, como todo conteúdo: a escala por tier do grupo é aplicada na hora de abrir o combate (ver `tier-e-progressao.md`).
 
+**As fichas em si estão em [../CRIATURAS.md](../CRIATURAS.md)**: as criaturas uma por uma, com CA, HP, golpes por rodada e habilidade, agrupadas pela faixa de CR que decide qual tier as encontra. Aqui está a regra; lá está o conteúdo.
+
 ---
 
 Gerado por `tools/gerar_mecanicas_md.py` a partir de `src/bestiario.py`, `data/bestiario.json`. Não edite à mão: rode o gerador.

@@ -4,12 +4,18 @@
 
 ## O ouro
 
-| De onde vem | Quanto | Quando |
+| De onde vem | Quanto | Quem paga |
 |---|---|---|
-| Cada sala superada | 5 × tier | no fecho da incursão |
-| Concluir a incursão | 20 × tier | no fecho da incursão |
+| Cada sala superada | 5 × tier | conclusão **e** desistência |
+| Concluir a incursão | 20 × tier | só a conclusão |
 
-**A incursão paga uma vez, no fim, e só quando é concluída.** As salas do caminho não pagam por si: elas ficam registradas, e no fecho de uma vitória a contagem delas vira ouro. Uma run que acaba com o grupo inteiro no chão não rende nada — nem o das salas já atravessadas.
+**A incursão paga uma vez, no fim.** As salas do caminho não pagam por si: elas ficam registradas, e o fecho conta quantas foram superadas. O que muda é qual fecho paga o quê:
+
+- **Concluída:** paga as salas superadas **e** o bônus de ter fechado.
+- **Abandonada** pelo grupo: paga as salas superadas; o bônus do fecho fica para trás, e os MEs também. O grupo atravessou o que atravessou — o que ele não fez foi terminar.
+- **Fracassada**, com o grupo inteiro no chão: não paga nada, nem o das salas já atravessadas.
+
+Desistir paga mais que cair, então: é a diferença entre voltar e ser carregado de volta.
 
 **Recebe todo mundo que passou pela run**, e não só quem estava de pé no fim: quem caiu no objetivo e quem foi ejetado por Exaustão no meio do caminho jogaram a incursão e levam o mesmo que os outros. Fica de fora quem desistiu **antes** de ela começar.
 

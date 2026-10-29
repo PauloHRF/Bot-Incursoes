@@ -136,6 +136,12 @@ abre. Reações (*Relentless*, *Uncanny Dodge*) não contam: disparam sozinhas, 
 Quem está caído ou atordoado quando a vez chega perde a vez; se tinha guardado uma
 habilidade, ela não sai e **o uso volta**.
 
+**Cura levanta quem está caído** — a apontada em alguém, a que cai no grupo e a que vem
+por turno —, e **voltar do chão custa 1 ponto de Exaustão**. O preço é de sair do zero,
+não da cura: curar quem está de pé não cobra nada. Como a Exaustão não decai com o
+combate e 5 pontos tiram o personagem da incursão, cair e voltar várias vezes é o caminho
+mais rápido para ficar fora dela — segurar o aliado de pé vale mais que levantá-lo depois.
+
 O canal fica com **um cartão só, o do momento**: a votação some quando o grupo entra na
 sala — junto com o "voto registrado" que cada um recebeu —, a sala some quando a próxima
 votação abre, e o resumo privado de cada golpe e a marcação da rodada somem quando a rodada
@@ -211,7 +217,7 @@ Os valores são **o que um stack faz**, e são fixos: não escalam por tier.
 | 🦥 **Moleza** | -2 em Acrobacia, Prestidigitação e Furtividade | Evento |
 | 🙃 **Introversão** | -2 em Enganação, Intimidação, Atuação e Persuasão | Evento |
 | 🌫️ **Insensatez** | -2 em Intuição, Medicina, Percepção e Sobrevivência | Evento |
-| 🥵 **Exaustão** | -2 nos ataques, -2 nos testes e -5 de iniciativa | Evento |
+| 🫩 **Exaustão** | -2 nos ataques, -2 nos testes e -5 de iniciativa | Evento, Armadilha, criatura, **e voltar do chão** |
 
 ### Os buffs
 
@@ -249,7 +255,7 @@ Só duas condições tiram o personagem, e cada uma no teto dela:
 | Condição | Teto | Por quê |
 | --- | --- | --- |
 | 🩸 **Deterioração** | 10 stacks | 10 × -10% = **-100% do HP máximo** |
-| 🥵 **Exaustão** | 5 pontos | é a regra escrita da Exaustão |
+| 🫩 **Exaustão** | 5 pontos | é a regra escrita da Exaustão |
 
 As outras **não têm teto** — empilham livremente, porque decaem sozinhas e não disparam
 nada. Buff nunca tira ninguém. Esvaziando o grupo, a run termina em fracasso.
@@ -709,10 +715,12 @@ tools/
   bestiario_traducao.py      os nomes das criaturas e dos golpes em português
   gerar_mecanicas_md.py      docs/mecanicas/ — as regras, uma por arquivo
   gerar_fichas_md.py         docs/FICHAS.md — o conteúdo das 14 classes
+  gerar_criaturas_md.py      docs/CRIATURAS.md — as fichas do bestiário
   balanco.py                 docs/BALANCO.md — mede o jogo e aponta desequilíbrio
 docs/
   mecanicas/    as regras do jogo, um arquivo por mecânica
   FICHAS.md     os números e as habilidades de cada classe, tier por tier
+  CRIATURAS.md  as fichas das 385 criaturas, agrupadas por faixa de CR
   BALANCO.md    dano, durabilidade, cura e o valor de cada habilidade
 data/
   planilhas/    planilhas de autoria das incursões (.xlsx)

@@ -24,7 +24,14 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import ameaca, classes as cl, habilidades as H, motor, rules  # noqa: E402
+from src import (  # noqa: E402
+    ameaca,
+    bestiario,
+    classes as cl,
+    habilidades as H,
+    motor,
+    rules,
+)
 
 SAIDA = RAIZ / "docs" / "BALANCO.md"
 RODADAS = 20000
@@ -45,20 +52,11 @@ def referencia_do_bestiario() -> dict[int, tuple[int, int, int]]:
     Sai da mediana da faixa de CR que aquele tier encontra, e não de um número
     escolhido: é o bestiário de 385 criaturas que define a dificuldade.
     """
-    arquivo = RAIZ / "data" / "bestiario.json"
-    criaturas = json.loads(arquivo.read_text(encoding="utf-8"))["criaturas"]
+    criaturas = bestiario.carregar()
 
-    def cr(c) -> float:
-        texto = str(c.get("cr", "0"))
-        if "/" in texto:
-            a, b = texto.split("/")
-            return float(a) / float(b)
-        return float(texto or 0)
-
-    faixas = {1: (0, 1), 2: (2, 4), 3: (5, 8), 4: (9, 13), 5: (14, 99)}
     saida = {}
-    for tier, (lo, hi) in faixas.items():
-        grupo = [c for c in criaturas if lo <= cr(c) <= hi]
+    for tier, (lo, hi) in bestiario.FAIXAS_DE_CR.items():
+        grupo = [c for c in criaturas if lo <= bestiario.cr_de(c) <= hi]
         cas, ataques, danos = [], [], []
         for c in grupo:
             golpes = c.get("golpes") or []

@@ -149,6 +149,51 @@ def caso_teste_no_golpe():
     print("  a mordida do carniçal só deixa condição quando acerta: ok")
 
 
+def caso_o_documento_das_criaturas_esta_em_dia():
+    """`docs/CRIATURAS.md` é o que o gerador produz do bestiário de hoje.
+
+    Documento gerado que ninguém confere envelhece em silêncio: importa-se
+    um bestiário novo, esquece-se de rodar o gerador, e quem escreve sala
+    passa a escolher criatura por números que não existem mais. Este caso
+    refaz o documento em memória e compara.
+    """
+    sys.path.insert(0, str(RAIZ / "tools"))
+    import gerar_criaturas_md as gerador
+
+    arquivo = RAIZ / "docs" / "CRIATURAS.md"
+    assert arquivo.exists(), "falta docs/CRIATURAS.md: rode tools/gerar_criaturas_md.py"
+    assert arquivo.read_text(encoding="utf-8") == gerador.documento(), (
+        "docs/CRIATURAS.md está desatualizado: rode "
+        ".venv/Scripts/python.exe tools/gerar_criaturas_md.py"
+    )
+    print("  o documento das criaturas está em dia: ok")
+
+
+def caso_o_tier_do_cr_cobre_o_bestiario_inteiro():
+    """Toda criatura cai em exatamente uma faixa, e a tabela não tem buraco.
+
+    A tabela de faixas é o que decide a dificuldade do jogo: o `balanco.py`
+    tira dela a criatura típica de cada tier. Um CR que não casasse com
+    faixa nenhuma sumiria da medição e do documento sem avisar.
+    """
+    criaturas = bestiario.carregar()
+    assert criaturas, "bestiário vazio"
+    for c in criaturas:
+        cr = bestiario.cr_de(c)
+        faixas = [
+            tier for tier, (lo, hi) in bestiario.FAIXAS_DE_CR.items() if lo <= cr <= hi
+        ]
+        assert len(faixas) == 1, f"{c['nome']} (CR {c.get('cr')}) cai em {faixas}"
+        assert bestiario.tier_do_cr(cr) == faixas[0]
+
+    # As faixas se encostam sem deixar vão: o fim de uma e o começo da
+    # seguinte não podem ter um CR inteiro entre eles.
+    limites = sorted(bestiario.FAIXAS_DE_CR.values())
+    for (_lo, fim), (inicio, _hi) in zip(limites, limites[1:]):
+        assert inicio - fim <= 1, f"há CR entre {fim} e {inicio} sem tier"
+    print(f"  as faixas de CR cobrem as {len(criaturas)} criaturas: ok")
+
+
 def caso_metade_no_sucesso():
     ankheg = monstro_de({"nome": "Ankheg"})[0]
     efeito = ankheg.habilidade
@@ -235,6 +280,8 @@ async def main():
         caso_sala_so_com_nome()
         caso_golpes_diferentes()
         caso_teste_no_golpe()
+        caso_o_documento_das_criaturas_esta_em_dia()
+        caso_o_tier_do_cr_cobre_o_bestiario_inteiro()
         caso_metade_no_sucesso()
         caso_matilha()
         caso_regeneracao()

@@ -12,6 +12,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
+from src import habilidades as H  # noqa: E402
 from src import (  # noqa: E402
     classes,
     condicoes as C,
@@ -415,6 +416,75 @@ async def caso_sala_vencida_nao_castiga_quem_falhou():
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print("  sala vencida nao castiga quem falhou nela: ok")
+
+
+async def caso_voltar_do_chao_custa_exaustao():
+    """Levantar por cura custa 1 ponto de Exaustão, nas três curas.
+
+    O preço é de SAIR DO ZERO, e não da cura: cobra igual venha de magia
+    apontada, de cura em grupo ou da regeneração por turno. A Exaustão não
+    decai com o combate — só o descanso tira, um por descanso —, então o
+    custo é alto de propósito: cinco quedas tiram o personagem da incursão.
+    """
+    conn, canal, cog, incursao = await preparar(salas_de("Evento", 10))
+    run = await montar_run(conn, canal, cog)
+    alvo_id, grupo_id, regen_id = JOGADORES[0], JOGADORES[1], JOGADORES[2]
+
+    async def exaustao_de(user_id):
+        return (await db.condicoes_de(conn, run["id"], user_id)).get("exaustao", 0)
+
+    def estado_com(combatentes):
+        return motor.EstadoCombate([], 1, combatentes)
+
+    curar = next(
+        h for h in H.POR_ID.values() if (h.acao or {}).get("tipo") == "cura"
+        and (h.acao or {}).get("alvo") == "aliado"
+    )
+
+    # 1) a cura de alvo escolhido
+    await db.definir_hp(conn, run["id"], alvo_id, 0)
+    combatentes = await cog._combatentes(run)
+    texto = await cog._resolver_cura(
+        run, JOGADORES[4], curar, curar.acao, [alvo_id], estado_com(combatentes)
+    )
+    assert await exaustao_de(alvo_id) == 1, await exaustao_de(alvo_id)
+    assert "volta do chão" in texto, texto
+
+    # Curar quem está DE PÉ não cobra nada.
+    await db.definir_hp(conn, run["id"], alvo_id, 5)
+    combatentes = await cog._combatentes(run)
+    await cog._resolver_cura(
+        run, JOGADORES[4], curar, curar.acao, [alvo_id], estado_com(combatentes)
+    )
+    assert await exaustao_de(alvo_id) == 1, "curar quem está de pé não cobra"
+
+    # 2) a cura em grupo
+    await db.definir_hp(conn, run["id"], grupo_id, 0)
+    combatentes = await cog._combatentes(run)
+    habilidade = type("H", (), {"nome": "Cancao de Cura", "id": "teste_grupo"})()
+    await cog._resolver_grupo(
+        run, estado_com(combatentes), habilidade,
+        {"tipo": "grupo", "cura_fracao": 0.3, "turnos": 1}, JOGADORES[4],
+    )
+    assert await exaustao_de(grupo_id) == 1, await exaustao_de(grupo_id)
+
+    # 3) a regeneração por turno
+    await db.definir_hp(conn, run["id"], regen_id, 0)
+    combatentes = await cog._combatentes(run)
+    for c in combatentes:
+        if c.user_id == regen_id:
+            c.cura_por_turno = 0.2
+    await cog._virar_efeitos(run, estado_com(combatentes))
+    assert await exaustao_de(regen_id) == 1, await exaustao_de(regen_id)
+
+    # E o preço ACUMULA: cair e voltar de novo custa outro ponto.
+    await db.definir_hp(conn, run["id"], alvo_id, 0)
+    combatentes = await cog._combatentes(run)
+    await cog._resolver_cura(
+        run, JOGADORES[4], curar, curar.acao, [alvo_id], estado_com(combatentes)
+    )
+    assert await exaustao_de(alvo_id) == 2, await exaustao_de(alvo_id)
+    print("  voltar do chão custa 1 de Exaustão nas três curas: ok")
 
 
 async def caso_a_cura_levanta_quem_caiu():
@@ -1135,6 +1205,7 @@ async def main():
 
     await caso_armadilha_cobra_dano_e_debuff()
     await caso_sala_vencida_nao_castiga_quem_falhou()
+    await caso_voltar_do_chao_custa_exaustao()
     await caso_a_cura_levanta_quem_caiu()
     await caso_a_cura_de_grupo_e_a_por_turno_levantam()
     await caso_evento_perdido_deixa_debuff_de_evento()

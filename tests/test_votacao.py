@@ -8,7 +8,8 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db  # noqa: E402
+from src import config, database as db, mercado  # noqa: E402
+from src.cogs.incursao import maioria_de  # noqa: E402
 from src.cogs.incursao import Incursoes, ViewVotacao  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
@@ -446,8 +447,70 @@ async def caso_o_tier_aparece_na_hora_de_escolher():
     print("  o tier aparece na hora de escolher a incursão: ok")
 
 
+async def caso_desistir_mostra_cartao_e_paga_as_salas():
+    """Abandonar a incursão deixa um cartão, e paga as salas vencidas.
+
+    A desistência era o único dos três fechos sem embed: ela mandava uma
+    linha de texto e nada mais, então o grupo saía sem ver por onde passou
+    nem com o que ficou. E não pagava nada — o ouro das salas atravessadas
+    ficava para trás junto com o bônus de conclusão.
+
+    Agora as salas vencidas pagam e o fecho não: o grupo atravessou o que
+    atravessou, o que ele não fez foi terminar.
+    """
+    conn, canal, cog = await preparar()
+    run = await montar_run_em_votacao(conn, canal, cog)
+    incursao = cog._incursao_da_run(run)
+
+    # Duas salas vencidas antes de o grupo desistir.
+    for passo, sala_id in ((1, "E1"), (2, "E2")):
+        await db.marcar_sala_superada(conn, run["id"], passo, sala_id)
+    tier = cog._tier_da_run(run) or 1
+    esperado = 2 * mercado.ouro_da_sala(tier)
+
+    # A maioria desiste.
+    total = len(await db.participantes(conn, run["id"]))
+    for user_id in JOGADORES[: maioria_de(total)]:
+        await cog.desistir.callback(cog, FakeInteraction(canal, user_id))
+
+    depois = await db.buscar_run(conn, run["id"])
+    assert depois["status"] == "desistiu", depois["status"]
+
+    # O cartão existe, e diz onde o grupo parou.
+    cartoes = [
+        m for m in canal.enviadas
+        if m.embeds and "abandonada" in (m.embeds[0].title or "")
+    ]
+    assert len(cartoes) == 1, f"esperava um cartão de desistência, achei {len(cartoes)}"
+    embed = cartoes[0].embeds[0]
+    assert incursao.nome in embed.title, embed.title
+    campos = {f.name: f.value for f in embed.fields}
+
+    # O ouro das salas entrou, e o cartão mostra.
+    for p in await db.quem_recebe_da_run(conn, run["id"]):
+        assert await db.ouro(conn, p["id"]) == esperado, (
+            f"{p['nome']} devia levar {esperado} das 2 salas vencidas"
+        )
+    assert any("Ouro" in nome for nome in campos), list(campos)
+
+    # E o preço de desistir está dito, com número.
+    deixado = campos.get("Ficou para trás", "")
+    assert str(mercado.ouro_da_incursao(tier)) in deixado, deixado
+    assert str(incursao.recompensa_mes) in deixado, deixado
+
+    # O bônus de fecho NÃO foi pago: desistir não é concluir.
+    assert await cog._pagar_o_fecho(run) > 0, (
+        "o bônus de conclusão não devia ter sido pago na desistência"
+    )
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  desistir mostra o cartão e paga as salas vencidas: ok")
+
+
 async def main():
     await caso_maioria_fecha_sem_esperar()
+    await caso_desistir_mostra_cartao_e_paga_as_salas()
     await caso_o_tier_aparece_na_hora_de_escolher()
     await caso_dois_cliques_juntos_abrem_a_sala_uma_vez()
     await caso_a_sala_fecha_uma_vez_so()

@@ -1023,6 +1023,54 @@ def run_fracassada(
     return e
 
 
+def run_desistida(
+    incursao: Incursao,
+    onde: Optional[Sala] = None,
+    passo: int = 0,
+    votos: int = 0,
+    total: int = 0,
+    lancamentos: Optional[list[dict]] = None,
+    total_org: int = 0,
+    caminho: Optional[list[Sala]] = None,
+    ouro: Optional[list[tuple[str, int]]] = None,
+    perdido: int = 0,
+) -> discord.Embed:
+    """O desfecho de uma run abandonada pelo grupo.
+
+    Antes a desistência só mandava uma linha de texto: não havia cartão, e
+    o grupo saía sem ver por onde passou nem com o que ficou. Era o único
+    dos três fechos sem embed.
+
+    `perdido` é o ouro do fecho que ficou para trás — o preço de desistir,
+    dito com número. As salas vencidas pagam; a conclusão não.
+    """
+    lugar = f" em **{onde.nome}**" if onde else ""
+    quanto = f" no passo {passo} de {incursao.passos}" if passo else ""
+    e = discord.Embed(
+        title=f"🏳️ {titulo_da_incursao(incursao)} — abandonada",
+        description=(
+            f"O grupo decidiu voltar{lugar}{quanto}, por {votos} de {total} votos. "
+            f"A incursão fica sem resolução, e {incursao.organizacao} vai saber "
+            f"por quem."
+        ),
+        color=COR_FALHA,
+    )
+    campo_caminho(e, caminho)
+    campo_ouro(e, ouro)
+    # O que desistir custou, com nome e numero: o bonus de fecho e os MEs
+    # nao saem de uma run abandonada.
+    deixado = [f"**{incursao.recompensa_mes} MEs** por participante"]
+    if perdido:
+        deixado.append(f"**{perdido}** de ouro do fecho")
+    e.add_field(
+        name="Ficou para trás",
+        value=" e ".join(deixado) + ". As salas vencidas pagaram; o fecho, não.",
+        inline=False,
+    )
+    _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
+    return _rodape(e, "O que o grupo atravessou valeu; o que faltava, não.")
+
+
 def run_concluida(
     incursao: Incursao,
     membros: list[discord.abc.User],

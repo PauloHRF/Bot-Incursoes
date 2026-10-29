@@ -276,8 +276,10 @@ async def caso_a_run_concluida_paga_todos_que_passaram():
     for passo, sala_id in ((1, "E1"), (2, "E2"), (3, objetivo.id)):
         await db.marcar_sala_superada(conn, run_id, passo, sala_id)
 
-    pagos = await cog._pagar_a_run(run)
+    # A vitoria paga as duas partes; a desistencia paga so a primeira.
+    pagos = await cog._pagar_as_salas(run)
     assert pagos == 2, f"esperava pagar 2 (o que ficou e o ejetado), pagou {pagos}"
+    assert await cog._pagar_o_fecho(run) == 2
 
     tier = cog._tier_da_run(run) or 1
     esperado = 3 * mercado.ouro_da_sala(tier) + mercado.ouro_da_incursao(tier)
@@ -291,7 +293,8 @@ async def caso_a_run_concluida_paga_todos_que_passaram():
     assert await db.ouro(conn, ids[JOGADORES[4]]) == 0, "quem nunca entrou"
 
     # Pagar de novo nao paga de novo: a chave e por run.
-    assert await cog._pagar_a_run(run) == 0
+    assert await cog._pagar_as_salas(run) == 0
+    assert await cog._pagar_o_fecho(run) == 0
     assert await db.ouro(conn, ids[ficou]) == esperado
     print(f"  o fecho paga {esperado} a cada um que passou, uma vez: ok")
 

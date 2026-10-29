@@ -1221,33 +1221,43 @@ class Incursoes(commands.Cog):
             self.bot.db, run["id"], self._passo(run), sala.id
         )
 
-    async def _pagar_a_run(self, run: dict[str, Any]) -> int:
-        """O ouro da incursao inteira, de uma vez, no fecho de uma vitoria.
+    async def _pagar_as_salas(self, run: dict[str, Any]) -> int:
+        """O ouro das salas que o grupo venceu, no fecho da run.
 
         Vai para TODOS que passaram pela run, e nao so para quem estava de
         pe no fim: quem caiu no objetivo e quem foi ejetado por Exaustao no
         meio do caminho jogaram a incursao e levam o mesmo que os outros.
 
-        O valor sai da contagem de salas superadas, entao nao depende de
+        O valor sai da CONTAGEM de salas superadas, entao nao depende de
         quem estava presente em qual sala — e o grupo que atravessou, nao
         cada um por si.
+
+        Separado do fecho porque a desistencia paga isto e nao paga aquele:
+        o grupo atravessou as salas, so nao terminou a incursao.
         """
         tier = self._tier_da_run(run) or 1
         superadas = await db.salas_superadas(self.bot.db, run["id"])
-        das_salas = superadas * mercado.ouro_da_sala(tier)
-        do_fecho = mercado.ouro_da_incursao(tier)
+        quanto = superadas * mercado.ouro_da_sala(tier)
         pagos = 0
         for p in await db.quem_recebe_da_run(self.bot.db, run["id"]):
-            recebeu = await db.lancar_ouro(
-                self.bot.db, p["id"], das_salas,
+            if await db.lancar_ouro(
+                self.bot.db, p["id"], quanto,
                 f"Salas superadas ({superadas})",
                 run_id=run["id"], chave="salas",
-            )
-            recebeu |= await db.lancar_ouro(
-                self.bot.db, p["id"], do_fecho, "Incursao concluida",
+            ):
+                pagos += 1
+        return pagos
+
+    async def _pagar_o_fecho(self, run: dict[str, Any]) -> int:
+        """O bonus de ter CONCLUIDO a incursao. So a vitoria paga."""
+        quanto = mercado.ouro_da_incursao(self._tier_da_run(run) or 1)
+        pagos = 0
+        for p in await db.quem_recebe_da_run(self.bot.db, run["id"]):
+            if await db.lancar_ouro(
+                self.bot.db, p["id"], quanto, "Incursao concluida",
                 run_id=run["id"], chave="conclusao",
-            )
-            pagos += 1 if recebeu else 0
+            ):
+                pagos += 1
         return pagos
 
     async def _creditar(
@@ -2867,6 +2877,30 @@ class Incursoes(commands.Cog):
         """
         return motor.curar(alvo, acao["fracao"] + max(0.0, bonus_pct or 0.0))
 
+    async def _cobrar_o_retorno(self, run: dict[str, Any], quem) -> str:
+        """Voltar do chão custa 1 ponto de Exaustão. Devolve a linha do aviso.
+
+        O preço é de SAIR DO ZERO, e não da cura: cobra igual venha de uma
+        magia apontada em alguém, da cura que cai no grupo ou da regeneração
+        por turno. Quem decide levantar paga, e quem é levantado sem ninguém
+        decidir paga também — o corpo não sabe a diferença.
+
+        A Exaustão **não decai com o combate**: só o descanso tira, um ponto
+        por descanso. Cinco quedas numa incursão tiram o personagem dela, e
+        é de propósito que o custo seja alto.
+
+        O combatente em memória não é recalculado: a penalidade entra no
+        saldo na próxima vez que o estado for montado, como acontece com
+        toda condição aplicada no meio do combate.
+        """
+        stacks = await db.aplicar_condicao(
+            self.bot.db, run["id"], quem.user_id, condicoes.EXAUSTAO
+        )
+        return (
+            f"**{quem.nome}** volta do chão e fica com "
+            f"{condicoes.rotulo(condicoes.EXAUSTAO, stacks)}"
+        )
+
     async def _limpar_atordoamento(self, run: dict[str, Any], alvo) -> None:
         """Tira o atordoamento de quem recebeu cura (Restauração, do clérigo)."""
         if not getattr(alvo, "atordoado", False):
@@ -2889,8 +2923,14 @@ class Incursoes(commands.Cog):
 
         quem_curou = await self._personagem_na_run(run, user_id)
         dele = ((quem_curou or {}).get("efeitos") or {})
+        estava_caido = alvo.caido
         curado = self._quanto_cura(alvo, acao, dele.get("bonus_cura_pct"))
         await db.definir_hp(self.bot.db, run["id"], alvo.user_id, alvo.hp_atual)
+        retorno = (
+            await self._cobrar_o_retorno(run, alvo)
+            if estava_caido and not alvo.caido
+            else ""
+        )
         # Restauracao, do clerigo: a cura tira o atordoamento de quem recebe.
         if curado and dele.get("cura_limpa_controle"):
             await self._limpar_atordoamento(run, alvo)
@@ -2913,9 +2953,10 @@ class Incursoes(commands.Cog):
             await db.definir_thp(self.bot.db, run["id"], alvo.user_id, alvo.thp)
         if curado:
             extra = f" e fica com **{temporario}** de THP" if temporario else ""
+            cobranca = f"\n\u00b7 {retorno}." if retorno else ""
             texto = (
                 f"\u2728 **{habilidade.nome}**: {alvo.nome} recupera **{curado}** de HP "
-                f"({alvo.hp_atual}/{alvo.hp_max}){extra}."
+                f"({alvo.hp_atual}/{alvo.hp_max}){extra}.{cobranca}"
             )
         else:
             texto = (
@@ -2948,13 +2989,19 @@ class Incursoes(commands.Cog):
             bonus = ((quem_curou or {}).get("efeitos") or {}).get("bonus_cura_pct")
             como = {"fracao": acao["cura_fracao"]}
             curados = {}
+            levantados = []
             # `combatentes` e nao `vivos`: a cura em grupo levanta os caidos,
             # como a cura de alvo escolhido.
             for c in estado.combatentes:
+                estava_caido = c.caido
                 if self._quanto_cura(c, como, bonus):
                     curados[c.user_id] = c.hp_atual
+                if estava_caido and not c.caido:
+                    levantados.append(c)
             if curados:
                 await db.definir_hp_varios(self.bot.db, run["id"], curados)
+            for c in levantados:
+                linhas.append(await self._cobrar_o_retorno(run, c))
             total = acao["cura_fracao"] + max(0.0, bonus or 0.0)
             # `round`, e nao `int`: 0.35 + 0.10 da 0.44999999999999996 em
             # float, e truncar mostraria "44%" numa cura de 45%.
@@ -3644,17 +3691,25 @@ class Incursoes(commands.Cog):
         """No fim da rodada: cura de quem tem cura por turno, e prazos vencidos."""
         passo = self._passo(run)
         curas = {}
+        levantados = []
         # `combatentes` e nao `vivos`: a cura por turno levanta caido como as
         # outras. Grupo INTEIRO no chao nao chega aqui — o laco do `_avancar`
         # ve `estado.encerrado` antes de virar a rodada e encerra o combate —,
         # entao a regeneracao socorre quem caiu, mas nao desfaz uma derrota.
         for c in estado.combatentes:
             if c.cura_por_turno:
+                estava_caido = c.caido
                 ganho = motor.curar(c, c.cura_por_turno)
                 if ganho:
                     curas[c.user_id] = c.hp_atual
+                if estava_caido and not c.caido:
+                    levantados.append(c)
         if curas:
             await db.definir_hp_varios(self.bot.db, run["id"], curas)
+        # A regeneracao levanta sem ninguem decidir, e cobra igual: a linha
+        # entra no registro da rodada para o grupo ver o preco.
+        for c in levantados:
+            self._registrar(run, estado.rodada, [await self._cobrar_o_retorno(run, c)])
         await self._sangrar_acorrentados(run, estado)
         await self._refazer_saves(run, estado)
         await db.limpar_efeitos_vencidos(self.bot.db, run["id"], passo, estado.rodada)
@@ -3769,9 +3824,10 @@ class Incursoes(commands.Cog):
             await self._creditar(
                 run, incursao.pontos_conclusao, "Objetivo cumprido", "conclusao"
             )
-            # Aqui, e em nenhum outro lugar: a incursao so paga quando e
-            # concluida.
-            await self._pagar_a_run(run)
+            # A vitoria paga as duas partes: as salas atravessadas e o
+            # bonus de ter fechado a incursao.
+            await self._pagar_as_salas(run)
+            await self._pagar_o_fecho(run)
             if canal:
                 # Desfecho num embed so: vitoria, como o grupo saiu, MEs e pontos.
                 lancamentos, total = await self._balanco(run)
@@ -4419,10 +4475,36 @@ class Incursoes(commands.Cog):
         necessarios = maioria_de(total)
 
         if len(votos) >= necessarios:
+            # A sala onde o grupo parou, LIDA ANTES de encerrar: o encerramento
+            # tira os botoes e nao quero depender da ordem para saber onde foi.
+            onde = await self._sala_corrente(run)
+            passo = self._passo(run)
             await self._encerrar_run(run, "desistiu")
+            # As salas vencidas pagam; o fecho, nao. O grupo atravessou o que
+            # atravessou — o que ele nao fez foi terminar.
+            await self._pagar_as_salas(run)
+            incursao = self._incursao_da_run(run)
             await interaction.response.send_message(
                 f"A run #{run['id']} foi abandonada por decisão do grupo "
-                f"({len(votos)}/{total}). Ninguém recebe MEs."
+                f"({len(votos)}/{total})."
+            )
+            canal = await self._canal(run)
+            if not (canal and incursao):
+                return
+            lancamentos, total_org = await self._balanco(run)
+            await canal.send(
+                embed=E.run_desistida(
+                    incursao,
+                    onde=onde,
+                    passo=passo,
+                    votos=len(votos),
+                    total=total,
+                    lancamentos=lancamentos,
+                    total_org=total_org,
+                    caminho=await self._caminho(run),
+                    ouro=await db.ouro_da_run(self.bot.db, run["id"]),
+                    perdido=mercado.ouro_da_incursao(self._tier_da_run(run) or 1),
+                )
             )
             return
 

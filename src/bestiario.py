@@ -20,6 +20,38 @@ ARQUIVO = Path(__file__).resolve().parent.parent / "data" / "bestiario.json"
 _indice: Optional[dict[str, dict[str, Any]]] = None
 
 
+# A faixa de CR que cada tier do grupo encontra. É esta tabela que decide
+# a dificuldade do jogo: `tools/balanco.py` tira dela a criatura típica de
+# cada tier, e é contra essa criatura que as classes são medidas.
+#
+# O `meta.tier` que vem em cada entrada NÃO é isto: ele vem do arquivo de
+# origem, `data/planilhas/fichas_monstros.json`, e discorda desta tabela em
+# um terço do bestiário. Quem manda na dificuldade é esta — a outra é um
+# rótulo de quem exportou os dados.
+FAIXAS_DE_CR = {1: (0.0, 1.0), 2: (2.0, 4.0), 3: (5.0, 8.0), 4: (9.0, 13.0),
+                5: (14.0, 99.0)}
+
+
+def cr_de(criatura: dict[str, Any]) -> float:
+    """O CR como número: '1/2' vira 0.5, e o que falta vira 0."""
+    texto = str(criatura.get("cr", "0") or "0")
+    if "/" in texto:
+        a, b = texto.split("/")
+        return float(a) / float(b)
+    try:
+        return float(texto)
+    except ValueError:
+        return 0.0
+
+
+def tier_do_cr(cr: float) -> int:
+    """O tier do grupo que encontra uma criatura daquele CR."""
+    for tier, (lo, hi) in FAIXAS_DE_CR.items():
+        if lo <= cr <= hi:
+            return tier
+    return max(FAIXAS_DE_CR)
+
+
 def carregar(arquivo: Path = ARQUIVO) -> list[dict[str, Any]]:
     """Todas as criaturas do bestiário. Sem o arquivo, o bestiário está vazio."""
     if not arquivo.exists():

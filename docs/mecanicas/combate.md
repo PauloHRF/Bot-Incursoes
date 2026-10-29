@@ -49,6 +49,10 @@ A 0 de HP o personagem cai: perde a vez enquanto estiver no chão e deixa de ser
 
 **Cura levanta.** Qualquer cura — a apontada em alguém, a que cai no grupo e a que vem por turno — tira do chão quem está a 0, e ele volta com o que a cura deu. A conta é a de sempre, de 0 para cima: nada é somado nem descontado por o alvo estar caído, e a Debilidade corta essa cura como corta as outras. Quem levanta volta a agir na própria vez seguinte.
 
+**E voltar do chão custa 1 ponto de Exaustão.** O preço é de sair do zero, não da cura: cobra igual nas três, inclusive na regeneração por turno, que levanta sem ninguém decidir. Curar quem está de pé não cobra nada.
+
+A Exaustão **não decai com o combate** — só o descanso tira, um ponto por descanso — e com 5 pontos o personagem sai da incursão. Então o custo acumula: cair e voltar várias vezes numa incursão é o caminho mais rápido para ficar fora dela, e segurar o aliado de pé vale mais que levantá-lo depois.
+
 Isso **não** desfaz uma derrota: caindo o grupo inteiro, o combate encerra antes de a rodada virar, e a cura por turno nem chega a rodar. Vida temporária segue sendo outra história — quem está no chão não ganha THP, porque THP não levanta ninguém.
 
 Fora do combate, quem caiu também volta de pé no Descanso.
