@@ -71,11 +71,9 @@ Soma +5 em todo teste de perícia.
 **Acerto:** +6  
 **Dano:** 3d6+4
 
-### **Escolha — Expertise**
+### **Passiva — Marca Fatal**
 
-Escolhe 2 perícias com proficiência; o bônus delas dobra.
-
-Escolhe 2 perícias com proficiência; dobra o bônus.
+Todo acerto seu marca o inimigo. Na 3a marca elas explodem de uma vez, sem rolar acerto. Passar 3 turnos sem marcar o mesmo inimigo perde as marcas dele; marcar de novo devolve o prazo inteiro.
 
 ---
 
@@ -88,11 +86,11 @@ Escolhe 2 perícias com proficiência; dobra o bônus.
 **Acerto:** +7  
 **Dano:** 4d6+4
 
-### **Ativa — Uncanny Dodge**
+### **Ativa — Furtividade**
 
 **1x por combate.**
 
-Corta pela metade o primeiro golpe pesado que sofrer.
+Ataca e se esconde. Pelos 3 turnos seguintes a sua ameaça para de subir, mesmo atacando — e segue podendo cair.
 
 ---
 
@@ -107,7 +105,7 @@ Corta pela metade o primeiro golpe pesado que sofrer.
 
 ### **Escolha — Expertise**
 
-Escolhe mais 2 perícias com proficiência; o bônus delas dobra.
+Escolhe 2 perícias com proficiência; o bônus delas dobra.
 
 Escolhe 2 perícias com proficiência; dobra o bônus.
 
@@ -122,9 +120,9 @@ Escolhe 2 perícias com proficiência; dobra o bônus.
 **Acerto:** +10  
 **Dano:** 6d6+5
 
-### **Passiva — Reliable Talent +**
+### **Passiva — Marca Fatal +**
 
-Soma +10 em todo teste de perícia.
+A explosao passa a 3d6 por marca. E o inimigo que morre antes dela não leva as marcas embora: você escolhe para quem elas passam, com o prazo que faltava.
 
 ---
 

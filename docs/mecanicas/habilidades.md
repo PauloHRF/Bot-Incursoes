@@ -1,6 +1,6 @@
 # Habilidades: a gramática do catálogo
 
-145 habilidades em 14 classes: 19 passivas, 88 ativas e 38 escolhas. O conteúdo de cada uma está em `docs/FICHAS.md`; aqui está a regra de como elas funcionam.
+145 habilidades em 14 classes: 20 passivas, 88 ativas e 37 escolhas. O conteúdo de cada uma está em `docs/FICHAS.md`; aqui está a regra de como elas funcionam.
 
 ## A forma de cada classe
 
@@ -16,7 +16,7 @@ Não há uma forma só, e a tabela é gerada do catálogo em vez de afirmada: as
 | Druida | 3 magias + 1 escolha | 1 escolha | 3 magias + 1 escolha | 1 ativa + 1 escolha | 3 magias + 1 escolha |
 | Feiticeiro | 3 magias + 1 escolha | 1 escolha | 3 magias + 1 escolha | 1 escolha | 3 magias + 1 escolha |
 | Guerreiro | 1 ativa | 1 escolha | 1 ativa + 1 passiva | 1 passiva | 1 ativa |
-| Ladino | 1 passiva | 1 escolha | 1 ativa | 1 escolha | 1 passiva |
+| Ladino | 1 passiva | 1 passiva | 1 ativa | 1 escolha | 1 passiva |
 | Mago | 3 magias + 1 escolha | 1 passiva | 3 magias + 1 escolha | 1 escolha | 3 magias + 1 escolha |
 | Monge | 1 ativa | 1 passiva | 1 ativa + 1 passiva | 1 passiva | 1 ativa |
 | Paladino | 1 ativa | 1 passiva | 1 ativa | 1 ativa + 1 passiva | 1 ativa |
@@ -55,11 +55,11 @@ Três exceções, e cada uma tem motivo:
 
 **Chave fora da lista conhecida é descartada em silêncio.** É a pegadinha do módulo: um efeito novo escrito com o nome errado simplesmente não acontece, sem erro nenhum. Por isso existem testes que varrem o catálogo inteiro conferindo os nomes — eles já pegaram três bugs reais que nenhum teste de comportamento pegava.
 
-## As 33 chaves de efeito
+## As 35 chaves de efeito
 
 Um efeito com qualquer uma destas vale sozinho, sem código novo no cog:
 
-`acerto`, `alvos_extra`, `ameaca`, `ataques`, `aura_save`, `bichinho_cura`, `bonus_cura_pct`, `bonus_iniciativa`, `bonus_pericia`, `bonus_save`, `bonus_save_atributo`, `bonus_sem_treino`, `bonus_teste`, `ca`, `cd_magia`, `critico_em`, `cura_limpa_controle`, `dado_inspiracao`, `dano_bonus`, `dano_extra`, `dano_ferido`, `dano_magia`, `escudo_arcano`, `expertise`, `flash_bonus`, `forma_lunar`, `infusao`, `magia_rapida`, `save_com_desvantagem`, `sequencia`, `thp_ao_derrubar`, `thp_na_cura`, `totem`
+`acerto`, `alvos_extra`, `ameaca`, `ataques`, `aura_save`, `bichinho_cura`, `bonus_cura_pct`, `bonus_iniciativa`, `bonus_pericia`, `bonus_save`, `bonus_save_atributo`, `bonus_sem_treino`, `bonus_teste`, `ca`, `cd_magia`, `critico_em`, `cura_limpa_controle`, `dado_inspiracao`, `dano_bonus`, `dano_extra`, `dano_ferido`, `dano_magia`, `escudo_arcano`, `expertise`, `flash_bonus`, `forma_lunar`, `infusao`, `magia_rapida`, `marca_fatal`, `marca_fatal_transfere`, `save_com_desvantagem`, `sequencia`, `thp_ao_derrubar`, `thp_na_cura`, `totem`
 
 ## As ações
 

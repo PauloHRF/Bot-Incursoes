@@ -99,7 +99,7 @@ def caso_catalogo_das_escolhas():
                 assert forma["aplica"] in ("expertise", "proficiencia")
             decidiveis.append(h.id)
     assert set(decidiveis) == {
-        "fighting_style", "expertise_1", "expertise_2",
+        "fighting_style", "expertise_2",
         "primal_knowledge", "escolha_totemica",
         "magia_t1", "dominio_t2", "magia_t3", "dominio_t4", "magia_t5",
         "ferramenta_t1", "infusao", "engenho_t3",
@@ -125,8 +125,14 @@ def caso_pendencias_por_nivel():
     ]
     # decidido, sai da lista
     assert cl.escolhas_pendentes("guerreiro", 3, {"fighting_style": "pesado"}) == []
-    # o Ladino decide duas vezes: tier 2 e tier 4
-    assert len(cl.escolhas_pendentes("ladino", 8, {})) == 2
+    # Uma classe que decide em DOIS tiers diferentes: o bruxo escolhe o
+    # pacto no 1 e a invocacao no 2. Era o ladino aqui, com a Expertise do
+    # tier 2 e a do 4, mas o rework da ficha dele deixou so a do tier 4.
+    pendentes = [h.id for _t, h in cl.escolhas_pendentes("bruxo", 4, {})]
+    assert len(pendentes) == 2, pendentes
+    # e decidir uma tira so aquela da lista
+    uma = cl.escolhas_pendentes("bruxo", 4, {pendentes[0]: "qualquer"})
+    assert [h.id for _t, h in uma] == pendentes[1:], uma
     print("  a pendencia aparece no tier certo e some quando decidida: ok")
 
 
@@ -165,13 +171,13 @@ async def caso_expertise_dobra_a_proficiencia():
     dono = JOGADORES[0]
     pid = await db.criar_personagem(
         conn, GUILD, dono, "Sombra", "ladino",
-        ["Furtividade", "Acrobacia", "Percepção"], nivel=4,
+        ["Furtividade", "Acrobacia", "Percepção"], nivel=7,
     )
     antes = await db.buscar_personagem(conn, pid)
     sem = mod_pericia("Furtividade", antes["numeros"], antes["pericias"], None, antes["efeitos"])
 
     inter = await escolher(
-        cog, canal, dono, pid, "expertise_1", ["Furtividade", "Acrobacia"]
+        cog, canal, dono, pid, "expertise_2", ["Furtividade", "Acrobacia"]
     )
     assert "Furtividade" in inter.resposta
 
@@ -192,19 +198,19 @@ async def caso_expertise_so_oferece_o_que_tem_proficiencia():
     conn, canal, cog = await preparar()
     dono = JOGADORES[0]
     pid = await db.criar_personagem(
-        conn, GUILD, dono, "Sombra", "ladino", ["Furtividade", "Acrobacia"], nivel=4
+        conn, GUILD, dono, "Sombra", "ladino", ["Furtividade", "Acrobacia"], nivel=7
     )
     abrindo = FakeInteraction(canal, dono)
-    await cog.abrir_escolha(abrindo, pid, "expertise_1")
+    await cog.abrir_escolha(abrindo, pid, "expertise_2")
     view = menu_de(abrindo)
     assert isinstance(view, SeletorPericiasDaEscolha)
     assert {o.label for o in view.menu.options} == {"Furtividade", "Acrobacia"}
 
     # Sem nenhuma proficiencia nao ha o que dobrar, e o bot explica onde elas
     # sao escolhidas — `/ficha pericias` saiu, entao nao da para mandar rodar.
-    vazio = await db.criar_personagem(conn, GUILD, dono, "Cru", "ladino", [], nivel=4)
+    vazio = await db.criar_personagem(conn, GUILD, dono, "Cru", "ladino", [], nivel=7)
     inter = FakeInteraction(canal, dono)
-    await cog.abrir_escolha(inter, vazio, "expertise_1")
+    await cog.abrir_escolha(inter, vazio, "expertise_2")
     assert "nenhuma para dobrar" in inter.resposta, inter.resposta
     assert "/ficha" not in inter.resposta, "nao pode citar comando que saiu"
     print("  Expertise so oferece pericia com proficiencia: ok")
@@ -284,17 +290,19 @@ async def caso_upar_conduz_a_escolha():
 
 
 async def caso_decisoes_em_fila():
-    """Com mais de uma pendencia, uma puxa a outra sem comando no meio."""
+    """Com mais de uma pendencia, uma puxa a outra sem comando no meio.
+
+    O bruxo, que deve o pacto do tier 1 e a invocacao do tier 2. Era o
+    ladino aqui, com as duas Expertises — mas o rework da ficha dele deixou
+    uma so, e hoje NENHUMA classe tem duas escolhas de pericia. O caso e
+    sobre a FILA, e nao sobre pericia: por isso ele passou a ler as opcoes
+    do proprio menu em vez de citar pericias pelo nome.
+    """
     conn, canal, cog = await preparar()
     dono = JOGADORES[0]
-    # Ladino no tier 3 devendo a Expertise do tier 2; ao subir para o 4, deve duas
-    # Com a cota CHEIA: um personagem abaixo dela e estado invalido desde
-    # que o menu passou a exigir a quantidade exata, e o upar cobra as
-    # que faltam antes de subir. Aqui o caso e sobre a fila de DECISOES.
     pid = await db.criar_personagem(
-        conn, GUILD, dono, "Sombra", "ladino",
-        ["Furtividade", "Acrobacia", "Percepção", "Atletismo",
-         "Enganação", "Intuição"], nivel=5,
+        conn, GUILD, dono, "Sombra", "bruxo",
+        ['Acrobacia', 'Adestrar Animais', 'Arcanismo', 'Atletismo'], nivel=1,
     )
     inter = FakeInteraction(canal, dono)
     await cog.upar.callback(cog, inter)
@@ -302,18 +310,20 @@ async def caso_decisoes_em_fila():
     assert "ainda faltam 1" in leu(inter), leu(inter)
 
     # gravando a primeira, a segunda abre sozinha
-    menu_de(inter).menu._values = ["Furtividade", "Acrobacia"]
+    primeiro = menu_de(inter)
+    primeiro.menu._values = [primeiro.menu.options[0].value]
     segunda = FakeInteraction(canal, dono)
-    await menu_de(inter)._escolher(segunda)
+    await primeiro._escolher(segunda)
     assert "Decida agora" in leu(segunda), leu(segunda)
-    assert isinstance(menu_de(segunda), SeletorPericiasDaEscolha)
+    assert menu_de(segunda) is not None, "a segunda decisao nao abriu"
 
-    menu_de(segunda).menu._values = ["Percepção"]
+    segundo = menu_de(segunda)
+    segundo.menu._values = [segundo.menu.options[0].value]
     fim = FakeInteraction(canal, dono)
-    await menu_de(segunda)._escolher(fim)
+    await segundo._escolher(fim)
     pronto = await db.buscar_personagem(conn, pid)
-    assert pronto["pendencias"] == []
-    assert set(pronto["efeitos"]["expertise"]) == {"Furtividade", "Acrobacia", "Percepção"}
+    assert pronto["pendencias"] == [], pronto["pendencias"]
+    assert len(pronto["escolhas"]) == 2, pronto["escolhas"]
     print("  uma decisao puxa a proxima ate acabarem: ok")
 
 

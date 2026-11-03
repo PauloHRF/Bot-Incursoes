@@ -98,25 +98,46 @@ MULTIATAQUE = Habilidade(
 )
 
 
+# Quanto cada Marca Fatal explode, pelo tier do LADINO — e não do grupo.
+# Sai da tabela da ficha dele; o tier 1 está aqui por completude, porque a
+# habilidade só começa no 2. Três marcas é o teto, então o estrago máximo é
+# três vezes isto.
+DANO_DA_MARCA = {1: "1d6", 2: "1d6", 3: "2d6", 4: "2d6", 5: "3d6"}
+
+# Quantas marcas o inimigo aguenta antes de elas explodirem, e por quantos
+# turnos elas esperam um acerto novo antes de cair sozinhas.
+MARCAS_PARA_EXPLODIR = 3
+TURNOS_DA_MARCA = 3
+
+
 HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
     "ladino": {
         1: [Habilidade("reliable_talent", "Reliable Talent", PASSIVA,
                        "Soma +5 em todo teste de pericia.", {"bonus_teste": 5})],
-        2: [Habilidade("expertise_1", "Expertise", ESCOLHA,
+        2: [Habilidade("marca_fatal", "Marca Fatal", PASSIVA,
+                       f"Todo acerto seu marca o inimigo. Na "
+                       f"{MARCAS_PARA_EXPLODIR}a marca elas explodem de uma "
+                       f"vez, sem rolar acerto. Passar {TURNOS_DA_MARCA} "
+                       f"turnos sem marcar o mesmo inimigo perde as marcas "
+                       f"dele; marcar de novo devolve o prazo inteiro.",
+                       {"marca_fatal": True})],
+        3: [Habilidade("furtividade", "Furtividade", ATIVA,
+                       f"1x por combate: ataca e se esconde. Pelos "
+                       f"{TURNOS_DA_MARCA} turnos seguintes a sua ameaca para "
+                       f"de subir, mesmo atacando — e segue podendo cair.",
+                       usos=_usos("combate"),
+                       acao={"tipo": "golpes", "quantidade": 1,
+                             "furtividade": TURNOS_DA_MARCA})],
+        4: [Habilidade("expertise_2", "Expertise", ESCOLHA,
                        "Escolhe 2 pericias com proficiencia; o bonus delas dobra.",
                        escolha={"tipo": "pericias", "quantidade": 2,
                                 "entre": "proficientes", "aplica": "expertise"})],
-        3: [Habilidade("uncanny_dodge", "Uncanny Dodge", ATIVA,
-                       "1x por combate: corta pela metade o primeiro golpe pesado que sofrer.",
-                       usos=_usos("combate"),
-                       acao={"tipo": "reacao", "quando": "sofreu_golpe",
-                             "reduz": 0.5, "limiar": 1 / 3})],
-        4: [Habilidade("expertise_2", "Expertise", ESCOLHA,
-                       "Escolhe mais 2 pericias com proficiencia; o bonus delas dobra.",
-                       escolha={"tipo": "pericias", "quantidade": 2,
-                                "entre": "proficientes", "aplica": "expertise"})],
-        5: [Habilidade("reliable_talent_mais", "Reliable Talent +", PASSIVA,
-                       "Soma +10 em todo teste de pericia.", {"bonus_teste": 10})],
+        5: [Habilidade("marca_fatal_mais", "Marca Fatal +", PASSIVA,
+                       "A explosao passa a 3d6 por marca. E o inimigo que "
+                       "morre antes dela nao leva as marcas embora: voce "
+                       "escolhe para quem elas passam, com o prazo que "
+                       "faltava.",
+                       {"marca_fatal": True, "marca_fatal_transfere": True})],
     },
     "barbaro": {
         1: [Habilidade("rage", "Rage", ATIVA,
@@ -1343,12 +1364,34 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
 
 # Toda habilidade pelo id, para quem so tem o id na mao (o turno gravado, por
 # exemplo) e precisa do nome.
-POR_ID: dict[str, Habilidade] = {
-    h.id: h
-    for tabela in HABILIDADES.values()
-    for lista in tabela.values()
-    for h in lista
-}
+# Habilidades que existem no catalogo e que NENHUMA classe lista.
+#
+# Estas duas eram do Ladino antes do rework da ficha dele, e ficam escritas
+# para voltarem facil — num tier novo dele, ou em outra classe. Ninguem as
+# tem hoje.
+#
+# Fora de `HABILIDADES` de proposito: aquele dicionario e lido POR CLASSE em
+# `classes.py`, e uma chave que nao fosse classe levantaria KeyError no laco
+# que pendura as habilidades.
+SEM_DONO: list[Habilidade] = [
+    Habilidade("uncanny_dodge", "Uncanny Dodge", ATIVA,
+               "1x por combate: corta pela metade o primeiro golpe pesado que sofrer.",
+               usos=_usos("combate"),
+               acao={"tipo": "reacao", "quando": "sofreu_golpe",
+                     "reduz": 0.5, "limiar": 1 / 3}),
+    Habilidade("reliable_talent_mais", "Reliable Talent +", PASSIVA,
+               "Soma +10 em todo teste de pericia.", {"bonus_teste": 10}),
+]
+
+POR_ID: dict[str, Habilidade] = {h.id: h for h in SEM_DONO}
+POR_ID.update(
+    {
+        h.id: h
+        for tabela in HABILIDADES.values()
+        for lista in tabela.values()
+        for h in lista
+    }
+)
 
 
 # O que o motor entende, e o valor neutro de cada coisa.
@@ -1404,6 +1447,13 @@ NEUTRO: dict = {
     # Botas do mercado: a ordem do combate. Nao e save de DES — o save mede
     # esquivar, e isto mede chegar antes.
     "bonus_iniciativa": 0,
+    # Marca Fatal, do ladino: todo acerto dele marca o inimigo. Precisa estar
+    # AQUI, e nao so na habilidade — `juntar_efeito` descarta em silencio a
+    # chave que nao esta neste padrao, e a passiva simplesmente nao valeria.
+    "marca_fatal": False,
+    # Marca Fatal +: a explosao nao se perde com o inimigo que morre antes
+    # dela. Chave propria porque e o tier 5 que a liga, e nao a marca.
+    "marca_fatal_transfere": False,
 }
 
 # Chaves que SOMAM em vez de valer a maior. A regra da casa para passiva e

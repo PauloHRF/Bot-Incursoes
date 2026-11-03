@@ -139,7 +139,7 @@ cura e área geram o dobro.
 
 | Classe | T1 | T2 | T3 | T4 | T5 |
 |---|---|---|---|---|---|
-| Ladino | +10 | +12 | +13 | +15 | +21 |
+| Ladino | +10 | +12 | +13 | +15 | +16 |
 | Druida | +5 | +10 | +11 | +13 | +14 |
 | Monge | +5 | +7 | +8 | +12 | +13 |
 | Bárbaro | +5 | +7 | +8 | +10 | +11 |
@@ -227,7 +227,7 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Bruxo | Healing Light | 18 | 18 × 1.00 | 18 de cura |
 | << | Bardo | Invisibility | 11 | 8 × 1.42 | 8 de mira desviada |
 | << | Patrulheiro | Rajada do Cacador | 7 | 5 × 1.42 | 5 de golpe a mais |
-| << | Ladino | Uncanny Dodge | 0 | 0 × 3.08 | efeito que esta conta não cobre (reação, vantagem) |
+| << | Ladino | Furtividade | 0 | 0 × 3.08 | efeito que esta conta não cobre (reação, vantagem) |
 | << | Bárbaro | Reckless Attack | 0 | 0 × 3.08 | efeito que esta conta não cobre (reação, vantagem) |
 
 ### Tier 4 — mediana 0 HP-eq, 6 ativas

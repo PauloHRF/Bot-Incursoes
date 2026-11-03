@@ -126,10 +126,28 @@ def caso_catalogo_completo():
 
 
 def caso_efeitos_se_somam():
-    """A versão mais forte substitui a fraca, em vez de somar em cima."""
-    # Reliable Talent: +5 no tier 1, +10 no tier 5 (nao +15)
-    assert cl.efeitos("ladino", 1)["bonus_teste"] == 5
-    assert cl.efeitos("ladino", 9)["bonus_teste"] == 10
+    """A versão mais forte substitui a fraca, em vez de somar em cima.
+
+    Testa a REGRA, em `juntar_efeito`, e não uma classe que por acaso tem
+    duas versões do mesmo bônus. O par que servia de exemplo — o Reliable
+    Talent do ladino, +5 no tier 1 e +10 no tier 5 — saiu do jogo no rework
+    da ficha dele, e hoje nenhuma classe tem dois valores da mesma chave.
+    Amarrar a regra a conteúdo a deixava sem teste no dia em que o conteúdo
+    mudasse, que é exatamente o que aconteceu.
+    """
+    juntos = dict(hb.NEUTRO)
+    hb.juntar_efeito(juntos, {"bonus_teste": 5})
+    hb.juntar_efeito(juntos, {"bonus_teste": 10})
+    assert juntos["bonus_teste"] == 10, "vale a maior, nao a soma"
+    hb.juntar_efeito(juntos, {"bonus_teste": 5})
+    assert juntos["bonus_teste"] == 10, "a mais fraca depois nao rebaixa"
+
+    # E a excecao escrita: o bonus de cura SOMA, porque duas fontes de 10%
+    # com max() fariam a segunda escolha nao acrescentar nada.
+    curas = dict(hb.NEUTRO)
+    hb.juntar_efeito(curas, {"bonus_cura_pct": 0.1})
+    hb.juntar_efeito(curas, {"bonus_cura_pct": 0.1})
+    assert round(curas["bonus_cura_pct"], 2) == 0.2, curas["bonus_cura_pct"]
 
     # Improved Critical desce o limiar do critico
     assert cl.efeitos("guerreiro", 5)["critico_em"] == 20

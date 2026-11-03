@@ -199,6 +199,47 @@ class ViewDescanso(discord.ui.View):
         return callback
 
 
+class ViewMarcaOrfa(discord.ui.View):
+    """Para onde vão as marcas do inimigo que caiu antes de elas explodirem.
+
+    Mensagem **pública** com botões, e não efêmera. O Discord só manda
+    efêmera para quem acabou de interagir, e o inimigo marcado cai na vez
+    de QUALQUER jogador — muitas vezes não na do ladino. Quem clica é
+    conferido no callback, como o descanso já faz.
+
+    O combate **não espera** por este clique: o grupo segue, e as marcas
+    ficam pendentes. Sem resposta até o fim do combate elas se perdem com
+    ele, e um restart também as perde — esta mensagem não é o cartão do
+    passo, então `restaurar_views` não a reativa.
+    """
+
+    def __init__(
+        self, cog: "Incursoes", run_id: int, dono: int, marcas: int,
+        expira: int, inimigos: list,
+    ):
+        super().__init__(timeout=None)
+        self.cog = cog
+        self.run_id = run_id
+        self.dono = dono
+        for inimigo in inimigos[:5]:
+            botao = discord.ui.Button(
+                label=f"{inimigo.nome} ({inimigo.hp_atual}/{inimigo.hp_max})",
+                emoji="🎯",
+                style=discord.ButtonStyle.primary,
+                custom_id=f"inc:marca:{run_id}:{dono}:{inimigo.indice}",
+            )
+            botao.callback = self._fazer(inimigo.indice, marcas, expira)
+            self.add_item(botao)
+
+    def _fazer(self, indice: int, marcas: int, expira: int):
+        async def callback(interaction: discord.Interaction) -> None:
+            await self.cog.transferir_marcas(
+                interaction, self.run_id, self.dono, indice, marcas, expira
+            )
+
+        return callback
+
+
 class ViewCombate(discord.ui.View):
     """Botao de atacar; com mais de um inimigo de pe, vira escolha de alvo."""
 
@@ -1835,6 +1876,10 @@ class Incursoes(commands.Cog):
         # Inspiracao no ataque: o golpe que errou por pouco passa a acertar,
         # antes de o HP ir para o banco.
         await self._inspirar_o_golpe(run, estado, atacante, golpes)
+        # A Marca Fatal entra DEPOIS da Inspiracao — ela vira erro em acerto,
+        # e acerto marca — e ANTES de gravar o HP, para a explosao ir no
+        # mesmo write.
+        marcas = await self._marcar_fatal(run, estado, atacante, user_id, golpes)
         await db.definir_hp_inimigos(
             self.bot.db,
             run["id"],
@@ -1861,8 +1906,11 @@ class Incursoes(commands.Cog):
             await self._bencao_do_patrono(run, personagem, atacante, golpes)
         if sequencia:
             await self._guardar_sequencia(run, user_id, passo, pilha)
-        self._registrar(run, estado.rodada, [E.linha_golpe(g) for g, _i in golpes])
-        return E.resumo_do_golpe([(g, i.nome) for g, i in golpes])
+        self._registrar(
+            run, estado.rodada, [E.linha_golpe(g) for g, _i in golpes] + marcas
+        )
+        resumo = E.resumo_do_golpe([(g, i.nome) for g, i in golpes])
+        return resumo + ("\n" + "\n".join(marcas) if marcas else "")
 
     def _trava(self, run_id: int) -> asyncio.Lock:
         """Uma fila por run: dois cliques ao mesmo tempo não resolvem a vez duas vezes."""
@@ -2052,6 +2100,7 @@ class Incursoes(commands.Cog):
         if turno["acao"] == "ataque":
             texto = await self._resolver_ataque(run, estado, user_id, turno["alvos"])
             await self._gerar_ameaca(run, estado, user_id, None)
+            await self._marcas_orfas(run, estado)
             return texto
         personagem = await self._personagem_na_run(run, user_id)
         habilidade = next(
@@ -2067,6 +2116,7 @@ class Incursoes(commands.Cog):
             run, estado, user_id, habilidade, turno["alvos"]
         )
         await self._gerar_ameaca(run, estado, user_id, habilidade.acao)
+        await self._marcas_orfas(run, estado)
         self._registrar(run, estado.rodada, [f"✨ {estado.combatente(user_id).nome} usa **{habilidade.nome}**"])
         return texto
 
@@ -2074,6 +2124,190 @@ class Incursoes(commands.Cog):
     # rodadas. O prazo grande diz isso: quem apaga a conta e a troca de sala,
     # porque o `passo` faz parte da chave em `run_efeitos`.
     PRAZO_DO_COMBATE = 10 ** 6
+
+    EFEITO_DA_MARCA = "marca_fatal"
+    EFEITO_DA_FURTIVIDADE = "furtividade"
+
+    async def _marcas_de(self, run: dict[str, Any], rodada: int) -> dict[int, dict]:
+        """As Marcas Fatais vivas, por índice de inimigo."""
+        return {
+            e["alvo_id"]: e
+            for e in await db.efeitos_ativos(
+                self.bot.db, run["id"], self._passo(run), rodada
+            )
+            if e["alvo_tipo"] == "inimigo" and e["efeito"] == self.EFEITO_DA_MARCA
+        }
+
+    async def _marcar_fatal(
+        self, run: dict[str, Any], estado, atacante, user_id: int, golpes: list
+    ) -> list[str]:
+        """Todo acerto do ladino marca o inimigo; a terceira marca explode.
+
+        As três regras da ficha, e como elas se encaixam:
+
+        - acertar aplica 1 marca, e **devolve o prazo inteiro** às que já
+          estão lá — não decrementa para 2, volta para 3;
+        - na terceira marca elas explodem na hora, sem rolar acerto;
+        - passar 3 turnos sem marcar o mesmo inimigo perde as marcas dele,
+          e disso quem cuida é `limpar_efeitos_vencidos`, que já roda ao
+          virar a rodada.
+
+        O dado sai do tier do LADINO, e não do grupo: é a ficha dele que
+        cresce. Chamado dos dois caminhos de ataque — o do turno e o da
+        ativa —, porque "sempre que acerta um ataque" vale para os dois.
+
+        Não altera o HP no banco: o estrago entra em `inimigo.hp_atual`, e
+        quem chama grava junto com o dano dos golpes.
+        """
+        if atacante is None or not golpes:
+            return []
+        personagem = await self._personagem_na_run(run, user_id)
+        dele = ((personagem or {}).get("efeitos") or {})
+        if not dele.get("marca_fatal"):
+            return []
+        dado = habilidades.DANO_DA_MARCA[tier((personagem or {}).get("nivel") or 1)]
+        vivas = await self._marcas_de(run, estado.rodada)
+        # Conta local porque um multiataque marca duas vezes no mesmo turno,
+        # e a segunda precisa ver a primeira.
+        quantas = {i: (e["valor"] or {}).get("marcas", 0) for i, e in vivas.items()}
+        passo, linhas = self._passo(run), []
+        for golpe, inimigo in golpes:
+            if not golpe.acertou or inimigo.caido:
+                continue
+            marcas = quantas.get(inimigo.indice, 0) + 1
+            if marcas >= habilidades.MARCAS_PARA_EXPLODIR:
+                dano = sum(motor.rolar_dano(dado) for _ in range(marcas))
+                inimigo.hp_atual = max(0, inimigo.hp_atual - dano)
+                quantas[inimigo.indice] = 0
+                await db.remover_efeito(
+                    self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
+                    self.EFEITO_DA_MARCA,
+                )
+                caiu = " — e **cai**" if inimigo.caido else ""
+                linhas.append(
+                    f"🎯 As **{marcas}** Marcas Fatais explodem em "
+                    f"**{inimigo.nome}**: **{dano}** de dano ({marcas}×{dado})"
+                    f"{caiu}"
+                )
+                continue
+            quantas[inimigo.indice] = marcas
+            await db.aplicar_efeito(
+                self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
+                self.EFEITO_DA_MARCA, {"marcas": marcas},
+                estado.rodada + habilidades.TURNOS_DA_MARCA, dono=user_id,
+            )
+            linhas.append(
+                f"🎯 **{inimigo.nome}** fica com **Marca Fatal ×{marcas}**"
+            )
+        return linhas
+
+    async def _marcas_orfas(self, run: dict[str, Any], estado) -> None:
+        """O inimigo marcado caiu. No tier 5 as marcas não vão com ele.
+
+        Roda no fecho do turno, que é por onde TODA ação de jogador passa:
+        o inimigo pode cair no golpe de qualquer um, e não só do ladino.
+
+        Abaixo do tier 5 as marcas se perdem com o inimigo — é o que o
+        documento diz, e a transferência é justamente o que o tier 5 traz.
+        """
+        if estado is None:
+            return
+        passo = self._passo(run)
+        for indice, marca in (await self._marcas_de(run, estado.rodada)).items():
+            inimigo = estado.inimigo(indice)
+            if inimigo is None or not inimigo.caido:
+                continue
+            # Sai do morto de um jeito ou de outro: ou ela passa, ou se perde.
+            await db.remover_efeito(
+                self.bot.db, run["id"], passo, "inimigo", indice,
+                self.EFEITO_DA_MARCA,
+            )
+            dono = marca["dono"]
+            quantas = (marca["valor"] or {}).get("marcas", 0)
+            sobraram = [i for i in estado.inimigos_vivos if i.indice != indice]
+            personagem = (
+                await self._personagem_na_run(run, dono) if dono else None
+            )
+            transfere = ((personagem or {}).get("efeitos") or {}).get(
+                "marca_fatal_transfere"
+            )
+            if not (transfere and sobraram and quantas):
+                continue
+            canal = await self._canal(run)
+            if canal is None:
+                continue
+            await canal.send(
+                f"🎯 <@{dono}> — **{inimigo.nome}** caiu com "
+                f"**{quantas}** Marca(s) Fatal(is) ainda sem explodir. "
+                f"Para quem elas passam?",
+                view=ViewMarcaOrfa(
+                    self, run["id"], dono, quantas, marca["expira"], sobraram
+                ),
+            )
+
+    async def transferir_marcas(
+        self, interaction: discord.Interaction, run_id: int, dono: int,
+        indice: int, marcas: int, expira: int,
+    ) -> None:
+        """Move as marcas do inimigo que caiu para o que o ladino escolheu.
+
+        O prazo vai como estava — `expira` é número de rodada, absoluto —,
+        que é o "mantendo sua duração restante" do documento.
+        """
+        if interaction.user.id != dono:
+            await interaction.response.send_message(
+                "Estas marcas não são suas.", ephemeral=True
+            )
+            return
+        run = await db.buscar_run(self.bot.db, run_id)
+        if not run or run["status"] not in ("em_sala", "objetivo"):
+            await interaction.response.send_message(
+                "Este combate já acabou.", ephemeral=True
+            )
+            return
+        sala = await self._sala_corrente(run)
+        estado = await self._estado_combate(run, sala) if sala else None
+        alvo = estado.inimigo(indice) if estado else None
+        if alvo is None or alvo.caido:
+            await interaction.response.send_message(
+                "Esse inimigo já caiu — escolha outro.", ephemeral=True
+            )
+            return
+        await db.aplicar_efeito(
+            self.bot.db, run_id, self._passo(run), "inimigo", indice,
+            self.EFEITO_DA_MARCA, {"marcas": marcas}, expira, dono=dono,
+        )
+        await interaction.response.edit_message(
+            content=(
+                f"🎯 As **{marcas}** Marca(s) Fatal(is) passam para "
+                f"**{alvo.nome}**, com o prazo que faltava."
+            ),
+            view=None,
+        )
+        self._registrar(
+            run, estado.rodada,
+            [f"🎯 As marcas passam para **{alvo.nome}** (×{marcas})"],
+        )
+
+    async def _escondido(self, run: dict[str, Any], user_id: int, rodada: int) -> bool:
+        """O ladino está em Stealth nesta rodada?
+
+        O `desde` existe porque o ataque que ABRE a Furtividade conta ameaça
+        normalmente — a ficha diz "realiza um ataque e depois entra em
+        Stealth". Sem ele, o próprio golpe que liga a habilidade já sairia
+        de graça.
+        """
+        for e in await db.efeitos_ativos(
+            self.bot.db, run["id"], self._passo(run), rodada
+        ):
+            if (
+                e["alvo_tipo"] == "personagem"
+                and e["alvo_id"] == user_id
+                and e["efeito"] == self.EFEITO_DA_FURTIVIDADE
+                and rodada >= (e["valor"] or {}).get("desde", 0)
+            ):
+                return True
+        return False
 
     async def _gerar_ameaca(
         self, run: dict[str, Any], estado: EstadoCombate, user_id: int, acao
@@ -2086,6 +2320,10 @@ class Incursoes(commands.Cog):
         """
         quem = estado.combatente(user_id)
         if quem is None or quem.e_invocacao:
+            return
+        # Furtividade: a ameaca para de SUBIR, e nao e zerada. O que ele
+        # acumulou continua valendo, e segue podendo cair por outros efeitos.
+        if await self._escondido(run, user_id, estado.rodada):
             return
         await db.somar_ameaca_gerada(
             self.bot.db, run["id"], self._passo(run), user_id,
@@ -3242,10 +3480,22 @@ class Incursoes(commands.Cog):
                 inimigo.hp_atual = max(0, inimigo.hp_atual - extra)
                 break
 
+        marcas = await self._marcar_fatal(run, estado, atacante, user_id, golpes)
         await db.definir_hp_inimigos(
             self.bot.db, run["id"], passo,
             {inimigo.indice: inimigo.hp_atual for _g, inimigo in golpes},
         )
+        # Furtividade: o ataque acima contou ameaca normalmente, e o Stealth
+        # comeca na rodada SEGUINTE — `desde`. A ficha diz "realiza um ataque
+        # e depois entra em Stealth", e sem isso o proprio golpe que liga a
+        # habilidade sairia de graca.
+        if acao.get("furtividade"):
+            turnos = int(acao["furtividade"])
+            await db.aplicar_efeito(
+                self.bot.db, run["id"], passo, "personagem", user_id,
+                self.EFEITO_DA_FURTIVIDADE, {"desde": estado.rodada + 1},
+                estado.rodada + 1 + turnos, dono=user_id,
+            )
         ganho = 0
         if acao.get("thp_proprio"):
             ganho = motor.ganhar_thp(atacante, motor.rolar_dano(acao["thp_proprio"]))

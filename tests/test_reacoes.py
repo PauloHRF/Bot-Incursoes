@@ -8,7 +8,13 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes as cl, config, database as db, motor  # noqa: E402
+from src import (  # noqa: E402
+    classes as cl,
+    config,
+    database as db,
+    habilidades as hb,
+    motor,
+)
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
@@ -100,36 +106,40 @@ def caso_atordoado_perde_a_vez():
     print("  inimigo atordoado perde a vez: ok")
 
 
-async def caso_uncanny_dodge_corta_o_golpe():
-    conn, canal, cog, incursao, run = await preparar(
-        classe="ladino", nivel=8, monstro=MARRETA
-    )
-    passo = cog._passo(run)
-    maximo = cl.classe("ladino").numeros(8).hp
+def caso_as_habilidades_sem_dono_seguem_no_catalogo():
+    """Uncanny Dodge e Reliable Talent + existem, e ninguem as tem.
 
-    msg = await canal.fetch_message(run["mensagem_id"])
-    for _ in range(4):
-        atual = await db.buscar_run(conn, run["id"])
-        if atual["status"] != "objetivo":
-            break
-        estado = await cog._estado_combate(atual, incursao.objetivo)
-        for c in list(estado.vivos):
-            await cog.atacar(FakeInteraction(canal, c.user_id, msg), run["id"], "OBJ")
-        if any("Uncanny Dodge" in (m.content or "") for m in canal.mensagens):
-            break
-        # volta todo mundo ao topo para a proxima tentativa
-        for user_id in JOGADORES[:2]:
-            await db.definir_hp(conn, run["id"], user_id, maximo)
+    As duas eram do Ladino antes do rework da ficha dele. Ficaram escritas
+    para voltarem facil — num tier novo dele, ou em outra classe —, e por
+    isso vivem em `habilidades.SEM_DONO`, fora do dicionario por classe.
 
-    assert any("Uncanny Dodge" in (m.content or "") for m in canal.enviadas), [
-        m.content for m in canal.mensagens if m.content
-    ]
-    # gastou o uso do combate
-    gastos = {}
-    for user_id in JOGADORES[:2]:
-        gastos.update(await db.usos_da_run(conn, run["id"], user_id))
-    assert gastos.get(("uncanny_dodge", f"combate:{passo}")) == 1, gastos
-    print("  Uncanny Dodge corta o golpe pesado e gasta o uso: ok")
+    O caso que exercitava o Uncanny Dodge em combate saiu daqui: nenhum
+    personagem pode mais te-lo, e um teste de comportamento sem portador
+    testaria o duble e nao o bot. O que sobra de verificavel e isto — que
+    elas nao se perderam, e que ninguem as ganhou de volta sem querer.
+    """
+    sem_dono = {h.id for h in hb.SEM_DONO}
+    assert sem_dono == {"uncanny_dodge", "reliable_talent_mais"}, sem_dono
+    for hid in sem_dono:
+        assert hid in hb.POR_ID, f"{hid} saiu do catalogo"
+    donas = {
+        classe.nome
+        for classe in cl.CLASSES.values()
+        for _t, h in classe.habilidades_ate(10)
+        if h.id in sem_dono
+    }
+    assert not donas, f"alguem ganhou habilidade sem dono: {donas}"
+
+    # A maquinaria de reacao a `sofreu_golpe` fica sem usuario, e e a unica
+    # do jogo desse gatilho: anotado para quem for mexer nela.
+    gatilhos = {
+        (h.acao or {}).get("quando")
+        for classe in cl.CLASSES.values()
+        for _t, h in classe.habilidades_ate(10)
+        if (h.acao or {}).get("tipo") == "reacao"
+    }
+    assert "sofreu_golpe" not in gatilhos, gatilhos
+    print("  as habilidades sem dono seguem no catalogo, sem portador: ok")
 
 
 async def caso_stunning_strike_atordoa_ou_devolve():
@@ -184,7 +194,7 @@ async def main():
         caso_quando_vale_esquivar()
         caso_sequencia_do_monge()
         caso_atordoado_perde_a_vez()
-        await caso_uncanny_dodge_corta_o_golpe()
+        caso_as_habilidades_sem_dono_seguem_no_catalogo()
         await caso_stunning_strike_atordoa_ou_devolve()
         await caso_martial_arts_sobe_dentro_do_turno()
     finally:

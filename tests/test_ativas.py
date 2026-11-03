@@ -94,7 +94,7 @@ def caso_catalogo_das_ativas():
 
     assert "second_wind" in prontas and "cura_pelas_maos" in prontas
     assert "rage" in prontas and "marca_do_cacador" in prontas
-    assert "uncanny_dodge" in prontas and "stunning_strike" in prontas
+    assert "furtividade" in prontas and "stunning_strike" in prontas
     # Nao sobra nenhuma: as duas que repetiam um teste de pericia viraram o
     # socorro que o Flash of Genius do artifice trouxe, que chega na hora em
     # que a rolagem ainda da para salvar.
