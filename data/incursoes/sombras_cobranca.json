@@ -1,0 +1,225 @@
+{
+  "id": "sombras_cobranca",
+  "nome": "A Cobrança de Terça",
+  "organizacao": "Aliança das Sombras",
+  "tamanho": "Média",
+  "tier": 2,
+  "lore_inicial": "A Aliança cobra na terça. Não é superstição: terça é o dia em que as casas de penhor fecham o caixa da semana, e dinheiro contado é dinheiro que ainda não foi gasto. Quem cobra sai com uma lista, volta com a lista riscada, e a Aliança não pergunta como.\n\nNesta terça o cobrador não voltou. Nem ele, nem a lista, nem os dois que foram com ele. A Aliança descobriu na quarta, quando o caixa de três ruas não subiu — e descobriu também que alguém andou cobrando nessas três ruas no lugar dela, com uma lista igual à nossa.\n\nVocês vão até a última casa da lista, achar quem está cobrando em nome da Aliança, e trazer a lista. A pessoa é secundária.",
+  "lore_final": "A lista volta, riscada por uma letra que não é a do cobrador. A Aliança passa a tarde conferindo rua por rua, e no fim concorda que a cobrança foi bem feita — melhor que a dela, em duas das três ruas.\n\nNinguém comenta o que isso diz da Aliança. O que vocês levam é o pagamento da semana e um aviso dito como quem não quer nada: **na terça que vem, a lista é de vocês**. Na Aliança, promoção e ameaça usam a mesma frase.",
+  "imagem_capa": null,
+  "recompensa_mes": 10,
+  "pontos_conclusao": 10,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "A Última Casa da Lista",
+    "tipo": "Combate",
+    "descricao": "A casa é de penhores, como as outras, e o caixa está aberto e cheio — ninguém levou nada. Numa cadeira atrás do balcão está o cobrador da Aliança, de costas para a porta, muito quieto e já há algum tempo.\n\nQuem está de pé ao lado dele tem a lista na mão e o sotaque da própria Aliança, e é grande de um jeito que a roupa não explica. Pelos canos do rodapé vem barulho de muita unha em madeira, e ele não parece surpreso com isso — eles vieram com ele.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "10 MEs por participante + pontos com a Aliança das Sombras",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Homem-Tigre",
+        "ca": 12,
+        "ataque": 5,
+        "dano": "1d6+3",
+        "hp": 120,
+        "ataques": 1,
+        "saves": {
+          "FOR": 3,
+          "DES": 2,
+          "CON": 3,
+          "INT": 0,
+          "SAB": 1,
+          "CAR": 0
+        },
+        "golpes": [
+          {
+            "nome": "Cimitarra",
+            "ataque": 5,
+            "dano": "1d6+3",
+            "efeito": {
+              "nome": "Cimitarra",
+              "save": "SAB",
+              "cd": 13,
+              "debuff": [
+                "perdicao"
+              ]
+            }
+          }
+        ],
+        "habilidade": {
+          "nome": "Bote",
+          "alvos": 1,
+          "save": "ATK",
+          "dano": "3d6",
+          "recarga": 5
+        }
+      },
+      {
+        "nome": "Homem-Rato 1",
+        "ca": 12,
+        "ataque": 4,
+        "dano": "1d4+2",
+        "hp": 33,
+        "ataques": 1,
+        "saves": {
+          "FOR": 0,
+          "DES": 2,
+          "CON": 1,
+          "INT": 0,
+          "SAB": 0,
+          "CAR": -1
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d4+2",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "SAB",
+              "cd": 12,
+              "debuff": [
+                "perdicao"
+              ]
+            }
+          }
+        ],
+        "matilha": true
+      },
+      {
+        "nome": "Homem-Rato 2",
+        "ca": 12,
+        "ataque": 4,
+        "dano": "1d4+2",
+        "hp": 33,
+        "ataques": 1,
+        "saves": {
+          "FOR": 0,
+          "DES": 2,
+          "CON": 1,
+          "INT": 0,
+          "SAB": 0,
+          "CAR": -1
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d4+2",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "SAB",
+              "cd": 12,
+              "debuff": [
+                "perdicao"
+              ]
+            }
+          }
+        ],
+        "matilha": true
+      },
+      {
+        "nome": "Homem-Rato 3",
+        "ca": 12,
+        "ataque": 4,
+        "dano": "1d4+2",
+        "hp": 33,
+        "ataques": 1,
+        "saves": {
+          "FOR": 0,
+          "DES": 2,
+          "CON": 1,
+          "INT": 0,
+          "SAB": 0,
+          "CAR": -1
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d4+2",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "SAB",
+              "cd": 12,
+              "debuff": [
+                "perdicao"
+              ]
+            }
+          }
+        ],
+        "matilha": true
+      },
+      {
+        "nome": "Homem-Rato 4",
+        "ca": 12,
+        "ataque": 4,
+        "dano": "1d4+2",
+        "hp": 33,
+        "ataques": 1,
+        "saves": {
+          "FOR": 0,
+          "DES": 2,
+          "CON": 1,
+          "INT": 0,
+          "SAB": 0,
+          "CAR": -1
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d4+2",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "SAB",
+              "cd": 12,
+              "debuff": [
+                "perdicao"
+              ]
+            }
+          }
+        ],
+        "matilha": true
+      },
+      {
+        "nome": "Homem-Rato 5",
+        "ca": 12,
+        "ataque": 4,
+        "dano": "1d4+2",
+        "hp": 33,
+        "ataques": 1,
+        "saves": {
+          "FOR": 0,
+          "DES": 2,
+          "CON": 1,
+          "INT": 0,
+          "SAB": 0,
+          "CAR": -1
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d4+2",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "SAB",
+              "cd": 12,
+              "debuff": [
+                "perdicao"
+              ]
+            }
+          }
+        ],
+        "matilha": true
+      }
+    ]
+  }
+}

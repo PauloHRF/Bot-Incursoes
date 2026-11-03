@@ -554,32 +554,46 @@ reler tudo sem reiniciar.
 
 ### O que já está escrito
 
-As quatro Organizações têm banco. **O tier 1 tem três entradas, de três Organizações
-diferentes** — personagem novo não fica preso a uma só —, e os tiers acima têm uma cada:
+As quatro Organizações têm banco. **O tier 1 tem três entradas e o tier 2 tem quatro,
+uma por Organização** — personagem novo não fica preso a uma só —, e os tiers acima têm
+uma cada:
 
 | Incursão | Tier | Tamanho | Organização | Objetivo |
 | --- | --- | --- | --- | --- |
 | *O Posto de Vigia Calado* | 1 | Curta | Sentinelas do Alvorecer | Senhor da Matilha Gnoll + 2 Gnolls |
 | *O Contrato Rasgado* | 1 | Média | Aliança das Sombras | Doppelganger + 2 Brutamontes |
 | *A Agulha de Vidro* | 1 | Média | Vórtice Oculto | Gárgula + 3 Aranhas de Fase |
+| *A Sala dos Nomes* | 2 | Média | Sentinelas do Alvorecer | Demônio das Sombras + Fanático + 2 Gárgulas + Horror Elmado + Diabo Espinhoso |
+| *A Cobrança de Terça* | 2 | Média | Aliança das Sombras | Homem-Tigre + 5 Homens-Rato |
 | *O Ossuário de Vael* | 2 | Média | Guilda dos Mortos | Múmia + 2 Ogros Zumbi + 2 Carniçais |
+| *O Poço dos Olhos* | 2 | Média | Vórtice Oculto | Chuul + 3 Nothics + 2 Devoradores de Intelecto |
 | *A Cripta do Vórtice* | 4 | Média | Vórtice Oculto | Medusa + 3 Nothics |
 | *A Brecha de Fogo Pálido* | 4 | Longa | Sentinelas do Alvorecer | Diabo Ósseo + Vrock + 2 Cães Infernais + Diabo Barbado |
 
-**O tier 1 medido**, com `tools/simular_combate.py` contra um grupo misto de nível 1 e sem
-nenhuma habilidade ativa — é um piso, não um prognóstico: a mesa de verdade tem cura,
-buff e magia de dano por cima disto.
+**Os dois primeiros tiers medidos**, com `tools/simular_combate.py` contra um grupo misto
+do nível do tier e **sem nenhuma habilidade ativa** — é um piso, não um prognóstico: a
+mesa de verdade tem cura, buff e magia de dano por cima disto.
 
-| Objetivo do tier 1 | Grupo de 5 | de 4 | de 3 |
-| --- | --- | --- | --- |
-| *O Contrato Rasgado* | 37% | 4% | 0% |
-| *O Posto de Vigia Calado* | 51% | 15% | 3% |
-| *A Agulha de Vidro* | 58% | 11% | 2% |
+| Objetivo | Tier | Grupo de 5 | de 4 | de 3 |
+| --- | --- | --- | --- | --- |
+| *O Contrato Rasgado* | 1 | 37% | 4% | 0% |
+| *O Posto de Vigia Calado* | 1 | 51% | 15% | 3% |
+| *A Agulha de Vidro* | 1 | 58% | 11% | 2% |
+| *O Ossuário de Vael* | 2 | 81% | 22% | 1% |
+| *O Poço dos Olhos* | 2 | 87% | 26% | 1% |
+| *A Sala dos Nomes* | 2 | 92% | 34% | 2% |
+| *A Cobrança de Terça* | 2 | 95% | 21% | 0% |
 
-As duas novas ficam juntas na faixa do meio, e o *Contrato* é o mais duro dos três — ele
-já era, e não foi mexido. Os números das duas novas saíram da **composição**, não de
-números inventados: as criaturas são as do bestiário, com os golpes e as habilidades que
-elas têm lá. Para endurecer ou abrandar, o lever é quantas entram na sala.
+Os números saíram da **composição**, e não de estatística inventada: as criaturas são as
+do bestiário, com os golpes e as habilidades que elas têm lá. Para endurecer ou abrandar
+uma sala, o lever é **quantas** entram nela — o teto do motor é 6.
+
+**O tier 2 é mais brando que o tier 1**, e isso é visível na tabela. Não é descuido de
+conteúdo: o grupo cresce mais rápido entre o nível 1 e o 3 do que as criaturas de CR 2 a
+4 que o tier 2 encontra. Se a mesa quiser o tier 2 tão apertado quanto o 1, o conserto é
+subir a faixa de CR que o tier 2 usa (`bestiario.FAIXAS_DE_CR`), e não mexer sala por
+sala — mas isso muda o `BALANCO.md` inteiro, porque é dessa tabela que ele tira a
+criatura típica contra a qual as 14 classes são medidas.
 
 As incursões tiram **todas** as criaturas do bestiário — nas planilhas delas só o nome
 está preenchido. Entre elas, cada mecânica que o importador do Monster Manual gera

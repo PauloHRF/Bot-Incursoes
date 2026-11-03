@@ -1,0 +1,193 @@
+{
+  "id": "alvorecer_nomes",
+  "nome": "A Sala dos Nomes",
+  "organizacao": "Sentinelas do Alvorecer",
+  "tamanho": "Média",
+  "tier": 2,
+  "lore_inicial": "O Alvorecer escreve os mortos no que eles morreram defendendo. Cada selo tem a borda cheia de nomes, e quando a borda enche a Ordem abre uma placa nova na parede da Sala dos Nomes — doze selos, oitocentos e quarenta e um nomes, nenhum apagado em trezentos anos.\n\nNa terça o irmão arquivista contou oitocentos e trinta e nove. Contou três vezes. Dois nomes não estão raspados: estão lisos, como se a pedra nunca tivesse sido escrita ali.\n\nA Ordem não vai dizer de quem eram os dois nomes, e vocês não vão perguntar. Vão descer até a Sala dos Nomes, ver quem está apagando, e trazer a mão que apaga.",
+  "lore_final": "As placas voltam para a parede e a Ordem manda gravar os dois nomes de novo, da memória de quem ainda lembrava — e lembrava mal, porque um deles saiu com uma letra trocada. Ninguém corrige: a Ordem decide que a letra trocada é o nome agora.\n\nVocês não saem com nada que caiba numa bolsa. Saem sabendo que o Alvorecer tem trezentos anos de nomes e nenhum jeito de provar que eles estavam certos — e a Ordem sabe que vocês sabem. É isso que ela paga.",
+  "imagem_capa": null,
+  "recompensa_mes": 10,
+  "pontos_conclusao": 10,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "A Parede de Trás",
+    "tipo": "Combate",
+    "descricao": "A Sala dos Nomes é um corredor de placas, e a última parede é a mais antiga. Há um andaime encostado nela, do tipo que a Ordem usa para gravar — e alguém está em cima dele, de hábito, com um cinzel.\n\nEle se vira quando termina a letra, e é um noviço. O que está atrás dele não se vira porque não tem frente: é o hábito dele que está pendurado no andaime, e a coisa dentro do hábito é o que veio pelo selo.\n\nDuas das gárgulas do beiral estão no chão da sala, viradas para dentro, e uma armadura da guarda de honra está de pé entre elas, vazia e fechada. A Ordem esculpiu as gárgulas do beiral olhando para fora, e guarda as armaduras abertas.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "10 MEs por participante + pontos com as Sentinelas do Alvorecer",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Demônio das Sombras",
+        "ca": 13,
+        "ataque": 5,
+        "dano": "2d6+3+4d6+3",
+        "hp": 66,
+        "ataques": 1,
+        "saves": {
+          "FOR": -5,
+          "DES": 5,
+          "CON": 1,
+          "INT": 2,
+          "SAB": 1,
+          "CAR": 4
+        },
+        "golpes": [
+          {
+            "nome": "Garras",
+            "ataque": 5,
+            "dano": "2d6+3+4d6+3"
+          }
+        ],
+        "habilidade": {
+          "nome": "Escuridão Aterrorizante",
+          "alvos": 2,
+          "save": "SAB",
+          "cd": 13,
+          "debuff": [
+            "medo"
+          ],
+          "recarga": 5
+        }
+      },
+      {
+        "nome": "Fanático do Culto",
+        "ca": 13,
+        "ataque": 4,
+        "dano": "1d4+2",
+        "hp": 33,
+        "ataques": 1,
+        "saves": {
+          "FOR": 0,
+          "DES": 2,
+          "CON": 1,
+          "INT": 0,
+          "SAB": 1,
+          "CAR": 2
+        },
+        "golpes": [
+          {
+            "nome": "Adaga",
+            "ataque": 4,
+            "dano": "1d4+2"
+          }
+        ],
+        "habilidade": {
+          "nome": "Comando Sombrio",
+          "alvos": 3,
+          "save": "SAB",
+          "cd": 12,
+          "debuff": [
+            "perdicao"
+          ],
+          "recarga": 5
+        }
+      },
+      {
+        "nome": "Gárgula 1",
+        "ca": 15,
+        "ataque": 4,
+        "dano": "1d6+2",
+        "hp": 52,
+        "ataques": 1,
+        "saves": {
+          "FOR": 2,
+          "DES": 0,
+          "CON": 3,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d6+2"
+          }
+        ]
+      },
+      {
+        "nome": "Gárgula 2",
+        "ca": 15,
+        "ataque": 4,
+        "dano": "1d6+2",
+        "hp": 52,
+        "ataques": 1,
+        "saves": {
+          "FOR": 2,
+          "DES": 0,
+          "CON": 3,
+          "INT": -2,
+          "SAB": 0,
+          "CAR": -2
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 4,
+            "dano": "1d6+2"
+          }
+        ]
+      },
+      {
+        "nome": "Horror Elmado",
+        "ca": 20,
+        "ataque": 6,
+        "dano": "1d8+4",
+        "hp": 60,
+        "ataques": 1,
+        "saves": {
+          "FOR": 4,
+          "DES": 1,
+          "CON": 3,
+          "INT": 0,
+          "SAB": 0,
+          "CAR": 0
+        },
+        "golpes": [
+          {
+            "nome": "Espada Longa",
+            "ataque": 6,
+            "dano": "1d8+4"
+          }
+        ]
+      },
+      {
+        "nome": "Diabo Espinhoso",
+        "ca": 13,
+        "ataque": 2,
+        "dano": "2d4",
+        "hp": 22,
+        "ataques": 1,
+        "saves": {
+          "FOR": 0,
+          "DES": 2,
+          "CON": 1,
+          "INT": 0,
+          "SAB": 2,
+          "CAR": -1
+        },
+        "golpes": [
+          {
+            "nome": "Mordida",
+            "ataque": 2,
+            "dano": "2d4",
+            "efeito": {
+              "nome": "Mordida",
+              "save": "CON",
+              "cd": 12,
+              "debuff": [
+                "debilidade"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
