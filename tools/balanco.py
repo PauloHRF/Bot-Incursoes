@@ -311,6 +311,15 @@ def valor_da_ativa(classe_id: str, tier: int, h, ataques: int) -> tuple[float, s
         if ef.get("dano_extra"):
             v += ef["dano_extra"] * turnos * max(1, ataques)
             partes.append("dano extra enquanto dura")
+        if ef.get("dano_bonus"):
+            # O dado a mais em todo golpe enquanto a marca dura. Faltava, e
+            # por isso as duas marcas do Patrulheiro — a assinatura da classe
+            # — apareciam aqui valendo ZERO, com a nota de "efeito que esta
+            # conta nao cobre". Mesma forma do `dano_extra` logo acima: por
+            # golpe, por turno.
+            bruto = media_do_valor(ef["dano_bonus"], tier) * turnos * max(1, ataques)
+            v += bruto
+            partes.append(f"{bruto:.0f} de dado extra enquanto dura")
         if ef.get("ataques"):
             v += H.media_do_dado(cl.numeros(classe_id, rules.nivel_do_tier(tier)).dano) * 0.6 * turnos
             partes.append("um ataque a mais enquanto dura")

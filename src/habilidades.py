@@ -239,9 +239,16 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
     },
     "patrulheiro": {
         1: [Habilidade("marca_do_cacador", "Marca do Cacador", ATIVA,
-                       "1x por combate: marca um inimigo por 3 turnos, com +1d6 de dano nele.",
+                       "1x por combate: marca um inimigo por 3 turnos, com "
+                       "+1d6 de dano nele — e ataca na mesma rodada, ja com "
+                       "o dado da marca.",
                        usos=_usos("combate"),
+                       # `acoes: 1` e o turno INTEIRO de ataques de quem usa,
+                       # e nao um golpe: com Multiattack, "quantidade: 1"
+                       # trocaria os dois golpes da rodada por um, e marcar
+                       # seria pior que atacar.
                        acao={"tipo": "duracao", "turnos": 3, "alvo": "inimigo",
+                             "acoes": 1,
                              "efeitos": {"dano_bonus": "1d6"}})],
         2: [Habilidade("predador", "Predador", PASSIVA,
                        "+2 de dano contra inimigos com metade ou menos do HP.",
@@ -265,9 +272,11 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        acao={"tipo": "reacao", "quando": "falhou_teste",
                              "bonus": 5})],
         5: [Habilidade("cacador_supremo", "Cacador Supremo", ATIVA,
-                       "1x por descanso: uma presa por 3 turnos, com +2d8 e vantagem.",
+                       "1x por descanso: uma presa por 3 turnos, com +2d8 e "
+                       "vantagem — e ataca na mesma rodada, ja com os dois.",
                        usos=_usos("descanso"),
                        acao={"tipo": "duracao", "turnos": 3, "alvo": "inimigo",
+                             "acoes": 1,
                              "efeitos": {"dano_bonus": "2d8", "vantagem": True}})],
     },
     "paladino": {

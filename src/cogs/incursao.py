@@ -3328,7 +3328,31 @@ class Incursoes(commands.Cog):
                 self.bot.db, run["id"], passo, "inimigo", alvo.indice,
                 habilidade.id, acao["efeitos"], expira, dono=user_id,
             )
+            # A marca vale JA no golpe desta rodada. O que o banco guarda só
+            # chega ao combatente quando o estado é remontado, e remontar
+            # aqui custaria caro — então a marca é espelhada na memória, do
+            # mesmo jeito que `_aplicar_ligado` faria.
+            quem_marca = estado.combatente(user_id)
+            if quem_marca is not None:
+                if acao["efeitos"].get("dano_bonus"):
+                    quem_marca.dano_por_alvo[alvo.indice] = (
+                        habilidade.nome, acao["efeitos"]["dano_bonus"]
+                    )
+                if acao["efeitos"].get("vantagem"):
+                    quem_marca.vantagem_contra.add(alvo.indice)
             alvo_nome = alvo.nome
+            # Marcar e bater na MESMA rodada: a ação carrega os golpes, e eles
+            # saem depois de a marca estar valendo.
+            if acao.get("acoes") or acao.get("quantidade"):
+                golpes = await self._resolver_golpes(
+                    run, user_id, estado, habilidade, acao, [alvo.indice],
+                    cabeca=False,
+                )
+                return (
+                    f"✨ **{habilidade.nome}** em **{alvo.nome}** — vale por "
+                    f"{acao.get('turnos', 1)} turno(s), até a rodada "
+                    f"{expira - 1}.\n{golpes}"
+                )
         elif acao.get("alvo") == "aliados":
             # Fly: pega varios do grupo, nao so quem lancou. Sem escolha vale
             # quem esta de pe, do mais exposto para o menos — o que o mago
@@ -3412,7 +3436,8 @@ class Incursoes(commands.Cog):
         await db.definir_thp(self.bot.db, run["id"], combatente.user_id, combatente.thp)
 
     async def _resolver_golpes(
-        self, run, user_id: int, estado, habilidade, acao, alvos
+        self, run, user_id: int, estado, habilidade, acao, alvos,
+        cabeca: bool = True,
     ) -> str:
         """Os golpes de uma ativa, no lugar do ataque do turno."""
         passo = self._passo(run)
@@ -3545,6 +3570,11 @@ class Incursoes(commands.Cog):
         await self._anunciar_habilidade(
             run, f"\u2728 {atacante.nome} usa **{habilidade.nome}**."
         )
+        # Sem cabe\u00e7a quando quem chamou j\u00e1 escreveu a dele: a marca do
+        # Patrulheiro anuncia o alvo e o prazo, e repetir o nome logo embaixo
+        # n\u00e3o acrescenta nada.
+        if not cabeca:
+            return resumo
         return f"\u2728 **{habilidade.nome}**\n{resumo}"
 
     async def _bencao_do_patrono(

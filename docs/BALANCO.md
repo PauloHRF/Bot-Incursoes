@@ -159,11 +159,12 @@ cura e área geram o dobro.
 Uso × frequência de recarga. `>>` marca o que está acima de 2,5× a
 mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 
-### Tier 1 — mediana 14 HP-eq, 28 ativas
+### Tier 1 — mediana 15 HP-eq, 28 ativas
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
 | >> | Bárbaro | Rage | 46 | 15 × 3.08 | 9 de dano cortado; dano extra enquanto dura |
+|  | Patrulheiro | Marca do Cacador | 32 | 10 × 3.08 | 10 de dado extra enquanto dura |
 |  | Feiticeiro | Chromatic Orb | 26 | 18 × 1.42 | 18 de dano |
 |  | Feiticeiro | Burning Hands | 23 | 16 × 1.42 | 16 de dano |
 |  | Clérigo | Guiding Bolt | 20 | 14 × 1.42 | 14 de dano |
@@ -178,6 +179,7 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Mago | Magic Missile | 15 | 10 × 1.42 | 10 de dano |
 |  | Druida | Wild Shape — Lobo | 14 | 10 × 1.42 | 10 da forma em 3 rodadas |
 |  | Bruxo | Arms of Hadar | 11 | 11 × 1.00 | 11 de dano |
+|  | Bruxo | Hex | 10 | 10 × 1.00 | 10 de dado extra enquanto dura |
 |  | Xamã | Tradicao xamanica — marcial | 10 | 7 × 1.42 | 4 de golpe a mais; 4 de THP |
 |  | Druida | Wild Shape — Urso | 9 | 7 × 1.42 | 7 da forma em 3 rodadas |
 |  | Clérigo | Command | 9 | 6 × 1.42 | 6 de dano negado (1 turno(s) de criatura) |
@@ -188,9 +190,7 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Bruxo | Charm Person | 6 | 6 × 1.00 | 6 de dano negado (1 turno(s) de criatura) |
 | << | Monge | Flurry of Blows | 6 | 4 × 1.42 | 4 de golpe a mais |
 | << | Bardo | Healing Word | 5 | 4 × 1.42 | 4 de cura |
-| << | Patrulheiro | Marca do Cacador | 0 | 0 × 3.08 | efeito que esta conta não cobre (reação, vantagem) |
 | << | Artífice | Faerie Fire | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
-| << | Bruxo | Hex | 0 | 0 × 1.00 | efeito que esta conta não cobre (reação, vantagem) |
 
 ### Tier 2 — mediana 0 HP-eq, 3 ativas
 
@@ -241,7 +241,7 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Paladino | Lider Sagrado — socorro | 0 | 0 × 1.00 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Bruxo | Dark One's Own Luck | 0 | 0 × 1.00 | efeito que esta conta não cobre (reação, vantagem) |
 
-### Tier 5 — mediana 53 HP-eq, 26 ativas
+### Tier 5 — mediana 57 HP-eq, 26 ativas
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
@@ -254,6 +254,7 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Mago | Hold Monster | 89 | 63 × 1.42 | 63 de dano negado (3 turno(s) de criatura) |
 |  | Bardo | Otto's Irresistible Dance | 89 | 63 × 1.42 | 63 de dano negado (3 turno(s) de criatura) |
 |  | Bruxo | Synaptic Static | 87 | 87 × 1.00 | 87 de dano |
+|  | Patrulheiro | Cacador Supremo | 77 | 54 × 1.42 | 54 de dado extra enquanto dura |
 |  | Druida | Conjure Elemental | 66 | 46 × 1.42 | 46 de aliado conjurado |
 |  | Bruxo | Hold Monster | 63 | 63 × 1.00 | 63 de dano negado (3 turno(s) de criatura) |
 |  | Guerreiro | Action Mastery | 57 | 19 × 3.08 | 19 de golpe a mais |
@@ -264,11 +265,10 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Paladino | Avatar da Luz | 26 | 26 × 1.00 | 11 de regeneração; dano extra enquanto dura |
 |  | Feiticeiro | Dimension Door | 24 | 17 × 1.42 | 17 de mira desviada |
 |  | Druida | Antilife Shell | 24 | 17 × 1.42 | 17 de mira desviada |
-|  | Artífice | Arcane Jolt — destrutivo | 22 | 7 × 3.08 | 7 de golpe a mais |
+| << | Artífice | Arcane Jolt — destrutivo | 22 | 7 × 3.08 | 7 de golpe a mais |
 | << | Feiticeiro | Polymorph | 21 | 15 × 1.42 | 15 da forma em 3 rodadas |
 | << | Monge | Perfect Strike | 19 | 6 × 3.08 | 6 de golpe a mais |
 | << | Bárbaro | Brutal Strike | 6 | 6 × 1.00 | 6 de golpe a mais |
-| << | Patrulheiro | Cacador Supremo | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 | << | Mago | Circle of Power | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 | << | Clérigo | Dominate Person | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 
@@ -279,9 +279,9 @@ frequência, os três escopos encostam. Isto é desenho funcionando.
 
 | Escopo | Ativas | Mediana por uso | Usos/masmorra | Mediana por masmorra |
 |---|---|---|---|---|
-| combate | 8 | 12 | 3.08 | 38 |
-| descanso | 47 | 15 | 1.42 | 21 |
-| incursao | 16 | 38 | 1.00 | 38 |
+| combate | 9 | 11 | 3.08 | 34 |
+| descanso | 48 | 16 | 1.42 | 22 |
+| incursao | 17 | 36 | 1.00 | 36 |
 
 ### A mesma magia com disponibilidade diferente
 

@@ -442,7 +442,7 @@ Um ataque que acerta e já sai crítico.
 
 **1x por combate.**
 
-Marca um inimigo por 3 turnos, com +1d6 de dano nele.
+Marca um inimigo por 3 turnos, com +1d6 de dano nele — e ataca na mesma rodada, já com o dado da marca.
 
 ---
 
@@ -516,7 +516,7 @@ Quando alguém falha o teste da sala, soma +5 — e só dispara se o +5 fizer pa
 
 **1x por descanso.**
 
-Uma presa por 3 turnos, com +2d8 e vantagem.
+Uma presa por 3 turnos, com +2d8 e vantagem — e ataca na mesma rodada, já com os dois.
 
 ---
 

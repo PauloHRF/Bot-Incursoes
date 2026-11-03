@@ -185,12 +185,19 @@ async def caso_a_marca_cai_sozinha_depois_de_tres_turnos():
     primeiro_prazo = marcas[0]["expira"]
     assert primeiro_prazo == 1 + hb.TURNOS_DA_MARCA, primeiro_prazo
 
-    # Marcar de novo na rodada seguinte devolve o prazo inteiro, contado de lá.
-    inter = FakeInteraction(canal, JOGADORES[0], msg)
-    await cog.atacar(inter, run["id"], "OBJ")
-    run = await db.buscar_run(conn, run["id"])
-    estado = await cog._estado_combate(run, incursao.objetivo)
-    marcas = await cog._marcas_de(run, estado.rodada)
+    # Marcar de novo numa rodada seguinte devolve o prazo inteiro, contado de
+    # lá. Ataca até ACERTAR: com CA 1 só o 1 natural erra, e errar não marca
+    # — então um erro deixaria o prazo onde estava, e o caso acusaria falso.
+    marcas = {}
+    for _ in range(20):
+        inter = FakeInteraction(canal, JOGADORES[0], msg)
+        await cog.atacar(inter, run["id"], "OBJ")
+        run = await db.buscar_run(conn, run["id"])
+        estado = await cog._estado_combate(run, incursao.objetivo)
+        marcas = await cog._marcas_de(run, estado.rodada)
+        if marcas and marcas[0]["expira"] > primeiro_prazo:
+            break
+    assert marcas, "a marca sumiu antes de renovar"
     assert marcas[0]["expira"] > primeiro_prazo, (marcas[0]["expira"], primeiro_prazo)
 
     # E sem acerto novo elas vencem: `efeitos_ativos` nao as devolve mais.
