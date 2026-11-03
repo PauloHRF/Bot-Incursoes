@@ -249,8 +249,33 @@ class FakeFollowup:
         return mensagem if wait else None
 
 
+class _Namespace:
+    """Os OUTROS campos que o Discord ja preencheu no comando.
+
+    Um autocomplete nao recebe so o que esta sendo digitado: o
+    `interaction.namespace` traz o que o jogador ja disse nos demais
+    campos. O duble nao tinha isto, e por isso dois autocompletes do
+    mercado puderam ignorar o `personagem` digitado sem nenhum teste
+    reclamar — quem tinha dois personagens nunca via item para vestir.
+    """
+
+    def __init__(self, **campos):
+        for nome, valor in campos.items():
+            setattr(self, nome, valor)
+
+    def __getattr__(self, _nome):  # campo que o comando nao tem
+        return None
+
+
 class FakeInteraction:
-    def __init__(self, canal: FakeCanal, user_id: int, mensagem: FakeMensagem | None = None):
+    def __init__(
+        self,
+        canal: FakeCanal,
+        user_id: int,
+        mensagem: FakeMensagem | None = None,
+        **digitado,
+    ):
+        self.namespace = _Namespace(**digitado)
         self.canal = canal
         self.user = FakeUsuario(user_id)
         self.channel = canal

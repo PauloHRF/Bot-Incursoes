@@ -314,17 +314,34 @@ class Mercado(commands.Cog):
             return None
         return personagens[0]
 
-    async def _quieto(self, interaction: discord.Interaction) -> Optional[dict[str, Any]]:
-        """O personagem para um autocomplete: o único, ou nada. Nunca responde.
+    async def _para_listar(
+        self, interaction: discord.Interaction
+    ) -> list[dict[str, Any]]:
+        """Os personagens que o autocomplete deve considerar.
 
-        Autocomplete não pode mandar mensagem, e com mais de um personagem não
-        há como saber de qual é a lista — aí ela sai vazia e o jogador digita
-        o nome do personagem primeiro.
+        O que o jogador JÁ digitou no campo `personagem`, se ele digitou;
+        senão todos os dele.
+
+        Antes isto devolvia "o único, ou nada", e nada virava lista vazia.
+        Quem tinha dois personagens nunca via item nenhum para vestir — nem
+        depois de dizer qual personagem era, porque o campo digitado não era
+        lido. Lista vazia sem explicação é a pior resposta possível num
+        autocomplete: o jogador conclui que o item sumiu da bolsa.
+
+        O `namespace` é o que o Discord já preencheu nos OUTROS campos do
+        comando, e é por ele que o `personagem` chega aqui.
         """
-        personagens = await db.listar_personagens(
+        todos = await db.listar_personagens(
             self.bot.db, interaction.guild_id, interaction.user.id
         )
-        return personagens[0] if len(personagens) == 1 else None
+        nome = getattr(getattr(interaction, "namespace", None), "personagem", None)
+        if nome:
+            achado = await db.personagem_por_nome(
+                self.bot.db, interaction.guild_id, interaction.user.id, nome
+            )
+            if achado:
+                return [achado]
+        return todos
 
     async def _anunciar(self, interaction: discord.Interaction, texto: str) -> None:
         """Manda no canal, e nao na resposta.
@@ -404,17 +421,26 @@ class Mercado(commands.Cog):
     async def _sugerir_vitrine(
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
-        escolhido = await self._quieto(interaction)
-        if not escolhido:
-            return []
+        personagens = await self._para_listar(interaction)
         termo = atual.lower()
-        return [
-            app_commands.Choice(
-                name=f"{peca.nome} — {peca.custo} de ouro", value=peca.id
-            )
-            for peca in mercado.vitrine(escolhido["id"], self._semana())
-            if termo in peca.nome.lower()
-        ][:25]
+        # A vitrine é POR personagem: com dois, os dois aparecem com o nome
+        # no rótulo. Comprar ainda confere a prateleira de quem o comando
+        # resolver — e `_resolver` exige o nome quando há mais de um —, então
+        # o rótulo orienta e a validação continua sendo a do comando.
+        de_varios = len(personagens) > 1
+        saida, vistos = [], set()
+        for quem in personagens:
+            for peca in mercado.vitrine(quem["id"], self._semana()):
+                if termo not in peca.nome.lower():
+                    continue
+                rotulo = f"{peca.nome} — {peca.custo} de ouro"
+                if de_varios:
+                    rotulo = f"{rotulo} ({quem['nome']})"
+                if rotulo in vistos:
+                    continue
+                vistos.add(rotulo)
+                saida.append(app_commands.Choice(name=rotulo, value=peca.id))
+        return saida[:25]
 
     @grupo.command(name="comprar", description="Leva um item da sua vitrine da semana")
     @app_commands.describe(
@@ -448,22 +474,25 @@ class Mercado(commands.Cog):
     async def _sugerir_bolsa(
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
-        escolhido = await self._quieto(interaction)
-        if not escolhido:
-            return []
+        personagens = await self._para_listar(interaction)
         termo = atual.lower()
-        guardados = await db.itens_na_bolsa(self.bot.db, escolhido["id"])
-        saida = []
-        for item_id in guardados:
-            peca = itens.item(item_id)
-            if peca is None or termo not in peca.nome.lower():
-                continue
-            saida.append(
-                app_commands.Choice(
-                    name=f"{peca.nome} — {itens.NOME_DO_SLOT[peca.slot]}",
-                    value=peca.id,
-                )
-            )
+        # Com mais de um personagem em jogo, o nome dele entra no rótulo: o
+        # item é o mesmo id para os dois, e sem isso o jogador veria a mesma
+        # peça duas vezes sem saber de quem é qual.
+        de_varios = len(personagens) > 1
+        saida, vistos = [], set()
+        for quem in personagens:
+            for item_id in await db.itens_na_bolsa(self.bot.db, quem["id"]):
+                peca = itens.item(item_id)
+                if peca is None or termo not in peca.nome.lower():
+                    continue
+                rotulo = f"{peca.nome} — {itens.NOME_DO_SLOT[peca.slot]}"
+                if de_varios:
+                    rotulo = f"{rotulo} ({quem['nome']})"
+                if rotulo in vistos:
+                    continue
+                vistos.add(rotulo)
+                saida.append(app_commands.Choice(name=rotulo, value=peca.id))
         return saida[:25]
 
     @grupo.command(name="equipar", description="Veste um item da sua bolsa")

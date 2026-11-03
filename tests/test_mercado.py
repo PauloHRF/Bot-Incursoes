@@ -703,6 +703,63 @@ def caso_sem_ouro_o_campo_nao_aparece():
     print("  sem ouro, o campo nao entra no embed: ok")
 
 
+async def caso_a_lista_de_equipar_nao_vem_vazia_com_dois_personagens():
+    """Quem tem dois personagens vê o que vestir, e vê de quem é.
+
+    Era o relato da mesa: o jogador comprou — pelo BOTÃO da vitrine, que
+    não passa por autocomplete — e o item apareceu na bolsa, mas não na
+    lista do `/mercado equipar`. A lista vinha vazia porque o autocomplete
+    desistia quando havia mais de um personagem, e nem lia o `personagem`
+    que o jogador já tinha digitado.
+
+    Lista vazia é a pior resposta possível num autocomplete: ela não
+    explica nada, e o jogador conclui que o item sumiu.
+    """
+    conn, canal, cog, ids = await preparar()
+    dono = JOGADORES[0]
+    primeiro = ids[dono]
+    # Um SEGUNDO personagem do mesmo jogador: é a condição do relato.
+    segundo = await db.criar_personagem(
+        conn, GUILD, dono, "Cupcake", "ladino", ["Furtividade"]
+    )
+    peca = itens.item("gibao_de_couro")
+    await db.lancar_ouro(conn, segundo, 500, "teste")
+    assert await db.comprar(conn, segundo, peca.id, peca.custo)
+    assert await db.itens_na_bolsa(conn, segundo) == {peca.id: 1}
+
+    # Sem dizer o personagem: a lista traz os itens dos dois, com o nome
+    # de quem é cada um — e não vem vazia.
+    aberto = FakeInteraction(canal, dono)
+    opcoes = await cog.loja._sugerir_bolsa(aberto, "")
+    assert opcoes, "a lista de equipar veio vazia com dois personagens"
+    assert any(peca.nome in o.name and "Cupcake" in o.name for o in opcoes), (
+        [o.name for o in opcoes]
+    )
+
+    # Dizendo o personagem, a lista é só dele.
+    dito = FakeInteraction(canal, dono, personagem="Cupcake")
+    so_dele = await cog.loja._sugerir_bolsa(dito, "")
+    assert [o.value for o in so_dele] == [peca.id], [o.name for o in so_dele]
+
+    # E a vitrine, que é POR personagem, tem o mesmo conserto.
+    vitrine = await cog.loja._sugerir_vitrine(dito, "")
+    assert vitrine, "a vitrine veio vazia mesmo com o personagem dito"
+    da_semana = {p.id for p in mercado.vitrine(segundo, cog.loja._semana())}
+    assert {o.value for o in vitrine} <= da_semana, (
+        "a vitrine ofereceu peça que não está na prateleira dele"
+    )
+
+    # Com um personagem só, nada de nome no rótulo: ele não ajuda ninguém.
+    outro = JOGADORES[1]
+    await db.lancar_ouro(conn, ids[outro], 500, "teste")
+    assert await db.comprar(conn, ids[outro], peca.id, peca.custo)
+    sozinho = FakeInteraction(canal, outro)
+    uma = await cog.loja._sugerir_bolsa(sozinho, "")
+    assert len(uma) == 1 and "(" not in uma[0].name.split("—")[-1], uma[0].name
+
+    print("  a lista de equipar nao vem vazia com dois personagens: ok")
+
+
 async def main():
     try:
         caso_todo_item_respeita_o_dominio_do_slot()
@@ -720,6 +777,7 @@ async def main():
         await caso_a_run_concluida_paga_todos_que_passaram()
         await caso_comprar_debita_e_guarda()
         await caso_equipar_tira_da_bolsa_e_troca_sem_perder()
+        await caso_a_lista_de_equipar_nao_vem_vazia_com_dois_personagens()
         await caso_so_cabe_um_por_slot()
         await caso_o_equipamento_entra_na_ca_e_no_acerto()
         await caso_o_item_nao_soma_com_a_passiva_da_classe()
