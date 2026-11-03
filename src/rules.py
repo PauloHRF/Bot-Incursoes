@@ -68,23 +68,19 @@ CONSTANTE_OBJETIVO = 9
 AJUSTE_DE_CD_POR_TIER = {1: 0, 2: 2, 3: 3, 4: 5, 5: 6}
 
 
-# Quanto o corpo de uma criatura cresce por tier. É a progressão de HP da
-# família d8 (19, 31, 45, 59, 73) relativa ao tier 1 — a mesma curva que o
-# grupo segue, tanto no HP que ele tem quanto no dano que ele faz, que medem
-# quase igual (3,8x e 3,3x do tier 1 ao 5).
+# A CRIATURA NÃO ESCALA. Aqui morava `ESCALA_DE_MONSTRO_POR_TIER`, que
+# multiplicava HP e dano de cada criatura pelo tier do grupo (1,0 · 1,6 · 2,4
+# · 3,1 · 3,8). A conta parecia certa — era a curva de HP da família d8 — mas
+# batia em cima de fichas já escritas em força cheia de Monster Manual: cinco
+# Gárgulas de 52 HP viravam 416 HP numa sala de tier 2, e as cinco salas de
+# combate de um banco dizimavam o grupo SEMPRE. A mesa sentiu antes da conta
+# mostrar, e passou a evitar combate para chegar inteira ao objetivo.
 #
-# É o que faltava para o combate funcionar fora do tier 1: a criatura escrita
-# no banco é a do tier 1, e os bancos são compartilhados entre incursões de
-# tiers diferentes. Sem escala, uma sala de tier 4 abria com criatura de tier
-# 1 e o combate acabava em uma rodada e meia.
-ESCALA_DE_MONSTRO_POR_TIER = {1: 1.0, 2: 1.6, 3: 2.4, 4: 3.1, 5: 3.8}
-
-
-def escala_do_monstro(tier_alvo: Optional[int]) -> float:
-    """O multiplicador de corpo e de dano da criatura naquele tier."""
-    if not tier_alvo:
-        return 1.0
-    return ESCALA_DE_MONSTRO_POR_TIER[max(1, min(TIER_MAXIMO, tier_alvo))]
+# O tier agora vive no CONTEÚDO: `Sala.monstros_por_tier` diz quem cada tier
+# encontra na sala, e cada ficha vale como está escrita. O bestiário tem 385
+# criaturas de CR 0 a 20 — se uma não serve ao tier, o conteúdo usa outra.
+# Só a CD continua escalando, porque a perícia do personagem cresce devagar
+# (+6 em cinco tiers) e a CD escrita é a do tier 1.
 
 
 def cd_no_tier(cd_base: int, tier_alvo: Optional[int]) -> int:

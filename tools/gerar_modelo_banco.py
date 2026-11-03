@@ -105,7 +105,8 @@ SALAS = [
     ("VO11", "Guardião Adormecido", "Combate", "", "",
      "A coisa ocupa o corredor inteiro e respira devagar, como quem dorme há séculos. Dá para "
      "tentar passar em silêncio. Nunca dá certo.",
-     "", "Coisa do Umbral", 16, 6, "2d8+3", 40, "", 2),
+     # As criaturas desta sala estao na aba 'Monstros', uma linha por tier.
+     "", "", "", "", "", "", "", 2),
     ("VO12", "Poço de Oferendas", "Tesouro", "Difícil", "Religião; Investigação",
      "Moedas, dentes e anéis cobrem o fundo raso. Cada objeto foi deixado por alguém pedindo "
      "passagem — e a maioria não conseguiu.",
@@ -115,10 +116,14 @@ SALAS = [
 # Salas em que a mesma criatura aparece repetida (sala_id -> quantidade).
 QUANTIDADES = {"VO03": 2}
 
-# Criaturas extras, para salas com um bando misto. Vao na aba 'Monstros' e se
-# somam ao monstro_* da linha da sala.
+# As criaturas que vao na aba 'Monstros': as de um bando misto e as que
+# mudam por tier. Com o tier preenchido, elas sao a lista DAQUELE tier; sem
+# tier, somam ao monstro_* da linha da sala.
 MONSTROS_EXTRAS = [
-    ("VO11", "Larva do Umbral", 3, 12, 3, "1d6", 9),
+    # A mesma sala, uma linha por tier: no tier 1 tres larvas, no tier 2 a
+    # coisa que elas viram. Nada e multiplicado — muda quem mora la.
+    ("VO11", 1, "Larva do Umbral", 3, 12, 3, "1d6", 9),
+    ("VO11", 2, "Coisa do Umbral", 2, 14, 5, "1d10+3", 32),
 ]
 
 DIFICULDADES = [("Fácil", 10, 5), ("Média", 15, 10), ("Difícil", 20, 15)]
@@ -222,6 +227,11 @@ def gerar(organizacao: str, destino: Path) -> Path:
     ws = wb.create_sheet("Monstros")
     cabecalho_monstros = (
         ("sala_id", 10, "De qual sala desta planilha esta criatura e."),
+        ("tier", 8, "Para qual tier do grupo esta criatura e: 1 a 5."
+         " A MESMA sala serve incursoes de tiers diferentes, e o que muda entre"
+         " eles e QUEM mora nela — nada e multiplicado por tier. Entao a mesma"
+         " sala aparece aqui uma vez por tier, com a criatura que cabe naquele"
+         " tier. Vazio = vale para qualquer tier."),
         ("nome", 22, "Nome da criatura. Com os números vazios, vem do bestiário."),
         ("quantidade", 12, "Quantas iguais. Vazio ou 1 = uma."),
         ("ca", 8, "Classe de Armadura."),
@@ -257,9 +267,12 @@ def gerar(organizacao: str, destino: Path) -> Path:
         c.comment = Comment(ajuda, "Incursoes 2.0", height=80, width=260)
         ws.column_dimensions[get_column_letter(i)].width = largura
     ws.cell(row=1, column=1).comment = Comment(
-        "Criaturas EXTRAS de uma sala, para um bando misto. O que estiver aqui se soma"
-        " ao monstro_* da linha da sala, ate 6 criaturas por sala."
-        " Deixe a aba vazia se cada sala tiver so um tipo de criatura."
+        "Criaturas de uma sala POR TIER, e tambem o bando misto. Preencha o tier"
+        " para dizer quem aquele tier encontra na sala: a mesma sala serve"
+        " incursoes de tiers diferentes, e nada e multiplicado por tier — se a"
+        " criatura nao serve ao tier, escreva outra que sirva. Sem tier, a"
+        " criatura soma ao monstro_* da linha da sala e vale para todos."
+        " Ate 6 criaturas por sala em cada tier."
         " Criatura com multiataque, resistencias ou acao especial vem sempre por"
         " aqui: a linha da sala so tem as colunas basicas.",
         "Incursoes 2.0",

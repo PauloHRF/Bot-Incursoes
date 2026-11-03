@@ -1,71 +1,39 @@
 {
-  "id": "vortice_cripta",
-  "nome": "A Cripta do Vórtice",
-  "organizacao": "Vórtice Oculto",
-  "tamanho": "Média",
-  "tier": 4,
-  "lore_inicial": "Um selo antigo cedeu sob a cidade e algo do outro lado começou a vazar. Três dias depois, os cães pararam de latir no bairro inteiro e uma rua acordou com as portas trancadas por dentro e ninguém atrás delas.\n\nO Vórtice Oculto já sabia do selo — foi um dos seus que o fez, há muito tempo. Agora quer o Olho de volta antes que a fenda se alargue o bastante para alguém de fora perceber de quem foi a culpa. Vocês descem hoje.",
-  "lore_final": "O Olho para de piscar assim que sai do pedestal, e o silêncio que vem depois é pior que o zumbido. Lá em cima, os cães voltam a latir.\n\nA Organização recebe o Olho sem cerimônia, como quem recolhe uma ferramenta emprestada. Ninguém menciona o que ele guardava, nem por que o selo tinha a marca de um deles. Vocês recebem o pagamento, e a instrução de não voltar àquela rua.",
-  "imagem_capa": null,
-  "recompensa_mes": 10,
-  "pontos_conclusao": 10,
-  "objetivo": {
-    "id": "OBJ",
-    "nome": "O Olho do Vórtice",
-    "tipo": "Combate",
-    "descricao": "A câmara é uma esfera perfeita e o Olho flutua no centro dela, aberto. O que o guarda não tem nome porque nada que o viu voltou para dar um — e o chão ao redor está cheio de gente de pedra com a mão levantada, como quem tentou explicar alguma coisa.",
-    "dificuldade": null,
-    "cd": null,
-    "alvo_progresso": null,
-    "pericias": [],
-    "imagem": null,
-    "recompensa": "10 MEs por participante + pontos com o Vórtice Oculto",
-    "pontos_organizacao": 0,
-    "monstros": [
-      {
-        "nome": "Medusa",
-        "ca": 17,
-        "ataque": 7,
-        "dano": "3d8+3+2d6",
-        "hp": 172,
-        "ataques": 1,
-        "habilidade": {
-          "nome": "Petrifying Gaze",
-          "save": "CON",
-          "cd": 13,
-          "texto": "O olhar dela percorre a câmara inteira; ninguém escapa de ser olhado.",
-          "dano": null,
-          "alvos": 6,
-          "atordoa": 1,
-          "cada": 2,
-          "recarga": 5,
-          "save_repete": true
-        }
-      },
-      {
-        "nome": "Nothic 1",
-        "ca": 15,
-        "ataque": 5,
-        "dano": "1d10+3",
-        "hp": 45,
-        "ataques": 1
-      },
-      {
-        "nome": "Nothic 2",
-        "ca": 15,
-        "ataque": 5,
-        "dano": "1d10+3",
-        "hp": 45,
-        "ataques": 1
-      },
-      {
-        "nome": "Nothic 3",
-        "ca": 15,
-        "ataque": 5,
-        "dano": "1d10+3",
-        "hp": 45,
-        "ataques": 1
-      }
-    ]
-  }
+ "id": "vortice_cripta",
+ "nome": "A Cripta do Vórtice",
+ "organizacao": "Vórtice Oculto",
+ "tamanho": "Média",
+ "tier": 4,
+ "lore_inicial": "Um selo antigo cedeu sob a cidade e algo do outro lado começou a vazar. Três dias depois, os cães pararam de latir no bairro inteiro e uma rua acordou com as portas trancadas por dentro e ninguém atrás delas.\n\nO Vórtice Oculto já sabia do selo — foi um dos seus que o fez, há muito tempo. Agora quer o Olho de volta antes que a fenda se alargue o bastante para alguém de fora perceber de quem foi a culpa. Vocês descem hoje.",
+ "lore_final": "O Olho para de piscar assim que sai do pedestal, e o silêncio que vem depois é pior que o zumbido. Lá em cima, os cães voltam a latir.\n\nA Organização recebe o Olho sem cerimônia, como quem recolhe uma ferramenta emprestada. Ninguém menciona o que ele guardava, nem por que o selo tinha a marca de um deles. Vocês recebem o pagamento, e a instrução de não voltar àquela rua.",
+ "imagem_capa": null,
+ "recompensa_mes": 10,
+ "pontos_conclusao": 10,
+ "objetivo": {
+  "id": "OBJ",
+  "nome": "O Olho do Vórtice",
+  "tipo": "Combate",
+  "descricao": "A câmara é uma esfera perfeita e o Olho flutua no centro dela, aberto. O que o guarda não tem nome porque nada que o viu voltou para dar um — e o chão ao redor está cheio de gente de pedra com a mão levantada, como quem tentou explicar alguma coisa.\n\nDois menores rodeiam o pedestal, e param quando ele olha.",
+  "dificuldade": null,
+  "cd": null,
+  "alvo_progresso": null,
+  "pericias": [],
+  "imagem": null,
+  "recompensa": "10 MEs por participante + pontos com o Vórtice Oculto",
+  "pontos_organizacao": 0,
+  "monstros": [
+   {
+    "nome": "Observador"
+   },
+   {
+    "nome": "Nothic",
+    "ca": 15,
+    "ataque": 5,
+    "dano": "1d10+3",
+    "hp": 45,
+    "ataques": 1,
+    "quantidade": 2
+   }
+  ]
+ }
 }

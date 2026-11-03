@@ -244,13 +244,43 @@ class Sala:
     pericias: list[str] = field(default_factory=list)
     imagem: Optional[str] = None
     monstros: list[Monstro] = field(default_factory=list)
+    # As criaturas por tier do GRUPO. A ficha escrita vale como ela está:
+    # nada é esticado por multiplicador. Se a criatura não serve ao tier, o
+    # conteúdo usa outra — é para isso que o bestiário tem 385 delas, de CR
+    # 0 a 20. Antes havia um `escalar_monstro` que multiplicava o HP e o
+    # dano pelo tier, e ele batia em cima de criaturas já escritas em força
+    # cheia de Monster Manual: cinco Gárgulas de 52 HP viravam 416 HP numa
+    # sala de tier 2, e o grupo era dizimado sempre.
+    monstros_por_tier: dict[int, list[Monstro]] = field(default_factory=dict)
     recompensa: Optional[str] = None
     pontos_organizacao: int = 0
+
+    def monstros_do_tier(self, tier: Optional[int] = None) -> list[Monstro]:
+        """As criaturas que ESTE tier encontra nesta sala.
+
+        O tier exato quando ele está escrito; senão o maior tier escrito
+        abaixo dele, porque conteúdo de tier baixo é jogável por grupo alto
+        e o contrário não. Sem nenhum, a lista solta de `monstros`, que é o
+        que o conteúdo antigo tem.
+        """
+        if tier and self.monstros_por_tier:
+            if tier in self.monstros_por_tier:
+                return self.monstros_por_tier[tier]
+            abaixo = [t for t in self.monstros_por_tier if t <= tier]
+            if abaixo:
+                return self.monstros_por_tier[max(abaixo)]
+        if self.monstros_por_tier and not self.monstros:
+            # Sala que só tem lista por tier: o menor escrito é o piso.
+            return self.monstros_por_tier[min(self.monstros_por_tier)]
+        return self.monstros
 
     @property
     def monstro(self) -> Optional[Monstro]:
         """O primeiro inimigo da sala, para quando basta um nome."""
-        return self.monstros[0] if self.monstros else None
+        if self.monstros:
+            return self.monstros[0]
+        do_tier = self.monstros_do_tier()
+        return do_tier[0] if do_tier else None
 
     def cd_efetiva(self, tier: Optional[int] = None) -> Optional[int]:
         """A CD que o grupo rola de fato, no tier da incursão.
@@ -296,6 +326,10 @@ class Sala:
             "recompensa": self.recompensa,
             "pontos_organizacao": self.pontos_organizacao,
             "monstros": [m.para_dict() for m in self.monstros],
+            "monstros_por_tier": {
+                str(tier): [m.para_dict() for m in lista]
+                for tier, lista in sorted(self.monstros_por_tier.items())
+            },
         }
 
 
@@ -786,15 +820,44 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
     for bruto in brutos:
         monstros.extend(_monstros_de_dict(bruto, onde, problemas))
 
+    # As criaturas por tier do grupo. A mesma sala serve incursoes de tiers
+    # diferentes, e o que muda entre eles e QUEM mora nela — nao o tamanho
+    # da mesma criatura.
+    por_tier: dict[int, list[Monstro]] = {}
+    for chave, lista in (dados.get("monstros_por_tier") or {}).items():
+        numero = _inteiro(chave)
+        if numero is None or not 1 <= numero <= TIER_MAXIMO:
+            problemas.append(
+                f"{onde}: '{chave}' nao e um tier de 1 a {TIER_MAXIMO} em "
+                f"monstros_por_tier."
+            )
+            continue
+        do_tier: list[Monstro] = []
+        for bruto in lista or []:
+            do_tier.extend(
+                _monstros_de_dict(bruto, f"{onde}: tier {numero}", problemas)
+            )
+        if len(do_tier) > MAX_INIMIGOS:
+            problemas.append(
+                f"{onde}: tier {numero} tem {len(do_tier)} criaturas na mesma "
+                f"sala; o maximo e {MAX_INIMIGOS}."
+            )
+            do_tier = do_tier[:MAX_INIMIGOS]
+        if do_tier:
+            por_tier[numero] = do_tier
+
     if tipo == "Combate":
-        if not brutos:
-            problemas.append(f"{onde}: sala de Combate precisa de pelo menos uma criatura.")
+        if not brutos and not por_tier:
+            problemas.append(
+                f"{onde}: sala de Combate precisa de pelo menos uma criatura, "
+                f"em 'monstros' ou em 'monstros_por_tier'."
+            )
         elif len(monstros) > MAX_INIMIGOS:
             problemas.append(
                 f"{onde}: {len(monstros)} criaturas na mesma sala; o máximo é {MAX_INIMIGOS}."
             )
             monstros = monstros[:MAX_INIMIGOS]
-    elif brutos:
+    elif brutos or por_tier:
         problemas.append(f"{onde}: só salas de Combate têm criatura.")
 
     return Sala(
@@ -808,6 +871,7 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
         pericias=pericias,
         imagem=(str(dados.get("imagem")).strip() or None) if dados.get("imagem") else None,
         monstros=monstros,
+        monstros_por_tier=por_tier,
         recompensa=(str(dados.get("recompensa")).strip() or None) if dados.get("recompensa") else None,
         pontos_organizacao=pontos_sala,
     )

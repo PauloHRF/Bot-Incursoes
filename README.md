@@ -191,6 +191,11 @@ código), mas é a referência contra a qual `test_condicoes.py` confere os núm
 | **Evento** | um **prêmio** para o grupo | um debuff de Evento ou um ponto de **Exaustão** |
 | **Tesouro** | o texto de recompensa da sala | nada — e chance de acordar **Mímicos** |
 | **Descanso** | cura metade do HP e cada um tira **uma** condição | — |
+| **Combate** | **o dobro do ouro** de uma sala, no fecho da run | o combate perdido encerra a run |
+
+A sala de **Combate** paga dobrado porque é a única que cobra HP, e o HP não volta entre
+salas: enquanto ela pagava igual à de Tesouro, desviar do combate era sempre a jogada
+certa — e era isso que a mesa fazia, de propósito, para chegar inteira ao objetivo.
 
 **A sala é do grupo, nos dois sentidos.** O que decide é o desfecho dela, não a rolagem de
 cada um: vencida, não castiga ninguém — nem quem rolou mal; perdida, castiga **todos que a
@@ -316,10 +321,17 @@ descanso sem clique nenhum. Quem caiu continua voltando com metade do HP. O esta
 
 ### O Mímico do baú
 
-Falhar num Tesouro tem 35% de chance de acordar dois Mímicos, e aí a sala vira combate no
-mesmo passo em vez de devolver o grupo à votação. Os números vêm do bestiário e ficam
-gravados em `run_inimigos`, então a emboscada se remonta sozinha depois de um restart —
-ela não precisa existir no banco de salas.
+Falhar num Tesouro tem 35% de chance de acordar o que fingia ser um baú, e aí a sala vira
+combate no mesmo passo em vez de devolver o grupo à votação. Os números vêm do bestiário e
+ficam gravados em `run_inimigos`, então a emboscada se remonta sozinha depois de um
+restart — ela não precisa existir no banco de salas.
+
+**A emboscada tem uma linha por tier** (`consequencias.A_EMBOSCADA`): 3 Mímicos no tier 1,
+5 no tier 2, e do tier 3 para cima eles vêm acompanhados — o Mímico é CR 2 e satura, seis
+deles deixam 85% do HP de um grupo de tier 3. Quem dá o peso é quem morava com o baú: o
+Xorn, que come metal e pedra preciosa; a Naga Guardiã, que guarda tesouro; e o Golem de
+Pedra, guardião de câmara. O Tesouro que virou emboscada continua pagando como Tesouro:
+a emboscada é castigo por falhar, e pagar dobrado por ela seria pagar pelo erro.
 
 **Os itens não entram no bot.** Tesouro vencido anuncia o que caiu no texto da sala; quem
 guarda poções, itens de carga e material de craft é a planilha do grupo, como já acontece
@@ -560,40 +572,48 @@ uma cada:
 
 | Incursão | Tier | Tamanho | Organização | Objetivo |
 | --- | --- | --- | --- | --- |
-| *O Posto de Vigia Calado* | 1 | Curta | Sentinelas do Alvorecer | Senhor da Matilha Gnoll + 2 Gnolls |
-| *O Contrato Rasgado* | 1 | Média | Aliança das Sombras | Doppelganger + 2 Brutamontes |
-| *A Agulha de Vidro* | 1 | Média | Vórtice Oculto | Gárgula + 3 Aranhas de Fase |
-| *A Sala dos Nomes* | 2 | Média | Sentinelas do Alvorecer | Demônio das Sombras + Fanático + 2 Gárgulas + Horror Elmado + Diabo Espinhoso |
-| *A Cobrança de Terça* | 2 | Média | Aliança das Sombras | Homem-Tigre + 5 Homens-Rato |
-| *O Ossuário de Vael* | 2 | Média | Guilda dos Mortos | Múmia + 2 Ogros Zumbi + 2 Carniçais |
-| *O Poço dos Olhos* | 2 | Média | Vórtice Oculto | Chuul + 3 Nothics + 2 Devoradores de Intelecto |
-| *A Cripta do Vórtice* | 4 | Média | Vórtice Oculto | Medusa + 3 Nothics |
-| *A Brecha de Fogo Pálido* | 4 | Longa | Sentinelas do Alvorecer | Diabo Ósseo + Vrock + 2 Cães Infernais + Diabo Barbado |
+| *O Posto de Vigia Calado* | 1 | Curta | Sentinelas do Alvorecer | Senhor da Matilha Gnoll + 2 Crias de Gnoll |
+| *O Contrato Rasgado* | 1 | Média | Aliança das Sombras | Doppelganger + Brutamontes |
+| *A Agulha de Vidro* | 1 | Média | Vórtice Oculto | Gárgula + 2 Aranhas de Fase |
+| *A Sala dos Nomes* | 2 | Média | Sentinelas do Alvorecer | Demônio das Sombras + Fanático + 2 Gárgulas + Horror Elmado |
+| *A Cobrança de Terça* | 2 | Média | Aliança das Sombras | Homem-Tigre + 4 Homens-Rato |
+| *O Ossuário de Vael* | 2 | Média | Guilda dos Mortos | Múmia + 2 Ogros Zumbi + Carniçal |
+| *O Poço dos Olhos* | 2 | Média | Vórtice Oculto | 2 Nothics + Devorador de Intelecto + *o que estava na água* |
+| *A Cripta do Vórtice* | 4 | Média | Vórtice Oculto | Observador + 2 Nothics |
+| *A Brecha de Fogo Pálido* | 4 | Longa | Sentinelas do Alvorecer | Diabo Ósseo + Vrock + 2 Diabos Barbados |
 
-**Os dois primeiros tiers medidos**, com `tools/simular_combate.py` contra um grupo misto
-do nível do tier e **sem nenhuma habilidade ativa** — é um piso, não um prognóstico: a
-mesa de verdade tem cura, buff e magia de dano por cima disto.
+**Os nove objetivos medidos**, com `tools/simular_combate.py` contra um grupo misto de 5
+no nível do tier e **sem nenhuma habilidade ativa** — é um piso, não um prognóstico: a
+mesa de verdade tem cura, buff e magia de dano por cima disto. As duas colunas são as duas
+maneiras de chegar: intacto (desviando dos combates) e gasto, com os 65% de HP que o
+caminho calibrado cobra.
 
-| Objetivo | Tier | Grupo de 5 | de 4 | de 3 |
-| --- | --- | --- | --- | --- |
-| *O Contrato Rasgado* | 1 | 37% | 4% | 0% |
-| *O Posto de Vigia Calado* | 1 | 51% | 15% | 3% |
-| *A Agulha de Vidro* | 1 | 58% | 11% | 2% |
-| *O Ossuário de Vael* | 2 | 81% | 22% | 1% |
-| *O Poço dos Olhos* | 2 | 87% | 26% | 1% |
-| *A Sala dos Nomes* | 2 | 92% | 34% | 2% |
-| *A Cobrança de Terça* | 2 | 95% | 21% | 0% |
+| Objetivo | Tier | Chegando intacto | Chegando com 65% do HP |
+| --- | --- | --- | --- |
+| *O Posto de Vigia Calado* | 1 | 78% | 53% |
+| *A Agulha de Vidro* | 1 | 92% | 59% |
+| *O Contrato Rasgado* | 1 | 94% | 62% |
+| *O Ossuário de Vael* | 2 | 96% | 57% |
+| *O Poço dos Olhos* | 2 | 97% | 67% |
+| *A Sala dos Nomes* | 2 | 97% | 74% |
+| *A Cobrança de Terça* | 2 | 99% | 75% |
+| *A Brecha de Fogo Pálido* | 4 | 96% | 62% |
+| *A Cripta do Vórtice* | 4 | 97% | 61% |
 
 Os números saíram da **composição**, e não de estatística inventada: as criaturas são as
 do bestiário, com os golpes e as habilidades que elas têm lá. Para endurecer ou abrandar
-uma sala, o lever é **quantas** entram nela — o teto do motor é 6.
+uma sala, os levers são **quantas** entram nela — o teto do motor é 6 — e **quais**, que é
+o que o tier escolhe.
 
-**O tier 2 é mais brando que o tier 1**, e isso é visível na tabela. Não é descuido de
-conteúdo: o grupo cresce mais rápido entre o nível 1 e o 3 do que as criaturas de CR 2 a
-4 que o tier 2 encontra. Se a mesa quiser o tier 2 tão apertado quanto o 1, o conserto é
-subir a faixa de CR que o tier 2 usa (`bestiario.FAIXAS_DE_CR`), e não mexer sala por
-sala — mas isso muda o `BALANCO.md` inteiro, porque é dessa tabela que ele tira a
-criatura típica contra a qual as 14 classes são medidas.
+**O que decide a sala é o número de atacantes, não o HP somado.** No nível 1, duas crias de
+Gnoll a mais levam a vitória de 94% para 47%; no nível 3, tirar uma criatura de seis pula
+de 27% para 85% com o grupo gasto. É por isso que a sala do caminho é calibrada por
+contagem (`vitória ≥ 95%`, `55–75% do HP restante`) e o objetivo por formação.
+
+*O Posto de Vigia Calado* é o único abaixo da faixa, e de propósito: a descrição dele fixa
+o elenco em três — o lorde e "os dois menores" —, e no nível 1 um terceiro atacante custa
+15 pontos de vitória. O conserto não é tirar a cria da ficha: é a cura da mesa, que a
+simulação não conta.
 
 As incursões tiram **todas** as criaturas do bestiário — nas planilhas delas só o nome
 está preenchido. Entre elas, cada mecânica que o importador do Monster Manual gera
@@ -601,25 +621,28 @@ aparece ao menos uma vez:
 
 | Mecânica | Onde ver |
 | --- | --- |
-| Táticas de Matilha | os 3 Lobos do *Corredor dos Cães*, os 4 Cães do *Canil da Brecha* |
+| Táticas de Matilha | os 4 Lobos do *Corredor dos Cães* no tier 1, os Lobos Atrozes dele no 2, os Cães Infernais do *Canil da Brecha* |
 | Multiataque do livro | Espiões e Brutamontes da Aliança, Trolls e Gárgulas do Alvorecer |
-| Teste imposto pelo golpe | a garra do Carniçal, na *Vala Comum* e no chefe da Guilda |
-| Regeneração | os três Trolls da *Despensa*, 10 por rodada cada um |
+| Teste imposto pelo golpe | a garra do Carniçal, no chefe da Guilda |
+| Regeneração | o Troll da *Despensa* (três deles no tier 4), 10 por rodada cada um |
 | Recharge 5–6 + metade no sucesso | o sopro dos Cães Infernais |
 | Recharge 6 | os Esporos do Vrock, no chefe do Alvorecer |
 | Ação especial em ritmo fixo | o Olhar Aterrador da Múmia, a cada 2 rodadas |
 | Dano somado | a mordida do Basilisco (`2d6+3+2d6`) e o punho da Múmia |
-
-Contra um grupo cheio de 5, os três chefes novos ficam em 89%, 99% e 88% de vitória, de
-4,8 a 6,5 rodadas — medido com `tools/simular_combate.py`, que assume cinco Guerreiros, o
-grupo mais forte possível. Um grupo misto sente mais.
 
 **Como pôr mais de uma criatura numa sala**: a coluna `monstro_quantidade` repete a mesma
 criatura (3 = "Lobo 1", "Lobo 2", "Lobo 3"). Para um bando misto, preencha a aba
 **Monstros** — no banco ela tem `sala_id` e é somada à criatura da linha da sala; na
 planilha da incursão ela é a escolta do chefe. O limite é 6 criaturas por sala, contando as
 duas fontes. Os dois modelos já vêm com exemplos: as Sentinelas de Basalto são duas, o
-Guardião Adormecido vem com três Larvas, e o Olho do Vórtice tem dois Acólitos.
+Guardião Adormecido vem com três Larvas no tier 1, e o Olho do Vórtice tem dois Acólitos.
+
+**Como mudar a criatura por tier**: preencha a coluna `tier` na aba **Monstros**, e a
+mesma sala aparece lá uma vez por tier. **Nada é multiplicado por tier** — a ficha vale
+como está escrita, e o que muda entre os tiers é quem mora na sala. Sem tier preenchido, a
+criatura vale para todos, que é como todo banco escrito antes disso continua valendo. O bot
+usa o tier da incursão, ou o maior tier escrito abaixo dele, e por isso conteúdo de tier
+baixo continua jogável por grupo alto.
 
 **O que uma criatura pode ter** (colunas da aba Monstros, todas opcionais): `ataques` para
 multiataque, `saves` (`FOR +5, CON +5`) e `saves_vantagem` para as resistências dela, e um

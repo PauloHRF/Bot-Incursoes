@@ -14,10 +14,13 @@ aqui estão as fichas.
 
 ## Como ler
 
-**Os números são os do tier 1**, como todo conteúdo do bot. Quem escala é o
-combate, na hora de abrir, pelo tier do GRUPO que entrou: HP e dano crescem
-pelo mesmo multiplicador do HP do grupo, e CA, ataque e saves sobem pelo
-ajuste do bônus de proficiência. Uma criatura de 52 HP aqui tem 182 no tier 4.
+**Os números valem como estão escritos.** Nada aqui é multiplicado por tier:
+a criatura de 52 HP tem 52 HP em qualquer incursão. O tier está em QUEM a sala
+chama — cada sala de combate tem uma lista por tier, e se a criatura não serve
+ao tier o conteúdo usa outra, que é para isso que estas 385 existem. (Havia um
+multiplicador até aqui: ele batia em cima de fichas já em força cheia de
+*Monster Manual* e dizimava o grupo — cinco Gárgulas de 52 HP viravam 416 HP
+numa sala de tier 2.)
 
 **O agrupamento é por faixa de CR**, que é a tabela que decide a dificuldade do
 jogo: `tools/balanco.py` tira dela a criatura típica de cada tier, e é contra

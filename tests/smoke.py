@@ -152,6 +152,35 @@ async def main():
     recusa(bom, lambda d: d.update(id="Vórtice Cripta"), "letras minúsculas")
     recusa(bom, lambda d: d.update(pontos_conclusao=-5), "não pode ser negativo")
 
+    # --- a sala lista criaturas POR TIER, e nada escala ---
+    #
+    # Antes a ficha do banco era a do tier 1 e o combate a multiplicava pelo
+    # tier do grupo (x3,1 no tier 4), em cima de criaturas ja escritas em
+    # forca cheia de Monster Manual: as cinco salas de combate de um banco
+    # dizimavam o grupo sempre. Agora cada sala diz quem cada tier encontra, e
+    # estas asserções impedem um banco novo de voltar a sair sem isso.
+    for arquivo in sorted((raiz / "data" / "bancos").glob("*.json")):
+        de_combate = [s for s in carregar_banco(arquivo).salas if s.e_combate]
+        assert de_combate, arquivo.name
+        for sala in de_combate:
+            assert sala.monstros_por_tier, f"{arquivo.name}/{sala.id} sem lista por tier"
+            for t in range(1, TIER_MAXIMO + 1):
+                quem = sala.monstros_do_tier(t)
+                assert quem, f"{arquivo.name}/{sala.id} nao tem criatura no tier {t}"
+                assert all(m.hp > 0 for m in quem), (arquivo.name, sala.id, t)
+            # Sem tier a sala devolve o menor escrito, que e o piso dela.
+            assert sala.monstros_do_tier() == sala.monstros_do_tier(
+                min(sala.monstros_por_tier)
+            ), f"{arquivo.name}/{sala.id}: o piso nao e o menor tier escrito"
+
+    def tier_invalido(d):
+        for sala in d["salas"]:
+            if sala.get("monstros_por_tier"):
+                sala["monstros_por_tier"]["9"] = [{"nome": "Lobo"}]
+                return
+        raise AssertionError("o banco de exemplo perdeu a lista por tier")
+
+    recusa(bom_banco, tier_invalido, "monstros_por_tier", banco_de_dict)
     recusa(bom_banco, lambda d: d.update(salas=d["salas"][:2]), "pelo menos", banco_de_dict)
     recusa(bom_banco, lambda d: d["salas"][0]["pericias"].append("Alquimia"), "não existe", banco_de_dict)
     recusa(bom_banco, lambda d: d["salas"].append(deepcopy(d["salas"][0])), "aparece 2 vezes", banco_de_dict)

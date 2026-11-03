@@ -1192,6 +1192,21 @@ async def sala_fechada(conn: aiosqlite.Connection, run_id: int, passo: int) -> b
     return bool(linha and linha["fechada"])
 
 
+async def ids_das_salas_superadas(conn: aiosqlite.Connection, run_id: int) -> list[str]:
+    """As salas que o grupo venceu, pelo id, na ordem do caminho.
+
+    A contagem sozinha (`salas_superadas`) não basta mais para pagar: a sala
+    de Combate paga dobrado, e para saber quantas eram de combate é preciso
+    saber QUAIS foram.
+    """
+    async with conn.execute(
+        "SELECT sala_id FROM run_salas WHERE run_id = ? AND superada = 1"
+        " ORDER BY passo",
+        (run_id,),
+    ) as cur:
+        return [r["sala_id"] for r in await cur.fetchall()]
+
+
 async def salas_visitadas(conn: aiosqlite.Connection, run_id: int) -> list[str]:
     """As salas por onde o grupo já passou nesta run."""
     async with conn.execute(

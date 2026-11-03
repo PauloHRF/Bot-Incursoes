@@ -7,7 +7,10 @@
 | De onde vem | Quanto | Quem paga |
 |---|---|---|
 | Cada sala superada | 5 × tier | conclusão **e** desistência |
+| Sala de **Combate** do caminho | 10 × tier (2× uma sala) | conclusão **e** desistência |
 | Concluir a incursão | 20 × tier | só a conclusão |
+
+**A sala de Combate paga dobrado**, e isso é regra de desenho: ela é a única que cobra HP, e o HP não volta entre salas. Enquanto ela pagava igual à de Tesouro, desviar do combate era sempre a jogada certa — e era isso que a mesa fazia, de propósito, para chegar inteira ao objetivo. O objetivo fica fora da dobra: ele não é escolha de ninguém, e quem paga por ele é o bônus de conclusão. O Tesouro que virou emboscada de Mímico também fica fora — a emboscada é castigo por falhar no baú.
 
 **A incursão paga uma vez, no fim.** As salas do caminho não pagam por si: elas ficam registradas, e o fecho conta quantas foram superadas. O que muda é qual fecho paga o quê:
 

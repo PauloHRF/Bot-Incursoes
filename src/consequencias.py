@@ -35,9 +35,43 @@ DANO_PCT = 20
 # Chance de falhar num Tesouro acordar Mímicos.
 CHANCE_DE_MIMICO = 0.35
 
-# Quantos Mímicos aparecem quando acordam.
-MIMICOS = 2
+# Quem aparece quando os Mímicos acordam, tier por tier.
+#
+# Nada é esticado por multiplicador aqui, como em nenhuma outra sala. E o
+# Mímico sozinho não dá conta de todos os tiers: ele é CR 2 e satura — seis
+# deles deixam 85% do HP de um grupo de tier 3 e 93% de um de tier 4. Do tier
+# 3 para cima o baú tem companhia, e quem dá o peso é quem morava com ele: o
+# Xorn come metal e pedra preciosa, a Naga Guardiã guarda tesouro e o Golem de
+# Pedra é guardião de câmara. A ficção é a mesma — o tesouro era isca.
+#
+# Medido com a mesa de cinco no nível do tier, 300 combates por linha, mirando
+# o que uma sala do caminho deve cobrar (vitória ≥ 95%, HP restante 55–75%):
+#   T1 3 Mímicos (65% do HP sobra)   T2 5 Mímicos (70%)
+#   T3 2 Mímicos + 2 Xorn (60%)      T4 1 Mímico + 2 Nagas Guardiãs (60%)
+#   T5 1 Mímico + 2 Golens de Pedra (67%)
 NOME_DO_MIMICO = "Mímico"
+A_EMBOSCADA: dict[int, tuple[tuple[str, int], ...]] = {
+    1: ((NOME_DO_MIMICO, 3),),
+    2: ((NOME_DO_MIMICO, 5),),
+    3: ((NOME_DO_MIMICO, 2), ("Xorn", 2)),
+    4: ((NOME_DO_MIMICO, 1), ("Naga Guardiã", 2)),
+    5: ((NOME_DO_MIMICO, 1), ("Golem de Pedra", 2)),
+}
+
+
+def emboscada_do_tier(tier: Optional[int] = None) -> tuple[tuple[str, int], ...]:
+    """Quem acorda com o baú, no tier da incursão.
+
+    Sem tier declarado vale o tier 1: a emboscada é consequência de uma falha,
+    e errar para o lado leve é melhor que dizimar um grupo por falta de dado.
+    """
+    escritos = sorted(A_EMBOSCADA)
+    if not tier:
+        return A_EMBOSCADA[escritos[0]]
+    if tier in A_EMBOSCADA:
+        return A_EMBOSCADA[tier]
+    abaixo = [t for t in escritos if t <= tier]
+    return A_EMBOSCADA[abaixo[-1] if abaixo else escritos[0]]
 
 # Os prêmios de Evento que não são buff com stack.
 CURA = "cura"

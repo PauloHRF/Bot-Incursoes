@@ -10,7 +10,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from openpyxl import load_workbook
 
@@ -22,7 +22,7 @@ from src.incursoes import (  # noqa: E402
     banco_de_dict,
     criatura_de_colunas,
 )
-from src.rules import chave_comparacao  # noqa: E402
+from src.rules import TIER_MAXIMO, chave_comparacao  # noqa: E402
 
 COLUNAS = (
     "sala_id", "nome", "tipo", "dificuldade", "cd", "alvo_progresso", "pericias",
@@ -33,7 +33,9 @@ COLUNAS_MONSTROS = ("sala_id", "nome", "quantidade", "ca", "ataque", "dano", "hp
 
 # As colunas novas das criaturas (multiataque, resistencias, acao especial) sao
 # opcionais de proposito: uma planilha feita antes delas continua importando.
-CAMPOS_EXTRA_MONSTRO = CAMPOS_DE_CRIATURA
+# "tier" esta entre elas: sem a coluna, a criatura vale para qualquer tier,
+# que e como todo banco escrito antes da lista por tier continua valendo.
+CAMPOS_EXTRA_MONSTRO = CAMPOS_DE_CRIATURA + ("tier",)
 
 
 class ErroDePlanilha(Exception):
@@ -159,7 +161,9 @@ def _monstros_extras(wb) -> dict[str, list[dict[str, Any]]]:
         raise ErroDePlanilha(
             f"A aba 'Monstros' esta sem a(s) coluna(s): {', '.join(faltando)}."
         )
-    por_sala: dict[str, list[dict[str, Any]]] = {}
+    # (sala_id, tier) -> criaturas. Tier vazio quer dizer "vale para qualquer
+    # tier", que e a lista solta da sala.
+    por_sala: dict[tuple[str, Optional[int]], list[dict[str, Any]]] = {}
     for linha in ws.iter_rows(min_row=2):
         def valor(nome: str):
             indice = indices.get(nome)
@@ -173,7 +177,23 @@ def _monstros_extras(wb) -> dict[str, list[dict[str, Any]]]:
             continue
         if not sala_id:
             raise ErroDePlanilha(f"A aba 'Monstros' tem a criatura '{nome}' sem sala_id.")
-        por_sala.setdefault(sala_id, []).append(criatura_de_colunas(valor))
+        bruto = _texto(valor("tier"))
+        tier = None
+        if bruto:
+            try:
+                tier = int(float(bruto))
+            except ValueError:
+                raise ErroDePlanilha(
+                    f"A aba 'Monstros' tem tier '{bruto}' na criatura '{nome}' "
+                    f"da sala {sala_id}: use um numero de 1 a {TIER_MAXIMO}, ou "
+                    f"deixe vazio."
+                ) from None
+            if not 1 <= tier <= TIER_MAXIMO:
+                raise ErroDePlanilha(
+                    f"A aba 'Monstros' tem tier {tier} na criatura '{nome}' da "
+                    f"sala {sala_id}: o tier vai de 1 a {TIER_MAXIMO}."
+                )
+        por_sala.setdefault((sala_id, tier), []).append(criatura_de_colunas(valor))
     return por_sala
 
 
@@ -186,14 +206,22 @@ def importar(planilha: Path, saida: Path) -> Path:
     salas = ler_salas(wb, dificuldades)
     extras = _monstros_extras(wb)
     conhecidas = {s["id"] for s in salas}
-    for sala_id, criaturas in extras.items():
+    for (sala_id, tier), criaturas in extras.items():
         if sala_id not in conhecidas:
             raise ErroDePlanilha(
                 f"A aba 'Monstros' cita a sala '{sala_id}', que nao existe na aba 'Salas'."
             )
         for sala in salas:
-            if sala["id"] == sala_id:
+            if sala["id"] != sala_id:
+                continue
+            if tier is None:
                 sala["monstros"].extend(criaturas)
+            else:
+                # A sala diz quem CADA tier encontra nela. Nada e multiplicado
+                # por tier: se a criatura nao serve, o conteudo usa outra.
+                sala.setdefault("monstros_por_tier", {}).setdefault(
+                    str(tier), []
+                ).extend(criaturas)
     dados = {"organizacao": ler_organizacao(wb), "salas": salas}
     banco = banco_de_dict(dados)
 

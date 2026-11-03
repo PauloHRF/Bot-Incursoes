@@ -2,7 +2,7 @@
 
 O personagem vai do nível 1 ao 10. Cada tier cobre 2 níveis, então são 5 tiers.
 
-O tier é a unidade de tudo: a tabela da classe, as habilidades novas, a CD das salas e o tamanho das criaturas todos leem o tier, não o nível. O nível existe para dar dois passos dentro de cada tier.
+O tier é a unidade de tudo: a tabela da classe, as habilidades novas, a CD das salas e QUEM mora em cada sala de combate todos leem o tier, não o nível. O nível existe para dar dois passos dentro de cada tier.
 
 | Tier | Níveis | Bônus de proficiência | Bônus sem proficiência |
 |---|---|---|---|
@@ -30,22 +30,23 @@ A CD escrita no banco é a do tier 1. O tier soma um ajuste que segue o próprio
 
 Sem esse ajuste a sala de tier 5 seria trivial, porque o grupo chega lá com o bônus muito maior do que quando a CD foi escrita. Com ele, a taxa de sucesso é idêntica nos cinco tiers.
 
-### O tamanho das criaturas
+### As criaturas NÃO escalam
 
-A criatura escrita no banco também é a do tier 1, e os bancos são compartilhados entre incursões de tiers diferentes. Corpo e dano crescem pela progressão de HP da família d8; CA, ataque e saves sobem pelo mesmo ajuste da CD, acima.
+A CD escala porque a perícia do personagem cresce devagar. A criatura não: **a ficha dela vale como está escrita**, e o tier está em QUEM mora na sala. Cada sala de combate tem uma lista por tier (`monstros_por_tier`), e a sala escolhe a do tier da incursão — ou a do maior tier escrito abaixo dele, que é o que faz conteúdo de tier baixo continuar jogável por grupo alto.
 
-| Tier | Multiplicador de HP e dano | Ajuste de CA, ataque e saves |
-|---|---|---|
-| T1 | 1x | +0 |
-| T2 | 1,6x | +2 |
-| T3 | 2,4x | +3 |
-| T4 | 3,1x | +5 |
-| T5 | 3,8x | +6 |
+Antes havia um multiplicador por tier (1,0 · 1,6 · 2,4 · 3,1 · 3,8 de HP e dano, mais o ajuste da CD em CA e ataque). A conta vinha da curva de HP da família d8 e parecia certa, mas batia em cima de fichas já escritas em força cheia de *Monster Manual*: cinco Gárgulas de 52 HP viravam 416 HP numa sala de tier 2, e as cinco salas de combate de um banco dizimavam o grupo **sempre** — 0% de vitória com o grupo de HP cheio. A mesa sentiu isso antes de a conta mostrar, e passou a evitar combate para chegar inteira ao objetivo.
 
-**O tier que vale é o do grupo, pela mediana — não o da incursão.** Duas razões, e as duas doem se esquecidas:
+O bestiário tem 385 criaturas de CR 0 a 20 (ver `CRIATURAS.md`): se uma não serve ao tier, o conteúdo usa outra. Faixa de CR por tier, como `bestiario.tier_do_cr` lê:
 
-- A incursão sem tier declarado vale `TIER_MAXIMO` para dizer "aberta a todos" na hora de entrar. Usar isso para escalar daria criatura de tier 5 em toda incursão aberta.
-- Pela mediana, e não pelo maior, porque um personagem de tier baixo pode pegar carona numa incursão alta — e escalar pelo maior esmagaria justamente ele.
+| Tier | Faixa de CR |
+|---|---|
+| T1 | 0 a 1 |
+| T2 | 2 a 4 |
+| T3 | 5 a 8 |
+| T4 | 9 a 13 |
+| T5 | 14+ |
+
+A faixa é ponto de partida, não garantia: ela vem do livro, e o que vale é a medição contra a mesa deste bot (`tools/simular_combate.py --tier`). A sala do caminho é calibrada para **cobrar HP sem ameaçar dizimar** — vitória ≥ 95% e 55% a 75% do HP restante —, porque quem decide a run é o objetivo.
 
 ## Perícias e resistências
 

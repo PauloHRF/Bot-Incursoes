@@ -1,226 +1,110 @@
 {
-  "id": "vortice_olhos",
-  "nome": "O Poço dos Olhos",
-  "organizacao": "Vórtice Oculto",
-  "tamanho": "Média",
-  "tier": 2,
-  "lore_inicial": "O Vórtice mede as fendas pelo que passa por elas. Agulha é o que passa uma coisa de cada vez; poço é o que passa coisas que se olham.\n\nO que há sob o antigo observatório da Colina Rasa é um poço. A Organização sabe disso há onze anos e não fez nada, porque o que mora lá embaixo nunca subiu — e o acordo tácito era esse. Semana passada o acordo acabou: um pedreiro que trabalhava no observatório parou de reconhecer a mulher dele, e descreveu com precisão o rosto de uma pessoa que não existe.\n\nVocês vão descer o poço, ver o que passou a olhar para cima, e fechar. O Vórtice prefere que vocês não olhem de volta, mas não vai fingir que isso é uma instrução realista.",
-  "lore_final": "O poço é tampado com chumbo e o observatório, comprado em nome de ninguém. O pedreiro continua não reconhecendo a mulher, e o Vórtice paga a ele a mesma quantia que paga a vocês — pagamento, aqui, é o que fecha assunto.\n\nNo relatório a Organização anota que o poço foi fechado em onze anos e seis dias. Os onze anos ficam na mesma linha que os seis dias, como se fossem a mesma coisa, e é essa linha que explica o Vórtice melhor que qualquer outra.",
-  "imagem_capa": null,
-  "recompensa_mes": 10,
-  "pontos_conclusao": 10,
-  "objetivo": {
-    "id": "OBJ",
-    "nome": "O Fundo do Poço",
-    "tipo": "Combate",
-    "descricao": "O poço acaba numa câmara redonda, larga, e a parede inteira é de pedra lisa — lisa de ser gasta, e gasta na altura de uma mão que se apoia. Alguma coisa anda em volta desta sala há muito tempo.\n\nDois deles têm um olho só, e não atacam de imediato: param, inclinam a cabeça e olham, e o que fazem com o que veem é a parte ruim. O terceiro anda baixo, não tem olho nenhum e chega primeiro.\n\nO quarto estava na água do fundo desde antes do poço ser um poço, e é o único que não veio de lugar nenhum.",
-    "dificuldade": null,
-    "cd": null,
-    "alvo_progresso": null,
-    "pericias": [],
-    "imagem": null,
-    "recompensa": "10 MEs por participante + pontos com o Vórtice Oculto",
-    "pontos_organizacao": 0,
-    "monstros": [
-      {
-        "nome": "Chuul",
-        "ca": 16,
-        "ataque": 6,
-        "dano": "2d6+4",
-        "hp": 93,
-        "ataques": 1,
-        "saves": {
-          "FOR": 4,
-          "DES": 0,
-          "CON": 3,
-          "INT": -3,
-          "SAB": 0,
-          "CAR": -3
-        },
-        "golpes": [
-          {
-            "nome": "Pinça",
-            "ataque": 6,
-            "dano": "2d6+4",
-            "efeito": {
-              "nome": "Pinça",
-              "save": "CON",
-              "cd": 13,
-              "debuff": [
-                "envenenado"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "nome": "Nothic 1",
-        "ca": 15,
-        "ataque": 4,
-        "dano": "1d6+3",
-        "hp": 45,
-        "ataques": 1,
-        "saves": {
-          "FOR": 2,
-          "DES": 3,
-          "CON": 3,
-          "INT": 1,
-          "SAB": 0,
-          "CAR": -1
-        },
-        "golpes": [
-          {
-            "nome": "Garra",
-            "ataque": 4,
-            "dano": "1d6+3"
-          }
-        ],
-        "habilidade": {
-          "nome": "Olhar Apodrecido",
-          "alvos": 1,
-          "save": "CON",
-          "cd": 13,
-          "dano": "3d6",
-          "debuff": [
-            "perturbacao"
-          ],
-          "recarga": 5
-        }
-      },
-      {
-        "nome": "Nothic 2",
-        "ca": 15,
-        "ataque": 4,
-        "dano": "1d6+3",
-        "hp": 45,
-        "ataques": 1,
-        "saves": {
-          "FOR": 2,
-          "DES": 3,
-          "CON": 3,
-          "INT": 1,
-          "SAB": 0,
-          "CAR": -1
-        },
-        "golpes": [
-          {
-            "nome": "Garra",
-            "ataque": 4,
-            "dano": "1d6+3"
-          }
-        ],
-        "habilidade": {
-          "nome": "Olhar Apodrecido",
-          "alvos": 1,
-          "save": "CON",
-          "cd": 13,
-          "dano": "3d6",
-          "debuff": [
-            "perturbacao"
-          ],
-          "recarga": 5
-        }
-      },
-      {
-        "nome": "Nothic 3",
-        "ca": 15,
-        "ataque": 4,
-        "dano": "1d6+3",
-        "hp": 45,
-        "ataques": 1,
-        "saves": {
-          "FOR": 2,
-          "DES": 3,
-          "CON": 3,
-          "INT": 1,
-          "SAB": 0,
-          "CAR": -1
-        },
-        "golpes": [
-          {
-            "nome": "Garra",
-            "ataque": 4,
-            "dano": "1d6+3"
-          }
-        ],
-        "habilidade": {
-          "nome": "Olhar Apodrecido",
-          "alvos": 1,
-          "save": "CON",
-          "cd": 13,
-          "dano": "3d6",
-          "debuff": [
-            "perturbacao"
-          ],
-          "recarga": 5
-        }
-      },
-      {
-        "nome": "Devorador de Intelecto 1",
-        "ca": 12,
-        "ataque": 4,
-        "dano": "2d4+2",
-        "hp": 21,
-        "ataques": 1,
-        "saves": {
-          "FOR": -2,
-          "DES": 2,
-          "CON": 1,
-          "INT": 1,
-          "SAB": 0,
-          "CAR": 0
-        },
-        "golpes": [
-          {
-            "nome": "Garras",
-            "ataque": 4,
-            "dano": "2d4+2"
-          }
-        ],
-        "habilidade": {
-          "nome": "Devorar Intelecto",
-          "alvos": 1,
-          "save": "INT",
-          "cd": 12,
-          "debuff": [
-            "tolice"
-          ],
-          "recarga": 5
-        }
-      },
-      {
-        "nome": "Devorador de Intelecto 2",
-        "ca": 12,
-        "ataque": 4,
-        "dano": "2d4+2",
-        "hp": 21,
-        "ataques": 1,
-        "saves": {
-          "FOR": -2,
-          "DES": 2,
-          "CON": 1,
-          "INT": 1,
-          "SAB": 0,
-          "CAR": 0
-        },
-        "golpes": [
-          {
-            "nome": "Garras",
-            "ataque": 4,
-            "dano": "2d4+2"
-          }
-        ],
-        "habilidade": {
-          "nome": "Devorar Intelecto",
-          "alvos": 1,
-          "save": "INT",
-          "cd": 12,
-          "debuff": [
-            "tolice"
-          ],
-          "recarga": 5
-        }
-      }
+ "id": "vortice_olhos",
+ "nome": "O Poço dos Olhos",
+ "organizacao": "Vórtice Oculto",
+ "tamanho": "Média",
+ "tier": 2,
+ "lore_inicial": "O Vórtice mede as fendas pelo que passa por elas. Agulha é o que passa uma coisa de cada vez; poço é o que passa coisas que se olham.\n\nO que há sob o antigo observatório da Colina Rasa é um poço. A Organização sabe disso há onze anos e não fez nada, porque o que mora lá embaixo nunca subiu — e o acordo tácito era esse. Semana passada o acordo acabou: um pedreiro que trabalhava no observatório parou de reconhecer a mulher dele, e descreveu com precisão o rosto de uma pessoa que não existe.\n\nVocês vão descer o poço, ver o que passou a olhar para cima, e fechar. O Vórtice prefere que vocês não olhem de volta, mas não vai fingir que isso é uma instrução realista.",
+ "lore_final": "O poço é tampado com chumbo e o observatório, comprado em nome de ninguém. O pedreiro continua não reconhecendo a mulher, e o Vórtice paga a ele a mesma quantia que paga a vocês — pagamento, aqui, é o que fecha assunto.\n\nNo relatório a Organização anota que o poço foi fechado em onze anos e seis dias. Os onze anos ficam na mesma linha que os seis dias, como se fossem a mesma coisa, e é essa linha que explica o Vórtice melhor que qualquer outra.",
+ "imagem_capa": null,
+ "recompensa_mes": 10,
+ "pontos_conclusao": 10,
+ "objetivo": {
+  "id": "OBJ",
+  "nome": "O Fundo do Poço",
+  "tipo": "Combate",
+  "descricao": "O poço acaba numa câmara redonda, larga, e a parede inteira é de pedra lisa — lisa de ser gasta, e gasta na altura de uma mão que se apoia. Alguma coisa anda em volta desta sala há muito tempo.\n\nDois deles têm um olho só, e não atacam de imediato: param, inclinam a cabeça e olham, e o que fazem com o que veem é a parte ruim. O terceiro anda baixo, não tem olho nenhum e chega primeiro.\n\nO quarto estava na água do fundo desde antes do poço ser um poço, e é o único que não veio de lugar nenhum.",
+  "dificuldade": null,
+  "cd": null,
+  "alvo_progresso": null,
+  "pericias": [],
+  "imagem": null,
+  "recompensa": "10 MEs por participante + pontos com o Vórtice Oculto",
+  "pontos_organizacao": 0,
+  "monstros": [
+   {
+    "nome": "Nothic",
+    "ca": 15,
+    "ataque": 4,
+    "dano": "1d6+3",
+    "hp": 45,
+    "ataques": 1,
+    "saves": {
+     "FOR": 2,
+     "DES": 3,
+     "CON": 3,
+     "INT": 1,
+     "SAB": 0,
+     "CAR": -1
+    },
+    "golpes": [
+     {
+      "nome": "Garra",
+      "ataque": 4,
+      "dano": "1d6+3"
+     }
+    ],
+    "habilidade": {
+     "nome": "Olhar Apodrecido",
+     "alvos": 1,
+     "save": "CON",
+     "cd": 13,
+     "dano": "3d6",
+     "debuff": [
+      "perturbacao"
+     ],
+     "recarga": 5
+    },
+    "quantidade": 2
+   },
+   {
+    "nome": "Devorador de Intelecto",
+    "ca": 12,
+    "ataque": 4,
+    "dano": "2d4+2",
+    "hp": 21,
+    "ataques": 1,
+    "saves": {
+     "FOR": -2,
+     "DES": 2,
+     "CON": 1,
+     "INT": 1,
+     "SAB": 0,
+     "CAR": 0
+    },
+    "golpes": [
+     {
+      "nome": "Garras",
+      "ataque": 4,
+      "dano": "2d4+2"
+     }
+    ],
+    "habilidade": {
+     "nome": "Devorar Intelecto",
+     "alvos": 1,
+     "save": "INT",
+     "cd": 12,
+     "debuff": [
+      "tolice"
+     ],
+     "recarga": 5
+    }
+   },
+   {
+    "nome": "O que estava na água",
+    "ca": 15,
+    "ataque": 6,
+    "dano": "2d10+4",
+    "hp": 150,
+    "ataques": 1,
+    "golpes": [
+     {
+      "nome": "Braçada",
+      "ataque": 6,
+      "dano": "2d10+4"
+     }
     ]
-  }
+   }
+  ]
+ }
 }

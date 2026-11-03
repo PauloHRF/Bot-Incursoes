@@ -43,23 +43,26 @@ from .ficha import sugerir_personagens
 log = logging.getLogger("incursoes.run")
 
 
-def emboscada_de(sala: Sala) -> Sala:
+def emboscada_de(sala: Sala, tier: Optional[int] = None) -> Sala:
     """O Tesouro que virou combate, quando a falha acorda os Mímicos.
 
-    Função pura e determinística de propósito: a mesma sala sempre devolve a
-    mesma emboscada, então remontá-la depois de um restart dá no mesmo. Vem com
-    `monstros` vazio se o bestiário não tiver Mímico.
+    Função pura e determinística de propósito: a mesma sala e o mesmo tier
+    sempre devolvem a mesma emboscada, então remontá-la depois de um restart
+    dá no mesmo. Vem com `monstros` vazio se o bestiário não tiver Mímico.
+
+    Quem entra sai de `consequencias.A_EMBOSCADA`, que tem uma linha medida
+    por tier — o Mímico é CR 2 e sozinho não pesa num grupo de tier alto.
     """
     do_livro = bestiario.buscar(consequencias.NOME_DO_MIMICO)
     monstros = []
     if do_livro is not None:
-        monstros = monstros_de_criatura(
-            {
-                "nome": consequencias.NOME_DO_MIMICO,
-                "quantidade": consequencias.MIMICOS,
-            },
-            f"{sala.id}: emboscada",
-        )
+        monstros = [
+            m
+            for nome, quantas in consequencias.emboscada_do_tier(tier)
+            for m in monstros_de_criatura(
+                {"nome": nome, "quantidade": quantas}, f"{sala.id}: emboscada"
+            )
+        ]
     return Sala(
         id=sala.id,
         nome=f"{sala.nome} — a emboscada",
@@ -618,7 +621,7 @@ class Incursoes(commands.Cog):
         if sala is None or sala.e_combate:
             return sala
         if await db.estado_combate(self.bot.db, run["id"], self._passo(run)):
-            return emboscada_de(sala)
+            return emboscada_de(sala, self._tier_da_run(run))
         return sala
 
     async def _opcoes(self, run: dict[str, Any], passo: int) -> list[Sala]:
@@ -1269,21 +1272,41 @@ class Incursoes(commands.Cog):
         pe no fim: quem caiu no objetivo e quem foi ejetado por Exaustao no
         meio do caminho jogaram a incursao e levam o mesmo que os outros.
 
-        O valor sai da CONTAGEM de salas superadas, entao nao depende de
-        quem estava presente em qual sala — e o grupo que atravessou, nao
-        cada um por si.
+        O valor sai das salas superadas e nao de quem estava em qual: e o
+        grupo que atravessou, nao cada um por si. A de Combate conta por
+        duas, porque e a unica que cobra HP.
+
+        Duas salas ficam de fora da dobra. O objetivo, porque ele nao e
+        escolha de ninguem: a dobra existe para a sala de Combate competir
+        na votacao com a de Tesouro, e o objetivo e obrigatorio — quem paga
+        por ele e o bonus de conclusao. E o Tesouro que virou emboscada de
+        Mimico, que continua contando como Tesouro: a emboscada e castigo
+        por falhar no bau, e nao da para pagar dobrado por ter falhado.
 
         Separado do fecho porque a desistencia paga isto e nao paga aquele:
         o grupo atravessou as salas, so nao terminou a incursao.
         """
         tier = self._tier_da_run(run) or 1
-        superadas = await db.salas_superadas(self.bot.db, run["id"])
-        quanto = superadas * mercado.ouro_da_sala(tier)
+        ids = await db.ids_das_salas_superadas(self.bot.db, run["id"])
+        superadas = len(ids)
+        # A de Combate paga dobrado: é a única que cobra HP, e o HP não volta
+        # entre salas. Pagando igual à de Tesouro, evitar combate era sempre
+        # a melhor jogada.
+        incursao = self._incursao_da_run(run)
+        do_caminho = (
+            (self._sala(incursao, i) for i in ids if i != incursao.objetivo.id)
+            if incursao
+            else ()
+        )
+        de_combate = sum(1 for s in do_caminho if s and s.e_combate)
+        quanto = mercado.ouro_das_salas(tier, superadas, de_combate)
+        motivo = f"Salas superadas ({superadas})"
+        if de_combate:
+            motivo = f"Salas superadas ({superadas}, {de_combate} de combate)"
         pagos = 0
         for p in await db.quem_recebe_da_run(self.bot.db, run["id"]):
             if await db.lancar_ouro(
-                self.bot.db, p["id"], quanto,
-                f"Salas superadas ({superadas})",
+                self.bot.db, p["id"], quanto, motivo,
                 run_id=run["id"], chave="salas",
             ):
                 pagos += 1
@@ -1663,12 +1686,21 @@ class Incursoes(commands.Cog):
         canal = await self._canal(run)
         if not canal:
             return
-        # A criatura escrita no banco e a do tier 1: aqui ela vira a do tier
-        # de QUEM entrou. Pelo grupo e nao pela incursao, porque incursao sem
-        # tier declarado vale TIER_MAXIMO para liberar a entrada — e isso
-        # daria criatura de tier 5 em toda incursao aberta.
-        tier_do_grupo = motor.tier_do_grupo(await self._niveis(run))
-        inimigos = [motor.escalar_monstro(m, tier_do_grupo) for m in sala.monstros]
+        # A sala diz QUEM mora nela em cada tier, e a ficha de cada criatura
+        # vale como esta escrita. Nada e esticado por multiplicador: se a
+        # criatura nao serve ao tier, o conteudo usa outra.
+        #
+        # Antes daqui saia `escalar_monstro(m, tier)`, que multiplicava HP e
+        # dano em cima de criaturas ja escritas em forca cheia de Monster
+        # Manual. Cinco Gargulas de 52 HP viravam 416 numa sala de tier 2, e
+        # as cinco salas de combate de um dos bancos dizimavam o grupo
+        # SEMPRE — 0% de vitoria com o grupo de HP cheio.
+        #
+        # O tier e o da INCURSAO, o mesmo que dimensiona CD, debuff e ouro:
+        # um tier por run, para o cartao da sala nunca mostrar uma criatura
+        # e o combate abrir com outra. Incursao aberta a todos vale
+        # TIER_MAXIMO, e ai a sala cai no maior tier que ela tem escrito.
+        inimigos = sala.monstros_do_tier(self._tier_da_run(run))
         await db.iniciar_combate(self.bot.db, run["id"], self._passo(run), sala.id, inimigos)
 
         incursao = self._incursao_da_run(run)
@@ -4719,7 +4751,7 @@ class Incursoes(commands.Cog):
         `_abrir_combate`, então o combate se remonta sozinho depois de um
         restart — a emboscada não precisa existir no banco de salas.
         """
-        emboscada = emboscada_de(sala)
+        emboscada = emboscada_de(sala, self._tier_da_run(run))
         if not emboscada.monstros:
             # Sem Mímico no bestiário não há emboscada: segue o fluxo normal.
             log.warning("Mímico não encontrado no bestiário; emboscada cancelada")

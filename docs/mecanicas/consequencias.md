@@ -25,7 +25,7 @@ A Graça tira **um stack de um debuff de alguém** do grupo, sorteado entre todo
 ### Tesouro
 
 - **Grupo venceu:** o **texto de recompensa escrito na sala** — e não um item do mercado. Os itens de tesouro vivem na planilha do grupo, não no bot; a economia do bot é a do mercado (ver `mercado.md`).
-- **Grupo perdeu:** não leva nada — e tem 35% de chance de acordar o que fingia ser um baú. Acordando, **2 Mímicos** entram e a sala vira combate, em vez de devolver o grupo à votação.
+- **Grupo perdeu:** não leva nada — e tem 35% de chance de acordar o que fingia ser um baú. Acordando, a sala vira combate em vez de devolver o grupo à votação, com uma linha por tier: **T1** 3 Mímico; **T2** 5 Mímico; **T3** 2 Mímico + 2 Xorn; **T4** 1 Mímico + 2 Naga Guardiã; **T5** 1 Mímico + 2 Golem de Pedra. O Mímico é CR 2 e satura — seis deles deixam 85% do HP de um grupo de tier 3 —, então do tier 3 para cima quem dá o peso é quem morava com o baú.
 
 ### Combate e Descanso
 

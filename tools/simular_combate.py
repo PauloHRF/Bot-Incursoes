@@ -141,6 +141,12 @@ def main() -> int:
     )
     parser.add_argument("--nivel", type=int, default=8, help="Nivel do grupo (1 a 10)")
     parser.add_argument("--semente", type=int, default=None)
+    parser.add_argument(
+        "--tier",
+        type=int,
+        default=None,
+        help="de qual tier da sala sao as criaturas (padrao: o do --nivel)",
+    )
     grupo_monstro = parser.add_argument_group("sobreporem os números do monstro (para calibrar)")
     grupo_monstro.add_argument("--hp-monstro", type=int)
     grupo_monstro.add_argument("--ca-monstro", type=int)
@@ -173,6 +179,15 @@ def main() -> int:
         print(f"A sala '{sala.id}' é do tipo {sala.tipo}, não Combate.", file=sys.stderr)
         return 1
 
+    # NADA ESCALA. A sala diz quem cada tier encontra nela
+    # (`Sala.monstros_por_tier`) e a ficha vale como esta escrita — e e assim
+    # que o bot abre o combate. O tier vem do argumento, senao do nivel dado:
+    # medir a lista de um tier contra um grupo de outro e numero bonito e
+    # falso, que foi o que esta ferramenta devolveu durante todo o
+    # balanceamento do tier 2 (99,6% de vitoria onde a mesa tinha 4,8%).
+    tier_medido = args.tier or tier(args.nivel)
+    base_das_salas = sala.monstros_do_tier(tier_medido)
+
     # As sobreposicoes valem para todas as criaturas da sala, para calibrar rapido.
     monstros = [
         Monstro(
@@ -192,10 +207,13 @@ def main() -> int:
             matilha=base.matilha,
             regeneracao=base.regeneracao,
         )
-        for base in sala.monstros
+        for base in base_das_salas
     ]
     rng = random.Random(args.semente)
     print(f"{titulo} — {sala.nome}")
+    if sala.monstros_por_tier:
+        escritos = ", ".join(f"T{t}" for t in sorted(sala.monstros_por_tier))
+        print(f"criaturas do tier {tier_medido} (a sala tem lista de {escritos})")
     for m in monstros:
         extras = ""
         if m.golpes:

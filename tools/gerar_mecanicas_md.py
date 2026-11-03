@@ -117,8 +117,9 @@ def tier_e_progressao() -> str:
         f"{rules.NIVEIS_POR_TIER} níveis, então são {rules.TIER_MAXIMO} tiers.",
         "",
         "O tier é a unidade de tudo: a tabela da classe, as habilidades novas, "
-        "a CD das salas e o tamanho das criaturas todos leem o tier, não o "
-        "nível. O nível existe para dar dois passos dentro de cada tier.",
+        "a CD das salas e QUEM mora em cada sala de combate todos leem o "
+        "tier, não o nível. O nível existe para dar dois passos dentro de "
+        "cada tier.",
         "",
     ]
     def em_todas(tier: int, campo: str) -> str:
@@ -186,33 +187,43 @@ def tier_e_progressao() -> str:
         "lá com o bônus muito maior do que quando a CD foi escrita. Com ele, a "
         "taxa de sucesso é idêntica nos cinco tiers.",
         "",
-        "### O tamanho das criaturas",
+        "### As criaturas NÃO escalam",
         "",
-        "A criatura escrita no banco também é a do tier 1, e os bancos são "
-        "compartilhados entre incursões de tiers diferentes. Corpo e dano "
-        "crescem pela progressão de HP da família d8; CA, ataque e saves sobem "
-        "pelo mesmo ajuste da CD, acima.",
+        "A CD escala porque a perícia do personagem cresce devagar. A criatura "
+        "não: **a ficha dela vale como está escrita**, e o tier está em QUEM "
+        "mora na sala. Cada sala de combate tem uma lista por tier "
+        "(`monstros_por_tier`), e a sala escolhe a do tier da incursão — ou a "
+        "do maior tier escrito abaixo dele, que é o que faz conteúdo de tier "
+        "baixo continuar jogável por grupo alto.",
+        "",
+        "Antes havia um multiplicador por tier (1,0 · 1,6 · 2,4 · 3,1 · 3,8 "
+        "de HP e dano, mais o ajuste da CD em CA e ataque). A conta vinha da "
+        "curva de HP da família d8 e parecia certa, mas batia em cima de "
+        "fichas já escritas em força cheia de *Monster Manual*: cinco Gárgulas "
+        "de 52 HP viravam 416 HP numa sala de tier 2, e as cinco salas de "
+        "combate de um banco dizimavam o grupo **sempre** — 0% de vitória com "
+        "o grupo de HP cheio. A mesa sentiu isso antes de a conta mostrar, e "
+        "passou a evitar combate para chegar inteira ao objetivo.",
+        "",
+        "O bestiário tem 385 criaturas de CR 0 a 20 (ver `CRIATURAS.md`): se "
+        "uma não serve ao tier, o conteúdo usa outra. Faixa de CR por tier, "
+        "como `bestiario.tier_do_cr` lê:",
         "",
     ]
     L += tabela(
-        ["Tier", "Multiplicador de HP e dano", "Ajuste de CA, ataque e saves"],
+        ["Tier", "Faixa de CR"],
         [
             [f"T{t}",
-             num(rules.ESCALA_DE_MONSTRO_POR_TIER[t]) + "x",
-             f"+{rules.cd_no_tier(0, t)}"]
-            for t in range(1, rules.TIER_MAXIMO + 1)
+             f"{num(baixo)} a {num(alto)}" if alto < 90 else f"{num(baixo)}+"]
+            for t, (baixo, alto) in sorted(bestiario.FAIXAS_DE_CR.items())
         ],
     )
     L += [
-        "**O tier que vale é o do grupo, pela mediana — não o da incursão.** "
-        "Duas razões, e as duas doem se esquecidas:",
-        "",
-        "- A incursão sem tier declarado vale `TIER_MAXIMO` para dizer "
-        "\"aberta a todos\" na hora de entrar. Usar isso para escalar daria "
-        "criatura de tier 5 em toda incursão aberta.",
-        "- Pela mediana, e não pelo maior, porque um personagem de tier baixo "
-        "pode pegar carona numa incursão alta — e escalar pelo maior "
-        "esmagaria justamente ele.",
+        "A faixa é ponto de partida, não garantia: ela vem do livro, e o que "
+        "vale é a medição contra a mesa deste bot "
+        "(`tools/simular_combate.py --tier`). A sala do caminho é calibrada "
+        "para **cobrar HP sem ameaçar dizimar** — vitória ≥ 95% e 55% a 75% do "
+        "HP restante —, porque quem decide a run é o objetivo.",
         "",
         "## Perícias e resistências",
         "",
@@ -654,9 +665,11 @@ def incursoes_e_salas() -> str:
         "",
         "## Combate",
         "",
-        f"Uma sala de combate chama até **{I.MAX_INIMIGOS} criaturas**, por "
-        "nome do bestiário ou escritas na própria sala. Ver `combate.md` e "
-        "`bestiario.md`.",
+        f"Uma sala de combate chama até **{I.MAX_INIMIGOS} criaturas por "
+        f"tier** (`monstros_por_tier`), por nome do bestiário ou escritas na "
+        "própria sala. A mesma sala serve incursões de tiers diferentes, e o "
+        "que muda entre eles é QUEM mora nela — nada é multiplicado. Ver "
+        "`combate.md`, `bestiario.md` e `tier-e-progressao.md`.",
         "",
         "## Vaga de incursão",
         "",
@@ -732,9 +745,17 @@ def consequencias_md() -> str:
         "do mercado. Os itens de tesouro vivem na planilha do grupo, não no "
         "bot; a economia do bot é a do mercado (ver `mercado.md`).",
         "**Grupo perdeu:** não leva nada — e tem " + pct(C.CHANCE_DE_MIMICO, 0) + " de "
-        f"chance de acordar o que fingia ser um baú. Acordando, "
-        f"**{C.MIMICOS} {C.NOME_DO_MIMICO}s** entram e a sala vira combate, "
-        "em vez de devolver o grupo à votação.",
+        "chance de acordar o que fingia ser um baú. Acordando, a sala vira "
+        "combate em vez de devolver o grupo à votação, com uma linha por "
+        "tier: "
+        + "; ".join(
+            f"**T{t}** "
+            + " + ".join(f"{q} {nome}" for nome, q in elenco)
+            for t, elenco in sorted(C.A_EMBOSCADA.items())
+        )
+        + f". O {C.NOME_DO_MIMICO} é CR 2 e satura — seis deles deixam 85% do "
+        "HP de um grupo de tier 3 —, então do tier 3 para cima quem dá o peso "
+        "é quem morava com o baú.",
     ])
     L += ["### Combate e Descanso", ""]
     L += lista([
@@ -1096,10 +1117,25 @@ def mercado_md() -> str:
         [
             ["Cada sala superada", f"{mercado.OURO_POR_SALA} × tier",
              "conclusão **e** desistência"],
+            ["Sala de **Combate** do caminho",
+             f"{mercado.OURO_POR_SALA * mercado.PESO_DO_COMBATE} × tier "
+             f"({mercado.PESO_DO_COMBATE}× uma sala)",
+             "conclusão **e** desistência"],
             ["Concluir a incursão", f"{mercado.OURO_POR_INCURSAO} × tier",
              "só a conclusão"],
         ],
     )
+    L += [
+        "**A sala de Combate paga dobrado**, e isso é regra de desenho: ela é "
+        "a única que cobra HP, e o HP não volta entre salas. Enquanto ela "
+        "pagava igual à de Tesouro, desviar do combate era sempre a jogada "
+        "certa — e era isso que a mesa fazia, de propósito, para chegar "
+        "inteira ao objetivo. O objetivo fica fora da dobra: ele não é "
+        "escolha de ninguém, e quem paga por ele é o bônus de conclusão. O "
+        "Tesouro que virou emboscada de Mímico também fica fora — a emboscada "
+        "é castigo por falhar no baú.",
+        "",
+    ]
     L += [
         "**A incursão paga uma vez, no fim.** As salas do caminho não pagam "
         "por si: elas ficam registradas, e o fecho conta quantas foram "

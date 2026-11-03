@@ -37,6 +37,7 @@ from fakes import (  # noqa: E402
     FakeInteraction,
     criar_grupo,
     montar_conteudo,
+    salas_de_combate,
     salas_sem_combate,
 )
 
@@ -248,6 +249,50 @@ async def caso_a_sala_superada_nao_paga_na_hora():
     await cog._marcar_sala_superada(run, sala)
     assert await db.salas_superadas(conn, run_id) == 1
     print("  a sala vencida fica registrada e nao paga na hora: ok")
+
+
+async def caso_a_sala_de_combate_paga_dobrado():
+    """A sala de Combate do caminho conta por duas. O objetivo, por uma.
+
+    Enquanto ela pagava igual à de Evento ou de Tesouro, evitar combate era
+    sempre a jogada certa: a sala de combate é a única que cobra HP, e o HP
+    não volta entre salas — a mesa passou a desviar de propósito, para
+    chegar inteira ao objetivo. A dobra existe para a escolha do passo ter
+    dois lados.
+
+    O objetivo fica fora da dobra porque não é escolha de ninguém: quem paga
+    por ele é o bônus de conclusão.
+    """
+    conn, canal, cog, ids = await preparar()
+    montar_conteudo(
+        cog,
+        tamanho="Curta",
+        salas=salas_sem_combate(quantas=2) + salas_de_combate(quantas=2),
+        tier=3,
+    )
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", JOGADORES[0])
+    await db.adicionar_participante(conn, run_id, JOGADORES[0], ids[JOGADORES[0]])
+    run = await db.buscar_run(conn, run_id)
+    objetivo = cog._incursao_da_run(run).objetivo
+
+    # O caminho foi uma de Evento e uma de Combate, e depois o objetivo.
+    for passo, sala_id in ((1, "E1"), (2, "C1"), (3, objetivo.id)):
+        await db.marcar_sala_superada(conn, run_id, passo, sala_id)
+
+    assert await cog._pagar_as_salas(run) == 1
+    tier = cog._tier_da_run(run) or 1
+    # E1 vale uma, C1 vale duas, o objetivo vale uma: quatro salas de ouro.
+    esperado = mercado.ouro_das_salas(tier, 3, 1)
+    assert esperado == 4 * mercado.ouro_da_sala(tier), esperado
+    assert await db.ouro(conn, ids[JOGADORES[0]]) == esperado, (
+        await db.ouro(conn, ids[JOGADORES[0]])
+    )
+
+    extrato = await db.extrato_de_ouro(conn, ids[JOGADORES[0]])
+    assert any("de combate" in (linha["motivo"] or "") for linha in extrato), (
+        f"o extrato não diz quantas salas eram de combate: {extrato}"
+    )
+    print(f"  a sala de combate paga dobrado ({esperado} por três salas): ok")
 
 
 async def caso_a_run_concluida_paga_todos_que_passaram():
@@ -774,6 +819,7 @@ async def main():
         await caso_o_ouro_e_a_soma_do_livro_caixa()
         await caso_a_mesma_sala_nunca_paga_duas_vezes()
         await caso_a_sala_superada_nao_paga_na_hora()
+        await caso_a_sala_de_combate_paga_dobrado()
         await caso_a_run_concluida_paga_todos_que_passaram()
         await caso_comprar_debita_e_guarda()
         await caso_equipar_tira_da_bolsa_e_troca_sem_perder()

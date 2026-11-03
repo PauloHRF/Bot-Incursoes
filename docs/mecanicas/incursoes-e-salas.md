@@ -75,7 +75,7 @@ Um personagem de fora pode somar na rolagem de outro depois do d20 — é o Flas
 
 ## Combate
 
-Uma sala de combate chama até **6 criaturas**, por nome do bestiário ou escritas na própria sala. Ver `combate.md` e `bestiario.md`.
+Uma sala de combate chama até **6 criaturas por tier** (`monstros_por_tier`), por nome do bestiário ou escritas na própria sala. A mesma sala serve incursões de tiers diferentes, e o que muda entre eles é QUEM mora nela — nada é multiplicado. Ver `combate.md`, `bestiario.md` e `tier-e-progressao.md`.
 
 ## Vaga de incursão
 

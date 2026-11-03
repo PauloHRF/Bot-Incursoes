@@ -45,10 +45,23 @@ TEMPERO = "incursoes-mercado-v1"
 OURO_POR_SALA = 5
 OURO_POR_INCURSAO = 20
 
+# A sala de Combate paga este tanto de sala. Ela é a única que cobra HP, e o
+# HP não volta entre salas: pagando igual à de Tesouro, evitar combate era
+# sempre a jogada certa — e a mesa passou a jogar assim de propósito, para
+# chegar inteira ao objetivo. Quem escolhe o combate está gastando um recurso
+# que vale até o fim da run, e isso tem preço.
+PESO_DO_COMBATE = 2
+
 
 def ouro_da_sala(tier: int) -> int:
     """O que uma sala superada paga a cada um que estava nela."""
     return OURO_POR_SALA * max(1, tier)
+
+
+def ouro_das_salas(tier: int, superadas: int, de_combate: int = 0) -> int:
+    """O ouro de todas as salas superadas, com o Combate contando dobrado."""
+    de_combate = max(0, min(de_combate, superadas))
+    return (superadas + de_combate * (PESO_DO_COMBATE - 1)) * ouro_da_sala(tier)
 
 
 def ouro_da_incursao(tier: int) -> int:

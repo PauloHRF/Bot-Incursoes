@@ -924,8 +924,12 @@ async def caso_tesouro_falho_acorda_mimicos():
 
     assert run["linha_atual"] == 1, run["linha_atual"]
     inimigos = await db.inimigos_do_combate(conn, run["id"], cog._passo(run))
-    assert len(inimigos) == X.MIMICOS, inimigos
-    assert all(X.NOME_DO_MIMICO in i["nome"] for i in inimigos), inimigos
+    # A emboscada tem uma linha por tier (`A_EMBOSCADA`): o Mímico é CR 2 e
+    # sozinho não pesa num grupo de tier alto, então do tier 3 para cima ele
+    # vem acompanhado. Quem manda é o tier da run.
+    elenco = X.emboscada_do_tier(cog._tier_da_run(run))
+    assert len(inimigos) == sum(q for _nome, q in elenco), inimigos
+    assert any(X.NOME_DO_MIMICO in i["nome"] for i in inimigos), inimigos
 
     corrente = await cog._sala_corrente(run)
     assert corrente is not None and corrente.e_combate, corrente

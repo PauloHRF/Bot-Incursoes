@@ -312,15 +312,18 @@ def sala_aberta(
         e.add_field(name="Rolaram", value=f"{ja_rolaram}/{total}", inline=True)
         rodape = "Cada jogador rola uma vez, com a melhor perícia que tiver entre as listadas."
     elif sala.e_combate:
+        # Quem mora na sala depende do tier do grupo: a mesma sala tem uma
+        # lista por tier, e nada é esticado por multiplicador.
+        criaturas = sala.monstros_do_tier(tier)
         e.add_field(
             name="⚔️ " + (
-                sala.monstros[0].nome
-                if len(sala.monstros) == 1
-                else f"{len(sala.monstros)} criaturas"
+                criaturas[0].nome
+                if len(criaturas) == 1
+                else f"{len(criaturas)} criaturas"
             ),
             value="\n".join(
                 f"**{m.nome}** — CA **{m.ca}** · {golpes_da_criatura(m)} · HP **{m.hp}**"
-                for m in sala.monstros
+                for m in criaturas
             ) or "*sem criatura*",
             inline=False,
         )
