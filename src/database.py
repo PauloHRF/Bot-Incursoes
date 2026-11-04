@@ -2362,6 +2362,48 @@ async def devolver_item(
     await conn.commit()
 
 
+async def dar_item(
+    conn: aiosqlite.Connection, personagem_id: int, item_id: str
+) -> None:
+    """Poe uma unidade na bolsa sem cobrar ouro.
+
+    Mesmo efeito de `devolver_item`, nome proprio porque a intencao e outra e
+    e no ponto de chamada que ela se le: aqui alguem GANHA o item (o Anel do
+    Mestre, que nao esta a venda), ali um item volta de uma acao que nao
+    aconteceu.
+    """
+    await _por_na_bolsa(conn, personagem_id, item_id)
+    await conn.commit()
+
+
+async def tirar_item(
+    conn: aiosqlite.Connection, personagem_id: int, item_id: str
+) -> bool:
+    """Tira o item do slot E da bolsa. False quando o personagem nao o tinha.
+
+    Dar e tirar tem de ser simetrico: sem limpar a bolsa, a peca sairia do
+    dedo e continuaria guardada, pronta para ser vestida de novo por engano.
+    """
+    async with conn.execute(
+        "SELECT 1 FROM personagem_itens"
+        " WHERE personagem_id = ? AND item_id = ? AND quantidade > 0",
+        (personagem_id, item_id),
+    ) as cur:
+        na_bolsa = await cur.fetchone() is not None
+    cur = await conn.execute(
+        "DELETE FROM personagem_equipamento"
+        " WHERE personagem_id = ? AND item_id = ?",
+        (personagem_id, item_id),
+    )
+    vestido = cur.rowcount > 0
+    await conn.execute(
+        "DELETE FROM personagem_itens WHERE personagem_id = ? AND item_id = ?",
+        (personagem_id, item_id),
+    )
+    await conn.commit()
+    return na_bolsa or vestido
+
+
 async def comprar(
     conn: aiosqlite.Connection, personagem_id: int, item_id: str, preco: int
 ) -> bool:

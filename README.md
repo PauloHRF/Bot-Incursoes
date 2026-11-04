@@ -68,6 +68,11 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
 | `/incursao recarregar` | (admin) Relê os JSON de incursão do disco |
+| `/mercado vitrine [personagem]` | A prateleira da semana: 6 equipamentos e 3 poções |
+| `/mercado bolsa [personagem]` | Ouro, o que está vestido e o que está guardado |
+| `/mercado comprar <item> [personagem]` | Leva um item da sua vitrine da semana |
+| `/mercado equipar <item> [personagem]` | Veste um item da bolsa (o slot sai do item) |
+| `/mercado anel_do_mestre [personagem] [tirar]` | (admin) Põe ou tira o **Anel do Mestre**, para atravessar uma incursão sozinho |
 | `/organizacao placar` | Pontos das quatro Organizações no servidor |
 | `/organizacao extrato [org]` | Últimos lançamentos, com o motivo de cada um |
 | `/organizacao ajustar <org> <pontos> <motivo>` | (admin) Lança pontos na mão, para correções |
@@ -165,6 +170,38 @@ de muitas mordidas pequenas. A **Poção de Mana X** devolve um uso **já gasto*
 habilidade daquele tier, escolhida por quem bebe; sem nada gasto, ela não é bebida.
 
 Detalhe de preço e catálogo em [docs/mecanicas/mercado.md](docs/mecanicas/mercado.md).
+
+### O Anel do Mestre
+
+Ferramenta de mesa, e não conteúdo: serve para **atravessar uma incursão sozinho** e ver as
+telas, as salas e o chefe funcionando sem juntar cinco pessoas. Chega por
+`/mercado anel_do_mestre`, que é admin, e sai por `tirar:True` — essa é a única porta dele.
+
+**Ele não está à venda, e não é uma checagem que garante isso.** O bolo do sorteio da
+vitrine sai de `itens.CATALOGO` e `esta_na_vitrine` é quem autoriza a compra; o anel vive em
+`itens.SEM_VITRINE`, fora do catálogo, e isso fecha as duas portas sozinho. Um teste varre
+6.000 vagas de prateleira conferindo que ele não aparece em nenhuma.
+
+Depois de vestido ele é equipamento como qualquer outro — a ficha, o painel e o combate não
+sabem que ele é especial. Por isso ele também **fura o domínio dos slots** de propósito (CA,
+acerto e teste de perícia no mesmo anel), o que nenhuma peça comprável pode fazer: a
+contenção de slot existe para a economia do mercado, e o que não é vendido não disputa nada.
+
+Os números são escandalosos porque a pergunta que ele responde é *"o fluxo funciona?"*, e
+não *"o combate é justo?"*: +10 de CA, +10 de acerto, 4 golpes por rodada, +15 de dano,
+crítico em 15, **+35 em teste de perícia**, +15 em todo save, e vida temporária de 20 por
+tier ao abrir cada combate. O +35 não é ao acaso — sozinho não há com quem dividir o
+progresso, e a sala mais dura pede 10 contra CD 24 no tier 5, então até o 1 natural tem de
+passar.
+
+Não há chave de HP no vocabulário de efeitos (o HP sai da tabela da classe), então a
+sobrevivência vem por outro caminho: CA alta para quase não ser acertado, e vida temporária
+para abrir cada combate e repor a cada inimigo derrubado.
+
+`tools/medir_anel_do_gm.py` mede se isso basta, com o motor de verdade e o grupo de um:
+**100% das salas de teste** em todo tier (com +13 de folga no 1 natural) e **100% de vitória
+em todos os nove chefes escritos**, em 1,5 a 5,9 rodadas. A medida é conservadora: o
+simulador não conta a vida temporária por inimigo derrubado.
 Quem está caído ou atordoado quando a vez chega perde a vez; se tinha guardado uma
 habilidade, ela não sai e **o uso volta**.
 

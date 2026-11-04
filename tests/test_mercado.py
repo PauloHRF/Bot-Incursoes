@@ -44,6 +44,7 @@ from fakes import (  # noqa: E402
     FakeCanal,
     FakeInteraction,
     criar_grupo,
+    leu,
     montar_conteudo,
     salas_de_combate,
     salas_sem_combate,
@@ -105,8 +106,12 @@ def caso_o_catalogo_cobre_os_cinco_slots():
     por_slot = collections.Counter(p.slot for p in itens.CATALOGO)
     assert set(por_slot) == set(itens.SLOTS), por_slot
     assert min(por_slot.values()) >= 4, por_slot
-    # Id repetido faria POR_ID perder uma peça em silêncio.
-    assert len(itens.POR_ID) == len(itens.CATALOGO)
+    # Id repetido faria POR_ID perder uma peça em silêncio. O `POR_ID` conhece
+    # também o que não está à venda, então a conta soma os dois.
+    assert len(itens.POR_ID) == len(itens.CATALOGO) + len(itens.SEM_VITRINE)
+    a_venda = {p.id for p in itens.CATALOGO}
+    fora = {p.id for p in itens.SEM_VITRINE}
+    assert not (a_venda & fora), a_venda & fora
     # Raridade conhecida, e preço saindo dela quando não é dito.
     for peca in itens.CATALOGO:
         assert peca.raridade in itens.RARIDADES, peca.id
@@ -120,6 +125,38 @@ def caso_o_item_nao_passa_de_dois_de_ca():
     for peca in itens.CATALOGO:
         assert peca.efeito.get("ca", 0) <= 2, (peca.id, peca.efeito)
     print("  nenhum item passa de +2 de CA: ok")
+
+
+def caso_o_anel_do_mestre_nunca_entra_na_vitrine():
+    """A garantia que o anel precisa ter: ele não aparece no mercado.
+
+    Ela não é uma checagem em tempo de execução, e é por isso que vale: o bolo
+    do sorteio é `CATALOGO`, e `esta_na_vitrine` é quem autoriza a compra.
+    Ficar fora do catálogo já fecha as duas portas. O caso varre prateleiras de
+    verdade para que ninguém o mova para dentro sem perceber.
+
+    E ele fura o domínio dos slots de propósito — CA, acerto e teste no mesmo
+    anel —, o que confirma que `caso_todo_item_respeita_o_dominio_do_slot`
+    está varrendo o catálogo e não o `POR_ID`.
+    """
+    anel = itens.POR_ID[itens.ID_DO_ANEL_DO_GM]
+    assert not itens.a_venda(anel.id)
+    assert anel not in itens.CATALOGO
+
+    # Mil prateleiras: 50 personagens × 20 semanas, com as 6 vagas de cada.
+    vistas = 0
+    for personagem_id in range(1, 51):
+        for s in range(20):
+            semana = f"2026-W{s + 1:02d}"
+            prateleira = mercado.vitrine(personagem_id, semana)
+            vistas += len(prateleira)
+            assert anel.id not in {p.id for p in prateleira}, (personagem_id, semana)
+            assert not mercado.esta_na_vitrine(personagem_id, semana, anel.id)
+    assert vistas >= 1000, vistas
+
+    # Ele mexe em mais de um domínio, e é essa a licença de não ser vendido.
+    assert len(itens.fora_do_dominio(anel)) >= 3, itens.fora_do_dominio(anel)
+    print(f"  o Anel do Mestre não saiu em nenhuma das {vistas} vagas: ok")
 
 
 # -------------------------------------------------------------- a vitrine
@@ -397,6 +434,80 @@ async def caso_equipar_tira_da_bolsa_e_troca_sem_perder():
     vestiu, _saiu = await db.equipar(conn, heroi, peitoral.id, peitoral.slot)
     assert not vestiu
     print("  equipar troca sem perder a peca antiga: ok")
+
+
+async def caso_o_comando_do_mestre_da_e_tira_o_anel():
+    """A única porta do anel: o comando de admin põe, veste e tira.
+
+    Põe e tira têm de ser simétricos — sem limpar a bolsa, o anel sairia do
+    dedo e continuaria guardado, pronto para ser vestido por engano.
+    """
+    conn, canal, cog, ids = await preparar(classe="guerreiro")
+    heroi = ids[JOGADORES[0]]
+    antes = await db.buscar_personagem(conn, heroi)
+    anel = itens.POR_ID[itens.ID_DO_ANEL_DO_GM]
+
+    # Ele não se compra, nem com ouro de sobra: não está em cartaz.
+    await db.lancar_ouro(conn, heroi, 9999, "teste")
+    comprado, texto = await tentar_comprar(
+        conn, heroi, cog.loja._semana(), anel.id
+    )
+    assert comprado is None, texto
+    assert "cartaz" in texto or "vitrine" in texto, texto
+    assert anel.id not in await db.itens_na_bolsa(conn, heroi)
+
+    # O comando de admin põe e veste de uma vez.
+    i = FakeInteraction(canal, JOGADORES[0])
+    await cog.loja.anel_do_mestre.callback(cog.loja, i, None)
+    assert anel.nome in leu(i), leu(i)
+    assert (await db.equipamento(conn, heroi)).get("anel") == anel.id
+
+    # E os números chegam à ficha pelo caminho normal do equipamento.
+    com_anel = await db.buscar_personagem(conn, heroi)
+    assert com_anel["ca"] == antes["ca"] + anel.efeito["ca"], (
+        antes["ca"], com_anel["ca"]
+    )
+    assert com_anel["bonus_ataque"] == antes["bonus_ataque"] + anel.efeito["acerto"]
+    assert com_anel["efeitos"]["ataques"] == anel.efeito["ataques"]
+    assert com_anel["efeitos"]["bonus_teste"] == anel.efeito["bonus_teste"]
+
+    # Vestir OUTRO anel devolve o do Mestre para a bolsa: é esse o estado em
+    # que ele está guardado e desvestido ao mesmo tempo, e é o que prova que
+    # tirar precisa limpar os dois lugares. Sem isso ele sairia do dedo e
+    # continuaria na bolsa, pronto para ser vestido de novo por engano.
+    outro = itens.item("anel_do_para_raios")
+    await db.comprar(conn, heroi, outro.id, outro.custo)
+    await db.equipar(conn, heroi, outro.id, outro.slot)
+    assert (await db.itens_na_bolsa(conn, heroi)).get(anel.id) == 1
+
+    # Tirar limpa o dedo E a bolsa.
+    i = FakeInteraction(canal, JOGADORES[0])
+    await cog.loja.anel_do_mestre.callback(cog.loja, i, None, True)
+    assert "devolveu" in leu(i), leu(i)
+    assert anel.id not in {
+        k for k, v in (await db.itens_na_bolsa(conn, heroi)).items() if v
+    }, await db.itens_na_bolsa(conn, heroi)
+    # E o outro anel, que não é do Mestre, continua no dedo.
+    assert (await db.equipamento(conn, heroi)).get("anel") == outro.id
+
+    # Com ele vestido, tirar também tira do dedo.
+    i = FakeInteraction(canal, JOGADORES[0])
+    await cog.loja.anel_do_mestre.callback(cog.loja, i, None)
+    assert (await db.equipamento(conn, heroi)).get("anel") == anel.id
+    i = FakeInteraction(canal, JOGADORES[0])
+    await cog.loja.anel_do_mestre.callback(cog.loja, i, None, True)
+    assert "anel" not in await db.equipamento(conn, heroi), (
+        await db.equipamento(conn, heroi)
+    )
+    limpo = await db.buscar_personagem(conn, heroi)
+    assert limpo["ca"] == antes["ca"], (antes["ca"], limpo["ca"])
+
+    # Tirar de quem não tem avisa, em vez de fingir que tirou.
+    i = FakeInteraction(canal, JOGADORES[0])
+    await cog.loja.anel_do_mestre.callback(cog.loja, i, None, True)
+    assert "não estava" in leu(i), leu(i)
+
+    print("  o comando do Mestre põe, veste e tira o anel: ok")
 
 
 async def caso_so_cabe_um_por_slot():
@@ -830,6 +941,7 @@ async def main():
         caso_todo_item_respeita_o_dominio_do_slot()
         caso_o_catalogo_cobre_os_cinco_slots()
         caso_o_item_nao_passa_de_dois_de_ca()
+        caso_o_anel_do_mestre_nunca_entra_na_vitrine()
         caso_a_vitrine_e_derivada_e_estavel()
         caso_a_vitrine_muda_por_personagem_e_por_semana()
         caso_a_semana_vira_na_segunda()
@@ -844,6 +956,7 @@ async def main():
         await caso_comprar_debita_e_guarda()
         await caso_equipar_tira_da_bolsa_e_troca_sem_perder()
         await caso_a_lista_de_equipar_nao_vem_vazia_com_dois_personagens()
+        await caso_o_comando_do_mestre_da_e_tira_o_anel()
         await caso_so_cabe_um_por_slot()
         await caso_o_equipamento_entra_na_ca_e_no_acerto()
         await caso_o_item_nao_soma_com_a_passiva_da_classe()

@@ -52,6 +52,7 @@ ORDEM_COMANDOS = (
     # O bloco de admin, no fim e nesta ordem.
     "ficha remover",
     "incursao recarregar",
+    "mercado anel_do_mestre",
     "organizacao ajustar",
     "organizacao extrato",
     "config intervalo",

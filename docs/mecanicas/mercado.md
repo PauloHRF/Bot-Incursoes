@@ -57,6 +57,16 @@ O peso é a fatia do sorteio de **uma** vaga. A prateleira é sorteada sem repet
 
 `DOMINIO` não é comentário: um teste varre o catálogo e reprova o item que escapar do domínio do slot dele. Sem isso o domínio seria uma intenção — e ele já pegou dois itens errados.
 
+## O que não está à venda
+
+`itens.SEM_VITRINE` guarda uma peça que EXISTE mas nunca entra num sorteio. O bolo da vitrine sai de `CATALOGO` e `esta_na_vitrine` é quem autoriza a compra, então ficar de fora do catálogo já fecha as duas portas — não há checagem em tempo de execução a manter. O domínio dos slots também não vale para elas: a contenção existe para a economia do mercado, e uma peça que não é vendida não disputa nada.
+
+| Peça | Slot | O que faz | Como chega |
+|---|---|---|---|
+| Anel do Mestre | Anel | `acerto` 10, `ataques` 4, `bonus_cura_pct` 1.0, `bonus_iniciativa` 10, `bonus_save` 15, `bonus_teste` 35, `ca` 10, `critico_em` 15, `dano_extra` 15, `escudo_arcano` 20, `thp_ao_derrubar` 10 | `/mercado anel_do_mestre` (admin) |
+
+O Anel do Mestre é ferramenta de mesa: serve para atravessar uma incursão **sozinho** e ver as telas, as salas e o chefe funcionando sem juntar cinco pessoas. `tools/medir_anel_do_gm.py` mede se os números dele bastam para isso, com o motor de verdade.
+
 ## As poções
 
 Prateleira própria, de **3 vagas**: as 2 de vida estão **sempre** em cartaz, e a terceira é sorteada por semana e por personagem, como a de equipamento. São 50 poções no catálogo.

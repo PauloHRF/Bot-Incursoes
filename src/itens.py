@@ -215,12 +215,68 @@ CATALOGO: tuple[Item, ...] = (
        {"ameaca": 8}),
 )
 
-POR_ID: dict[str, Item] = {i.id: i for i in CATALOGO}
+# ------------------------------------------------- o que não está à venda
+#
+# Peças que EXISTEM mas nunca entram num sorteio. `vitrine()` tira o bolo dela
+# de `CATALOGO`, e `esta_na_vitrine` é quem autoriza a compra — então ficar de
+# fora do catálogo é, por si só, a garantia de que isto não aparece no mercado
+# e não pode ser comprado. Mesma forma do `habilidades.SEM_DONO`: o `POR_ID`
+# conhece, a ficha e o combate resolvem, e o sorteio ignora.
+#
+# `DOMINIO` também não vale aqui, e é de propósito: o teste que reprova item
+# fora do domínio varre `CATALOGO`, e a contenção de slot existe para a
+# economia do mercado — um item que não é vendido não disputa nada com os
+# outros. É por isso que o anel abaixo mexe em CA, acerto e teste ao mesmo
+# tempo, o que nenhuma peça comprável pode fazer.
+SEM_VITRINE: tuple[Item, ...] = (
+    # Ferramenta de mesa, não conteúdo: serve para o Mestre atravessar uma
+    # incursão SOZINHO e ver as telas, as salas e o chefe funcionando sem
+    # juntar cinco pessoas. Os números são escandalosos de propósito — a
+    # pergunta que ele responde é "o fluxo funciona?", e não "o combate é
+    # justo?". Medido em `tools/medir_anel_do_gm.py`.
+    #
+    # Não há chave de HP no vocabulário de efeitos (o HP sai da tabela da
+    # classe), então a sobrevivência vem por outro caminho: CA alta para
+    # quase não ser acertado, `escudo_arcano` para abrir cada combate com
+    # vida temporária (ela é multiplicada pelo tier) e `thp_ao_derrubar`
+    # para repor a cada criatura que cai.
+    _i("anel_do_gm", "Anel do Mestre", "anel", "lendario",
+       "Ferramenta de teste: atravessa uma incursão sozinho. +10 de CA, "
+       "+10 de acerto, 4 golpes por rodada, +15 de dano, crítico em 15, "
+       "+35 nos testes de perícia, +15 em todo save, +10 de iniciativa, "
+       "abre o combate com vida temporária (20 por tier) e ganha 10 por "
+       "tier a cada inimigo derrubado. **Não está à venda.**",
+       {
+           "ca": 10,
+           "acerto": 10,
+           "ataques": 4,
+           "dano_extra": 15,
+           "critico_em": 15,
+           # 35 não é número ao acaso: a sala mais dura pede 10 de progresso
+           # contra CD 24 no tier 5, e sozinho não há com quem dividir. Com
+           # +35 até o 1 natural passa com folga (1 + 35 − 24 = 12).
+           "bonus_teste": 35,
+           "bonus_save": 15,
+           "bonus_iniciativa": 10,
+           "escudo_arcano": 20,
+           "thp_ao_derrubar": 10,
+           "bonus_cura_pct": 1.0,
+       }),
+)
+
+ID_DO_ANEL_DO_GM = "anel_do_gm"
+
+POR_ID: dict[str, Item] = {i.id: i for i in (*CATALOGO, *SEM_VITRINE)}
 
 
 def item(id: Optional[str]) -> Optional[Item]:
     """O item daquele id, ou None. Id solto no banco não derruba a ficha."""
     return POR_ID.get(str(id or ""))
+
+
+def a_venda(id: Optional[str]) -> bool:
+    """Se aquele id é de uma peça que o mercado chega a oferecer."""
+    return any(p.id == str(id or "") for p in CATALOGO)
 
 
 def do_slot(slot: str) -> list[Item]:
@@ -295,7 +351,8 @@ def juntar_equipamento(efeitos: dict, ids) -> dict:
 
 
 __all__ = [
-    "CATALOGO", "DOMINIO", "Item", "NOME_DA_RARIDADE", "NOME_DO_SLOT",
-    "PESO_NA_VITRINE", "POR_ID", "PRECO_BASE", "RARIDADES", "SLOTS",
-    "do_slot", "fora_do_dominio", "item", "juntar_equipamento",
+    "CATALOGO", "DOMINIO", "ID_DO_ANEL_DO_GM", "Item", "NOME_DA_RARIDADE",
+    "NOME_DO_SLOT", "PESO_NA_VITRINE", "POR_ID", "PRECO_BASE", "RARIDADES",
+    "SEM_VITRINE", "SLOTS", "a_venda", "do_slot", "fora_do_dominio", "item",
+    "juntar_equipamento",
 ]

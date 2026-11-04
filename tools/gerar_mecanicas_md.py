@@ -1232,6 +1232,37 @@ def mercado_md() -> str:
         "item que escapar do domínio do slot dele. Sem isso o domínio seria "
         "uma intenção — e ele já pegou dois itens errados.",
         "",
+        "## O que não está à venda",
+        "",
+        f"`itens.SEM_VITRINE` guarda "
+        + (
+            "uma peça que EXISTE mas nunca entra"
+            if len(itens.SEM_VITRINE) == 1
+            else f"{len(itens.SEM_VITRINE)} peças que EXISTEM mas nunca entram"
+        )
+        + " num sorteio. O bolo da vitrine sai de "
+        "`CATALOGO` e `esta_na_vitrine` é quem autoriza a compra, então ficar "
+        "de fora do catálogo já fecha as duas portas — não há checagem em "
+        "tempo de execução a manter. O domínio dos slots também não vale "
+        "para elas: a contenção existe para a economia do mercado, e uma peça "
+        "que não é vendida não disputa nada.",
+        "",
+    ]
+    L += tabela(
+        ["Peça", "Slot", "O que faz", "Como chega"],
+        [
+            [p.nome, itens.NOME_DO_SLOT[p.slot],
+             ", ".join(f"`{k}` {v}" for k, v in sorted(p.efeito.items())),
+             "`/mercado anel_do_mestre` (admin)"]
+            for p in itens.SEM_VITRINE
+        ],
+    )
+    L += [
+        "O Anel do Mestre é ferramenta de mesa: serve para atravessar uma "
+        "incursão **sozinho** e ver as telas, as salas e o chefe funcionando "
+        "sem juntar cinco pessoas. `tools/medir_anel_do_gm.py` mede se os "
+        "números dele bastam para isso, com o motor de verdade.",
+        "",
         "## As poções",
         "",
         f"Prateleira própria, de **{consumiveis.VAGAS} vagas**: as "

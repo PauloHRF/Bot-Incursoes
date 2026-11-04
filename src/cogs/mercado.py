@@ -647,5 +647,73 @@ class Mercado(commands.Cog):
             f"CA **{atualizado['ca']}** · acerto **{atualizado['bonus_ataque']:+d}**"
         )
 
+    @grupo.command(
+        name="anel_do_mestre",
+        description="(admin) Põe ou tira o Anel do Mestre, para jogar sozinho",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.describe(
+        personagem="Qual personagem (opcional se você só tem um)",
+        tirar="Marque para TIRAR o anel em vez de dar",
+    )
+    @app_commands.autocomplete(personagem=_sugerir_personagens)
+    async def anel_do_mestre(
+        self,
+        interaction: discord.Interaction,
+        personagem: Optional[str] = None,
+        tirar: bool = False,
+    ) -> None:
+        """A única porta do Anel do Mestre: ele não está à venda.
+
+        Fica atrás de `manage_guild` porque é ferramenta de mesa, e no
+        `/mercado` porque é equipamento como qualquer outro depois de vestido
+        — a ficha, o painel e o combate não sabem que ele é especial.
+
+        Segue a trava do mercado de propósito: os números do combate são lidos
+        quando a sala abre, então vestir no meio de uma run não mudaria nada e
+        só pareceria quebrado.
+        """
+        if not await self._fora_de_incursao(interaction):
+            return
+        escolhido = await self._resolver(interaction, personagem)
+        if not escolhido:
+            return
+        peca = itens.POR_ID[itens.ID_DO_ANEL_DO_GM]
+
+        if tirar:
+            tinha = await db.tirar_item(self.bot.db, escolhido["id"], peca.id)
+            atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
+            await interaction.response.send_message(
+                (
+                    f"🔧 **{atualizado['nome']}** devolveu o **{peca.nome}**. "
+                    f"CA **{atualizado['ca']}** · acerto "
+                    f"**{atualizado['bonus_ataque']:+d}**"
+                )
+                if tinha
+                else f"**{atualizado['nome']}** não estava com o {peca.nome}.",
+                ephemeral=True,
+            )
+            return
+
+        await db.dar_item(self.bot.db, escolhido["id"], peca.id)
+        vestiu, anterior = await db.equipar(
+            self.bot.db, escolhido["id"], peca.id, peca.slot
+        )
+        atualizado = await db.buscar_personagem(self.bot.db, escolhido["id"])
+        saiu = itens.item(anterior)
+        troca = f" {saiu.nome} volta para a bolsa." if saiu else ""
+        await interaction.response.send_message(
+            f"🔧 **{atualizado['nome']}** veste o **{peca.nome}**.{troca}\n"
+            f"CA **{atualizado['ca']}** · acerto "
+            f"**{atualizado['bonus_ataque']:+d}** · 4 golpes por rodada · "
+            f"+35 em teste de perícia.\n"
+            f"-# Ferramenta de teste, fora da vitrine. "
+            f"`/mercado anel_do_mestre tirar:True` devolve."
+            if vestiu
+            else "Não consegui vestir o anel — tente de novo.",
+            ephemeral=True,
+        )
+
+
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Mercado(bot))
