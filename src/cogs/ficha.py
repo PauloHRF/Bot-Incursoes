@@ -13,7 +13,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import classes as cl, database as db, retratos
+from .. import classes as cl, database as db, motor, retratos
 from ..embeds import url_de_imagem
 from ..rules import (
     ATRIBUTOS,
@@ -238,12 +238,15 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         return e
 
     # CA e acerto saem do personagem, nao da tabela: o Fighting Style ja entrou.
+    # A iniciativa tambem: e o save de DES mais as botas do mercado, e sem ela
+    # na ficha o jogador comprava +2 de iniciativa sem nunca ver o numero.
     e.add_field(
         name="Combate",
         value=(
             f"HP **{numeros.hp}** | CA **{personagem.get('ca', numeros.ca)}** | "
             f"Acerto **{fmt(personagem.get('bonus_ataque', numeros.acerto))}** | "
-            f"Dano **{numeros.dano}**"
+            f"Dano **{numeros.dano}** | "
+            f"Iniciativa **{fmt(motor.iniciativa_da_ficha(personagem))}**"
         ),
         inline=False,
     )
@@ -358,7 +361,14 @@ def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
     texto = "\n".join(linhas)
     if len(texto) > 1024:
         texto = texto[:1000].rsplit("\n", 1)[0] + "\n…"
-    e.add_field(name=f"Habilidades ({len(ganhas)})", value=texto, inline=False)
+    # A legenda no titulo: o icone sempre disse se a habilidade e acionada ou
+    # automatica, mas ninguem tinha onde descobrir isso — e uma ativa lida
+    # como passiva e uma ativa que nunca e usada.
+    e.add_field(
+        name=f"Habilidades ({len(ganhas)}) — ⚡ você aciona · ⚙️ o bot aplica",
+        value=texto,
+        inline=False,
+    )
 
 
 def _rodape_da_ficha(e: discord.Embed, numeros, nivel: int) -> discord.Embed:

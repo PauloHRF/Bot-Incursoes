@@ -44,6 +44,12 @@ POR_MASMORRA = {"combate": 3.08, "descanso": 1.42, "incursao": 1.00}
 # bestiário contra a CD de 8+acerto do tier.
 FALHA = 0.55
 
+# A Marca Fatal do ladino não vale pela ação dela, e sim pela marcação que ela
+# abre: é medida à parte, em `valor_da_ativa`. O id fica aqui porque o cog já
+# a conhece pelo id também (`Incursoes.ID_DA_MARCA_FATAL`) — não há campo
+# declarativo para "abre a marcação", e inventar um só para a conta seria pior.
+ID_DA_MARCA_FATAL = "marca_fatal"
+
 
 # ------------------------------------------------------- a mesa de referência
 def referencia_do_bestiario() -> dict[int, tuple[int, int, int]]:
@@ -251,6 +257,22 @@ def valor_da_ativa(classe_id: str, tier: int, h, ataques: int) -> tuple[float, s
         v += bruto
         if bruto:
             partes.append(f"{bruto:.0f} de golpe a mais")
+
+    # A Marca Fatal nao causa dano nenhum pela acao dela: ela ABRE a marcacao
+    # do combate, e o estrago vem dos acertos seguintes. Sem isto a ferramenta
+    # daria zero justamente a habilidade que a mudanca mexeu — o mesmo ponto
+    # cego que as duas marcas do patrulheiro tinham antes.
+    #
+    # O modelo, e ele e uma suposicao declarada: um combate dura
+    # `mesa(tier)["rodadas"]` rodadas, o ladino acerta nos mesmos 60% que
+    # `por_golpe` ja assume, e cada acerto vale em media UM dado da marca —
+    # tres marcas explodem por 3x o dado, entao por acerto da o dado. O golpe
+    # da propria ativa entra na conta, porque ele tambem marca.
+    if h.id == ID_DA_MARCA_FATAL:
+        acertos = (1 + (m["rodadas"] - 1) * max(1, ataques)) * 0.6
+        bruto = acertos * media_do_valor(H.DANO_DA_MARCA[tier], tier)
+        v += bruto
+        partes.append(f"{bruto:.0f} de marca em {m['rodadas']} rodadas")
 
     if a.get("fracao"):
         bruto = a["fracao"] * m["hp"]

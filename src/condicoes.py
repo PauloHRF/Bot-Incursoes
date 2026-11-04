@@ -325,6 +325,39 @@ def descricao(cid: str, tier: Optional[int] = None, stacks: int = 1) -> str:
     return f"{condicao.texto} (×{stacks})"
 
 
+# Como cada número do catálogo se lê quando já está somado. A ordem é a da
+# planilha, e o `+d` traz o sinal — os debuffs são negativos na origem.
+_COMO_SE_LE: tuple[tuple[str, str], ...] = (
+    ("ataque", "{:+d} em ataques"),
+    ("saves", "{:+d} em saves"),
+    ("testes", "{:+d} nos testes de perícia"),
+    ("iniciativa", "{:+d} de iniciativa"),
+    ("hp_maximo_pct", "{:+d}% de HP máximo"),
+    ("cura_recebida_pct", "{:+d}% de cura recebida"),
+)
+
+
+def efeito_somado(cid: str, stacks: int) -> str:
+    """O que `stacks` stacks fazem, com a conta já feita.
+
+    O texto do catálogo é o que UM stack faz, porque é assim que a planilha
+    escreve. Quem carrega três precisa do total, e multiplicar de cabeça no
+    meio da sala é o atrito que faz a mesa ignorar a condição e jogar com
+    penalidade invisível.
+    """
+    condicao = POR_ID[cid]
+    partes = [
+        molde.format(getattr(condicao, campo) * stacks)
+        for campo, molde in _COMO_SE_LE
+        if getattr(condicao, campo)
+    ]
+    if condicao.pericias and condicao.por_pericia:
+        partes.append(
+            f"{condicao.por_pericia * stacks:+d} em " + ", ".join(condicao.pericias)
+        )
+    return " · ".join(partes)
+
+
 def rotulo(cid: str, stacks: int = 1) -> str:
     """Nome com o ícone e, quando empilhado, a contagem: '😨 Medo ×2'."""
     condicao = POR_ID[cid]

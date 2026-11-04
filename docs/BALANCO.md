@@ -192,10 +192,11 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 | << | Bardo | Healing Word | 5 | 4 × 1.42 | 4 de cura |
 | << | Artífice | Faerie Fire | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 
-### Tier 2 — mediana 0 HP-eq, 3 ativas
+### Tier 2 — mediana 0 HP-eq, 4 ativas
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
+| >> | Ladino | Marca Fatal | 19 | 6 × 3.08 | 6 de marca em 3 rodadas |
 |  | Bardo | Inspiracao — no ataque | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Bardo | Inspiracao — na resistencia | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Bardo | Inspiracao — na pericia | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |

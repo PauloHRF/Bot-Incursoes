@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 import discord
 
@@ -289,11 +289,18 @@ def votacao(
 def sala_aberta(
     sala: Sala,
     linha: int,
-    ja_rolaram: int,
-    total: int,
+    rolaram: Sequence[str] = (),
+    faltam: Sequence[str] = (),
     passos: Optional[int] = None,
     tier: Optional[int] = None,
 ) -> tuple[discord.Embed, Optional[discord.File]]:
+    """O cartão da sala, reescrito a cada rolagem.
+
+    `rolaram` e `faltam` são nomes de PERSONAGEM, como no resultado da sala:
+    quem joga com dois não se reconheceria por apelido de Discord. Antes aqui
+    só vinha o par de números ("3/5"), e o grupo ficava esperando sem saber
+    de quem — o nome é o que faz alguém ser cobrado.
+    """
     e = discord.Embed(
         title=f"{EMOJI_TIPO.get(sala.tipo, '•')} {sala.nome}",
         description=sala.descricao,
@@ -309,7 +316,19 @@ def sala_aberta(
             ),
             inline=False,
         )
-        e.add_field(name="Rolaram", value=f"{ja_rolaram}/{total}", inline=True)
+        linhas = []
+        if rolaram:
+            linhas.append("🎲 " + " · ".join(f"**{n}**" for n in rolaram))
+        if faltam:
+            linhas.append("⏳ faltam " + ", ".join(f"**{n}**" for n in faltam))
+        e.add_field(
+            name=f"Rolaram {len(rolaram)}/{len(rolaram) + len(faltam)}",
+            # O dado de cada um fica para o fecho da sala: aqui só se diz
+            # QUEM já rolou. O resultado aparecendo rolagem a rolagem tiraria
+            # a virada do `resultado_sala`, que mostra tudo de uma vez.
+            value="\n".join(linhas) or "*ninguém ainda*",
+            inline=False,
+        )
         rodape = "Cada jogador rola uma vez, com a melhor perícia que tiver entre as listadas."
     elif sala.e_combate:
         # Quem mora na sala depende do tier do grupo: a mesma sala tem uma
@@ -388,7 +407,69 @@ def resultado_sala(
         e.add_field(
             name="O que fica", value="\n".join(desfecho.linhas)[:1024], inline=False
         )
+    # A benção ou a maldição tem painel próprio: ela é o que o grupo leva para
+    # as próximas salas, e virava uma linha no meio das outras.
+    if desfecho is not None and getattr(desfecho, "condicao", None):
+        nome, valor = painel_da_condicao(desfecho.condicao)
+        e.add_field(name=nome, value=valor, inline=False)
     return e
+
+
+def painel_da_condicao(aplicada: Any) -> tuple[str, str]:
+    """O painel da condição que a sala deixou: o quê, em quem, e por quanto tempo.
+
+    Devolve (título, corpo) em vez de mexer no embed para o teste poder ler as
+    duas partes sem montar um embed inteiro.
+
+    As três coisas que faltavam na linha antiga:
+      - **quem ficou com quanto**, porque o stack é por cabeça;
+      - o **prazo**, que é a única regra que o jogador não tem como adivinhar
+        (tudo decai 1 stack por combate, menos a Exaustão);
+      - o **teto**, quando alguém chega perto de ser tirado da incursão por
+        ele — a Exaustão em 5 e a Deterioração em 10 expulsam, e sem aviso o
+        personagem simplesmente desaparecia do grupo na sala seguinte.
+    """
+    from . import condicoes
+
+    condicao = condicoes.POR_ID[aplicada.cid]
+    stacks = aplicada.stacks
+    maior = max(stacks.values()) if stacks else 1
+    titulo = f"{condicao.icone} {condicao.nome}" + (
+        " — o grupo inteiro" if len(stacks) > 1 else ""
+    )
+    linhas = [f"**{condicao.texto}**"]
+    if stacks:
+        linhas.append(
+            " · ".join(
+                f"{nome}{f' ×{quantos}' if quantos > 1 else ''}"
+                for nome, quantos in stacks.items()
+            )
+        )
+    # O efeito somado só entra quando há mais de um stack: com um, repetiria a
+    # linha de cima com outras palavras. Uma linha por nível empilhado, e não
+    # por pessoa — depois de um Evento o grupo todo está no mesmo número.
+    for nivel in sorted({q for q in stacks.values() if q > 1}, reverse=True):
+        somado = condicoes.efeito_somado(aplicada.cid, nivel)
+        if somado:
+            linhas.append(f"*Em ×{nivel} isso vale {somado}.*")
+    # O prazo é a regra que o jogador não tem como adivinhar — menos na
+    # Exaustão, a única que não decai, cujo próprio texto do catálogo já diz
+    # que ela só sai no descanso. Repetir ali era a terceira vez na mesma tela.
+    if condicao.decai:
+        linhas.append("*Decai 1 stack a cada combate.*")
+    if condicao.teto:
+        perto = [
+            f"**{nome}** ({quantos}/{condicao.teto})"
+            for nome, quantos in stacks.items()
+            if quantos >= condicao.teto - 1
+        ]
+        if perto:
+            linhas.append(
+                f"⚠️ A {condicao.nome} tira da incursão em **{condicao.teto}**: "
+                + ", ".join(perto)
+                + "."
+            )
+    return titulo, "\n".join(linhas)[:1024]
 
 
 LIMPEZAS = {

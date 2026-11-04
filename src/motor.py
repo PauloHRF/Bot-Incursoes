@@ -1223,6 +1223,23 @@ def mod_iniciativa(quem: Any) -> int:
     return (quem.saves or {}).get("DES", 0) + quem.mod_iniciativa_extra
 
 
+def iniciativa_da_ficha(personagem: dict[str, Any]) -> int:
+    """A mesma conta de `mod_iniciativa`, pela ficha em vez do combatente.
+
+    A ficha vive fora da run, então aqui não há Exaustão nem condição de sala
+    para entrar — é só o save de DES mais o que o equipamento e as passivas
+    somam. É o número que o jogador vai rolar quando o combate começar, e
+    estava invisível: as botas do mercado existem para mexer nele.
+
+    Separada e não um `if` dentro de `mod_iniciativa` porque o que entra é
+    diferente: lá o `mod_iniciativa_extra` já vem somado com as condições,
+    e aqui elas não existem.
+    """
+    saves = personagem.get("saves") or {}
+    efeitos = personagem.get("efeitos") or {}
+    return saves.get("DES", 0) + efeitos.get("bonus_iniciativa", 0)
+
+
 def rolar_iniciativa(
     tipo: str, ident: int, nome: str, modificador: int, rng: Optional[random.Random] = None
 ) -> Iniciativa:

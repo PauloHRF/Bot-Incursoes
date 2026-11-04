@@ -80,20 +80,43 @@ NOME_DA_GRACA = "Graça"
 
 
 @dataclass
+class CondicaoAplicada:
+    """A benção ou a maldição que a sala grudou no grupo, por personagem.
+
+    Os stacks são por cabeça e não um número só: quem já carregava a mesma
+    condição sai com mais que os outros. A linha antiga dizia "todos ficam
+    com Medo ×2" usando o número de quem por acaso foi o último do laço, e
+    era o único número errado da tela.
+
+    `cid` é o id no catálogo de `condicoes`; `stacks` vai do nome do
+    personagem para o que ele carrega AGORA, somando o que já tinha.
+    """
+
+    cid: str
+    stacks: dict[str, int] = field(default_factory=dict)
+
+
+@dataclass
 class Desfecho:
     """O que a sala deixou no grupo, já em texto pronto para o embed.
 
     `mimicos` diz que a sala virou combate em vez de devolver o grupo à
     votação; `fora` lista quem bateu no teto de uma condição e saiu.
+
+    `condicao` é a única parte que NÃO vem em texto: ela ganha painel próprio
+    no resultado da sala, com o que faz, quem ficou com quanto e o prazo.
+    Uma condição por sala — a armadilha que disparou é uma, e o evento que
+    deu errado aconteceu uma vez.
     """
 
     linhas: list[str] = field(default_factory=list)
     mimicos: bool = False
     fora: list[str] = field(default_factory=list)
+    condicao: Optional[CondicaoAplicada] = None
 
     @property
     def vazio(self) -> bool:
-        return not (self.linhas or self.mimicos or self.fora)
+        return not (self.linhas or self.mimicos or self.fora or self.condicao)
 
 
 def _rng(rng: Optional[random.Random]) -> random.Random:

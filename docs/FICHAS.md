@@ -71,9 +71,11 @@ Soma +5 em todo teste de perícia.
 **Acerto:** +6  
 **Dano:** 3d6+4
 
-### **Passiva — Marca Fatal**
+### **Ativa — Marca Fatal**
 
-Todo acerto seu marca o inimigo. Na 3a marca elas explodem de uma vez, sem rolar acerto. Passar 3 turnos sem marcar o mesmo inimigo perde as marcas dele; marcar de novo devolve o prazo inteiro.
+**1x por combate.**
+
+Um ataque que marca — e abre a marcacao: dali em diante todo acerto seu marca. Na 3a marca elas explodem de uma vez, sem rolar acerto. Passar 3 turnos sem marcar o mesmo inimigo perde as marcas dele; marcar de novo devolve o prazo inteiro.
 
 ---
 

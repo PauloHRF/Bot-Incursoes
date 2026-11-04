@@ -1265,7 +1265,6 @@ class Incursoes(commands.Cog):
             return
         # Atravessar a sala a tira do sorteio: ela nao volta a ser oferecida.
         await db.registrar_visita(self.bot.db, run["id"], self._passo(run), sala.id)
-        total = len(await db.participantes_de_pe(self.bot.db, run["id"]))
 
         if sala.tipo == "Descanso":
             await db.atualizar_run(self.bot.db, run["id"], status="em_sala", sala_atual=sala.id)
@@ -1322,8 +1321,13 @@ class Incursoes(commands.Cog):
             await self._abrir_combate(await db.buscar_run(self.bot.db, run["id"]), sala)
             return
 
+        # Só a sala de teste cobra nome de alguém: numa sem teste isto seriam
+        # duas leituras de banco para um campo que o cartão não desenha.
+        faltam_rolar: list[str] = []
+        if sala.tem_teste:
+            _, faltam_rolar = await self._quem_rolou(run, [])
         embed, arquivo = E.sala_aberta(
-            sala, run["linha_atual"], 0, total,
+            sala, run["linha_atual"], (), faltam_rolar,
             incursao.passos if incursao else None,
             # O tier, senao o cartao mostra a CD do tier 1 e `motor.testar`
             # cobra a do tier da run: o grupo via um numero e rolava contra
@@ -2279,6 +2283,31 @@ class Incursoes(commands.Cog):
 
     EFEITO_DA_MARCA = "marca_fatal"
     EFEITO_DA_FURTIVIDADE = "furtividade"
+    ID_DA_MARCA_FATAL = "marca_fatal"
+
+    async def _marcacao_aberta(self, run: dict[str, Any], user_id: int) -> bool:
+        """A Marca Fatal esta aberta neste combate para este personagem?
+
+        A habilidade era passiva, e o que a ligava era `efeitos["marca_fatal"]`:
+        o ladino marcava desde o primeiro golpe, sem decidir nada. Agora ela e
+        uma chave — ele gasta a acao uma vez por combate para abrir, e dali em
+        diante todo acerto marca, como antes.
+
+        **O registro do uso E o interruptor**, e nao um estado novo:
+        `gastar_uso` grava sob `combate:{passo}`, entao a chave nasce quando a
+        ativa e usada, vale pelo combate inteiro e morre com ele — e ja esta
+        gravada quando o golpe da propria ativa resolve, porque `usar_habilidade`
+        gasta o uso antes de resolver. Por isso o ataque que abre tambem marca.
+
+        So quem tem a habilidade consegue gastar o uso dela, entao isto tambem
+        responde "este personagem e um ladino do tier 2 ou mais".
+        """
+        habilidade = habilidades.POR_ID.get(self.ID_DA_MARCA_FATAL)
+        if habilidade is None:
+            return False
+        gastos = await db.usos_da_run(self.bot.db, run["id"], user_id)
+        chave = self._chave_de_recarga(habilidade, run, self._passo(run))
+        return gastos.get((habilidade.chave_de_uso, chave), 0) > 0
 
     async def _marcas_de(self, run: dict[str, Any], rodada: int) -> dict[int, dict]:
         """As Marcas Fatais vivas, por índice de inimigo."""
@@ -2293,10 +2322,14 @@ class Incursoes(commands.Cog):
     async def _marcar_fatal(
         self, run: dict[str, Any], estado, atacante, user_id: int, golpes: list
     ) -> list[str]:
-        """Todo acerto do ladino marca o inimigo; a terceira marca explode.
+        """Com a marcação aberta, todo acerto marca; a terceira explode.
 
-        As três regras da ficha, e como elas se encaixam:
+        As regras da ficha, e como elas se encaixam:
 
+        - **a marcação não vem de graça**: o ladino gasta a ativa do tier 2
+          uma vez por combate para abri-la (`_marcacao_aberta`). O golpe
+          dessa própria ativa já marca, porque o uso é gravado antes de o
+          golpe resolver;
         - acertar aplica 1 marca, e **devolve o prazo inteiro** às que já
           estão lá — não decrementa para 2, volta para 3;
         - na terceira marca elas explodem na hora, sem rolar acerto;
@@ -2313,10 +2346,9 @@ class Incursoes(commands.Cog):
         """
         if atacante is None or not golpes:
             return []
-        personagem = await self._personagem_na_run(run, user_id)
-        dele = ((personagem or {}).get("efeitos") or {})
-        if not dele.get("marca_fatal"):
+        if not await self._marcacao_aberta(run, user_id):
             return []
+        personagem = await self._personagem_na_run(run, user_id)
         dado = habilidades.DANO_DA_MARCA[tier((personagem or {}).get("nivel") or 1)]
         vivas = await self._marcas_de(run, estado.rodada)
         # Conta local porque um multiataque marca duas vezes no mesmo turno,
@@ -4727,9 +4759,10 @@ class Incursoes(commands.Cog):
         if resolucao.encerrada:
             await self._concluir_sala(run, sala, resolucao)
         else:
+            ja_rolaram, faltam_rolar = await self._quem_rolou(run, registros)
             embed, _ = E.sala_aberta(
-                sala, run["linha_atual"], len(registros), total, incursao.passos,
-                tier=self._tier_da_run(run),
+                sala, run["linha_atual"], ja_rolaram, faltam_rolar,
+                incursao.passos, tier=self._tier_da_run(run),
             )
             if interaction.message is not None:
                 try:
@@ -4958,6 +4991,27 @@ class Incursoes(commands.Cog):
         personagem = await db.personagem_da_run(self.bot.db, run["id"], user_id)
         return (personagem or {}).get("nome") or f"<@{user_id}>"
 
+    async def _quem_rolou(
+        self, run: dict[str, Any], registros: list[dict[str, Any]]
+    ) -> tuple[list[str], list[str]]:
+        """Quem ja rolou nesta sala e quem ainda falta, por nome de personagem.
+
+        Quem caiu depois de rolar continua na primeira lista e sai da segunda:
+        a sala fecha quando os de pe rolarem, e e essa a conta que o cartao
+        mostra.
+        """
+        ja = {r["user_id"] for r in registros}
+        nomes = {
+            p["user_id"]: p["nome"]
+            for p in await db.personagens_da_run(self.bot.db, run["id"])
+        }
+        faltam = [
+            nomes.get(user_id, f"<@{user_id}>")
+            for user_id in await db.participantes_de_pe(self.bot.db, run["id"])
+            if user_id not in ja
+        ]
+        return [r["personagem"] for r in registros], faltam
+
     # ------------------------------------------- o que a sala deixa no grupo
 
     async def _consequencias_da_sala(
@@ -5040,7 +5094,7 @@ class Incursoes(commands.Cog):
         debuff = consequencias.debuff_da_armadilha()
         hps: dict[int, int] = {}
         nomes: list[str] = []
-        stacks = 1
+        caiu = consequencias.CondicaoAplicada(debuff)
         for quem in encararam:
             combatente = combatentes.get(quem.user_id)
             if combatente is None:
@@ -5048,7 +5102,7 @@ class Incursoes(commands.Cog):
             dano = consequencias.dano_da_armadilha(combatente.hp_max)
             combatente.hp_atual = max(0, combatente.hp_atual - dano)
             hps[quem.user_id] = combatente.hp_atual
-            stacks = await db.aplicar_condicao(
+            caiu.stacks[quem.personagem] = await db.aplicar_condicao(
                 self.bot.db, run["id"], quem.user_id, debuff
             )
             nomes.append(f"**{quem.personagem}** (-{dano})")
@@ -5058,10 +5112,7 @@ class Incursoes(commands.Cog):
             desfecho.linhas.append(
                 "A armadilha pega o grupo: " + ", ".join(nomes) + "."
             )
-            desfecho.linhas.append(
-                f"Todos ficam com {condicoes.rotulo(debuff, stacks)} — "
-                f"{condicoes.descricao(debuff, stacks=stacks)}"
-            )
+            desfecho.condicao = caiu
 
     async def _premio_de_evento(
         self, run: dict[str, Any], desfecho: consequencias.Desfecho
@@ -5111,12 +5162,13 @@ class Incursoes(commands.Cog):
         # Sobrou buff, que é o piso do Evento: vale para o grupo inteiro.
         if premio not in condicoes.BUFFS:
             premio = condicoes.BUFFS[0]
+        ganho = consequencias.CondicaoAplicada(premio)
         for c in combatentes:
-            await db.aplicar_condicao(self.bot.db, run["id"], c.user_id, premio)
-        desfecho.linhas.append(
-            f"✨ O grupo inteiro ganha {condicoes.rotulo(premio)} — "
-            f"{condicoes.descricao(premio)}"
-        )
+            ganho.stacks[c.nome] = await db.aplicar_condicao(
+                self.bot.db, run["id"], c.user_id, premio
+            )
+        desfecho.linhas.append("✨ O evento corre bem, e o grupo sai melhor dele.")
+        desfecho.condicao = ganho
 
     async def _castigo_de_evento(
         self,
@@ -5133,20 +5185,13 @@ class Incursoes(commands.Cog):
         if not encararam:
             return
         castigo = consequencias.castigo_do_evento()
-        stacks = 1
+        caiu = consequencias.CondicaoAplicada(castigo)
         for quem in encararam:
-            stacks = await db.aplicar_condicao(
+            caiu.stacks[quem.personagem] = await db.aplicar_condicao(
                 self.bot.db, run["id"], quem.user_id, castigo
             )
-        desfecho.linhas.append(
-            "O evento sai pela culatra para o grupo: "
-            + ", ".join(f"**{q.personagem}**" for q in encararam)
-            + "."
-        )
-        desfecho.linhas.append(
-            f"Todos ficam com {condicoes.rotulo(castigo, stacks)} — "
-            f"{condicoes.descricao(castigo, stacks=stacks)}"
-        )
+        desfecho.linhas.append("O evento sai pela culatra para o grupo.")
+        desfecho.condicao = caiu
 
     async def _expulsar_estourados(self, run: dict[str, Any]) -> None:
         """Quem bateu no teto de uma condição sai da incursão.

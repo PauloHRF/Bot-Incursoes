@@ -114,13 +114,26 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
     "ladino": {
         1: [Habilidade("reliable_talent", "Reliable Talent", PASSIVA,
                        "Soma +5 em todo teste de pericia.", {"bonus_teste": 5})],
-        2: [Habilidade("marca_fatal", "Marca Fatal", PASSIVA,
-                       f"Todo acerto seu marca o inimigo. Na "
+        # Era passiva, e o ladino marcava do primeiro golpe sem decidir nada.
+        # Agora ela e a CHAVE: gasta a acao uma vez para abrir, e dali em
+        # diante todo acerto marca. Quem liga a marcacao e o registro do uso
+        # (ver `_marcacao_aberta`), e nao mais `efeitos["marca_fatal"]` —
+        # entao o efeito saiu do dicionario, aqui e no tier 5.
+        #
+        # O texto comeca pelo que importa porque o menu de habilidade corta
+        # em 100 caracteres: "abre a marcacao" tem de caber no corte.
+        2: [Habilidade("marca_fatal", "Marca Fatal", ATIVA,
+                       f"1x por combate: um ataque que marca — e abre a "
+                       f"marcacao: dali em diante todo acerto seu marca. Na "
                        f"{MARCAS_PARA_EXPLODIR}a marca elas explodem de uma "
                        f"vez, sem rolar acerto. Passar {TURNOS_DA_MARCA} "
                        f"turnos sem marcar o mesmo inimigo perde as marcas "
                        f"dele; marcar de novo devolve o prazo inteiro.",
-                       {"marca_fatal": True})],
+                       usos=_usos("combate"),
+                       # `quantidade: 1` e nao `acoes`: o ladino nao tem
+                       # Multiataque, entao o turno dele JA e um golpe — e e
+                       # "1 atk + marca" que a ficha pede.
+                       acao={"tipo": "golpes", "quantidade": 1})],
         3: [Habilidade("furtividade", "Furtividade", ATIVA,
                        f"1x por combate: ataca e se esconde. Pelos "
                        f"{TURNOS_DA_MARCA} turnos seguintes a sua ameaca para "
@@ -132,12 +145,15 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "Escolhe 2 pericias com proficiencia; o bonus delas dobra.",
                        escolha={"tipo": "pericias", "quantidade": 2,
                                 "entre": "proficientes", "aplica": "expertise"})],
+        # Sem `marca_fatal`: quem abre a marcacao e a ativa do tier 2, e
+        # so ela. O tier 5 continua fazendo as duas coisas de sempre — o
+        # dado (que `DANO_DA_MARCA` ja da pelo tier) e a transferencia.
         5: [Habilidade("marca_fatal_mais", "Marca Fatal +", PASSIVA,
                        "A explosao passa a 3d6 por marca. E o inimigo que "
                        "morre antes dela nao leva as marcas embora: voce "
                        "escolhe para quem elas passam, com o prazo que "
                        "faltava.",
-                       {"marca_fatal": True, "marca_fatal_transfere": True})],
+                       {"marca_fatal_transfere": True})],
     },
     "barbaro": {
         1: [Habilidade("rage", "Rage", ATIVA,
@@ -1456,10 +1472,10 @@ NEUTRO: dict = {
     # Botas do mercado: a ordem do combate. Nao e save de DES — o save mede
     # esquivar, e isto mede chegar antes.
     "bonus_iniciativa": 0,
-    # Marca Fatal, do ladino: todo acerto dele marca o inimigo. Precisa estar
-    # AQUI, e nao so na habilidade — `juntar_efeito` descarta em silencio a
-    # chave que nao esta neste padrao, e a passiva simplesmente nao valeria.
-    "marca_fatal": False,
+    # Nao ha chave `marca_fatal` aqui: a marcacao do ladino deixou de ser
+    # passiva, e quem a liga agora e o USO da ativa do tier 2 — o registro em
+    # `run_usos`, nao um numero na ficha. Ver `_marcacao_aberta`.
+    #
     # Marca Fatal +: a explosao nao se perde com o inimigo que morre antes
     # dela. Chave propria porque e o tier 5 que a liga, e nao a marca.
     "marca_fatal_transfere": False,

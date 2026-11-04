@@ -98,6 +98,36 @@ async def marcas_em(cog, run, incursao, indice=0):
     return (vivas.get(indice, {}).get("valor") or {}).get("marcas", 0)
 
 
+def tudo_lido(canal, falas=()):
+    """Tudo que o jogador leu: as efêmeras dos cliques mais o canal.
+
+    O ataque comum responde em PRIVADO; a ativa anuncia no CANAL e apaga a
+    efêmera de quem clicou. Os dois caminhos marcam, então nenhum caso de
+    marca pode depender de por qual porta o texto saiu — e procurar o trecho
+    no monte também não depende de quem falou por último.
+    """
+    return "\n".join([*falas, *(m.content or "" for m in canal.enviadas)])
+
+
+async def abrir_marcacao(conn, canal, cog, incursao, run, dono=JOGADORES[0]):
+    """Gasta a ativa do tier 2, que é o que abre a marcação do combate.
+
+    Virou passo obrigatório de todo caso de marca: sem isso o ladino ataca e
+    não marca nada. Devolve (o que o jogador viu, a run depois, a rodada em
+    que a ativa agiu) — a rodada porque o golpe dela já pode ter marcado, e
+    o prazo da marca é contado de onde ela caiu.
+    """
+    rodada = (await cog._estado_combate(run, incursao.objetivo)).rodada
+    msg = await canal.fetch_message(run["mensagem_id"])
+    inter = FakeInteraction(canal, dono, msg)
+    await cog.usar_habilidade(inter, run["id"], "OBJ", "marca_fatal")
+    atual = await db.buscar_run(conn, run["id"])
+    assert await cog._marcacao_aberta(atual, dono), (
+        f"a ativa não abriu a marcação: {inter.resposta}"
+    )
+    return str(inter.resposta), atual, rodada
+
+
 def caso_a_ficha_bate_com_o_documento():
     """Os números e as habilidades do Ladino, tier por tier.
 
@@ -129,36 +159,130 @@ def caso_a_ficha_bate_com_o_documento():
     # O dado da explosão sai da tabela da ficha dele.
     assert hb.DANO_DA_MARCA == {1: "1d6", 2: "1d6", 3: "2d6", 4: "2d6", 5: "3d6"}
     assert hb.MARCAS_PARA_EXPLODIR == 3 and hb.TURNOS_DA_MARCA == 3
+
+    # A Marca Fatal é ATIVA, 1x por combate, e dá um golpe: era passiva, e o
+    # ladino marcava do primeiro ataque sem decidir nada.
+    marca = hb.POR_ID["marca_fatal"]
+    assert marca.tipo == cl.ATIVA, marca.tipo
+    assert (marca.escopo, marca.vezes) == ("combate", 1), (marca.escopo, marca.vezes)
+    assert marca.acao == {"tipo": "golpes", "quantidade": 1}, marca.acao
+    # E a marcação não vem mais de graça pela ficha: nenhum tier do ladino
+    # entrega a chave `marca_fatal` como efeito passivo.
+    for nivel in (3, 5, 7, 9):
+        assert "marca_fatal" not in cl.efeitos("ladino", nivel, {}), nivel
+    assert cl.efeitos("ladino", 9, {}).get("marca_fatal_transfere"), (
+        "o tier 5 continua passando as marcas do inimigo que cai"
+    )
     print("  a ficha do Ladino bate com o documento: ok")
 
 
-async def caso_a_marca_empilha_e_explode_na_terceira():
-    """Acertar marca; a terceira marca explode na hora, sem rolar acerto."""
+async def caso_atacar_sem_a_ativa_nao_marca():
+    """A marcação não vem de graça: sem gastar a ativa, nenhum acerto marca.
+
+    É a mudança inteira. Antes a Marca Fatal era passiva e o ladino marcava
+    desde o primeiro golpe, sem decidir nada; agora ele gasta a ação uma vez
+    por combate para abrir a torneira.
+    """
     ordem_fixa(("p", JOGADORES[0]), ("i", 0))
     conn, canal, cog, incursao, run = await preparar(nivel=3)
     msg = await canal.fetch_message(run["mensagem_id"])
+    dono = JOGADORES[0]
+    assert not await cog._marcacao_aberta(run, dono), "nasceu aberta"
 
-    # Ataca até as três marcas fecharem. A CA do boneco é 1, então só o 1
-    # natural erra — e ele sai, de vez em quando. O caso é sobre a marca, e
-    # não sobre a rolagem de acerto: errar não marca, e só isso.
-    vistas = []
+    # Cinco acertos sem a ativa: com CA 1, quase todos acertam — e nenhum marca.
+    for _ in range(5):
+        inter = FakeInteraction(canal, dono, msg)
+        await cog.atacar(inter, run["id"], "OBJ")
+        assert "Marca Fatal" not in str(inter.resposta), inter.resposta
+        run = await db.buscar_run(conn, run["id"])
+    assert await marcas_em(cog, run, incursao) == 0, "marcou sem a ativa"
+
+    # Agora abre. Dali em diante o acerto volta a marcar, como a passiva fazia.
+    _, run, _ = await abrir_marcacao(conn, canal, cog, incursao, run)
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for _ in range(20):
+        if await marcas_em(cog, run, incursao) > 0:
+            break
+        inter = FakeInteraction(canal, dono, msg)
+        await cog.atacar(inter, run["id"], "OBJ")
+        run = await db.buscar_run(conn, run["id"])
+    assert await marcas_em(cog, run, incursao) > 0, "não marcou nem com a ativa"
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  sem a ativa ninguém marca; com ela, todo acerto marca: ok")
+
+
+async def caso_o_uso_e_o_interruptor_e_vale_pelo_combate():
+    """Quem liga a marcação é o REGISTRO DO USO, e ele é por combate.
+
+    Sem estado novo: `gastar_uso` grava sob `combate:{passo}`, então a chave
+    nasce com a ativa, vale pelo combate inteiro e morre na troca de sala.
+    E ela está gravada antes de o golpe da ativa resolver — por isso o
+    ataque que abre também marca.
+    """
+    ordem_fixa(("p", JOGADORES[0]), ("i", 0))
+    conn, canal, cog, incursao, run = await preparar(nivel=3)
+    dono, passo = JOGADORES[0], cog._passo(run)
+    _, run, _ = await abrir_marcacao(conn, canal, cog, incursao, run)
+
+    gastos = await db.usos_da_run(conn, run["id"], dono)
+    assert gastos.get(("marca_fatal", f"combate:{passo}")) == 1, gastos
+    assert await cog._marcacao_aberta(run, dono) is True
+
+    # Um uso só: a segunda tentativa é recusada, e a marcação segue aberta.
+    msg = await canal.fetch_message(run["mensagem_id"])
+    inter = FakeInteraction(canal, dono, msg)
+    await cog.usar_habilidade(inter, run["id"], "OBJ", "marca_fatal")
+    run = await db.buscar_run(conn, run["id"])
+    assert await cog._marcacao_aberta(run, dono) is True
+
+    # E ninguém mais do grupo marca por tabela: a chave é de quem gastou.
+    assert await cog._marcacao_aberta(run, JOGADORES[1]) is False
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o uso é o interruptor, vale por combate e é de quem gastou: ok")
+
+
+async def caso_a_marca_empilha_e_explode_na_terceira():
+    """Com a marcação aberta, acertar marca; a terceira explode na hora."""
+    ordem_fixa(("p", JOGADORES[0]), ("i", 0))
+    conn, canal, cog, incursao, run = await preparar(nivel=3)
+    _, run, _ = await abrir_marcacao(conn, canal, cog, incursao, run)
+    msg = await canal.fetch_message(run["mensagem_id"])
+
+    # Ataca até as três marcas fecharem, lendo a PILHA e não o texto: o
+    # anúncio sai no canal e o inimigo fala depois dele, então procurar a
+    # linha "×1" na resposta do clique seria frágil.
+    #
+    # A CA do boneco é 1, então só o 1 natural erra — e ele sai, de vez em
+    # quando. O caso é sobre a marca, e não sobre a rolagem de acerto:
+    # errar não marca, e só isso. O golpe da própria ativa já marca, então
+    # o primeiro valor lido pode ser 1.
+    pilha = [await marcas_em(cog, run, incursao)]
+    falas = []
     for _ in range(20):
         inter = FakeInteraction(canal, JOGADORES[0], msg)
         await cog.atacar(inter, run["id"], "OBJ")
-        linha = str(inter.resposta)
-        if "Marca Fatal" in linha or "explodem" in linha:
-            vistas.append(linha)
-        if any("explodem" in v for v in vistas):
+        falas.append(str(inter.resposta))
+        run = await db.buscar_run(conn, run["id"])
+        pilha.append(await marcas_em(cog, run, incursao))
+        if "explodem" in tudo_lido(canal, falas):
             break
 
-    assert len(vistas) >= 3, vistas
-    assert "Marca Fatal ×1" in vistas[0], vistas[0]
-    assert "Marca Fatal ×2" in vistas[1], vistas[1]
-    assert "explodem" in vistas[2], vistas[2]
+    # A pilha subiu de 1 em 1 até a terceira, e a explosão a zerou.
+    assert 1 in pilha and 2 in pilha, pilha
+    assert pilha.index(1) < pilha.index(2), pilha
+    assert pilha[-1] == 0, pilha
+    assert max(pilha) < hb.MARCAS_PARA_EXPLODIR, (
+        f"a terceira marca deveria explodir em vez de ficar: {pilha}"
+    )
+
+    lido = tudo_lido(canal, falas)
+    assert "explodem" in lido, "a explosão não foi anunciada em lugar nenhum"
     # E a explosão não rola acerto: ela sai no mesmo golpe que fechou as três.
-    assert "3×1d6" in vistas[2], vistas[2]
-    # Depois de explodir o inimigo fica limpo, e o ciclo recomeça.
-    assert await marcas_em(cog, await db.buscar_run(conn, run["id"]), incursao) == 0
+    assert "3×1d6" in lido, lido[-400:]
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
@@ -174,16 +298,37 @@ async def caso_a_marca_cai_sozinha_depois_de_tres_turnos():
     """
     ordem_fixa(("p", JOGADORES[0]), ("i", 0))
     conn, canal, cog, incursao, run = await preparar(nivel=3)
+    aberta, run, rodada_do_abrir = await abrir_marcacao(
+        conn, canal, cog, incursao, run
+    )
     msg = await canal.fetch_message(run["mensagem_id"])
     passo = cog._passo(run)
 
-    inter = FakeInteraction(canal, JOGADORES[0], msg)
-    await cog.atacar(inter, run["id"], "OBJ")
-    run = await db.buscar_run(conn, run["id"])
+    # O golpe da própria ativa já pode ter marcado. Se não marcou — só o 1
+    # natural erra, e ele sai de vez em quando —, ataca até ACERTAR: errar não
+    # marca, e uma rolagem em vinte deixava este caso vermelho com um
+    # KeyError, que não é a falha que ele existe para apontar.
     estado = await cog._estado_combate(run, incursao.objetivo)
     marcas = await cog._marcas_de(run, estado.rodada)
+    marcou_na_rodada = rodada_do_abrir if marcas else None
+    while not marcas:
+        # A rodada de ANTES do golpe: atacar sozinho vira a rodada, e o prazo
+        # da marca é contado de quando ela caiu, não de depois da virada.
+        marcou_na_rodada = (
+            await cog._estado_combate(run, incursao.objetivo)
+        ).rodada
+        if marcou_na_rodada > rodada_do_abrir + 20:
+            break
+        inter = FakeInteraction(canal, JOGADORES[0], msg)
+        await cog.atacar(inter, run["id"], "OBJ")
+        run = await db.buscar_run(conn, run["id"])
+        estado = await cog._estado_combate(run, incursao.objetivo)
+        marcas = await cog._marcas_de(run, estado.rodada)
+    assert marcas, "vinte ataques sem marcar: não é azar, é regra quebrada"
     primeiro_prazo = marcas[0]["expira"]
-    assert primeiro_prazo == 1 + hb.TURNOS_DA_MARCA, primeiro_prazo
+    assert primeiro_prazo == marcou_na_rodada + hb.TURNOS_DA_MARCA, (
+        primeiro_prazo, marcou_na_rodada
+    )
 
     # Marcar de novo numa rodada seguinte devolve o prazo inteiro, contado de
     # lá. Ataca até ACERTAR: com CA 1 só o 1 natural erra, e errar não marca
@@ -215,15 +360,17 @@ async def caso_a_explosao_cresce_com_o_tier():
     for nivel, dado in ((3, "1d6"), (5, "2d6"), (9, "3d6")):
         ordem_fixa(("p", JOGADORES[0]), ("i", 0))
         conn, canal, cog, incursao, run = await preparar(nivel=nivel)
+        _, run, _ = await abrir_marcacao(conn, canal, cog, incursao, run)
         msg = await canal.fetch_message(run["mensagem_id"])
-        visto = ""
+        falas = []
         for _ in range(20):
+            if "explodem" in tudo_lido(canal, falas):
+                break
             inter = FakeInteraction(canal, JOGADORES[0], msg)
             await cog.atacar(inter, run["id"], "OBJ")
-            if "explodem" in str(inter.resposta):
-                visto = str(inter.resposta)
-                break
-        assert f"3×{dado}" in visto, (nivel, visto)
+            falas.append(str(inter.resposta))
+        lido = tudo_lido(canal, falas)
+        assert f"3×{dado}" in lido, (nivel, lido[-400:])
         await conn.close()
         config.DB_PATH.unlink(missing_ok=True)
     print("  a explosão cresce com o tier do Ladino: ok")
@@ -339,6 +486,8 @@ async def caso_a_marca_passa_do_inimigo_que_cai():
 async def main():
     try:
         caso_a_ficha_bate_com_o_documento()
+        await caso_atacar_sem_a_ativa_nao_marca()
+        await caso_o_uso_e_o_interruptor_e_vale_pelo_combate()
         await caso_a_marca_empilha_e_explode_na_terceira()
         await caso_a_marca_cai_sozinha_depois_de_tres_turnos()
         await caso_a_explosao_cresce_com_o_tier()

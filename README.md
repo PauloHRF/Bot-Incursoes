@@ -95,6 +95,10 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    progresso; quem falha contribui 0 e sofre a consequência do tipo da sala
    (dano, debuff ou Exaustão — ver *O que a sala deixa no grupo*).
    A sala encerra quando o alvo é atingido ou quando todos rolaram.
+   O cartão se reescreve a cada rolagem e **nomeia quem já rolou e quem falta** — pelo nome
+   do personagem, não pelo apelido de Discord. Quem está caído sai das duas listas e da
+   conta: a sala fecha quando os de pé rolarem. **O dado de cada um só aparece no fecho da
+   sala**, de uma vez; durante a rolagem o cartão diz quem, não quanto.
 6. Depois de 3, 5 ou 7 salas (conforme o tamanho da incursão), o grupo enfrenta o Objetivo,
    que é sempre um combate. O desfecho vem em dois embeds: um com a vitória, como o grupo
    saiu, os MEs e os pontos de Organização, e outro com a **lore de fecho** — o epílogo só
@@ -132,7 +136,7 @@ bando pesa de verdade: cinco lobos batem cinco vezes por rodada.
 
 Cada personagem age **uma vez por rodada: ou ataca, ou usa uma habilidade, ou bebe uma
 poção**, nunca dois. Quem já escolheu recebe o aviso dizendo com o que gastou o turno, e o
-menu ✨ Habilidade nem abre. Reações (*Relentless*, *Uncanny Dodge*) não contam: disparam
+menu ✨ Habilidade nem abre. Reações (*Relentless*, os socorros de teste) não contam: disparam
 sozinhas, fora do turno.
 
 ### As poções
@@ -315,10 +319,24 @@ escolha, não só na conta — e a Esperteza reverte isso.
 
 ### Onde o grupo vê isso
 
-No **painel de combate**, ao lado do HP de cada um, só com os ícones (`😨×2`). Em
-**`/incursao status`**, com o nome e a contagem de cada condição. E na hora em que a
-condição entra ou decai, numa linha no canal — penalidade invisível é penalidade que a
-mesa não entende.
+No **resultado da sala**, a benção ou a maldição que acabou de entrar ganha **campo
+próprio**, com o ícone e o nome no título e, dentro:
+
+- o que **um stack** faz, que é como a planilha escreve;
+- **quem ficou com quanto** — o stack é por cabeça, e quem já carregava a mesma condição
+  sai com mais que os outros;
+- o **total já multiplicado** de quem empilhou (`Em ×2 isso vale -4 em saves`), para
+  ninguém fazer a conta de cabeça no meio da sala;
+- o **prazo** (decai 1 stack por combate), que é a regra que o jogador não tem como
+  adivinhar — a Exaustão não leva essa linha porque o texto dela já diz que só sai no
+  descanso;
+- um ⚠️ nomeando quem está a **um ponto do teto**, que é quem vai ser tirado da incursão
+  na próxima.
+
+Depois disso, no **painel de combate**, ao lado do HP de cada um, só com os ícones
+(`😨×2`). Em **`/incursao status`**, com o nome e a contagem de cada condição. E na hora em
+que a condição decai, numa linha no canal — penalidade invisível é penalidade que a mesa
+não entende.
 
 ### O prêmio do Evento
 
@@ -382,6 +400,11 @@ O personagem é **a classe**: ninguém digita atributo nem número de combate. `
 e pronto — HP, CA, acerto, dano e os bônus de perícia saem da tabela da classe no tier atual
 (`src/classes.py`).
 
+`/ficha ver` mostra na linha de **Combate** o HP, a CA, o acerto, o dano e a **iniciativa**,
+que é o save de DES mais o que o equipamento e as passivas somam — a mesma conta que o
+combate vai rolar. Ela ficava invisível: dá para comprar botas de `+5 de iniciativa` no
+mercado e nunca ver o número mudar.
+
 A ficha anda **de tier em tier**: dentro de um tier nada muda, então não existe meio passo.
 `/ficha upar` sobe um tier, até o **5**, dizendo o que mudou e abrindo na hora a decisão que
 o tier novo trouxer. `/ficha voltar` desce um, para quem upou sem querer — e esquece as
@@ -407,6 +430,10 @@ um ícone que diz o que o bot faz com elas:
 | ⚡ | ativa | o jogador aciona pelo botão ou por comando |
 | ❓ | escolha | o jogador decide algo ao chegar no tier |
 
+A legenda está **no título do campo** da ficha (`Habilidades (4) — ⚡ você aciona · ⚙️ o bot
+aplica`): o ícone sempre disse isso, mas não havia onde descobrir qual era qual — e uma
+ativa lida como passiva é uma ativa que nunca é usada.
+
 **As passivas que já valem** são as que se resolvem em número: *Reliable Talent* (+5 e
 depois +10 em todo teste), *Improved Critical* (crítico com 19), *Golpe Consagrado* (+2 de
 dano), *Predador* (+2 contra inimigo com metade ou menos do HP), *Multiattack* (2 golpes por
@@ -426,7 +453,7 @@ combate **é o turno** daquela rodada, no lugar do ataque. São treze:
 | golpe no lugar do ataque | *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*, *Rajada do Caçador*, *Golpe Divino* |
 | efeito com prazo | *Rage*, *Reckless Attack*, *Marca do Caçador*, *Caçador Supremo*, *Avatar da Luz* |
 | vida temporária | *Tradição xamânica* (dois caminhos), *Dança totêmica*, *Brutal Strike* |
-| reação | *Relentless*, *Uncanny Dodge* |
+| reação | *Relentless*, *Sobrevivente — socorro*, *Flash of Genius*, *Inspiração Bárdica* |
 | condição no alvo | *Stunning Strike* |
 
 **Vida temporária (THP)** absorve o dano antes do HP e não empilha — vale sempre a maior,
@@ -437,10 +464,15 @@ ele tiver THP o grupo inteiro leva +1 em acerto e dano** (+2 e +3 no tier 5). *R
 uma vez por combate.
 
 **Reações não aparecem no menu** — disparam sozinhas no gatilho, porque acontecem no turno do
-inimigo, quando ninguém está clicando. O *Uncanny Dodge* do Ladino corta um golpe pela metade,
-mas só entra quando o golpe **derrubaria** ou leva **um terço ou mais** do que resta (HP +
-THP): não faz sentido queimar o uso do combate inteiro num arranhão. O limiar é um número no
-catálogo, fácil de mexer se o grupo achar cedo ou tarde demais.
+inimigo, quando ninguém está clicando. O *Relentless* do Bárbaro segura a queda; os
+socorros de teste (*Sobrevivente*, *Líder Sagrado*, *Flash of Genius*, *Dark One's Own
+Luck*, *Presságio* e a *Inspiração Bárdica*) entram quando alguém falha a rolagem da sala,
+e só disparam se o bônus fizer passar — não se queima o uso para encurtar uma falha.
+
+O *Uncanny Dodge*, que cortava pela metade o golpe pesado, continua escrito no catálogo
+mas **não é de ninguém**: o rework do Ladino o tirou do tier 3 para abrir lugar para a
+Furtividade. Ele e o *Reliable Talent +* ficam em `habilidades.SEM_DONO`, prontos para
+voltar num tier novo ou em outra classe.
 
 *Stunning Strike* é a primeira **condição**: o Monge escolhe a habilidade na hora de bater e,
 se acertar, o inimigo perde a próxima vez dele — ainda nesta rodada, se ele vem depois na
@@ -458,6 +490,16 @@ Supremo). No painel, quem está sob efeito aparece com 🛡️ (dano reduzido), 
 
 Golpe de habilidade toma o turno, no lugar do ataque. Cura não levanta quem já caiu — isso
 é assunto do descanso.
+
+**A Marca Fatal do Ladino é uma chave, e não um prazo.** Ela era passiva — ele marcava
+desde o primeiro golpe, sem decidir nada. Agora é **ativa, 1x por combate**: dá um ataque
+que já marca e, dali em diante, **todo acerto dele marca**. A terceira marca explode na
+hora, sem rolar acerto, por 3× o dado do tier dele (1d6 no tier 2, 3d6 no 5); passar 3
+turnos sem marcar o mesmo inimigo perde as marcas dele, e marcar de novo devolve o prazo
+inteiro. Quem liga a torneira é o **registro do uso**, e não um número na ficha: ele é
+gravado por combate, então a marcação morre com a sala e nenhum estado novo foi inventado
+para ela. No tier 5, a *Marca Fatal +* continua fazendo as duas coisas — o dado maior e
+passar as marcas para outro inimigo quando o marcado cai antes da explosão.
 
 **Os usos recarregam** conforme o escopo declarado: *por combate* zera a cada sala de
 combate, *por descanso* zera quando o grupo passa por uma sala de Descanso, e *por incursão*
