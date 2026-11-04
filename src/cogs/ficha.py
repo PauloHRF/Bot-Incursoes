@@ -224,7 +224,7 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
         title=personagem["nome"],
         description=(
             f"{classe.nome if classe else personagem.get('classe')} | "
-            f"Tier {tier(nivel)} de {TIER_MAXIMO}"
+            f"Tier {tier(nivel)}"
         ),
         color=discord.Color.dark_gold(),
     )
@@ -259,13 +259,13 @@ def embed_ficha(personagem: dict[str, Any], autor: discord.abc.User) -> discord.
             for p in sorted(treinadas)
         ]
         e.add_field(
-            name=f"Proficiencias ({len(treinadas)}/{numeros.pericias})",
+            name="Proficiencias",
             value=" | ".join(linhas),
             inline=False,
         )
     else:
         e.add_field(
-            name=f"Proficiencias (0/{numeros.pericias})",
+            name="Proficiencias",
             value="nenhuma ainda",
             inline=False,
         )
@@ -299,7 +299,7 @@ def _campo_saves(e: discord.Embed, personagem: dict[str, Any]) -> None:
         linhas.append(
             f"{atributo} **{valor}**" if atributo in fortes else f"{atributo} {valor}"
         )
-    nome = "Resistencias" if fortes else "Resistencias (fortes a definir)"
+    nome = "Salvaguardas" if fortes else "Salvaguardas (fortes a definir)"
     e.add_field(name=nome, value=" | ".join(linhas), inline=False)
 
 
@@ -361,14 +361,7 @@ def _campo_habilidades(e: discord.Embed, personagem: dict[str, Any]) -> None:
     texto = "\n".join(linhas)
     if len(texto) > 1024:
         texto = texto[:1000].rsplit("\n", 1)[0] + "\n…"
-    # A legenda no titulo: o icone sempre disse se a habilidade e acionada ou
-    # automatica, mas ninguem tinha onde descobrir isso — e uma ativa lida
-    # como passiva e uma ativa que nunca e usada.
-    e.add_field(
-        name=f"Habilidades ({len(ganhas)}) — ⚡ você aciona · ⚙️ o bot aplica",
-        value=texto,
-        inline=False,
-    )
+    e.add_field(name="Habilidades", value=texto, inline=False)
 
 
 def _rodape_da_ficha(e: discord.Embed, numeros, nivel: int) -> discord.Embed:
@@ -595,43 +588,75 @@ class Ficha(commands.Cog):
         await interaction.response.send_message(embed=e, ephemeral=membro is None)
 
     @grupo.command(name="ver", description="Mostra a ficha com os modificadores ja calculados")
-    @app_commands.describe(
-        personagem="Qual personagem (opcional se voce so tem um)",
-        membro="Ver a ficha de outro jogador (opcional)",
-    )
+    @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
     @app_commands.autocomplete(personagem=_sugerir_personagens)
     async def ver(
         self,
         interaction: discord.Interaction,
         personagem: Optional[str] = None,
-        membro: Optional[discord.Member] = None,
     ) -> None:
-        if membro is not None:
-            personagens = await db.listar_personagens(self.bot.db, interaction.guild_id, membro.id)
-            if not personagens:
-                await interaction.response.send_message(
-                    f"{membro.display_name} nao tem personagem.", ephemeral=True
-                )
-                return
-            escolhido = personagens[0]
-            if personagem:
-                por_nome = await db.personagem_por_nome(
-                    self.bot.db, interaction.guild_id, membro.id, personagem
-                )
-                if not por_nome:
-                    await interaction.response.send_message(
-                        f"{membro.display_name} nao tem **{personagem}**.", ephemeral=True
-                    )
-                    return
-                escolhido = por_nome
-            await interaction.response.send_message(embed=embed_ficha(escolhido, membro))
-            return
+        """A ficha de quem pediu, e so dela.
 
+        Antes este comando tinha um parametro `membro` e qualquer um abria a
+        ficha de qualquer um. Ver a de outra pessoa passou a ser
+        `/ficha conferir`, que e de admin — a ficha e do jogador, e quem a
+        confere e quem administra a mesa.
+        """
         escolhido = await self._resolver(interaction, personagem)
         if not escolhido:
             return
         await interaction.response.send_message(
             embed=embed_ficha(escolhido, interaction.user), ephemeral=True
+        )
+
+    @grupo.command(
+        name="conferir",
+        description="(admin) Ve a ficha de outro jogador",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.describe(
+        membro="De quem e a ficha",
+        personagem="Qual personagem dele (sem isto, o primeiro)",
+    )
+    async def conferir(
+        self,
+        interaction: discord.Interaction,
+        membro: discord.Member,
+        personagem: Optional[str] = None,
+    ) -> None:
+        """A ficha de terceiro, para quem administra conferir.
+
+        Sai em privado: e ferramenta de conferencia, nao de publicacao. Quem
+        quiser mostrar a propria ficha ao grupo usa `/ficha ver` e repassa, e
+        quem sobe de tier ja e anunciado no canal pelo `/ficha upar`.
+
+        O `personagem` nao tem autocomplete de proposito: o que existe sugere
+        os personagens de QUEM DIGITA, e aqui o dono e outro — a lista
+        chegaria errada. Sem o nome, vai o primeiro; com o nome errado, a
+        resposta diz quais ele tem.
+        """
+        personagens = await db.listar_personagens(
+            self.bot.db, interaction.guild_id, membro.id
+        )
+        if not personagens:
+            await interaction.response.send_message(
+                f"{membro.display_name} nao tem personagem.", ephemeral=True
+            )
+            return
+        escolhido = personagens[0]
+        if personagem:
+            escolhido = await db.personagem_por_nome(
+                self.bot.db, interaction.guild_id, membro.id, personagem
+            )
+            if not escolhido:
+                tem = ", ".join(f"**{p['nome']}**" for p in personagens)
+                await interaction.response.send_message(
+                    f"{membro.display_name} nao tem **{personagem}**. Tem {tem}.",
+                    ephemeral=True,
+                )
+                return
+        await interaction.response.send_message(
+            embed=embed_ficha(escolhido, membro), ephemeral=True
         )
 
     @grupo.command(name="upar", description="Sobe o personagem um tier")

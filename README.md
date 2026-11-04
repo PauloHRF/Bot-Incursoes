@@ -52,12 +52,13 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/help [comando]` | Lista todos os comandos, com descrição; 🔒 marca os de admin |
 | `/ficha registrar <nome> <classe> [imagem]` | Cria um personagem no tier 1; as proficiências vêm num menu depois |
 | `/ficha listar [membro]` | Lista todos os personagens de um jogador |
-| `/ficha ver [personagem] [membro]` | Mostra a ficha com todos os modificadores calculados |
+| `/ficha ver [personagem]` | Mostra a **sua** ficha, com todos os modificadores calculados |
 | `/ficha upar [personagem]` | Sobe um tier, e conduz na hora a decisão que o tier trouxer |
 | `/ficha pericias [personagem]` | Reabre o menu de proficiências da classe |
 | `/ficha voltar [personagem]` | Desce um tier e esquece a decisão daquele tier, para refazer |
 | `/ficha imagem [link] [personagem]` | Associa um retrato ao personagem (sem link, remove) |
 | `/ficha remover <personagem>` | Apaga um personagem seu |
+| `/ficha conferir <membro> [personagem]` | (admin) Vê a ficha de outro jogador, em privado |
 | `/incursao listar` | Mostra as incursões carregadas |
 | `/incursao entrar <id> [personagem]` | Abre o recrutamento de uma incursão no canal |
 | `/incursao sala` | Reenvia a mensagem da sala atual |
@@ -446,7 +447,9 @@ O personagem é **a classe**: ninguém digita atributo nem número de combate. `
 e pronto — HP, CA, acerto, dano e os bônus de perícia saem da tabela da classe no tier atual
 (`src/classes.py`).
 
-`/ficha ver` mostra na linha de **Combate** o HP, a CA, o acerto, o dano e a **iniciativa**,
+`/ficha ver` é **só da sua ficha** — conferir a de outro jogador é `/ficha conferir`, que é
+admin e responde em privado: é ferramenta de conferência, não de publicação. Ela mostra na
+linha de **Combate** o HP, a CA, o acerto, o dano e a **iniciativa**,
 que é o save de DES mais o que o equipamento e as passivas somam — a mesma conta que o
 combate vai rolar. Ela ficava invisível: dá para comprar botas de `+5 de iniciativa` no
 mercado e nunca ver o número mudar.
@@ -498,6 +501,7 @@ combate **é o turno** daquela rodada, no lugar do ataque. São treze:
 | cura | *Second Wind*, *Cura pelas Mãos* |
 | golpe no lugar do ataque | *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*, *Rajada do Caçador*, *Golpe Divino* |
 | efeito com prazo | *Rage*, *Reckless Attack*, *Marca do Caçador*, *Caçador Supremo*, *Avatar da Luz* |
+| efeito com prazo **que ataca junto** | *Rage*, *Marca do Caçador*, *Caçador Supremo* |
 | vida temporária | *Tradição xamânica* (dois caminhos), *Dança totêmica*, *Brutal Strike* |
 | reação | *Relentless*, *Sobrevivente — socorro*, *Flash of Genius*, *Inspiração Bárdica* |
 | condição no alvo | *Stunning Strike* |
@@ -536,6 +540,15 @@ Supremo). No painel, quem está sob efeito aparece com 🛡️ (dano reduzido), 
 
 Golpe de habilidade toma o turno, no lugar do ataque. Cura não levanta quem já caiu — isso
 é assunto do descanso.
+
+**Ligar um efeito com prazo não custa mais a rodada** quando a ação declara `acoes`: a
+habilidade liga o efeito e **ataca na mesma rodada, já com ele valendo**. É o caso da
+*Rage* e das duas marcas do Patrulheiro — antes era um turno inteiro parado para ligar um
+buff de 3 turnos, e na prática o buff rendia dois. O `acoes` dá o turno INTEIRO de golpes de
+quem usa, e não um golpe: com Multiataque, um golpe só faria a habilidade sair pior que
+atacar, que é como ela deixa de ser usada. As outras seis ativas com prazo (*Reckless
+Attack*, *Hex*, *Haste*, *Avatar da Luz*, *Invisibility*, *Fly*, *Antilife Shell*,
+*Dimension Door*) continuam custando o turno.
 
 **A Marca Fatal do Ladino é uma chave, e não um prazo.** Ela era passiva — ele marcava
 desde o primeiro golpe, sem decidir nada. Agora é **ativa, 1x por combate**: dá um ataque

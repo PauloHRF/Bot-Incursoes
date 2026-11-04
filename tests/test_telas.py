@@ -34,6 +34,8 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    leu,
+    FakeUsuario,
     criar_grupo,
     montar_conteudo,
     sala,
@@ -376,11 +378,17 @@ async def caso_ficha_mostra_a_iniciativa():
     config.DB_PATH.unlink(missing_ok=True)
 
 
-async def caso_ficha_diz_o_que_o_icone_quer_dizer():
-    """⚡ e ⚙️ sempre estiveram lá; agora o título diz qual é qual.
+async def caso_os_campos_da_ficha_sao_os_quatro_nomes_limpos():
+    """Os títulos da ficha, sem contagem e sem legenda.
 
-    A Marca do Caçador é ativa — o jogador tem de clicar nela. Sem legenda,
-    uma ativa se lê como passiva e nunca é usada.
+    Eram "Tier 1 de 5", "Resistencias", "Proficiencias (2/6)" e
+    "Habilidades (1) — ⚡ você aciona · ⚙️ o bot aplica". A cota de perícias
+    e a contagem de habilidades são números que o jogador não decide nem usa,
+    e o teto do tier é o mesmo para todo mundo — tudo isso era ruído na tela
+    que ele mais abre.
+
+    O ⚡ continua marcando a ativa, e a Marca do Caçador é ativa: o jogador
+    tem de clicar nela.
     """
     conn, canal, cog = await preparar(
         salas_sem_combate(), nivel=1, classe="patrulheiro"
@@ -388,22 +396,63 @@ async def caso_ficha_diz_o_que_o_icone_quer_dizer():
     Ficha(FakeBot(conn, canal))
     dono = JOGADORES[0]
     personagem = await db.personagem_por_nome(conn, 1, dono, f"Heroi{dono}")
-    campos = {
-        f.name: f.value
-        for f in embed_ficha(personagem, FakeInteraction(canal, dono).user).fields
-    }
-    titulo = next(n for n in campos if n.startswith("Habilidades"))
-    assert "⚡ você aciona" in titulo, titulo
-    assert "⚙️ o bot aplica" in titulo, titulo
+    embed = embed_ficha(personagem, FakeInteraction(canal, dono).user)
+    campos = {f.name: f.value for f in embed.fields}
+
+    assert list(campos) == [
+        "Combate", "Salvaguardas", "Proficiencias", "Habilidades"
+    ], list(campos)
+    # "Tier 1", e não "Tier 1 de 5": o teto é o mesmo para todo mundo.
+    assert embed.description.endswith("Tier 1"), embed.description
 
     marca = cl.POR_ID["marca_do_cacador"]
     assert marca.tipo == cl.ATIVA, marca.tipo
     assert marca.escopo == "combate", marca.escopo
-    assert f"⚡ **{marca.nome}**" in campos[titulo], campos[titulo]
+    assert f"⚡ **{marca.nome}**" in campos["Habilidades"], campos["Habilidades"]
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
-    print("  a ficha explica o ⚡ e o ⚙️, e a Marca é ⚡: ok")
+    print("  os quatro campos da ficha, sem contagem nem legenda: ok")
+
+
+async def caso_ver_e_do_dono_e_conferir_e_de_admin():
+    """A ficha é do jogador; quem confere a de outro é quem administra.
+
+    `/ficha ver` tinha um parâmetro `membro`, e com ele qualquer um abria a
+    ficha de qualquer um — inclusive em PÚBLICO, porque esse caminho
+    respondia no canal. Virou `/ficha conferir`, atrás de `manage_guild` e em
+    privado: é ferramenta de conferência, não de publicação.
+    """
+    conn, canal, cog = await preparar(salas_sem_combate(), nivel=1)
+    ficha = Ficha(FakeBot(conn, canal))
+    dono, outro = JOGADORES[0], JOGADORES[1]
+
+    # `ver` não tem mais por onde apontar para outra pessoa.
+    assert {p.name for p in ficha.ver.parameters} == {"personagem"}, [
+        p.name for p in ficha.ver.parameters
+    ]
+    i = FakeInteraction(canal, dono)
+    await ficha.ver.callback(ficha, i)
+    assert i._mensagem_resposta.id == -1, "/ficha ver tem de sair em privado"
+    assert f"Heroi{dono}" in (i.resposta or ""), i.resposta
+
+    # `conferir` é de admin, e mostra a ficha do outro — também em privado.
+    assert ficha.conferir.default_permissions is not None
+    assert ficha.conferir.default_permissions.manage_guild
+    i = FakeInteraction(canal, dono)
+    await ficha.conferir.callback(ficha, i, FakeUsuario(outro))
+    assert i._mensagem_resposta.id == -1, "/ficha conferir tem de sair em privado"
+    assert f"Heroi{outro}" in (i.resposta or ""), i.resposta
+
+    # Nome errado diz quais ele tem, em vez de devolver a ficha errada.
+    i = FakeInteraction(canal, dono)
+    await ficha.conferir.callback(ficha, i, FakeUsuario(outro), "Ninguem")
+    assert "nao tem **Ninguem**" in leu(i), leu(i)
+    assert f"Heroi{outro}" in leu(i), leu(i)
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  /ficha ver é do dono; /ficha conferir é de admin: ok")
 
 
 async def main():
@@ -418,7 +467,8 @@ async def main():
     await caso_a_sala_deixa_o_painel_da_condicao()
     await caso_stack_e_por_personagem_e_nao_do_ultimo_do_laco()
     await caso_ficha_mostra_a_iniciativa()
-    await caso_ficha_diz_o_que_o_icone_quer_dizer()
+    await caso_os_campos_da_ficha_sao_os_quatro_nomes_limpos()
+    await caso_ver_e_do_dono_e_conferir_e_de_admin()
     print("TESTES DE TELAS PASSARAM")
 
 

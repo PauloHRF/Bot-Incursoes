@@ -3934,9 +3934,18 @@ class Incursoes(commands.Cog):
     async def _resolver_duracao(
         self, run, user_id: int, estado, habilidade, acao, alvos
     ) -> str:
-        """Liga um efeito com prazo em quem usou, ou no inimigo escolhido."""
+        """Liga um efeito com prazo em quem usou, ou no inimigo escolhido.
+
+        Com `acoes` ou `quantidade` na ação, ela **também ataca**, na mesma
+        rodada e já com o efeito valendo: era um turno inteiro parado para
+        ligar um buff de 3 turnos, e na prática o buff rendia dois.
+        """
         passo = self._passo(run)
         expira = estado.rodada + acao.get("turnos", 1)
+        # Os alvos dos golpes, quando a ação carrega golpes. Vazio = quem o
+        # motor escolher (o primeiro inimigo de pé), que é o certo para um
+        # buff no próprio: a fúria não aponta ninguém.
+        alvos_do_golpe: list[int] = []
         if acao.get("alvo") == "inimigo":
             # O escolhido pode ter caido enquanto a acao esperava a vez.
             alvo = (estado.alvo_preferido(alvos[0]) if alvos else None) or estado.alvo_preferido()
@@ -3959,18 +3968,7 @@ class Incursoes(commands.Cog):
                 if acao["efeitos"].get("vantagem"):
                     quem_marca.vantagem_contra.add(alvo.indice)
             alvo_nome = alvo.nome
-            # Marcar e bater na MESMA rodada: a ação carrega os golpes, e eles
-            # saem depois de a marca estar valendo.
-            if acao.get("acoes") or acao.get("quantidade"):
-                golpes = await self._resolver_golpes(
-                    run, user_id, estado, habilidade, acao, [alvo.indice],
-                    cabeca=False,
-                )
-                return (
-                    f"✨ **{habilidade.nome}** em **{alvo.nome}** — vale por "
-                    f"{acao.get('turnos', 1)} turno(s), até a rodada "
-                    f"{expira - 1}.\n{golpes}"
-                )
+            alvos_do_golpe = [alvo.indice]
         elif acao.get("alvo") == "aliados":
             # Fly: pega varios do grupo, nao so quem lancou. Sem escolha vale
             # quem esta de pe, do mais exposto para o menos — o que o mago
@@ -4011,13 +4009,43 @@ class Incursoes(commands.Cog):
         quem = estado.combatente(user_id)
         turnos = acao.get("turnos", 1)
         alvo_texto = f" em **{alvo_nome}**" if alvo_nome else ""
-        await self._anunciar_habilidade(
-            run, f"✨ {quem.nome if quem else 'Alguem'} usa **{habilidade.nome}**{alvo_texto}."
-        )
-        return (
+        cabeca = (
             f"✨ **{habilidade.nome}**{alvo_texto} — vale por "
             f"{turnos} turno(s), ate a rodada {expira - 1}."
         )
+
+        # Ligar e bater na MESMA rodada. Duas coisas têm de acontecer antes
+        # dos golpes:
+        #
+        # 1. o efeito precisa estar valendo NA MEMÓRIA. O que vai ao banco só
+        #    chega ao combatente quando o estado é remontado, e remontar aqui
+        #    custaria caro — então `_aplicar_ligado` recebe uma linha montada
+        #    à mão, e é ela que põe o +2 da fúria no golpe desta rodada;
+        # 2. o anúncio separado NÃO sai. O texto devolvido daqui já vai ao
+        #    canal inteiro, e `_anunciar_habilidade` diria a mesma coisa duas
+        #    vezes — é a mesma razão pela qual as duas marcas do patrulheiro
+        #    nunca passaram por ele.
+        if acao.get("acoes") or acao.get("quantidade"):
+            if acao.get("alvo") not in ("inimigo", "aliados"):
+                self._aplicar_ligado(
+                    estado.combatentes,
+                    {
+                        "alvo_tipo": "personagem",
+                        "alvo_id": user_id,
+                        "efeito": habilidade.id,
+                        "valor": acao["efeitos"],
+                    },
+                )
+            golpes = await self._resolver_golpes(
+                run, user_id, estado, habilidade, acao, alvos_do_golpe,
+                cabeca=False,
+            )
+            return f"{cabeca}\n{golpes}"
+
+        await self._anunciar_habilidade(
+            run, f"✨ {quem.nome if quem else 'Alguem'} usa **{habilidade.nome}**{alvo_texto}."
+        )
+        return cabeca
 
     async def _pilha_de_sequencia(
         self, run: dict[str, Any], user_id: int, passo: int

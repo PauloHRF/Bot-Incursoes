@@ -159,9 +159,16 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
     },
     "barbaro": {
         1: [Habilidade("rage", "Rage", ATIVA,
-                       "1x por combate: 50% menos dano e +2 de dano por 3 turnos.",
+                       "1x por combate: 50% menos dano e +2 de dano por 3 "
+                       "turnos — e ataca na mesma rodada, ja com o bonus.",
                        usos=_usos("combate"),
+                       # `acoes: 1` da o turno INTEIRO de golpes de quem usa,
+                       # e nao um golpe: com Multiataque, `quantidade: 1`
+                       # trocaria os dois golpes da rodada por um, e entrar em
+                       # furia sairia pior que atacar. Mesma convencao das duas
+                       # marcas do patrulheiro.
                        acao={"tipo": "duracao", "turnos": 3, "alvo": "proprio",
+                             "acoes": 1,
                              "efeitos": {"dano_extra": 2, "reducao_dano": 0.5}})],
         2: [Habilidade("primal_knowledge", "Primal Knowledge", ESCOLHA,
                        "Ganha proficiencia em mais 2 pericias.",

@@ -50,6 +50,7 @@ ORDEM_COMANDOS = (
     "organizacao placar",
     "help",
     # O bloco de admin, no fim e nesta ordem.
+    "ficha conferir",
     "ficha remover",
     "incursao recarregar",
     "mercado anel_do_mestre",

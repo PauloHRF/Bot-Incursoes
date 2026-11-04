@@ -172,9 +172,11 @@ async def caso_ficha_traz_os_saves():
         f.name: f.value
         for f in embed_ficha(personagem, FakeInteraction(canal, dono).user).fields
     }
-    assert "Resistencias" in campos, list(campos)
-    assert f"DES **+{FORTE[2]}**" in campos["Resistencias"], campos["Resistencias"]
-    assert f"FOR +{FRACO[2]}" in campos["Resistencias"]
+    # O campo se chama Salvaguardas na ficha — era "Resistencias", e o nome
+    # mudou para o que a mesa fala.
+    assert "Salvaguardas" in campos, list(campos)
+    assert f"DES **+{FORTE[2]}**" in campos["Salvaguardas"], campos["Salvaguardas"]
+    assert f"FOR +{FRACO[2]}" in campos["Salvaguardas"]
 
     # e o combatente leva os saves para o combate
     combatente = motor.Combatente(

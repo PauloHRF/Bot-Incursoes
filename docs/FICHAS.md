@@ -151,7 +151,7 @@ A explosao passa a 3d6 por marca. E o inimigo que morre antes dela não leva as 
 
 **1x por combate.**
 
-50% menos dano e +2 de dano por 3 turnos.
+50% menos dano e +2 de dano por 3 turnos — e ataca na mesma rodada, já com o bônus.
 
 ---
 

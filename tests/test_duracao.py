@@ -9,6 +9,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
+from src import habilidades as hb  # noqa: E402
 from src import classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes, SeletorAlvoHabilidade  # noqa: E402
 from fakes import (  # noqa: E402
@@ -21,6 +22,7 @@ from fakes import (  # noqa: E402
     FakeCanal,
     FakeInteraction,
     criar_grupo,
+    leu,
     montar_conteudo,
     salas_sem_combate,
 )
@@ -117,6 +119,45 @@ def caso_marca_soma_so_no_alvo_marcado():
     assert g_marcado.acertou and g_outro.acertou
     assert g_marcado.dano > g_outro.dano, (g_marcado.dano, g_outro.dano)
     print("  a marca so vale contra o inimigo marcado: ok")
+
+
+async def caso_o_rage_bate_na_rodada_que_entra():
+    """Entrar em fúria não custa mais a rodada: ela bate junto, já com o +2.
+
+    Era um turno inteiro parado para ligar um buff de 3 turnos — na prática a
+    fúria só rendia dois. É a mesma convenção das duas marcas do patrulheiro:
+    `acoes: 1` dá o turno INTEIRO de golpes de quem usa, e não um golpe, para
+    que o Multiataque não saia perdendo por usar a habilidade.
+    """
+    conn, canal, cog, incursao, run = await preparar(classe="barbaro", nivel=8)
+    dono = JOGADORES[0]
+    antes = (
+        await cog._estado_combate(run, incursao.objetivo)
+    ).inimigo(0).hp_atual
+
+    inter = FakeInteraction(canal, dono)
+    await cog.usar_habilidade(inter, run["id"], "OBJ", "rage")
+    lido = leu(inter)
+
+    # O anúncio da fúria e os golpes saem na MESMA resposta.
+    assert "Rage" in lido and "3 turno" in lido, lido
+    assert "🎲" in lido, f"a Rage não atacou: {lido}"
+    depois = (
+        await cog._estado_combate(
+            await db.buscar_run(conn, run["id"]), incursao.objetivo
+        )
+    ).inimigo(0).hp_atual
+    if "acertou" in lido or "CRITICO" in lido:
+        assert depois < antes, (antes, depois)
+
+    # E o +2 da fúria já está nos golpes dela, não só nos da rodada seguinte.
+    habilidade = hb.POR_ID["rage"]
+    assert habilidade.acao.get("acoes") == 1, habilidade.acao
+    assert "quantidade" not in habilidade.acao, habilidade.acao
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  a Rage bate na rodada em que entra: ok")
 
 
 async def caso_rage_dura_tres_turnos():
@@ -290,6 +331,7 @@ async def main():
         caso_vantagem_pega_o_melhor_dado()
         caso_reducao_de_dano()
         caso_marca_soma_so_no_alvo_marcado()
+        await caso_o_rage_bate_na_rodada_que_entra()
         await caso_rage_dura_tres_turnos()
         await caso_rage_vale_na_rodada_que_ela_fecha()
         await caso_efeito_vence_com_a_rodada()
