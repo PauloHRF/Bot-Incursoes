@@ -339,6 +339,11 @@ class Combatente:
     dano_ferido: int = 0
     # Efeitos com prazo, ligados por habilidade dentro do combate.
     reducao_dano: float = 0.0
+    # Corte PLANO no dano recebido, depois da fração acima (a Poção de
+    # Resistência). Separado de `reducao_dano` porque as duas contas são
+    # diferentes de propósito: fração protege contra golpe grande e não faz
+    # nada contra golpe de 4; o corte plano é o contrário.
+    reducao_plana: int = 0
     vantagem: bool = False
     ca_extra: int = 0
     cura_por_turno: float = 0.0
@@ -1266,10 +1271,22 @@ def ganhar_thp(combatente: Combatente, quantidade: int) -> int:
 
 
 def reduzido(combatente: Combatente, dano: int) -> int:
-    """O dano depois da reducao do alvo: Rage e companhia cortam antes do HP."""
-    if not combatente.reducao_dano:
-        return dano
-    return max(1, int(round(dano * (1 - combatente.reducao_dano))))
+    """O dano depois da reducao do alvo: Rage e companhia cortam antes do HP.
+
+    Duas camadas, nesta ordem: a FRAÇÃO (Rage, 50%) e depois o corte PLANO
+    (Poção de Resistência, 2 por X). É a ordem que o jogador espera — "reduz
+    todo dano recebido, depois da resistência" — e a única que faz o corte
+    plano valer contra golpe pequeno.
+
+    A fração nunca leva o golpe a zero: metade de 1 ainda dói. O corte plano
+    leva — é disso que ele vive. Uma Resistência 3 contra mordidas de 1d4+2
+    simplesmente acaba com a sala, e é para isso que ela custa 180.
+    """
+    if combatente.reducao_dano:
+        dano = max(1, int(round(dano * (1 - combatente.reducao_dano))))
+    if combatente.reducao_plana:
+        dano = max(0, dano - combatente.reducao_plana)
+    return dano
 
 
 def absorver(combatente: Combatente, dano: int) -> tuple[int, int]:

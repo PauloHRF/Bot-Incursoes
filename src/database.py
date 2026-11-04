@@ -2339,6 +2339,29 @@ async def _tirar_da_bolsa(
     return cur.rowcount > 0
 
 
+async def consumir_item(
+    conn: aiosqlite.Connection, personagem_id: int, item_id: str
+) -> bool:
+    """Gasta uma unidade da bolsa. False quando nao havia nenhuma.
+
+    A poção sai da bolsa ANTES de ser bebida, e o `UPDATE ... WHERE
+    quantidade > 0` é o que garante que dois cliques no mesmo instante não
+    bebam a mesma: quem perde a corrida leva False. Se depois disso a ação não
+    acontecer, `devolver_item` desfaz.
+    """
+    saiu = await _tirar_da_bolsa(conn, personagem_id, item_id)
+    await conn.commit()
+    return saiu
+
+
+async def devolver_item(
+    conn: aiosqlite.Connection, personagem_id: int, item_id: str
+) -> None:
+    """Devolve uma unidade a bolsa: saiu dela mas nao chegou a ser usada."""
+    await _por_na_bolsa(conn, personagem_id, item_id)
+    await conn.commit()
+
+
 async def comprar(
     conn: aiosqlite.Connection, personagem_id: int, item_id: str, preco: int
 ) -> bool:

@@ -6,6 +6,12 @@ Resolvido em `src/motor.py`, que é função pura sobre dados simples: não conh
 
 Iniciativa é **1d20 + o save de DES**, rolada uma vez quando o combate abre, para todos de uma vez — personagens e criaturas na mesma lista. Quem está na vez age; quando a lista dá a volta, a rodada vira.
 
+## A ação da rodada
+
+Cada personagem faz **uma** coisa por rodada, e o painel tem os três botões que ela pode ser: **Atacar**, **Habilidade** e **⚗️ Poção**. Escolher qualquer um gasta a rodada — quem bebe não ataca.
+
+Três coisas fogem disso, e as três são a razão de existirem: a **reação** (dispara sozinha no gatilho, sem consumir a vez), o **Quickened Spell** do feiticeiro (a magia sai como ação de bônus e o turno fica livre) e a **Poção da Aceleração** (beber não custa a ação). Ver `mercado.md` para as poções.
+
 ## O ataque
 
 **1d20 + acerto** contra a CA do alvo. O acerto e o dano saem da tabela da classe no tier, com o equipamento do mercado já somado.

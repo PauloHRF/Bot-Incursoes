@@ -28,6 +28,7 @@ from src import (  # noqa: E402
     config,
     condicoes as cond,
     consequencias as C,
+    consumiveis,
     habilidades as H,
     incursoes as I,
     itens,
@@ -258,6 +259,19 @@ def combate() -> str:
         "combate abre, para todos de uma vez — personagens e criaturas na "
         "mesma lista. Quem está na vez age; quando a lista dá a volta, a "
         "rodada vira.",
+        "",
+        "## A ação da rodada",
+        "",
+        "Cada personagem faz **uma** coisa por rodada, e o painel tem os três "
+        "botões que ela pode ser: **Atacar**, **Habilidade** e "
+        f"**{consumiveis.ICONE} Poção**. Escolher qualquer um gasta a rodada "
+        "— quem bebe não ataca.",
+        "",
+        "Três coisas fogem disso, e as três são a razão de existirem: a "
+        "**reação** (dispara sozinha no gatilho, sem consumir a vez), o "
+        "**Quickened Spell** do feiticeiro (a magia sai como ação de bônus e "
+        "o turno fica livre) e a **Poção da Aceleração** (beber não custa a "
+        "ação). Ver `mercado.md` para as poções.",
         "",
         "## O ataque",
         "",
@@ -1218,8 +1232,62 @@ def mercado_md() -> str:
         "item que escapar do domínio do slot dele. Sem isso o domínio seria "
         "uma intenção — e ele já pegou dois itens errados.",
         "",
+        "## As poções",
+        "",
+        f"Prateleira própria, de **{consumiveis.VAGAS} vagas**: as "
+        f"{len(consumiveis.FIXAS)} de vida estão **sempre** em cartaz, e a "
+        "terceira é sorteada por semana e por personagem, como a de "
+        "equipamento. São "
+        f"{len(consumiveis.CATALOGO)} poções no catálogo.",
+        "",
+        f"**Até {consumiveis.TETO_NA_BOLSA} de cada tipo na bolsa.** É a "
+        "contenção delas, no lugar do slot: o equipamento é único por "
+        "personagem porque o slot impede o stack, e a poção empilha — sem um "
+        "teto, ouro guardado viraria estoque e a incursão longa deixaria de "
+        "cobrar o HP que ela cobra.",
+        "",
+        "**Beber é a ação da rodada**: quem bebe não ataca. A única exceção é "
+        "a Poção da Aceleração, que não custa a ação — é disso que ela vive, "
+        "e não do número de golpes.",
+        "",
     ]
-    return "\n".join(L + rodape(["src/mercado.py", "src/itens.py"]))
+    L += tabela(
+        ["Família", "O que faz", "X", "Preço", "Gasta a ação"],
+        [
+            [
+                consumiveis.NOME_DA_FAMILIA[f],
+                consumiveis.RESUMO_DA_FAMILIA[f],
+                " · ".join(str(x) for x in consumiveis.niveis_da_familia(f)) or "—",
+                " · ".join(str(p) for p in consumiveis.precos_da_familia(f)),
+                "não" if not consumiveis.da_familia(f)[0].gasta_turno else "sim",
+            ]
+            for f in consumiveis.FAMILIAS
+        ],
+    )
+    L += [
+        f"As de prazo (Aceleração, Resistência, Dano) valem "
+        f"**{consumiveis.TURNOS} turnos**, e beber a segunda da mesma família "
+        "renova a primeira em vez de somar com ela — o efeito é gravado pela "
+        "família, como as habilidades.",
+        "",
+    ]
+    L += [
+        "O sorteio da vaga que sobra é **por família** e só depois por poção. "
+        f"As {len(consumiveis.da_familia(consumiveis.BUFF))} de buff são três "
+        "quartos do catálogo: sorteando direto, três de cada quatro semanas "
+        "trariam buff e a de Mana apareceria uma vez por ano.",
+        "",
+        "A de buff empilha uma condição da tabela de buffs (`condicoes.md`), "
+        "e o nível são os **stacks** — então o prazo dela é o da tabela, que "
+        "decai 1 por combate, e não os "
+        f"{consumiveis.TURNOS} turnos das outras. A de Mana devolve um uso "
+        "**já gasto** de uma habilidade daquele tier, escolhida por quem "
+        "bebe; sem nada gasto, ela não é bebida.",
+        "",
+    ]
+    return "\n".join(
+        L + rodape(["src/mercado.py", "src/itens.py", "src/consumiveis.py"])
+    )
 
 
 # ======================================================================== bestiário
@@ -1252,9 +1320,9 @@ def bestiario_md() -> str:
         "tier",
     ])
     L += [
-        "Os números do livro são os do tier 1, como todo conteúdo: a escala "
-        "por tier do grupo é aplicada na hora de abrir o combate (ver "
-        "`tier-e-progressao.md`).",
+        "**Os números valem como estão escritos.** Nada é multiplicado por "
+        "tier: a criatura de 52 HP tem 52 HP em qualquer incursão, e o tier "
+        "está em QUEM a sala chama (ver `tier-e-progressao.md`).",
         "",
         "**As fichas em si estão em [../CRIATURAS.md](../CRIATURAS.md)**: as "
         "criaturas uma por uma, com CA, HP, golpes por rodada e habilidade, "

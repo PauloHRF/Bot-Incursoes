@@ -18,7 +18,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .. import config, database as db, itens, mercado
+from .. import config, consumiveis, database as db, itens, mercado
 from .ficha import sugerir_personagens
 
 COR = 0xC8743A
@@ -31,8 +31,24 @@ ICONE_DA_RARIDADE = {
 }
 
 
-def _icone(peca: itens.Item) -> str:
+def _icone(peca) -> str:
+    """O ícone da peça. A poção não tem raridade: tem o alambique."""
+    if isinstance(peca, consumiveis.Consumivel):
+        return consumiveis.ICONE
     return ICONE_DA_RARIDADE.get(peca.raridade, "·")
+
+
+def _o_que_faz(peca) -> str:
+    """Uma linha com o que a peça faz, para a vitrine.
+
+    O equipamento lê isso do EFEITO (`itens.status`), para o número mostrado
+    ser o número que o motor aplica. A poção tem o texto escrito à mão, porque
+    o que ela faz nem sempre é um número — a de Mana devolve um uso, e a de
+    buff empilha uma condição da tabela.
+    """
+    if isinstance(peca, consumiveis.Consumivel):
+        return peca.texto
+    return itens.status(peca)
 
 
 async def ja_tem(conn, personagem_id: int, item_id: str) -> bool:
@@ -44,24 +60,43 @@ async def ja_tem(conn, personagem_id: int, item_id: str) -> bool:
 
 async def tentar_comprar(
     conn, personagem_id: int, semana: str, item_id: str
-) -> tuple[Optional[itens.Item], str]:
+) -> tuple[Optional[Any], str]:
     """A compra, uma vez só, para as duas portas que levam a ela.
 
     O comando digitado e o botão da vitrine passam os dois por aqui — se cada
     um tivesse a sua cópia das checagens, uma delas envelheceria. Devolve
     (a peça comprada ou None, o texto para o jogador).
+
+    Serve equipamento e poção, e a diferença entre os dois é só a contenção:
+    o equipamento é único por personagem (o slot já impede o stack) e a poção
+    empilha até `consumiveis.TETO_NA_BOLSA`.
     """
-    peca = itens.item(item_id)
+    pocao = consumiveis.item(item_id)
+    peca = pocao if pocao is not None else itens.item(item_id)
     # A prateleira de HOJE, e nao o id que chegou: o botao pode ser de uma
     # mensagem da semana passada, que o Discord mantem clicavel.
-    if peca is None or not mercado.esta_na_vitrine(personagem_id, semana, peca.id):
+    em_cartaz = (
+        consumiveis.esta_na_vitrine(personagem_id, semana, item_id)
+        if pocao is not None
+        else peca is not None and mercado.esta_na_vitrine(personagem_id, semana, peca.id)
+    )
+    if peca is None or not em_cartaz:
         return None, (
             "Esse item não está na vitrine desta semana. "
             "Veja o que tem com `/mercado vitrine`."
         )
+    if pocao is not None:
+        # O teto por tipo é o que segura a guerra de atrito: sem ele, ouro
+        # guardado virava estoque e a incursão longa deixava de cobrar HP.
+        quantos = (await db.itens_na_bolsa(conn, personagem_id)).get(pocao.id, 0)
+        if quantos >= consumiveis.TETO_NA_BOLSA:
+            return None, (
+                f"Você já tem {quantos} **{pocao.nome}** na bolsa, que é o "
+                f"máximo ({consumiveis.TETO_NA_BOLSA} de cada)."
+            )
     # Equipamento e unico por personagem: a segunda copia nao faria nada, e so
-    # queimaria ouro. (Consumivel vai precisar da excecao aqui, na fase 2.)
-    if peca.slot in itens.SLOTS and await ja_tem(conn, personagem_id, peca.id):
+    # queimaria ouro.
+    elif peca.slot in itens.SLOTS and await ja_tem(conn, personagem_id, peca.id):
         return None, f"Você já tem **{peca.nome}**. Uma segunda não faria nada."
     if not await db.comprar(conn, personagem_id, peca.id, peca.custo):
         saldo = await db.ouro(conn, personagem_id)
@@ -81,6 +116,8 @@ def embed_vitrine(
     saldo: int,
     prateleira: list[itens.Item],
     tendo: Optional[set] = None,
+    pocoes: Optional[list] = None,
+    bolsa: Optional[dict[str, int]] = None,
 ) -> discord.Embed:
     """A prateleira em texto. `tendo` são os ids que o personagem já possui.
 
@@ -101,12 +138,35 @@ def embed_vitrine(
         marca = " · já tem" if peca.id in ja else ""
         e.add_field(
             name=f"{_icone(peca)} {peca.nome} — {peca.custo} de ouro{marca}",
-            value=itens.status(peca),
+            value=_o_que_faz(peca),
             inline=False,
         )
     if not prateleira:
         e.add_field(name="Vazia", value="Nada à venda nesta semana.", inline=False)
-    e.set_footer(text="Clique para comprar · /mercado bolsa para vestir")
+    # As poções ficam num campo só, e não um por poção: são três, a prateleira
+    # delas muda pouco (duas são fixas) e o embed já tem seis peças em cima.
+    if pocoes:
+        guardadas = bolsa or {}
+        linhas = []
+        for pocao in pocoes:
+            tem = guardadas.get(pocao.id, 0)
+            cheio = tem >= consumiveis.TETO_NA_BOLSA
+            quanto = (
+                f" · você tem {tem}{' (cheio)' if cheio else ''}" if tem else ""
+            )
+            linhas.append(
+                f"{consumiveis.ICONE} **{pocao.nome}** — {pocao.custo} de "
+                f"ouro{quanto}\n　{pocao.texto}"
+            )
+        e.add_field(
+            name=f"Poções · até {consumiveis.TETO_NA_BOLSA} de cada na bolsa",
+            value="\n".join(linhas),
+            inline=False,
+        )
+    e.set_footer(
+        text="Clique para comprar · /mercado bolsa para vestir · poção se bebe "
+        f"no combate, pelo botão {consumiveis.ICONE}"
+    )
     return e
 
 
@@ -144,7 +204,15 @@ def embed_bolsa(
     e.add_field(name="No corpo", value="\n".join(corpo), inline=False)
 
     guardados = []
+    frascos = []
     for item_id, quantos in sorted(bolsa.items()):
+        pocao = consumiveis.item(item_id)
+        if pocao is not None:
+            vezes = f" ×{quantos}" if quantos > 1 else ""
+            frascos.append(
+                f"{consumiveis.ICONE} **{pocao.nome}**{vezes}\n　{pocao.texto}"
+            )
+            continue
         peca = itens.item(item_id)
         if peca is None:
             continue
@@ -158,8 +226,17 @@ def embed_bolsa(
         value="\n".join(guardados) if guardados else "Nada guardado.",
         inline=False,
     )
+    # As poções em campo próprio: o que se veste e o que se bebe são duas
+    # listas diferentes, e misturá-las fazia o jogador procurar.
+    if frascos:
+        e.add_field(name="Poções", value="\n".join(frascos), inline=False)
     e.set_footer(
         text="/mercado equipar para vestir · equipar outro no mesmo slot troca"
+        + (
+            f" · poção se bebe no combate, pelo botão {consumiveis.ICONE}"
+            if frascos
+            else ""
+        )
     )
     return e
 
@@ -167,9 +244,14 @@ def embed_bolsa(
 class BotaoDeCompra(discord.ui.Button):
     """Uma peça da prateleira. O clique só delega — a regra é da view."""
 
-    def __init__(self, dona: "ViewDaVitrine", peca: itens.Item, travado: str):
+    def __init__(self, dona: "ViewDaVitrine", peca, travado: str):
         super().__init__(
             label=f"{peca.nome} · {peca.custo}"[:80],
+            emoji=(
+                consumiveis.ICONE
+                if isinstance(peca, consumiveis.Consumivel)
+                else None
+            ),
             style=(
                 discord.ButtonStyle.secondary if travado
                 else discord.ButtonStyle.success
@@ -218,8 +300,10 @@ class ViewDaVitrine(discord.ui.View):
         conn = self.cog.bot.db
         saldo = await db.ouro(conn, self.personagem_id)
         prateleira = mercado.vitrine(self.personagem_id, self.semana)
+        pocoes = consumiveis.vitrine(self.personagem_id, self.semana)
         vestido = set((await db.equipamento(conn, self.personagem_id)).values())
-        na_bolsa = set(await db.itens_na_bolsa(conn, self.personagem_id))
+        bolsa = await db.itens_na_bolsa(conn, self.personagem_id)
+        na_bolsa = set(bolsa)
 
         self.clear_items()
         for peca in prateleira:
@@ -230,8 +314,18 @@ class ViewDaVitrine(discord.ui.View):
             else:
                 travado = ""
             self.add_item(BotaoDeCompra(self, peca, travado))
+        # A poção trava por teto na bolsa, e não por "já tem": é dela empilhar.
+        for pocao in pocoes:
+            if bolsa.get(pocao.id, 0) >= consumiveis.TETO_NA_BOLSA:
+                travado = "cheio"
+            elif pocao.custo > saldo:
+                travado = "ouro"
+            else:
+                travado = ""
+            self.add_item(BotaoDeCompra(self, pocao, travado))
         return embed_vitrine(
-            self.nome, saldo, prateleira, tendo=vestido | na_bolsa
+            self.nome, saldo, prateleira, tendo=vestido | na_bolsa,
+            pocoes=pocoes, bolsa=bolsa,
         )
 
     async def comprar(self, interaction: discord.Interaction, item_id: str) -> None:
@@ -430,7 +524,14 @@ class Mercado(commands.Cog):
         de_varios = len(personagens) > 1
         saida, vistos = [], set()
         for quem in personagens:
-            for peca in mercado.vitrine(quem["id"], self._semana()):
+            # Equipamento e poção na mesma lista: as duas coisas se compram
+            # pelo mesmo comando, e o jogador não tem por que saber que são
+            # dois catálogos.
+            prateleira = [
+                *mercado.vitrine(quem["id"], self._semana()),
+                *consumiveis.vitrine(quem["id"], self._semana()),
+            ]
+            for peca in prateleira:
                 if termo not in peca.nome.lower():
                     continue
                 rotulo = f"{peca.nome} — {peca.custo} de ouro"
@@ -514,8 +615,15 @@ class Mercado(commands.Cog):
             return
         peca = itens.item(item)
         if peca is None:
+            # Poção digitada à mão aqui é o erro esperado: ela está na bolsa
+            # como os outros itens, e o autocomplete de vestir não a oferece.
+            pocao = consumiveis.item(item)
             await interaction.response.send_message(
-                "Esse item não existe.", ephemeral=True
+                f"**{pocao.nome}** não se veste: ela se bebe no combate, pelo "
+                f"botão {consumiveis.ICONE} do painel."
+                if pocao is not None
+                else "Esse item não existe.",
+                ephemeral=True,
             )
             return
         # O slot sai do item, nunca de quem pediu: e o slot que impede o stack,

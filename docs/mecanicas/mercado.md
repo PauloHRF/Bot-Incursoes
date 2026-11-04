@@ -57,6 +57,29 @@ O peso é a fatia do sorteio de **uma** vaga. A prateleira é sorteada sem repet
 
 `DOMINIO` não é comentário: um teste varre o catálogo e reprova o item que escapar do domínio do slot dele. Sem isso o domínio seria uma intenção — e ele já pegou dois itens errados.
 
+## As poções
+
+Prateleira própria, de **3 vagas**: as 2 de vida estão **sempre** em cartaz, e a terceira é sorteada por semana e por personagem, como a de equipamento. São 50 poções no catálogo.
+
+**Até 3 de cada tipo na bolsa.** É a contenção delas, no lugar do slot: o equipamento é único por personagem porque o slot impede o stack, e a poção empilha — sem um teto, ouro guardado viraria estoque e a incursão longa deixaria de cobrar o HP que ela cobra.
+
+**Beber é a ação da rodada**: quem bebe não ataca. A única exceção é a Poção da Aceleração, que não custa a ação — é disso que ela vive, e não do número de golpes.
+
+| Família | O que faz | X | Preço | Gasta a ação |
+|---|---|---|---|---|
+| Poção de Vida | Recupera 30% (Menor) ou 50% do HP máximo de quem bebe. | — | 40 · 80 | sim |
+| Poção da Aceleração | +X golpes por rodada, e beber não gasta a ação da rodada. | 1 · 2 · 3 | 50 · 100 · 180 | não |
+| Poção de Resistência | Corta 2X do dano de cada golpe recebido, depois da resistência. | 1 · 2 · 3 | 50 · 100 · 180 | sim |
+| Poção do Dano | +X de dano em cada golpe. | 1 · 2 · 3 | 50 · 100 · 180 | sim |
+| Poção de Mana | Devolve um uso já gasto de uma habilidade de tier X. | 1 · 2 · 3 | 80 · 160 · 280 | sim |
+| Poção de buff | X stacks de um buff da tabela — uma poção para cada um dos 12. | 1 · 2 · 3 | 50 · 100 · 180 | sim |
+
+As de prazo (Aceleração, Resistência, Dano) valem **3 turnos**, e beber a segunda da mesma família renova a primeira em vez de somar com ela — o efeito é gravado pela família, como as habilidades.
+
+O sorteio da vaga que sobra é **por família** e só depois por poção. As 36 de buff são três quartos do catálogo: sorteando direto, três de cada quatro semanas trariam buff e a de Mana apareceria uma vez por ano.
+
+A de buff empilha uma condição da tabela de buffs (`condicoes.md`), e o nível são os **stacks** — então o prazo dela é o da tabela, que decai 1 por combate, e não os 3 turnos das outras. A de Mana devolve um uso **já gasto** de uma habilidade daquele tier, escolhida por quem bebe; sem nada gasto, ela não é bebida.
+
 ---
 
-Gerado por `tools/gerar_mecanicas_md.py` a partir de `src/mercado.py`, `src/itens.py`. Não edite à mão: rode o gerador.
+Gerado por `tools/gerar_mecanicas_md.py` a partir de `src/mercado.py`, `src/itens.py`, `src/consumiveis.py`. Não edite à mão: rode o gerador.

@@ -14,7 +14,7 @@ Aceita o nome em português e o original em inglês, com ou sem acento.
 - os saves escritos — e quando faltam, o bot deduz de `ataque − 3`
 - o CR, que é como o `BALANCO.md` escolhe a criatura típica de cada tier
 
-Os números do livro são os do tier 1, como todo conteúdo: a escala por tier do grupo é aplicada na hora de abrir o combate (ver `tier-e-progressao.md`).
+**Os números valem como estão escritos.** Nada é multiplicado por tier: a criatura de 52 HP tem 52 HP em qualquer incursão, e o tier está em QUEM a sala chama (ver `tier-e-progressao.md`).
 
 **As fichas em si estão em [../CRIATURAS.md](../CRIATURAS.md)**: as criaturas uma por uma, com CA, HP, golpes por rodada e habilidade, agrupadas pela faixa de CR que decide qual tier as encontra. Aqui está a regra; lá está o conteúdo.
 

@@ -21,6 +21,7 @@ from .. import (
     condicoes,
     config,
     consequencias,
+    consumiveis,
     database as db,
     embeds as E,
     habilidades,
@@ -275,6 +276,7 @@ class ViewCombate(discord.ui.View):
             self.menu = menu
             self.add_item(menu)
             self._botao_habilidade()
+            self._botao_pocao()
             return
         botao = discord.ui.Button(
             label="Atacar",
@@ -285,6 +287,7 @@ class ViewCombate(discord.ui.View):
         botao.callback = self._atacar
         self.add_item(botao)
         self._botao_habilidade()
+        self._botao_pocao()
 
     def _botao_habilidade(self) -> None:
         botao = discord.ui.Button(
@@ -296,11 +299,31 @@ class ViewCombate(discord.ui.View):
         botao.callback = self._habilidade
         self.add_item(botao)
 
+    def _botao_pocao(self) -> None:
+        """O botão existe sempre, mesmo com a bolsa vazia.
+
+        Esconder o botão de quem não tem poção pareceria mais limpo, mas o
+        painel é UMA mensagem para o grupo inteiro: o botão aparece conforme a
+        bolsa de quem for montado o painel, e não de quem clica. Então ele
+        está sempre lá, e quem não tem poção leva a recusa em privado.
+        """
+        botao = discord.ui.Button(
+            label="Poção",
+            emoji=consumiveis.ICONE,
+            style=discord.ButtonStyle.success,
+            custom_id=f"inc:pocao:{self.run_id}:{self.sala_id}",
+        )
+        botao.callback = self._pocao
+        self.add_item(botao)
+
     async def _atacar(self, interaction: discord.Interaction) -> None:
         await self.cog.atacar(interaction, self.run_id, self.sala_id)
 
     async def _habilidade(self, interaction: discord.Interaction) -> None:
         await self.cog.abrir_habilidades(interaction, self.run_id, self.sala_id)
+
+    async def _pocao(self, interaction: discord.Interaction) -> None:
+        await self.cog.abrir_pocoes(interaction, self.run_id, self.sala_id)
 
     async def _escolher_alvo(self, interaction: discord.Interaction) -> None:
         await self.cog.atacar(
@@ -331,6 +354,66 @@ class SeletorHabilidade(discord.ui.View):
         self.stop()
         await self.cog.usar_habilidade(
             interaction, self.run_id, self.sala_id, self.menu.values[0]
+        )
+
+
+class SeletorPocao(discord.ui.View):
+    """O que a bolsa tem para beber agora, só para quem clicou."""
+
+    def __init__(self, cog: "Incursoes", run_id: int, sala_id: str, opcoes: list[tuple]):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.run_id = run_id
+        self.sala_id = sala_id
+        menu = discord.ui.Select(
+            placeholder="Qual poção?",
+            options=[
+                discord.SelectOption(
+                    label=f"{nome} ×{quantos}", value=pid,
+                    description=descricao[:100], emoji=consumiveis.ICONE,
+                )
+                for pid, nome, quantos, descricao in opcoes[:25]
+            ],
+        )
+        menu.callback = self._escolher
+        self.menu = menu
+        self.add_item(menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await self.cog.usar_pocao(
+            interaction, self.run_id, self.sala_id, self.menu.values[0]
+        )
+
+
+class SeletorRecarga(discord.ui.View):
+    """Qual uso a Poção de Mana devolve, entre os que já foram gastos."""
+
+    def __init__(
+        self, cog: "Incursoes", run_id: int, sala_id: str, pocao_id: str,
+        opcoes: list[tuple],
+    ):
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.run_id = run_id
+        self.sala_id = sala_id
+        self.pocao_id = pocao_id
+        menu = discord.ui.Select(
+            placeholder="Devolver uso de qual habilidade?",
+            options=[
+                discord.SelectOption(label=nome, value=hid, description=descricao[:100])
+                for hid, nome, descricao in opcoes[:25]
+            ],
+        )
+        menu.callback = self._escolher
+        self.menu = menu
+        self.add_item(menu)
+
+    async def _escolher(self, interaction: discord.Interaction) -> None:
+        self.stop()
+        await self.cog.usar_pocao(
+            interaction, self.run_id, self.sala_id, self.pocao_id,
+            escolhida=self.menu.values[0],
         )
 
 
@@ -439,7 +522,14 @@ def nome_do_efeito(efeito_id: str) -> str:
     estatica — e porque ela nao olha para o estado de ninguem.
     """
     habilidade = habilidades.POR_ID.get(efeito_id)
-    return habilidade.nome if habilidade else efeito_id.replace('_', ' ')
+    if habilidade:
+        return habilidade.nome
+    # A poção grava o efeito pela FAMÍLIA ("pocao_aceleracao"), para a segunda
+    # renovar a primeira em vez de somar com ela — então o nome sai da família.
+    da_pocao = consumiveis.nome_do_efeito(efeito_id)
+    if da_pocao:
+        return da_pocao
+    return efeito_id.replace('_', ' ')
 
 
 class Incursoes(commands.Cog):
@@ -1571,6 +1661,11 @@ class Incursoes(commands.Cog):
             else:
                 quem.ameaca_extra += valor.get("ameaca", 0)
             quem.reducao_dano = max(quem.reducao_dano, valor.get("reducao_dano", 0.0))
+            # Poção de Resistência: corte plano, depois da fração acima. Vale
+            # o maior, como a fração — duas fontes não somam proteção.
+            quem.reducao_plana = max(
+                quem.reducao_plana, valor.get("reducao_plana", 0)
+            )
             quem.cura_por_turno = max(
                 quem.cura_por_turno, valor.get("cura_por_turno", 0.0)
             )
@@ -1586,6 +1681,11 @@ class Incursoes(commands.Cog):
             # Haste e afins: o segundo golpe por duracao.
             if valor.get("ataques"):
                 quem.ataques = max(quem.ataques, valor["ataques"])
+            # Poção da Aceleração: golpe A MAIS, e por isso soma em vez de
+            # valer o maior. `ataques` é absoluto ("passa a atacar 2x") e não
+            # serviria — num guerreiro de Multiattack ele não daria nada.
+            if valor.get("ataques_extra"):
+                quem.ataques += valor["ataques_extra"]
             # Fly: multiplica o peso dele no sorteio de alvo. Vale o menor
             # fator, que e o mais protegido.
             if valor.get("ameaca_fator") is not None:
@@ -2118,6 +2218,15 @@ class Incursoes(commands.Cog):
             return
         passo = self._passo(run)
         await db.resolver_turno(self.bot.db, run["id"], passo, estado.rodada, turno["user_id"])
+        # A poção escolhida que não chegou a ser bebida volta para a bolsa:
+        # ela saiu dela na escolha, e quem caiu ou foi atordoado antes da vez
+        # não bebeu nada. Sem isto, perder a vez queimava o item.
+        pocao = consumiveis.item(turno["acao"])
+        if pocao is not None:
+            personagem = await self._personagem_na_run(run, turno["user_id"])
+            if personagem is not None:
+                await db.devolver_item(self.bot.db, personagem["id"], pocao.id)
+            return
         habilidade = cl.POR_ID.get(turno["acao"])
         if habilidade is not None:
             await db.devolver_uso(
@@ -2134,6 +2243,17 @@ class Incursoes(commands.Cog):
             await self._gerar_ameaca(run, estado, user_id, None)
             await self._marcas_orfas(run, estado)
             return texto
+        # A poção guardada na vez: ela já saiu da bolsa quando foi escolhida,
+        # então aqui ela só precisa valer. O id dela não está entre as
+        # habilidades do personagem — é do catálogo de consumíveis.
+        pocao = consumiveis.item(turno["acao"])
+        if pocao is not None:
+            texto = await self._resolver_habilidade(
+                run, estado, user_id, consumiveis.habilidade_de(pocao), turno["alvos"]
+            )
+            await self._gerar_ameaca(run, estado, user_id, pocao.acao)
+            return texto
+
         personagem = await self._personagem_na_run(run, user_id)
         habilidade = next(
             (
@@ -2580,6 +2700,12 @@ class Incursoes(commands.Cog):
         """O aviso de quem ja agiu, dizendo com o que gastou o turno."""
         if acao == "ataque":
             return "Você já atacou nesta rodada — é um ataque **ou** uma habilidade."
+        pocao = consumiveis.item(acao)
+        if pocao is not None:
+            return (
+                f"Você já bebeu **{pocao.nome}** nesta rodada — beber é a ação "
+                f"do turno. Só a Poção da Aceleração não custa a ação."
+            )
         habilidade = cl.POR_ID.get(acao)
         nome = habilidade.nome if habilidade else acao
         return (
@@ -2675,6 +2801,241 @@ class Incursoes(commands.Cog):
             view=SeletorHabilidade(self, run_id, sala_id, opcoes),
             ephemeral=True,
         )
+
+    async def _dizer_ou_apagar(
+        self, run: dict[str, Any], interaction: discord.Interaction, texto: str
+    ) -> None:
+        """A resposta privada — ou nenhuma, quando a frase já foi ao canal.
+
+        É a mesma regra de `_avancar`, para quem resolve FORA da fila da
+        iniciativa: se esta exata frase acabou de ser publicada, repeti-la em
+        privado mostra a própria ação duas vezes na tela. A interação adiada
+        ainda precisa ser fechada, senão o Discord deixa o "pensando..."
+        pendurado para sempre.
+        """
+        if texto == self._publicado.get(run["id"]):
+            try:
+                await interaction.delete_original_response()
+            except discord.HTTPException:
+                pass
+            return
+        await self._dizer(interaction, texto)
+
+    async def _pocoes_na_bolsa(self, personagem: dict[str, Any]) -> list[tuple]:
+        """As poções que este personagem carrega: (poção, quantas).
+
+        A bolsa é do PERSONAGEM e não da run: o que ele comprou no mercado
+        continua com ele de uma incursão para a outra, e o que ele bebeu não
+        volta no fim. É o mesmo lugar onde o equipamento espera para ser
+        vestido (`personagem_itens`), só que com quantidade.
+        """
+        bolsa = await db.itens_na_bolsa(self.bot.db, personagem["id"])
+        achadas = []
+        for item_id, quantos in sorted(bolsa.items()):
+            pocao = consumiveis.item(item_id)
+            if pocao is not None and quantos > 0:
+                achadas.append((pocao, quantos))
+        return achadas
+
+    async def abrir_pocoes(
+        self, interaction: discord.Interaction, run_id: int, sala_id: str
+    ) -> None:
+        """Mostra, só para quem clicou, o que ele tem para beber agora."""
+        self._guardar_efemera(run_id, interaction)
+        run = await db.buscar_run(self.bot.db, run_id)
+        if not run or run["status"] not in ("em_sala", "objetivo"):
+            await interaction.response.send_message("Esta sala já terminou.", ephemeral=True)
+            return
+        personagem = await self._personagem_na_run(run, interaction.user.id)
+        if personagem is None:
+            await interaction.response.send_message(
+                "Você não faz parte desta run.", ephemeral=True
+            )
+            return
+
+        carregadas = await self._pocoes_na_bolsa(personagem)
+        if not carregadas:
+            await interaction.response.send_message(
+                "Sua bolsa não tem poção nenhuma. Compre no `/mercado vitrine` "
+                "— as duas de vida estão sempre em cartaz.",
+                ephemeral=True,
+            )
+            return
+
+        # Com o turno gasto só sobra o que não custa ação: a Aceleração. Em vez
+        # de recusar o botão inteiro, o menu mostra o que ainda dá — quem já
+        # atacou pode beber a Aceleração e ganhar os golpes da próxima rodada.
+        sala = await self._sala_corrente(run)
+        gasto = None
+        if sala is not None and sala.e_combate:
+            estado = await self._estado_combate(run, sala)
+            if estado is not None:
+                gasto = await db.acao_do_turno(
+                    self.bot.db, run_id, self._passo(run), estado.rodada,
+                    interaction.user.id,
+                )
+        if gasto:
+            carregadas = [(p, q) for p, q in carregadas if not p.gasta_turno]
+            if not carregadas:
+                await interaction.response.send_message(
+                    f"{self._turno_gasto(gasto)} Só a Poção da Aceleração não "
+                    f"custa a ação da rodada.",
+                    ephemeral=True,
+                )
+                return
+
+        opcoes = [(p.id, p.nome, q, p.texto) for p, q in carregadas]
+        await interaction.response.send_message(
+            "O que você bebe?",
+            view=SeletorPocao(self, run_id, sala_id, opcoes),
+            ephemeral=True,
+        )
+
+    async def usar_pocao(
+        self,
+        interaction: discord.Interaction,
+        run_id: int,
+        sala_id: str,
+        pocao_id: str,
+        escolhida: Optional[str] = None,
+    ) -> None:
+        """Bebe uma poção da bolsa.
+
+        Beber é a ação da rodada, como atacar — a Poção da Aceleração é a
+        única que não custa a ação, e é disso que ela vive. A poção sai da
+        bolsa antes de a ação ser marcada, e volta para ela se a marcação
+        falhar: assim dois cliques no mesmo instante não bebem duas.
+        """
+        self._guardar_efemera(run_id, interaction)
+        # Como em `usar_habilidade`: o defer com `thinking=True` é o que faz o
+        # ephemeral valer num clique de botão.
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        run = await db.buscar_run(self.bot.db, run_id)
+        if not run or run["status"] not in ("em_sala", "objetivo"):
+            await self._dizer(interaction, "Esta sala já terminou.")
+            return
+        personagem = await self._personagem_na_run(run, interaction.user.id)
+        if personagem is None:
+            await self._dizer(interaction, "Você não faz parte desta run.")
+            return
+        pocao = consumiveis.item(pocao_id)
+        if pocao is None:
+            await self._dizer(interaction, "Essa poção não existe.")
+            return
+
+        passo = self._passo(run)
+        sala = await self._sala_corrente(run)
+        estado = await self._estado_combate(run, sala) if sala and sala.e_combate else None
+
+        quem = estado.combatente(interaction.user.id) if estado else None
+        if estado is not None and (quem is None or quem.caido):
+            await self._dizer(
+                interaction, "Você está caído — fica fora do resto deste combate."
+            )
+            return
+        if quem is not None and quem.atordoado:
+            await self._dizer(interaction, "Você está atordoado e perde esta rodada.")
+            return
+
+        # A de Mana precisa saber QUAL uso devolver, e a escolha é um id de
+        # habilidade — que não cabe em `run_turnos.alvos`, que é lista de
+        # inteiros. Então ela é escolhida (e conferida) antes de a poção sair
+        # da bolsa: menu velho não queima item.
+        if pocao.acao.get("tipo") == "recarga":
+            candidatas = await self._recarregaveis(
+                run, personagem, pocao.acao["tier"]
+            )
+            if not candidatas:
+                await self._dizer(
+                    interaction,
+                    f"Você não gastou nenhuma habilidade de tier "
+                    f"{pocao.acao['tier']} nesta incursão. A poção fica na "
+                    f"bolsa.",
+                )
+                return
+            if escolhida is None:
+                await self._dizer(
+                    interaction,
+                    f"{consumiveis.rotulo(pocao)} — qual uso ela devolve?",
+                    view=SeletorRecarga(
+                        self, run_id, sala_id, pocao.id,
+                        [
+                            (h.id, h.nome, f"{usados} uso(s) gasto(s)")
+                            for h, usados in candidatas
+                        ],
+                    ),
+                )
+                return
+            if escolhida not in {h.id for h, _usados in candidatas}:
+                # O menu pode ter envelhecido: outra poção já devolveu aquele
+                # uso, ou a habilidade nem está mais gasta.
+                dela = next(
+                    (
+                        h.nome for _t, h in personagem.get("habilidades") or []
+                        if h.id == escolhida
+                    ),
+                    escolhida,
+                )
+                await self._dizer(
+                    interaction,
+                    f"**{dela}** não está gasta agora. A poção fica na bolsa.",
+                )
+                return
+
+        if estado is not None and pocao.gasta_turno:
+            gasto = await db.acao_do_turno(
+                self.bot.db, run_id, passo, estado.rodada, interaction.user.id
+            )
+            if gasto:
+                await self._dizer(interaction, self._turno_gasto(gasto))
+                return
+
+        # A poção sai da bolsa aqui: daqui para a frente ela foi bebida, ou
+        # volta explicitamente.
+        if not await db.consumir_item(self.bot.db, personagem["id"], pocao.id):
+            await self._dizer(
+                interaction, f"Você não tem mais **{pocao.nome}** na bolsa."
+            )
+            return
+
+        habilidade = consumiveis.habilidade_de(pocao)
+        if pocao.acao.get("tipo") == "recarga":
+            # Resolve na hora, e ainda assim gasta o turno: devolver um uso não
+            # tem lugar na iniciativa — não acerta ninguém, não cura ninguém.
+            if estado is not None and not await db.marcar_turno(
+                self.bot.db, run_id, passo, estado.rodada, interaction.user.id,
+                pocao.id, resolvida=True,
+            ):
+                await db.devolver_item(self.bot.db, personagem["id"], pocao.id)
+                await self._dizer(interaction, self._turno_gasto("ataque"))
+                return
+            texto = await self._resolver_recarga(
+                run, interaction.user.id, habilidade, pocao.acao, escolhida
+            )
+            await self._dizer_ou_apagar(run, interaction, texto)
+            if estado is not None:
+                await self._atualizar_painel(run, sala, estado)
+            return
+
+        # Fora de combate (e na Aceleração, que não custa a ação) resolve na
+        # hora; o resto espera a iniciativa, como o ataque e as habilidades.
+        if estado is None or not pocao.gasta_turno:
+            texto = await self._resolver_habilidade(
+                run, estado, interaction.user.id, habilidade, []
+            )
+            await self._dizer_ou_apagar(run, interaction, texto)
+            if estado is not None:
+                await self._atualizar_painel(run, sala, estado)
+            return
+
+        if not await db.marcar_turno(
+            self.bot.db, run_id, passo, estado.rodada, interaction.user.id,
+            pocao.id, resolvida=False,
+        ):
+            await db.devolver_item(self.bot.db, personagem["id"], pocao.id)
+            await self._dizer(interaction, self._turno_gasto("ataque"))
+            return
+        await self._avancar(run, sala, interaction)
 
     async def usar_habilidade(
         self,
@@ -2831,6 +3192,8 @@ class Incursoes(commands.Cog):
             return await self._resolver_grupo(run, estado, habilidade, acao, user_id)
         if acao.get("tipo") == "duracao":
             return await self._resolver_duracao(run, user_id, estado, habilidade, acao, alvos)
+        if acao.get("tipo") == "condicao":
+            return await self._resolver_condicao(run, user_id, habilidade, acao)
         if acao.get("tipo") == "save":
             return await self._resolver_save(run, user_id, estado, habilidade, acao, alvos)
         if acao.get("tipo") == "invocar":
@@ -3180,6 +3543,87 @@ class Incursoes(commands.Cog):
             self.bot.db, run["id"], self._passo(run), "personagem",
             alvo.user_id, "atordoado",
         )
+
+    async def _resolver_condicao(
+        self, run: dict[str, Any], user_id: int, habilidade, acao
+    ) -> str:
+        """A Poção de buff: stacks de uma condição da tabela, em quem bebeu.
+
+        Entra pelo MESMO caminho que o prêmio de um Evento vencido, então o
+        prazo dela é o da tabela de condições — decai 1 por combate — e não os
+        3 turnos das outras poções. A Poção da Benção 3 é "+3 agora, +2 no
+        combate seguinte, +1 no outro": vale menos por rodada e muito mais por
+        incursão, o que é a troca que a tabela de buffs já faz.
+
+        O número só chega ao combatente quando o estado é remontado, como toda
+        condição aplicada no meio do combate (ver `_cobrar_o_retorno`).
+        """
+        cid = acao["condicao"]
+        stacks = await db.aplicar_condicao(
+            self.bot.db, run["id"], user_id, cid, acao.get("stacks", 1)
+        )
+        # Anuncia e devolve A MESMA frase, que é a convenção dos outros
+        # resolvedores: é a igualdade exata que faz `_avancar` apagar o eco
+        # privado em vez de mostrar a mesma coisa duas vezes para quem bebeu.
+        quem = await self._personagem_na_run(run, user_id)
+        texto = (
+            f"{consumiveis.ICONE} **{(quem or {}).get('nome', 'Alguém')}** bebe "
+            f"**{habilidade.nome}** e fica com {condicoes.rotulo(cid, stacks)}."
+        )
+        await self._anunciar_habilidade(run, texto)
+        return texto
+
+    async def _resolver_recarga(
+        self, run: dict[str, Any], user_id: int, habilidade, acao, escolhida: str
+    ) -> str:
+        """A Poção de Mana: devolve um uso gasto de uma habilidade do tier.
+
+        Devolve um uso em vez de dar "mais um uso" porque o contador é de
+        gastos (`run_usos`), e o teto dele é a tabela da classe. Então a poção
+        desfaz um gasto — e não pode desfazer o que não aconteceu, por isso
+        quem bebe escolhe entre as que ele JÁ gastou.
+        """
+        personagem = await self._personagem_na_run(run, user_id)
+        passo = self._passo(run)
+        escolha = next(
+            (
+                h for _t, h in (personagem or {}).get("habilidades") or []
+                if h.id == escolhida
+            ),
+            None,
+        )
+        if escolha is None:
+            return "Essa habilidade não é sua."
+        await db.devolver_uso(
+            self.bot.db, run["id"], user_id, escolha.chave_de_uso,
+            self._chave_de_recarga(escolha, run, passo),
+        )
+        texto = (
+            f"{consumiveis.ICONE} **{(personagem or {}).get('nome', 'Alguém')}** "
+            f"bebe **{habilidade.nome}**: **{escolha.nome}** volta a ter um uso."
+        )
+        await self._anunciar_habilidade(run, texto)
+        return texto
+
+    async def _recarregaveis(
+        self, run: dict[str, Any], personagem: dict[str, Any], tier: int
+    ) -> list[tuple]:
+        """As habilidades daquele tier que este personagem já gastou.
+
+        São as candidatas da Poção de Mana. Fora a lista, a poção não tem o
+        que fazer — e aí ela não é bebida, para não queimar o item à toa.
+        """
+        gastos = await db.usos_da_run(self.bot.db, run["id"], personagem["user_id"])
+        passo = self._passo(run)
+        saida = []
+        for tier_dela, habilidade in personagem.get("habilidades") or []:
+            if tier_dela != tier or not habilidade.acionavel:
+                continue
+            chave = self._chave_de_recarga(habilidade, run, passo)
+            usados = gastos.get((habilidade.chave_de_uso, chave), 0)
+            if usados > 0:
+                saida.append((habilidade, usados))
+        return saida
 
     async def _resolver_cura(
         self, run: dict[str, Any], user_id: int, habilidade, acao, alvos, estado

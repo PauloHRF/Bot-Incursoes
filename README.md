@@ -130,9 +130,37 @@ próprio, e a sala só é superada quando a última cai — derrubar uma não en
 em quem já caiu não gasta o turno: o bot avisa e você escolhe outro alvo. É aqui que um
 bando pesa de verdade: cinco lobos batem cinco vezes por rodada.
 
-Cada personagem age **uma vez por rodada: ou ataca, ou usa uma habilidade**, nunca os dois.
-Quem já escolheu recebe o aviso dizendo com o que gastou o turno, e o menu ✨ Habilidade nem
-abre. Reações (*Relentless*, *Uncanny Dodge*) não contam: disparam sozinhas, fora do turno.
+Cada personagem age **uma vez por rodada: ou ataca, ou usa uma habilidade, ou bebe uma
+poção**, nunca dois. Quem já escolheu recebe o aviso dizendo com o que gastou o turno, e o
+menu ✨ Habilidade nem abre. Reações (*Relentless*, *Uncanny Dodge*) não contam: disparam
+sozinhas, fora do turno.
+
+### As poções
+
+O painel tem um terceiro botão, **⚗️ Poção**, que abre em privado o que a bolsa daquele
+personagem tem. Comprar é no mercado, fora da incursão; beber é aqui, no combate.
+
+A prateleira de poções tem **3 vagas**: a **Poção de Vida Menor** (30% do HP máximo) e a
+**Poção de Vida** (50%) estão sempre em cartaz, e a terceira é sorteada por semana e por
+personagem, entre 48 — Aceleração, Resistência, Dano, Mana e uma para cada um dos 12 buffs
+da tabela, todas em três níveis. Cabem **3 de cada tipo** na bolsa, e o que sobra de uma
+incursão fica para a próxima.
+
+**Beber gasta a ação da rodada**, com uma exceção: a **Poção da Aceleração** não custa a
+ação — bebe e ataca no mesmo turno, e ganha +X golpes por rodada por 3 turnos. É disso que
+ela vive, e é por isso que o menu dela continua aberto para quem já atacou.
+
+Duas regras que a mesa vai sentir: beber a segunda poção da mesma família **renova** a
+primeira em vez de somar (três Acelerações de graça no mesmo turno dariam +6 golpes), e a
+poção escolhida **sai da bolsa na hora da escolha e volta se você perder a vez** — cair ou
+ser atordoado antes do seu turno não queima o item.
+
+A **Poção de Resistência X** corta `2X` de cada golpe recebido, **depois** da redução por
+fração (a do *Rage*) — e esse corte pode zerar o golpe, que é o que a faz valer contra sala
+de muitas mordidas pequenas. A **Poção de Mana X** devolve um uso **já gasto** de uma
+habilidade daquele tier, escolhida por quem bebe; sem nada gasto, ela não é bebida.
+
+Detalhe de preço e catálogo em [docs/mecanicas/mercado.md](docs/mecanicas/mercado.md).
 Quem está caído ou atordoado quando a vez chega perde a vez; se tinha guardado uma
 habilidade, ela não sai e **o uso volta**.
 

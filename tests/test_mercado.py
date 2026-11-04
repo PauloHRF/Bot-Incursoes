@@ -18,7 +18,15 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes as cl, config, database as db, itens, mercado, motor  # noqa: E402
+from src import (  # noqa: E402
+    classes as cl,
+    config,
+    consumiveis,
+    database as db,
+    itens,
+    mercado,
+    motor,
+)
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.cogs.mercado import (  # noqa: E402
     BotaoDeCompra,
@@ -558,7 +566,12 @@ async def caso_a_vitrine_abre_com_um_botao_por_peca():
     assert isinstance(view, ViewDaVitrine), view
     botoes = [f for f in view.children if isinstance(f, BotaoDeCompra)]
     prateleira = mercado.vitrine(heroi, view.semana)
-    assert [b.peca.id for b in botoes] == [p.id for p in prateleira]
+    # Duas prateleiras na mesma tela: o equipamento da semana e as três
+    # poções (duas fixas e uma sorteada).
+    pocoes = consumiveis.vitrine(heroi, view.semana)
+    assert [b.peca.id for b in botoes] == [
+        *(p.id for p in prateleira), *(p.id for p in pocoes)
+    ]
     # Sem ouro nenhum, nada é clicável.
     assert all(b.disabled for b in botoes), [b.label for b in botoes]
 
@@ -786,12 +799,19 @@ async def caso_a_lista_de_equipar_nao_vem_vazia_com_dois_personagens():
     so_dele = await cog.loja._sugerir_bolsa(dito, "")
     assert [o.value for o in so_dele] == [peca.id], [o.name for o in so_dele]
 
-    # E a vitrine, que é POR personagem, tem o mesmo conserto.
+    # E a vitrine, que é POR personagem, tem o mesmo conserto. Ela tem duas
+    # prateleiras: o equipamento e as poções, que se compram pelo mesmo
+    # comando (ver `consumiveis.py`).
     vitrine = await cog.loja._sugerir_vitrine(dito, "")
     assert vitrine, "a vitrine veio vazia mesmo com o personagem dito"
-    da_semana = {p.id for p in mercado.vitrine(segundo, cog.loja._semana())}
+    da_semana = {
+        p.id for p in mercado.vitrine(segundo, cog.loja._semana())
+    } | {p.id for p in consumiveis.vitrine(segundo, cog.loja._semana())}
     assert {o.value for o in vitrine} <= da_semana, (
         "a vitrine ofereceu peça que não está na prateleira dele"
+    )
+    assert any(consumiveis.e_pocao(o.value) for o in vitrine), (
+        "as poções não apareceram no comprar"
     )
 
     # Com um personagem só, nada de nome no rótulo: ele não ajuda ninguém.

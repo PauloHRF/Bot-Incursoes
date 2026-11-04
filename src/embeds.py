@@ -521,6 +521,11 @@ def linha_golpe(g) -> str:
         )
     if g.falha_critica:
         return f"{EMOJI_FALHA_CRITICA} {g.atacante} · 🎲 **1** → erro critico, passa longe"
+    if g.acertou and not g.dano:
+        # Dano zero só sai do corte plano da Poção de Resistência: a fração do
+        # Rage nunca passa de "metade, no mínimo 1". Então a linha pode dizer
+        # o que aconteceu em vez de mostrar um 0 sem explicação.
+        return f"🛡️ {g.atacante} · {rolagem} → acertou, e a resistência segurou"
     if g.acertou:
         return f"⚔️ {g.atacante} · {rolagem} → **{g.dano}** de dano"
     return f"💨 {g.atacante} · {rolagem} → errou"
@@ -629,7 +634,7 @@ def _linha_inimigo(i, marcado: bool = False) -> str:
 def _marcas_do_combatente(c) -> str:
     """Os efeitos com prazo que estao valendo naquele personagem."""
     marcas = []
-    if getattr(c, "reducao_dano", 0):
+    if getattr(c, "reducao_dano", 0) or getattr(c, "reducao_plana", 0):
         marcas.append(MARCA_PROTEGIDO)
     if getattr(c, "vantagem", False):
         marcas.append(MARCA_ALVO)
