@@ -1,0 +1,16 @@
+[Unit]
+Description=Backup diario do banco do Bot de Incursoes
+
+[Timer]
+# Todo dia as 4h da manha no fuso da maquina. Diario e nao semanal porque o
+# arquivo tem 35 KB comprimido: o custo de guardar e nenhum, e a perda de um
+# dia de jogo doi muito mais que a de 14 arquivos no disco.
+OnCalendar=*-*-* 04:00:00
+# Se a maquina estava desligada na hora, roda ao voltar — Always Free da
+# Oracle reinicia instancia sem avisar.
+Persistent=true
+# Espalha o disparo em ate 10 min: nada corre junto do restart do bot.
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

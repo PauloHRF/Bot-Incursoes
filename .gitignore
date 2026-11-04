@@ -8,6 +8,11 @@ data/*.db-journal
 tests/*.db
 tests/*.db-journal
 
+# As copias que tools/backup.py deixa no disco. O backup e dado do grupo, e
+# o repositorio e publico: ele vai para o canal privado do Discord, nunca
+# para ca.
+data/backups/
+
 # Modelos .xlsx que os geradores soltam para preencher. Descartaveis: o que
 # vale e o JSON que a importacao deixa em data/incursoes e data/bancos, e uma
 # planilha versionada envelhece em relacao ao JSON que ela gerou — as quatro

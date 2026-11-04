@@ -874,6 +874,26 @@ problemas sem escrever nada. Eles exigem:
 Serve tanto Excel quanto Google Sheets — neste, baixe em *Arquivo → Fazer download →
 Microsoft Excel (.xlsx)* antes de importar.
 
+## Backup e a conta da Oracle
+
+O bot roda numa instância **Always Free** da Oracle, sob `systemd`. O backup do
+banco e o passo a passo do **Pay As You Go** estão em
+[deploy/README.md](deploy/README.md); o resumo:
+
+`tools/backup.py` tira uma cópia do banco **sem parar o bot** — pela API de
+backup online do SQLite, e não por um `cp`, que pode pegar uma escrita no meio
+—, comprime e manda para um canal privado do Discord por webhook. O `systemd`
+dispara todo dia às 4h, e as 14 cópias mais novas também ficam no disco.
+
+Webhook e não o próprio bot por três razões: funciona com o bot **parado**,
+que é exatamente quando se quer um backup (antes de uma atualização); dá para
+rodar na mão e ver o resultado na hora; e o webhook só sabe escrever num canal.
+
+**O tamanho não é problema, e isso foi medido**: dá cerca de **1 KB
+comprimido por incursão** (o banco com 31 runs tem 256 KB e comprime para 35
+KB). Um grupo que joga toda semana faz ~50 runs por ano, então 10.000 runs —
+dois séculos de jogo — ainda caberiam num upload do Discord.
+
 ## Estrutura
 
 ```
@@ -912,9 +932,11 @@ docs/
   BALANCO.md    dano, durabilidade, cura e o valor de cada habilidade
 data/
   planilhas/    não versionada: onde os geradores soltam os modelos .xlsx
+  backups/      não versionada: as 14 cópias mais novas do banco
   incursoes/    incursões em JSON — lore, tamanho, tier e sala final
   bancos/       bancos de salas por Organização — o que alimenta o sorteio
   bestiario.json  as criaturas prontas do Monster Manual, já no formato do bot
+deploy/         as unidades do systemd do backup, e o passo a passo da Oracle
 assets/         imagens das salas
 tests/
   todos.py      roda todas as suítes

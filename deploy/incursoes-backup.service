@@ -1,0 +1,21 @@
+[Unit]
+# Backup do banco do bot: copia consistente, comprimida, enviada ao Discord.
+# Nao para o bot — a copia sai pela API de backup online do SQLite.
+Description=Backup do banco do Bot de Incursoes
+# Nao tenta enviar antes de a rede estar de pe (no boot, o timer dispara com
+# Persistent=true e a maquina pode nem ter IP ainda).
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# AJUSTE: usuario, pasta e o python do venv, se os seus forem outros.
+User=ubuntu
+WorkingDirectory=/home/ubuntu/BotIncursao
+ExecStart=/home/ubuntu/BotIncursao/.venv/bin/python tools/backup.py
+# O script le o BACKUP_WEBHOOK do .env pelo proprio config do projeto, entao
+# nao ha segredo nenhum neste arquivo — ele pode viver no git.
+TimeoutStartSec=300
+# Falha de ENVIO sai com 2 e a copia local fica: o journal registra e o
+# backup da semana seguinte tenta de novo. Nao e caso de reiniciar em laco.
+Restart=no

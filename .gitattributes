@@ -1,0 +1,10 @@
+# O servidor e Linux e quem escreve aqui e Windows. Unidade de systemd com
+# CRLF o systemd RECUSA a carregar, com erro que nao diz que o problema e o
+# fim de linha — entao estes ficam travados em LF, independente do git config
+# de quem clonar.
+*.service text eol=lf
+*.timer   text eol=lf
+*.sh      text eol=lf
+
+# O python tambem: o bot roda la, e shebang com CR nao executa.
+*.py      text eol=lf
