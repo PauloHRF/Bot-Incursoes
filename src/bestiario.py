@@ -24,8 +24,8 @@ _indice: Optional[dict[str, dict[str, Any]]] = None
 # a dificuldade do jogo: `tools/balanco.py` tira dela a criatura típica de
 # cada tier, e é contra essa criatura que as classes são medidas.
 #
-# O `meta.tier` que vem em cada entrada NÃO é isto: ele vem do arquivo de
-# origem, `data/planilhas/fichas_monstros.json`, e discorda desta tabela em
+# O `meta.tier` que vem em cada entrada NÃO é isto: ele veio com a tabela de
+# fichas que `tools/importar_fichas.py` converteu, e discorda desta tabela em
 # um terço do bestiário. Quem manda na dificuldade é esta — a outra é um
 # rótulo de quem exportou os dados.
 FAIXAS_DE_CR = {1: (0.0, 1.0), 2: (2.0, 4.0), 3: (5.0, 8.0), 4: (9.0, 13.0),

@@ -214,8 +214,10 @@ jeito diferente. O catálogo é transcrição direta da planilha *Incursões —
 cada linha dela é um **par espelhado** (Benção/Perdição, Coragem/Medo, Vigor/Debilidade…).
 Ele vive em `src/condicoes.py`, e quem decide o que cada sala faz é
 `src/consequencias.py` — os dois são módulos puros, sem Discord nem banco. A planilha de
-origem está em `data/planilhas/buffs_debuffs.xlsx`: ela não é importada (o catálogo é
-código), mas é a referência contra a qual `test_condicoes.py` confere os números.
+origem (*Incursões — Buffs/Debuffs*) nunca foi importada: o catálogo é código, e os 25
+valores dela estão transcritos em `src/condicoes.py` com a nota de onde cada um saiu.
+`test_condicoes.py` confere essa transcrição linha por linha, então a planilha não precisa
+viver no repositório para a conta ficar presa.
 
 | Sala | O grupo venceu | O grupo perdeu |
 | --- | --- | --- |
@@ -619,8 +621,18 @@ dungeon saem daqui:
 
 ```bash
 .venv/Scripts/python.exe tools/gerar_modelo_banco.py "Vórtice Oculto"
+```
+
+O gerador escreve em `data/planilhas/`, criando a pasta se ela não existir. Preencha o
+`.xlsx` e importe:
+
+```bash
 .venv/Scripts/python.exe tools/importar_banco.py data/planilhas/banco_vortice_oculto.xlsx
 ```
+
+**A pasta não é versionada**, e as planilhas são descartáveis: o que vale é o JSON que a
+importação deixa em `data/bancos/` e `data/incursoes/`. Depois de importado, o conteúdo é
+editado no JSON — reimportar uma planilha antiga desfaria o que mudou desde ela.
 
 **A incursão** guarda a lore de abertura, a lore de fecho, o tamanho, o tier e a sala
 final — nenhuma sala do meio:
@@ -836,8 +848,8 @@ docs/
   CRIATURAS.md  as fichas das 385 criaturas, agrupadas por faixa de CR
   BALANCO.md    dano, durabilidade, cura e o valor de cada habilidade
 data/
-  planilhas/    planilhas de autoria das incursões (.xlsx)
-  incursoes/    incursões convertidas em JSON — lore, tamanho, tier e sala final
+  planilhas/    não versionada: onde os geradores soltam os modelos .xlsx
+  incursoes/    incursões em JSON — lore, tamanho, tier e sala final
   bancos/       bancos de salas por Organização — o que alimenta o sorteio
   bestiario.json  as criaturas prontas do Monster Manual, já no formato do bot
 assets/         imagens das salas
