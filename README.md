@@ -168,6 +168,13 @@ Detalhe de preço e catálogo em [docs/mecanicas/mercado.md](docs/mecanicas/merc
 Quem está caído ou atordoado quando a vez chega perde a vez; se tinha guardado uma
 habilidade, ela não sai e **o uso volta**.
 
+Mas **a vez perdida no chão não é gasta**: se alguém levantar o personagem ainda na mesma
+rodada, ele age — na hora, fora da ordem, porque a fila já passou por ele e devolver o
+ponteiro faria a criatura entre os dois agir duas vezes. Antes a cura o devolvia ao
+combate sem devolver a rodada: ele clicava, lia *"sai quando a iniciativa chegar em você"*
+— uma promessa que a fila não podia mais cumprir — e a ação era descartada na virada,
+levando dentro dela o uso da habilidade ou a poção.
+
 **Cura levanta quem está caído** — a apontada em alguém, a que cai no grupo e a que vem
 por turno —, e **voltar do chão custa 1 ponto de Exaustão**. O preço é de sair do zero,
 não da cura: curar quem está de pé não cobra nada. Como a Exaustão não decai com o
@@ -496,11 +503,17 @@ Golpe de habilidade toma o turno, no lugar do ataque. Cura não levanta quem já
 **A Marca Fatal do Ladino é uma chave, e não um prazo.** Ela era passiva — ele marcava
 desde o primeiro golpe, sem decidir nada. Agora é **ativa, 1x por combate**: dá um ataque
 que já marca e, dali em diante, **todo acerto dele marca**. A terceira marca explode na
-hora, sem rolar acerto, por 3× o dado do tier dele (1d6 no tier 2, 3d6 no 5); passar 3
-turnos sem marcar o mesmo inimigo perde as marcas dele, e marcar de novo devolve o prazo
-inteiro. Quem liga a torneira é o **registro do uso**, e não um número na ficha: ele é
-gravado por combate, então a marcação morre com a sala e nenhum estado novo foi inventado
-para ela. No tier 5, a *Marca Fatal +* continua fazendo as duas coisas — o dado maior e
+hora, sem rolar acerto, por 3× o dado do tier dele (1d6 no tier 2, 3d6 no 5) — e **a
+marcação se fecha com a explosão**: ela sai uma vez por combate, o ciclo não recomeça, e as
+marcas que sobraram em outro inimigo saem junto, porque sem marcação aberta elas nunca
+chegariam à terceira. Passar 3 turnos sem marcar o mesmo inimigo perde as marcas dele, e
+marcar de novo devolve o prazo inteiro.
+
+Quem liga a torneira é o **registro do uso**, e quem a fecha é um efeito no próprio ladino
+com o prazo do combate — nenhum dos dois é número na ficha, e os dois morrem na troca de
+sala. Vale olhar na mesa: em três rodadas o ladino acerta **1,8 golpe** em média, e a
+explosão quer três marcas — então ela frequentemente não sai, e a janela só fecha de
+verdade nos combates longos. No tier 5, a *Marca Fatal +* continua fazendo as duas coisas — o dado maior e
 passar as marcas para outro inimigo quando o marcado cai antes da explosão.
 
 **Os usos recarregam** conforme o escopo declarado: *por combate* zera a cada sala de

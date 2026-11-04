@@ -84,6 +84,15 @@ PRAZO_ATE_PASSAR = 20
 # pode agir (grupo inteiro atordoado) antes de o bot avisar.
 MAX_RODADAS_SOZINHAS = 10
 
+# A recusa de quem esta no chao, nos tres caminhos de acao (ataque, habilidade,
+# pocao). Dizia "fica fora do resto deste combate", de quando uma queda so se
+# desfazia no descanso — hoje a cura levanta, e a vez perdida no chao volta se
+# alguem levantar o personagem na mesma rodada (ver `resolver_atrasados`).
+AVISO_CAIDO = (
+    "Você está caído — espere alguém te levantar com uma cura. "
+    "A rodada só é perdida se ninguém levantar você nela."
+)
+
 
 def maioria_de(total: int) -> int:
     """Quantos votos fecham a votacao: mais da metade do grupo."""
@@ -1939,8 +1948,7 @@ class Incursoes(commands.Cog):
                 "Você não tem ficha cadastrada. Use `/ficha registrar`.")
             return
         if atacante.caido:
-            await self._dizer(interaction, 
-                "Você está caído — fica fora do resto deste combate.")
+            await self._dizer(interaction, AVISO_CAIDO)
             return
         if atacante.atordoado:
             await self._dizer(interaction, 
@@ -2105,6 +2113,48 @@ class Incursoes(commands.Cog):
             # chegado a existir — e ficaria no canal para sempre.
             self._guardar_efemera(run["id"], interaction)
 
+        async def resolver_atrasados(estado, ordem, vez) -> bool:
+            """Faz agir quem está de pé e cuja vez já passou. True se agiu.
+
+            A vez de quem está no chão é consumida no topo da rodada, e a fila
+            não volta — então a cura que chegava depois devolvia o personagem
+            ao combate sem devolver a rodada dele. Ele clicava, lia "sai
+            quando a iniciativa chegar em você" (uma promessa que a fila já
+            não podia cumprir) e a ação era descartada na virada, levando
+            dentro dela o uso da habilidade ou a poção, que `_perder_a_vez`
+            nunca teve a chance de devolver.
+
+            Então **a vez perdida no chão não é gasta**: levantado na mesma
+            rodada, ele age na hora. Fora da ordem de propósito — devolver o
+            ponteiro faria a criatura entre ele e a cura agir duas vezes.
+            """
+            passo = self._passo(run)
+            for posicao in ordem[:vez]:
+                if posicao["tipo"] != motor.PERSONAGEM:
+                    continue
+                user_id = posicao["alvo_id"]
+                quem = estado.combatente(user_id)
+                # `caido`/`atordoado` aqui é precaução, não regra testada:
+                # quando a fila passa por alguém nesse estado, `_perder_a_vez`
+                # já marca a ação dele como resolvida, então não sobra turno
+                # pendente para este laço achar. A guarda fica para o caso de
+                # essa invariante mudar.
+                if quem is None or quem.caido or quem.atordoado:
+                    continue
+                turno = await db.turno_de(
+                    self.bot.db, run["id"], passo, estado.rodada, user_id
+                )
+                if not turno or turno["resolvida"]:
+                    continue
+                texto = await self._resolver_turno(run, estado, user_id, turno)
+                await db.resolver_turno(
+                    self.bot.db, run["id"], passo, estado.rodada, user_id
+                )
+                if interaction is not None and interaction.user.id == user_id:
+                    await responder(texto)
+                return True
+            return False
+
         esperando: Optional[str] = None
         ativo = True
         # O fim do combate roda fora da trava: vencer pode abrir o combate do
@@ -2135,6 +2185,12 @@ class Incursoes(commands.Cog):
                     break
                 ordem = await self._garantir_iniciativa(run, estado)
                 vez = (await db.estado_combate(self.bot.db, run["id"], passo))["vez"]
+
+                # Antes de andar a fila: quem a fila já deixou atrás e voltou
+                # a ficar de pé age agora. Uma por volta do laço, para o
+                # estado ser lido de novo — a ação pode encerrar o combate.
+                if await resolver_atrasados(estado, ordem, vez):
+                    continue
 
                 if vez >= len(ordem):
                     viradas += 1
@@ -2284,6 +2340,26 @@ class Incursoes(commands.Cog):
     EFEITO_DA_MARCA = "marca_fatal"
     EFEITO_DA_FURTIVIDADE = "furtividade"
     ID_DA_MARCA_FATAL = "marca_fatal"
+    # Gravado no ladino quando a explosao sai: ela sai UMA vez por combate, e
+    # dali em diante ele para de marcar. Mora em `run_efeitos` com o prazo do
+    # combate, como a ameaca gerada — quem apaga e a troca de sala.
+    EFEITO_MARCA_GASTA = "marca_fatal_gasta"
+
+    async def _marcacao_gasta(self, run: dict[str, Any], user_id: int) -> bool:
+        """A explosao deste combate ja saiu?
+
+        `rodada=0` de proposito: a chave vale o combate inteiro, entao a
+        pergunta nao e "vale nesta rodada" e sim "existe" — e 0 pede tudo que
+        ainda nao venceu.
+        """
+        return any(
+            e["alvo_tipo"] == "personagem"
+            and e["alvo_id"] == user_id
+            and e["efeito"] == self.EFEITO_MARCA_GASTA
+            for e in await db.efeitos_ativos(
+                self.bot.db, run["id"], self._passo(run), 0
+            )
+        )
 
     async def _marcacao_aberta(self, run: dict[str, Any], user_id: int) -> bool:
         """A Marca Fatal esta aberta neste combate para este personagem?
@@ -2307,7 +2383,31 @@ class Incursoes(commands.Cog):
             return False
         gastos = await db.usos_da_run(self.bot.db, run["id"], user_id)
         chave = self._chave_de_recarga(habilidade, run, self._passo(run))
-        return gastos.get((habilidade.chave_de_uso, chave), 0) > 0
+        if gastos.get((habilidade.chave_de_uso, chave), 0) <= 0:
+            return False
+        # A torneira fecha sozinha na explosao: ela sai UMA vez por combate.
+        return not await self._marcacao_gasta(run, user_id)
+
+    async def _fechar_marcacao(self, run: dict[str, Any], user_id: int, estado) -> None:
+        """Grava que a explosao deste ladino ja saiu, e limpa o que sobrou.
+
+        Chamado pela propria explosao. O prazo e o do combate inteiro, como a
+        ameaca gerada: quem apaga e a troca de sala, porque o `passo` faz
+        parte da chave em `run_efeitos`.
+        """
+        passo = self._passo(run)
+        await db.aplicar_efeito(
+            self.bot.db, run["id"], passo, "personagem", user_id,
+            self.EFEITO_MARCA_GASTA, {}, self.PRAZO_DO_COMBATE, dono=user_id,
+        )
+        # As marcas que ficaram em outro inimigo morrem com a marcacao: sem
+        # ela aberta nao ha terceira marca, e elas so enfeitariam o painel.
+        for indice, marca in (await self._marcas_de(run, estado.rodada)).items():
+            if marca["dono"] == user_id:
+                await db.remover_efeito(
+                    self.bot.db, run["id"], passo, "inimigo", indice,
+                    self.EFEITO_DA_MARCA,
+                )
 
     async def _marcas_de(self, run: dict[str, Any], rodada: int) -> dict[int, dict]:
         """As Marcas Fatais vivas, por índice de inimigo."""
@@ -2362,7 +2462,6 @@ class Incursoes(commands.Cog):
             if marcas >= habilidades.MARCAS_PARA_EXPLODIR:
                 dano = sum(motor.rolar_dano(dado) for _ in range(marcas))
                 inimigo.hp_atual = max(0, inimigo.hp_atual - dano)
-                quantas[inimigo.indice] = 0
                 await db.remover_efeito(
                     self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
                     self.EFEITO_DA_MARCA,
@@ -2373,7 +2472,21 @@ class Incursoes(commands.Cog):
                     f"**{inimigo.nome}**: **{dano}** de dano ({marcas}×{dado})"
                     f"{caiu}"
                 )
-                continue
+                # A explosão sai UMA vez por combate, e fecha a torneira: o
+                # ciclo não recomeça. E as marcas que ficaram em OUTRO inimigo
+                # saem com ela — sem marcação aberta elas nunca mais crescem,
+                # e o 🎯 no nome dele passaria a prometer uma explosão que não
+                # vem.
+                #
+                # O `break` é precaução e não regra testada: o ladino tem UM
+                # golpe, então hoje não há golpe seguinte neste turno para
+                # marcar. Se um dia ele ganhar Multiataque, é o `break` que
+                # impede o segundo golpe de abrir a pilha de novo.
+                await self._fechar_marcacao(run, user_id, estado)
+                linhas.append(
+                    "🎯 A Marca Fatal se fecha: foi a explosão deste combate."
+                )
+                break
             quantas[inimigo.indice] = marcas
             await db.aplicar_efeito(
                 self.bot.db, run["id"], passo, "inimigo", inimigo.indice,
@@ -2961,9 +3074,7 @@ class Incursoes(commands.Cog):
 
         quem = estado.combatente(interaction.user.id) if estado else None
         if estado is not None and (quem is None or quem.caido):
-            await self._dizer(
-                interaction, "Você está caído — fica fora do resto deste combate."
-            )
+            await self._dizer(interaction, AVISO_CAIDO)
             return
         if quem is not None and quem.atordoado:
             await self._dizer(interaction, "Você está atordoado e perde esta rodada.")
@@ -3121,8 +3232,7 @@ class Incursoes(commands.Cog):
         # Quem usa precisa estar de pe quando a habilidade e de combate.
         atacante = estado.combatente(interaction.user.id) if estado else None
         if estado is not None and (atacante is None or atacante.caido):
-            await self._dizer(interaction, 
-                "Voce esta caido — fica fora do resto deste combate.")
+            await self._dizer(interaction, AVISO_CAIDO)
             return
         if atacante is not None and atacante.atordoado:
             await self._dizer(interaction, 

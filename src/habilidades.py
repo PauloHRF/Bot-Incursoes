@@ -126,9 +126,11 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        f"1x por combate: um ataque que marca — e abre a "
                        f"marcacao: dali em diante todo acerto seu marca. Na "
                        f"{MARCAS_PARA_EXPLODIR}a marca elas explodem de uma "
-                       f"vez, sem rolar acerto. Passar {TURNOS_DA_MARCA} "
-                       f"turnos sem marcar o mesmo inimigo perde as marcas "
-                       f"dele; marcar de novo devolve o prazo inteiro.",
+                       f"vez, sem rolar acerto, e a marcacao se FECHA: a "
+                       f"explosao sai uma vez por combate. Passar "
+                       f"{TURNOS_DA_MARCA} turnos sem marcar o mesmo inimigo "
+                       f"perde as marcas dele; marcar de novo devolve o prazo "
+                       f"inteiro.",
                        usos=_usos("combate"),
                        # `quantidade: 1` e nao `acoes`: o ladino nao tem
                        # Multiataque, entao o turno dele JA e um golpe — e e

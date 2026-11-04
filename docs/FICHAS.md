@@ -75,7 +75,7 @@ Soma +5 em todo teste de perícia.
 
 **1x por combate.**
 
-Um ataque que marca — e abre a marcacao: dali em diante todo acerto seu marca. Na 3a marca elas explodem de uma vez, sem rolar acerto. Passar 3 turnos sem marcar o mesmo inimigo perde as marcas dele; marcar de novo devolve o prazo inteiro.
+Um ataque que marca — e abre a marcacao: dali em diante todo acerto seu marca. Na 3a marca elas explodem de uma vez, sem rolar acerto, e a marcacao se FECHA: a explosao sai uma vez por combate. Passar 3 turnos sem marcar o mesmo inimigo perde as marcas dele; marcar de novo devolve o prazo inteiro.
 
 ---
 

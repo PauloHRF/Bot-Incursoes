@@ -268,9 +268,16 @@ def valor_da_ativa(classe_id: str, tier: int, h, ataques: int) -> tuple[float, s
     # `por_golpe` ja assume, e cada acerto vale em media UM dado da marca —
     # tres marcas explodem por 3x o dado, entao por acerto da o dado. O golpe
     # da propria ativa entra na conta, porque ele tambem marca.
+    #
+    # E o teto: a explosao sai UMA vez por combate e fecha a marcacao, entao
+    # nada passa de `MARCAS_PARA_EXPLODIR` dados por uso, por mais longo que
+    # o combate seja. Hoje o teto nem chega a morder — com 1,8 acerto
+    # esperado em tres rodadas a explosao normalmente NAO sai —, mas ele e a
+    # regra, e sem ele a conta prometeria um ciclo que nao existe mais.
     if h.id == ID_DA_MARCA_FATAL:
         acertos = (1 + (m["rodadas"] - 1) * max(1, ataques)) * 0.6
-        bruto = acertos * media_do_valor(H.DANO_DA_MARCA[tier], tier)
+        dados = min(acertos, H.MARCAS_PARA_EXPLODIR)
+        bruto = dados * media_do_valor(H.DANO_DA_MARCA[tier], tier)
         v += bruto
         partes.append(f"{bruto:.0f} de marca em {m['rodadas']} rodadas")
 

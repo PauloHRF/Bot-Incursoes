@@ -109,7 +109,9 @@ def tudo_lido(canal, falas=()):
     return "\n".join([*falas, *(m.content or "" for m in canal.enviadas)])
 
 
-async def abrir_marcacao(conn, canal, cog, incursao, run, dono=JOGADORES[0]):
+async def abrir_marcacao(
+    conn, canal, cog, incursao, run, dono=JOGADORES[0], alvos=None
+):
     """Gasta a ativa do tier 2, que é o que abre a marcação do combate.
 
     Virou passo obrigatório de todo caso de marca: sem isso o ladino ataca e
@@ -120,7 +122,12 @@ async def abrir_marcacao(conn, canal, cog, incursao, run, dono=JOGADORES[0]):
     rodada = (await cog._estado_combate(run, incursao.objetivo)).rodada
     msg = await canal.fetch_message(run["mensagem_id"])
     inter = FakeInteraction(canal, dono, msg)
-    await cog.usar_habilidade(inter, run["id"], "OBJ", "marca_fatal")
+    # Com mais de um inimigo a ativa pergunta o alvo antes de gastar o uso:
+    # sem `alvos` ela para no menu e a marcacao nao abre.
+    await cog.usar_habilidade(
+        inter, run["id"], "OBJ", "marca_fatal",
+        **({"alvos": alvos} if alvos is not None else {}),
+    )
     atual = await db.buscar_run(conn, run["id"])
     assert await cog._marcacao_aberta(atual, dono), (
         f"a ativa não abriu a marcação: {inter.resposta}"
@@ -287,6 +294,85 @@ async def caso_a_marca_empilha_e_explode_na_terceira():
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print("  a marca empilha e explode na terceira: ok")
+
+
+async def caso_a_explosao_sai_uma_vez_e_fecha_a_marcacao():
+    """A explosão é uma por combate: depois dela o ladino para de marcar.
+
+    Antes o ciclo recomeçava — o inimigo ficava limpo e as três marcas
+    subiam de novo, quantas vezes o combate durasse. Agora a ativa é uma
+    janela: abre, empilha, estoura, fecha.
+
+    Dois inimigos para provar a outra metade: as marcas que sobraram em
+    OUTRO inimigo saem com a marcação. Sem ela aberta elas nunca chegariam
+    à terceira, e o 🎯 no nome dele prometeria uma explosão que não vem.
+    """
+    ordem_fixa(("p", JOGADORES[0]), ("i", 0), ("i", 1))
+    conn, canal, cog, incursao, run = await preparar(nivel=3, inimigos=2)
+    _, run, _ = await abrir_marcacao(conn, canal, cog, incursao, run, alvos=[0])
+    msg = await canal.fetch_message(run["mensagem_id"])
+
+    async def marcas(indice):
+        return await marcas_em(cog, await db.buscar_run(conn, run["id"]), incursao, indice)
+
+    async def bater(indice):
+        inter = FakeInteraction(canal, JOGADORES[0], msg)
+        await cog.atacar(inter, run["id"], "OBJ", alvo_indice=indice)
+        return str(inter.resposta)
+
+    # O primeiro inimigo até ×2, sem fechar as três.
+    for _ in range(20):
+        if await marcas(0) >= 2:
+            break
+        await bater(0)
+    assert await marcas(0) == 2, await marcas(0)
+
+    # Só então uma marca no SEGUNDO, para o prazo dela estar VIVO quando a
+    # explosão sair: marcada antes, ela venceria sozinha nos 3 turnos e o caso
+    # daria a limpeza por provada sem que ninguém limpasse nada.
+    for _ in range(20):
+        if await marcas(1):
+            break
+        await bater(1)
+    assert await marcas(1) == 1, await marcas(1)
+    run = await db.buscar_run(conn, run["id"])
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    prazo_do_outro = (await cog._marcas_de(run, estado.rodada))[1]["expira"]
+    assert prazo_do_outro > estado.rodada + 1, (
+        f"a marca do outro vence antes da explosão ({prazo_do_outro} vs "
+        f"rodada {estado.rodada}): o caso não provaria a limpeza"
+    )
+
+    # E o golpe que fecha as três.
+    falas = []
+    for _ in range(20):
+        if "explodem" in tudo_lido(canal, falas):
+            break
+        falas.append(await bater(0))
+    lido = tudo_lido(canal, falas)
+    assert "explodem" in lido, "a explosão não saiu"
+    assert "se fecha" in lido, lido[-300:]
+
+    # A torneira fechou, e a marca do outro inimigo foi com ela.
+    run = await db.buscar_run(conn, run["id"])
+    assert await cog._marcacao_aberta(run, JOGADORES[0]) is False
+    assert await cog._marcacao_gasta(run, JOGADORES[0]) is True
+    assert await marcas(1) == 0, f"a marca do outro inimigo ficou: {await marcas(1)}"
+
+    # Dez acertos depois: nenhuma marca nova, nenhuma segunda explosão.
+    quantas_explosoes = tudo_lido(canal, falas).count("explodem")
+    for _ in range(10):
+        falas.append(await bater(0))
+    depois = tudo_lido(canal, falas)
+    assert await marcas(0) == 0, f"voltou a marcar: {await marcas(0)}"
+    assert await marcas(1) == 0, f"voltou a marcar o outro: {await marcas(1)}"
+    assert depois.count("explodem") == quantas_explosoes, (
+        "saiu uma segunda explosão no mesmo combate"
+    )
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  a explosão sai uma vez e fecha a marcação do combate: ok")
 
 
 async def caso_a_marca_cai_sozinha_depois_de_tres_turnos():
@@ -489,6 +575,7 @@ async def main():
         await caso_atacar_sem_a_ativa_nao_marca()
         await caso_o_uso_e_o_interruptor_e_vale_pelo_combate()
         await caso_a_marca_empilha_e_explode_na_terceira()
+        await caso_a_explosao_sai_uma_vez_e_fecha_a_marcacao()
         await caso_a_marca_cai_sozinha_depois_de_tres_turnos()
         await caso_a_explosao_cresce_com_o_tier()
         await caso_a_furtividade_congela_a_ameaca()

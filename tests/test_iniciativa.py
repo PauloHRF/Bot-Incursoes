@@ -20,6 +20,7 @@ from fakes import (  # noqa: E402
     FakeCanal,
     FakeInteraction,
     criar_grupo,
+    leu,
     iniciativa_de_verdade,
     montar_conteudo,
     salas_de_combate,
@@ -301,6 +302,70 @@ async def caso_guardada_de_quem_foi_preso_devolve_o_uso():
     print("  a habilidade guardada de quem foi preso nao sai, e o uso volta: ok")
 
 
+async def caso_curado_antes_da_virada_age_na_mesma_rodada():
+    """A vez perdida no chão não é gasta: levantado na rodada, ele age nela.
+
+    O caído é o PRIMEIRO da iniciativa, então a vez dele queima no topo da
+    rodada, antes de qualquer cura existir. Quando a cura chega, a fila já
+    passou por ele e não volta — e ele clicava, lia "sai quando a iniciativa
+    chegar em você" (uma promessa que a fila não podia mais cumprir) e a ação
+    era descartada na virada da rodada, levando dentro dela o uso da
+    habilidade ou a poção.
+
+    Três jogadores de propósito: com dois, o monstro age logo depois da cura
+    e a rodada vira na hora — o levantado agiria na rodada 2 e o caso passaria
+    sem provar nada.
+    """
+    caido, curandeiro, terceiro = JOGADORES[0], JOGADORES[1], JOGADORES[2]
+    ordem_fixa(("p", caido), ("p", curandeiro), ("p", terceiro), ("i", 0))
+    conn, canal, cog, incursao, run = await preparar(
+        monstro=PARADO, quantos=3, classe="paladino", nivel=3
+    )
+    await db.definir_hp(conn, run["id"], caido, 0)
+    run = await abrir(conn, cog, incursao, run)
+    passo = cog._passo(run)
+
+    # A vez dele queimou na abertura, e ele segue no chão.
+    assert await situacao(conn, cog, run) == (1, 1), await situacao(conn, cog, run)
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    assert estado.combatente(caido).caido
+
+    # O curandeiro levanta. A rodada NÃO virou: o terceiro ainda não agiu.
+    await cog.usar_habilidade(
+        FakeInteraction(canal, curandeiro), run["id"], "OBJ",
+        "cura_pelas_maos", alvos=[caido],
+    )
+    assert await situacao(conn, cog, run) == (1, 2), await situacao(conn, cog, run)
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    assert not estado.combatente(caido).caido, "a cura tinha de levantar"
+    hp_antes = estado.inimigo(0).hp_atual
+
+    # Ele clica, e a ação sai AGORA — fora da ordem, porque a fila não volta.
+    inter = FakeInteraction(canal, caido)
+    await cog.atacar(inter, run["id"], "OBJ")
+    lido = leu(inter)
+    assert "Ação guardada" not in lido, lido
+    turno = await db.turno_de(conn, run["id"], passo, 1, caido)
+    assert turno is not None and turno["resolvida"], turno
+    # A prova é que o golpe ROLOU nesta rodada, e não que ele doeu: a CA da
+    # Estátua é 1, mas o 1 natural ainda erra — exigir dano fazia o caso ficar
+    # vermelho uma vez em vinte por azar, que não é a falha que ele aponta.
+    assert "🎲" in lido, lido
+    estado = await cog._estado_combate(
+        await db.buscar_run(conn, run["id"]), incursao.objetivo
+    )
+    if "acertou" in lido:
+        assert estado.inimigo(0).hp_atual < hp_antes, (
+            f"acertou e não doeu: inimigo em {estado.inimigo(0).hp_atual}"
+        )
+    # E ele não age duas vezes: o segundo clique é recusado na mesma rodada.
+    outro = FakeInteraction(canal, caido)
+    await cog.atacar(outro, run["id"], "OBJ")
+    assert "já atacou" in leu(outro), leu(outro)
+
+    print("  curado antes da virada, ele age na mesma rodada: ok")
+
+
 async def caso_rage_guardada_vale_contra_o_monstro_seguinte():
     ordem_fixa(("p", JOGADORES[0]), ("i", 0))
     conn, canal, cog, incursao, run = await preparar(
@@ -409,6 +474,7 @@ async def main():
         await caso_atordoado_depois_da_vez_perde_a_proxima()
         await caso_atordoado_antes_da_vez_perde_a_desta()
         await caso_guardada_de_quem_foi_preso_devolve_o_uso()
+        await caso_curado_antes_da_virada_age_na_mesma_rodada()
         await caso_rage_guardada_vale_contra_o_monstro_seguinte()
         await caso_vencer_a_ultima_sala_abre_o_objetivo()
     finally:
