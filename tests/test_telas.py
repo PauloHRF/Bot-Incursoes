@@ -143,6 +143,38 @@ def caso_cartao_nomeia_quem_rolou_e_quem_falta():
     print("  o cartão da sala nomeia quem rolou e quem falta: ok")
 
 
+def caso_o_caminho_diz_passou_ou_falhou():
+    """O resumo do fim marca cada sala com ✅ ou ❌, e não com a dificuldade.
+
+    A dificuldade é a CD escrita no banco — número de quem monta a sala. Quem
+    lê o fecho de uma run quer saber em qual sala o grupo se deu mal.
+    """
+    import discord
+
+    def feita(ident, nome, dificuldade):
+        return Sala(
+            id=ident, nome=nome, tipo="Armadilha", descricao="",
+            dificuldade=dificuldade, cd=14, alvo_progresso=5,
+        )
+
+    venceu = feita("A", "Corredor que range", "Fácil")
+    perdeu = feita("B", "Poço sem fundo", "Difícil")
+    e = discord.Embed()
+    E.campo_caminho(e, [(venceu, True), (perdeu, False)])
+
+    campo = next(f for f in e.fields if f.name.startswith("Caminho"))
+    assert f"✅ 🕸️ **{venceu.nome}**" in campo.value, campo.value
+    assert f"❌ 🕸️ **{perdeu.nome}**" in campo.value, campo.value
+    # A dificuldade saiu de vez.
+    for rotulo in ("Fácil", "Média", "Difícil"):
+        assert rotulo not in campo.value, (rotulo, campo.value)
+    # Caminho vazio não desenha campo nenhum.
+    vazio = discord.Embed()
+    E.campo_caminho(vazio, [])
+    assert not vazio.fields
+    print("  o caminho marca passou ou falhou, sem a dificuldade: ok")
+
+
 # ------------------------------------------------------ com banco e canal
 
 
@@ -482,6 +514,7 @@ async def main():
     caso_painel_de_um_so_nao_fala_do_grupo()
     caso_painel_avisa_o_teto()
     caso_cartao_nomeia_quem_rolou_e_quem_falta()
+    caso_o_caminho_diz_passou_ou_falhou()
 
     await caso_o_cartao_vai_marcando_quem_rolou()
     await caso_quem_esta_caido_nao_entra_na_conta()

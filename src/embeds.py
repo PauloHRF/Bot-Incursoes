@@ -195,11 +195,9 @@ def recrutamento(
         color=COR_INCURSAO,
     )
     e.add_field(name="Organização", value=incursao.organizacao, inline=True)
-    e.add_field(
-        name="Caminho",
-        value=f"{incursao.tamanho} — {incursao.passos} salas + objetivo",
-        inline=True,
-    )
+    # So o tamanho: quantas salas a run tem nao muda a decisao de entrar, e o
+    # "+ objetivo" era vocabulario de quem escreve conteudo.
+    e.add_field(name="Caminho", value=incursao.tamanho, inline=True)
     e.add_field(name="Recompensa", value=f"{incursao.recompensa_mes} MEs", inline=True)
     e.add_field(name="Quem pode entrar", value=exigencia_de_tier(incursao), inline=False)
     lista = "\n".join(f"{i}. {m.mention}" for i, m in enumerate(membros, start=1)) or "*ninguém ainda*"
@@ -281,7 +279,7 @@ def votacao(
     else:
         rodape = (
             f"{len(votos)} de {total} votaram · faltam {maioria - lider} voto(s) "
-            f"numa mesma sala para fechar. Sem prazo: a votação espera."
+            f"numa mesma sala para fechar."
         )
     return _rodape(e, rodape)
 
@@ -531,7 +529,7 @@ def status(
     sala: Optional[Sala],
     ja_rolaram: int,
     condicoes_do_grupo: Optional[dict[int, dict[str, int]]] = None,
-    apelidos: Optional[dict[int, str]] = None,
+    nomes: Optional[dict[int, str]] = None,
 ) -> discord.Embed:
     rotulos = {
         "recrutando": "montando o grupo",
@@ -574,7 +572,7 @@ def status(
             texto = linha_de_condicoes(carregadas)
             if not texto:
                 continue
-            quem = (apelidos or {}).get(user_id, f"<@{user_id}>")
+            quem = (nomes or {}).get(user_id, f"<@{user_id}>")
             linhas.append(f"**{quem}** · {texto}")
         if linhas:
             e.add_field(
@@ -1027,10 +1025,19 @@ def descanso_fechado(
     Todo outro tipo de sala já deixava um `resultado_sala` atrás de si. O
     descanso era o único que não deixava nada, porque ele não tem rolagem e
     chegava em `_concluir_sala` sem resolução nenhuma.
+
+    **E ele leva a Recuperação junto.** Esse campo só existia no cartão com
+    botões, então o que o descanso devolveu — o texto da sala e os usos das
+    habilidades *por descanso* — sumia do canal junto com os botões. Era a
+    informação mais valiosa da sala depois do HP, e a única que não voltava.
     """
     e = discord.Embed(
         title=f"🏕️ {sala.nome} — o grupo descansou", color=COR_SUCESSO
     )
+    recuperado = ["As habilidades **por descanso** voltaram a ter uso."]
+    if sala.recompensa:
+        recuperado.insert(0, sala.recompensa)
+    e.add_field(name="Recuperação", value="\n".join(recuperado), inline=False)
     if linhas:
         e.add_field(name="Como o grupo saiu", value="\n".join(linhas), inline=False)
     return e
@@ -1055,18 +1062,22 @@ def campo_ouro(e: discord.Embed, ouro: Optional[list[tuple[str, int]]]) -> None:
     )
 
 
-def campo_caminho(e: discord.Embed, caminho: Optional[list[Sala]]) -> None:
-    """O histórico da run: por onde o grupo passou, na ordem.
+def campo_caminho(
+    e: discord.Embed, caminho: Optional[list[tuple[Sala, bool]]]
+) -> None:
+    """O histórico da run: por onde o grupo passou, na ordem, e como saiu.
 
     É o que sobra no canal — as mensagens de cada passo somem quando o passo
     seguinte abre, e o caminho inteiro reaparece aqui, no fim.
     """
     if not caminho:
         return
+    # Passou ou falhou, e nao a dificuldade: a dificuldade e a CD escrita no
+    # banco, numero de quem monta a sala. Quem le o fecho quer saber em qual
+    # sala o grupo se deu mal.
     linhas = [
-        f"{i}. {EMOJI_TIPO.get(s.tipo, '•')} **{s.nome}**"
-        + (f" — {s.dificuldade}" if s.dificuldade else "")
-        for i, s in enumerate(caminho, start=1)
+        f"{i}. {'✅' if venceu else '❌'} {EMOJI_TIPO.get(s.tipo, '•')} **{s.nome}**"
+        for i, (s, venceu) in enumerate(caminho, start=1)
     ]
     bloco = "\n".join(linhas)
     if len(bloco) > 1024:
@@ -1078,7 +1089,7 @@ def run_fracassada(
     incursao: Incursao,
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
-    caminho: Optional[list[Sala]] = None,
+    caminho: Optional[list[tuple[Sala, bool]]] = None,
     sala: Optional[Sala] = None,
     ouro: Optional[list[tuple[str, int]]] = None,
 ) -> discord.Embed:
@@ -1118,7 +1129,7 @@ def run_desistida(
     passo: int = 0,
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
-    caminho: Optional[list[Sala]] = None,
+    caminho: Optional[list[tuple[Sala, bool]]] = None,
     ouro: Optional[list[tuple[str, int]]] = None,
     perdido: int = 0,
 ) -> discord.Embed:
@@ -1175,7 +1186,7 @@ def run_concluida(
     estado=None,
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
-    caminho: Optional[list[Sala]] = None,
+    caminho: Optional[list[tuple[Sala, bool]]] = None,
     ouro: Optional[list[tuple[str, int]]] = None,
 ) -> discord.Embed:
     """O desfecho da run: vitória, como o grupo saiu, recompensa e pontos."""
@@ -1199,9 +1210,7 @@ def run_concluida(
     )
     campo_ouro(e, ouro)
     _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
-    # Os MEs sao da planilha do grupo; o ouro e do bot. Sao duas economias, e
-    # o rodape diz qual delas pede anotacao a mao.
-    return _rodape(e, "Anote os MEs na planilha; o ouro o bot já guardou.")
+    return e
 
 
 # ------------------------------------------- pontos de Organizacao

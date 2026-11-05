@@ -12,7 +12,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes as cl, config, database as db, motor  # noqa: E402
+from src import classes as cl, config, database as db, motor, rules  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.rules import mod_pericia  # noqa: E402
 from fakes import (  # noqa: E402
@@ -180,14 +180,25 @@ def caso_o_dado_cresce_no_tier_4():
 
 
 async def caso_inspiracao_na_pericia():
-    """CD alta de propósito: a falha é quase certa, e o d10 socorre ou não."""
-    dificil = [
-        sala("S1", "Evento", cd=30, alvo_progresso=1, pericias=["Atletismo"]),
-        sala("S2", "Evento", cd=30, alvo_progresso=1, pericias=["Atletismo"]),
-        sala("S3", "Evento", cd=30, alvo_progresso=1, pericias=["Atletismo"]),
-    ]
-    socorreu = False
-    for _ in range(14):
+    """A falha por 1 é socorrida pelo d10 — e isso não depende de sorte.
+
+    O caso rodava até 14 vezes esperando que a falha caísse no alcance do
+    dado, e **falhava uma vez em cinco**: a CD efetiva da sala é 36 (30 + 6
+    do tier), o modificador do bardo é +11, e o d10 só chega quando o d20 sai
+    15 ou mais — 10,5% por tentativa. Agora o d20 é fixo e a CD é escolhida
+    para a falha ser de exatamente 1 ponto: qualquer d10 cobre, e o socorro é
+    certo.
+    """
+    # 10 + 11 = 21 contra CD efetiva 22: falha por 1.
+    de_verdade = motor.rolar_d20
+    motor.rolar_d20 = lambda rng=None, vantagem=False, desvantagem=False: 10
+    try:
+        cd_escrita = 22 - rules.cd_no_tier(0, rules.tier(9))
+        dificil = [
+            sala(f"S{i}", "Evento", cd=cd_escrita, alvo_progresso=1,
+                 pericias=["Atletismo"])
+            for i in (1, 2, 3)
+        ]
         conn, canal, cog, incursao, run_id = await preparar(
             escolhas={"inspiracao_t2": "inspira_pericia"}, salas=dificil
         )
@@ -197,20 +208,31 @@ async def caso_inspiracao_na_pericia():
         await db.gravar_opcoes(conn, run_id, 1, ["S1", "S2", "S3"])
         inter = FakeInteraction(canal, JOGADORES[0])
         await cog.rolar(inter, run_id, "S1")
-        if "de Heroi" in (leu(inter) or ""):
-            socorreu = True
-            # o uso saiu, e o canal contou
-            anuncios = " ".join(str(m.content or "") for m in canal.enviadas)
-            assert "socorre" in anuncios, anuncios[-200:]
-            break
-    assert socorreu, "em 14 tentativas o socorro na pericia nunca entrou"
-    print("  Inspiracao na pericia socorre o teste de sala: ok")
+
+        lido = leu(inter) or ""
+        assert "de Heroi" in lido, lido
+        # O uso saiu, e o canal contou.
+        anuncios = " ".join(str(m.content or "") for m in canal.enviadas)
+        assert "socorre" in anuncios, anuncios[-200:]
+        gastos = await db.usos_da_run(conn, run_id, JOGADORES[0])
+        assert any(c[0] == "inspira_pericia" for c in gastos), gastos
+    finally:
+        motor.rolar_d20 = de_verdade
+    print("  Inspiracao na pericia socorre a falha por 1: ok")
 
 
 async def caso_inspiracao_no_ataque():
-    """CA 40: o golpe erra sempre, e o d10 nunca cobre — o uso fica guardado."""
+    """CA fora de alcance: o d10 nunca cobre, e o uso fica guardado.
+
+    A CA é 60 e não a 40 do Algoz: com +11 de acerto, um d20 de 19 erra por
+    10 — e o teto do d10 é exatamente 10. O caso dizia "falta 18 ou mais" e a
+    conta não fechava: uma vez em duzentas o dado cobria, o uso saía e a
+    suíte ficava vermelha por sorte. Com 60 a diferença é 30, e nenhum dado
+    do catálogo alcança.
+    """
     conn, canal, cog, incursao, run_id = await preparar(
-        escolhas={"inspiracao_t2": "inspira_ataque"}, monstro=CRUEL, monstros=1
+        escolhas={"inspiracao_t2": "inspira_ataque"},
+        monstro={**CRUEL, "ca": 60}, monstros=1,
     )
     run = await em_combate(conn, cog, incursao, run_id)
     estado = await cog._estado_combate(run, incursao.objetivo)
@@ -219,7 +241,6 @@ async def caso_inspiracao_no_ataque():
     inter = FakeInteraction(canal, JOGADORES[0])
     await cog.atacar(inter, run["id"], "OBJ", alvo)
     gastos = await db.usos_da_run(conn, run_id, JOGADORES[0])
-    # CA 40 contra +11: falta 18 ou mais, e o d10 nunca cobre
     assert not any(c[0] == "inspira_ataque" for c in gastos), gastos
     print("  no ataque impossivel a Inspiracao nao queima o uso: ok")
 

@@ -1052,6 +1052,12 @@ async def caso_o_descanso_deixa_o_desfecho_no_canal():
     for nome in nomes.values():
         assert nome in valor, f"{nome} não apareceu no desfecho: {valor}"
 
+    # E a RECUPERAÇÃO vem com ele. O campo só existia no cartão com botões,
+    # então o que o descanso devolveu sumia junto com os botões — e os usos
+    # das habilidades por descanso nunca eram ditos em lugar nenhum.
+    recuperacao = campos.get("Recuperação", "")
+    assert "por descanso" in recuperacao, campos
+
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print("  o descanso deixa o desfecho no canal: ok")

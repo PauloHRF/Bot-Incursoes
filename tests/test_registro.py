@@ -544,6 +544,68 @@ async def caso_alterar_nao_abre_pericia_em_tier_que_nao_da():
     print("  tier sem vaga de pericia nao oferece pericia: ok")
 
 
+async def caso_o_registro_so_e_anunciado_depois_da_decisao():
+    """O canal só sabe do personagem quando ele está pronto.
+
+    O anúncio saía logo depois das proficiências, e a decisão do tier 1 vinha
+    atrás: o canal lia "registrou Fulano" e, em seguida, "decidiu Fighting
+    Style de Fulano" — duas mensagens para um personagem que ainda estava
+    sendo feito, e a ficha do anúncio saía SEM a decisão dentro.
+
+    Agora o registro entra no mesmo `_fluxo` do upar e do alterar, que
+    anuncia uma vez, no fim. Quem não tem decisão de tier 1 é anunciado na
+    hora, como antes.
+    """
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+
+    # O Clerigo escolhe a magia de tier 1. (O Guerreiro nao serve: o
+    # Fighting Style dele e do tier 2.)
+    inter = await registrar(
+        ficha, canal, dono, "Vhalor", "clerigo", pericias=["Religião"]
+    )
+    personagem = await db.personagem_por_nome(conn, GUILD, dono, "Vhalor")
+    assert personagem["pendencias"], "o clerigo decide a magia no tier 1"
+
+    # Ainda NAO anunciou: a decisão está pendente.
+    anuncios = [m for m in canal.mensagens if "registrou" in (m.content or "")]
+    assert not anuncios, [m.content for m in anuncios]
+    assert personagem["id"] in ficha._fluxo, ficha._fluxo
+
+    # O menu da decisão veio por followup, e decidir fecha o fluxo.
+    escolha = menu_de(inter)
+    assert escolha is not None, "a decisão do tier 1 não foi oferecida"
+    escolha.menu._values = [escolha.menu.options[0].value]
+    await escolha._escolher(FakeInteraction(canal, dono))
+
+    # Agora sim: UMA mensagem, com a ficha já decidida.
+    anuncios = [m for m in canal.mensagens if "registrou" in (m.content or "")]
+    assert len(anuncios) == 1, [m.content for m in anuncios]
+    assert "Vhalor" in anuncios[0].content, anuncios[0].content
+    assert anuncios[0].embeds, "o anúncio leva a ficha"
+    campos = {f.name: f.value for f in anuncios[0].embeds[0].fields}
+    lista = campos[next(n for n in campos if n.startswith("Habilidades"))]
+    opcao = escolha.menu.options[0]
+    assert opcao.label in lista, (opcao.label, lista)
+    assert personagem["id"] not in ficha._fluxo, "o fluxo tinha de fechar"
+
+    print("  o registro é anunciado uma vez, depois da decisão: ok")
+
+
+async def caso_classe_sem_decisao_e_anunciada_na_hora():
+    """Sem pendência de tier 1, o anúncio não espera nada."""
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+    # O Ladino tem o Reliable Talent no tier 1, que é passiva: nada a decidir.
+    await registrar(ficha, canal, dono, "Sombra", "ladino", pericias=["Furtividade"])
+    personagem = await db.personagem_por_nome(conn, GUILD, dono, "Sombra")
+    assert not personagem["pendencias"], personagem["pendencias"]
+    anuncios = [m for m in canal.mensagens if "registrou" in (m.content or "")]
+    assert len(anuncios) == 1, [m.content for m in anuncios]
+    assert personagem["id"] not in ficha._fluxo
+    print("  classe sem decisão é anunciada na hora: ok")
+
+
 async def main():
     try:
         caso_tabela_das_classes()
@@ -560,6 +622,8 @@ async def main():
         await caso_menu_limita_as_proficiencias()
         await caso_classe_pendente_e_recusada()
         await caso_nome_repetido_e_limite()
+        await caso_o_registro_so_e_anunciado_depois_da_decisao()
+        await caso_classe_sem_decisao_e_anunciada_na_hora()
         await caso_upar_sobe_um_nivel()
         await caso_upar_avisa_pericia_nova_e_para_no_teto()
     finally:

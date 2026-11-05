@@ -1217,6 +1217,22 @@ async def salas_visitadas(conn: aiosqlite.Connection, run_id: int) -> list[str]:
         return [r["sala_id"] for r in await cur.fetchall()]
 
 
+async def visitadas_com_desfecho(
+    conn: aiosqlite.Connection, run_id: int
+) -> list[tuple[str, bool]]:
+    """As salas visitadas e se cada uma foi superada: [(sala_id, venceu)].
+
+    Pelo PASSO, e não pelo id: a mesma sala pode ser visitada em dois passos
+    de runs diferentes, e é o passo que diz qual linha é qual.
+    """
+    async with conn.execute(
+        "SELECT sala_id, superada FROM run_salas"
+        " WHERE run_id = ? AND visitada = 1 ORDER BY passo",
+        (run_id,),
+    ) as cur:
+        return [(r["sala_id"], bool(r["superada"])) for r in await cur.fetchall()]
+
+
 async def opcoes_do_passo(conn: aiosqlite.Connection, run_id: int, passo: int) -> list[str]:
     async with conn.execute(
         "SELECT sala_id FROM run_mapa WHERE run_id = ? AND passo = ? ORDER BY posicao",

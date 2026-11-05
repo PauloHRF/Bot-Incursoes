@@ -486,6 +486,7 @@ async def caso_desistir_mostra_cartao_e_paga_as_salas():
     assert incursao.nome in embed.title, embed.title
     campos = {f.name: f.value for f in embed.fields}
 
+
     # O ouro das salas entrou, e o cartão mostra.
     for p in await db.quem_recebe_da_run(conn, run["id"]):
         assert await db.ouro(conn, p["id"]) == esperado, (

@@ -545,16 +545,33 @@ class Ficha(commands.Cog):
             embed=embed_ficha(personagem, interaction.user),
             view=None,
         )
+        # A decisao do tier 1 e do REGISTRO. Sem isto ela ficava pendente e
+        # aparecia na primeira subida, junto com a do tier 2 — o jogador
+        # escolhia a magia de tier 1 ao virar tier 2, sempre um tier atrasado.
+        #
+        # E o ANUNCIO espera por ela. O canal lia "registrou Fulano" e, logo
+        # depois, "decidiu Fighting Style de Fulano": duas mensagens para um
+        # personagem que ainda estava sendo feito, e a ficha do anuncio saia
+        # sem a decisao dentro. Com pendencia, o registro entra no mesmo
+        # `_fluxo` do upar e do alterar, que anuncia uma vez, no fim.
+        pendencias = [h.id for _t, h in personagem.get("pendencias") or []]
+        if pendencias:
+            self._fluxo[personagem_id] = {
+                "tipo": "registrar",
+                "nivel": 1,
+                "faltam": pendencias,
+                # As proficiencias ja foram escolhidas no seletor acima.
+                "pericias": False,
+            }
+            await self._seguir_fluxo(interaction, personagem, por_followup=True)
+            return
+
         await self._anunciar(
             interaction,
             f"📜 {interaction.user.mention} registrou **{personagem['nome']}**, "
             f"{escolhida.nome} de nivel 1.",
             embed=embed_ficha(personagem, interaction.user),
         )
-        # A decisao do tier 1 e do REGISTRO. Sem isto ela ficava pendente e
-        # aparecia na primeira subida, junto com a do tier 2 — o jogador
-        # escolhia a magia de tier 1 ao virar tier 2, sempre um tier atrasado.
-        await self._abrir_pendencia_em_seguida(interaction, personagem)
 
     @staticmethod
     def _classes_prontas() -> str:
@@ -950,11 +967,19 @@ class Ficha(commands.Cog):
             )
         atualizado = await db.buscar_personagem(self.bot.db, personagem["id"])
         alvo = tier(passo["nivel"])
-        verbo = "subiu" if passo["tipo"] == "upar" else "refez o tier"
-        texto = (
-            f"\U0001f4c8 {interaction.user.mention} {verbo} "
-            f"**{atualizado['nome']}** — **tier {alvo}**."
-        )
+        if passo["tipo"] == "registrar":
+            classe = cl.classe(atualizado.get("classe"))
+            texto = (
+                f"\U0001f4dc {interaction.user.mention} registrou "
+                f"**{atualizado['nome']}**, "
+                f"{classe.nome if classe else atualizado.get('classe')} de nivel 1."
+            )
+        else:
+            verbo = "subiu" if passo["tipo"] == "upar" else "refez o tier"
+            texto = (
+                f"\U0001f4c8 {interaction.user.mention} {verbo} "
+                f"**{atualizado['nome']}** — **tier {alvo}**."
+            )
         embed = embed_ficha(atualizado, interaction.user)
         if por_followup or interaction.response.is_done():
             await interaction.followup.send(texto, embed=embed)
@@ -1015,33 +1040,6 @@ class Ficha(commands.Cog):
         await self._anunciar(
             interaction, anuncio, embed=embed_ficha(personagem, interaction.user)
         )
-
-    async def _abrir_pendencia_em_seguida(
-        self, interaction: discord.Interaction, personagem: dict[str, Any]
-    ) -> None:
-        """Abre a proxima decisao por followup, com a resposta ja gasta.
-
-        O registro usa a resposta da interacao no seletor de pericias, entao
-        aqui nao da para responder de novo — vai por followup. Da segunda
-        decisao em diante a cadeia de `gravar_escolha` cuida, porque cada
-        clique do menu traz uma interacao nova.
-        """
-        pendencias = personagem.get("pendencias") or []
-        if not pendencias:
-            return
-        _tier_da, habilidade = pendencias[0]
-        texto, view = self._seletor_da_escolha(personagem, habilidade)
-        faltam = (
-            f"\nDepois desta ainda faltam {len(pendencias) - 1}."
-            if len(pendencias) > 1 and view is not None
-            else ""
-        )
-        try:
-            await interaction.followup.send(
-                f"🧭 Decida agora: {texto}{faltam}", view=view, ephemeral=True
-            )
-        except discord.HTTPException:
-            pass
 
     async def abrir_escolha(
         self, interaction: discord.Interaction, personagem_id: int, habilidade_id: str

@@ -213,6 +213,11 @@ combate sem devolver a rodada: ele clicava, lia *"sai quando a iniciativa chegar
 — uma promessa que a fila não podia mais cumprir — e a ação era descartada na virada,
 levando dentro dela o uso da habilidade ou a poção.
 
+O cartão que fica depois do descanso leva a **Recuperação** com ele: o texto da sala e o
+aviso de que as habilidades *por descanso* voltaram a ter uso. Esse campo só existia no
+cartão com botões, que sai do canal quando o passo seguinte abre — então o que o descanso
+devolveu sumia junto com os botões, e os usos recarregados nunca eram ditos em lugar nenhum.
+
 **Cura levanta quem está caído** — a apontada em alguém, a que cai no grupo e a que vem
 por turno —, e **voltar do chão custa 1 ponto de Exaustão**. O preço é de sair do zero,
 não da cura: curar quem está de pé não cobra nada. Como a Exaustão não decai com o
@@ -366,6 +371,10 @@ escolha, não só na conta — e a Esperteza reverte isso.
 
 ### Onde o grupo vê isso
 
+Em toda frase que fala de efeito, quem é nomeado é o **personagem**, e não o apelido do
+Discord: a condição é da ficha, e quem joga com duas não se reconhece pela conta. O apelido
+serve para **marcar** alguém na hora de agir, que é outra coisa.
+
 No **resultado da sala**, a benção ou a maldição que acabou de entrar ganha **campo
 próprio**, com o ícone e o nome no título e, dentro:
 
@@ -429,6 +438,12 @@ a emboscada é castigo por falhar, e pagar dobrado por ela seria pagar pelo erro
 **Os itens não entram no bot.** Tesouro vencido anuncia o que caiu no texto da sala; quem
 guarda poções, itens de carga e material de craft é a planilha do grupo, como já acontece
 com os MEs.
+
+### O caminho, no fecho de qualquer run
+
+O resumo marca cada sala com **✅ ou ❌** — se o grupo passou nela ou não. Mostrava a
+*dificuldade*, que é a CD escrita no banco: número de quem monta a sala, não de quem a
+jogou. Quem lê o fecho quer saber **onde o grupo se deu mal**.
 
 ### O cartão da desistência
 

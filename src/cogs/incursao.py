@@ -690,8 +690,19 @@ class Incursoes(commands.Cog):
                 membro = None
         return membro or await self.bot.fetch_user(user_id)
 
-    async def _apelidos(self, run: dict[str, Any]) -> dict[int, str]:
-        return {m.id: m.display_name for m in await self._membros(run)}
+    async def _nomes(self, run: dict[str, Any]) -> dict[int, str]:
+        """{user_id: nome do PERSONAGEM} na run.
+
+        A condição é do personagem, não da conta: quem joga com dois não se
+        reconhece pelo apelido do Discord, e a mesma pessoa pode estar numa
+        run com uma ficha e em outra com a outra. Onde a frase fala de efeito,
+        é este nome que entra — o apelido serve para MARCAR alguém, que é
+        outra coisa (ver `_chamar`).
+        """
+        return {
+            p["user_id"]: p["nome"]
+            for p in await db.personagens_da_run(self.bot.db, run["id"])
+        }
 
     def _incursao_da_run(self, run: dict[str, Any]) -> Optional[Incursao]:
         return self.incursoes.get(run["incursao_id"])
@@ -2902,14 +2913,19 @@ class Incursoes(commands.Cog):
             pass
         await db.atualizar_run(self.bot.db, run["id"], mensagem_id=None)
 
-    async def _caminho(self, run: dict[str, Any]) -> list[Sala]:
-        """As salas por onde o grupo passou, na ordem, para o resumo do fim."""
+    async def _caminho(self, run: dict[str, Any]) -> list[tuple[Sala, bool]]:
+        """As salas por onde o grupo passou, com o desfecho de cada uma.
+
+        Devolve pares `(sala, venceu)`: o cartao do fim mostrava a
+        DIFICULDADE de cada sala, que e o numero de quem escreve conteudo —
+        quem leu a run quer saber se passou ou se se deu mal ali.
+        """
         incursao = self._incursao_da_run(run)
         if not incursao:
             return []
-        visitadas = await db.salas_visitadas(self.bot.db, run["id"])
-        salas = [self._sala(incursao, sala_id) for sala_id in visitadas]
-        return [s for s in salas if s is not None]
+        pares = await db.visitadas_com_desfecho(self.bot.db, run["id"])
+        caminho = [(self._sala(incursao, sala_id), venceu) for sala_id, venceu in pares]
+        return [(s, venceu) for s, venceu in caminho if s is not None]
 
     async def _chamar(
         self, run: dict[str, Any], user_ids: Optional[list[int]] = None
@@ -4875,9 +4891,10 @@ class Incursoes(commands.Cog):
         canal = await self._canal(run)
         if not canal:
             return
-        apelidos = await self._apelidos(run)
+        nomes = await self._nomes(run)
         linhas = [
-            f"{condicoes.rotulo(cid)} passa em {apelidos.get(user_id, f'<@{user_id}>')}"
+            f"{condicoes.rotulo(cid)} passa em "
+            f"**{nomes.get(user_id) or f'<@{user_id}>'}**"
             for user_id, cid in acabaram
         ]
         await canal.send("⏳ " + "; ".join(linhas) + ".")
@@ -5517,7 +5534,8 @@ class Incursoes(commands.Cog):
                 sala,
                 len(registros),
                 await db.condicoes_da_run(self.bot.db, run["id"]),
-                await self._apelidos(run),
+                # Nomes de PERSONAGEM: o campo fala do que cada ficha carrega.
+                await self._nomes(run),
             )
         )
 
