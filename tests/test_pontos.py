@@ -162,7 +162,12 @@ async def caso_fracasso_credita_so_participacao():
     run = await montar_run(conn, canal, cog, "derrota")
     run = await atravessar(conn, canal, cog, run, incursao)
 
-    for _ in range(len(JOGADORES) + 2):
+    # Folga de sobra no limite: o Ceifador mata UM por rodada, entao cinco
+    # rodadas bastariam — mas o laco e de tamanho fixo contra um desfecho que
+    # depende de rolagem, e com `len(JOGADORES) + 2` ele estourava de vez em
+    # quando (visto uma vez em 20 execucoes). O que o caso prova nao muda com
+    # o limite maior; o que muda e ele deixar de falhar por azar.
+    for _ in range(len(JOGADORES) * 4):
         atual = await db.buscar_run(conn, run["id"])
         if atual["status"] != "objetivo":
             break

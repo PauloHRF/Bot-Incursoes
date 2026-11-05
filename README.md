@@ -61,7 +61,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/ficha conferir <membro> [personagem]` | (admin) Vê a ficha de outro jogador, em privado |
 | `/ficha personagens <membro>` | (admin) Lista os personagens de outro jogador |
 | `/incursao listar [tier]` | Mostra as incursões disponíveis, filtráveis por tier |
-| `/incursao entrar <tier> <incursão> [personagem]` | Abre o recrutamento no canal; o tier filtra a lista de incursões |
+| `/incursao entrar <tier> <incursão> [personagem]` | Abre o recrutamento no canal; o tier se autocompleta com o que existe e filtra a lista de incursões |
 | `/incursao sala` | Reenvia a mensagem da sala atual |
 | `/incursao teste` | Rola o teste da sala (mesmo efeito do botão) |
 | `/incursao atacar` | Ataca o primeiro inimigo de pé, na sua vez da iniciativa (mesmo efeito do botão) |

@@ -816,9 +816,38 @@ class Incursoes(commands.Cog):
             )
         return opcoes[:25]
 
+    async def _sugerir_tiers(
+        self, interaction: discord.Interaction, atual: str
+    ) -> list[app_commands.Choice[int]]:
+        """Os tiers que TÊM incursão carregada, e quantas cada um tem.
+
+        Uma lista fixa de 1 a 5 ofereceria tier vazio — hoje não há conteúdo
+        de tier 3 nem de 5 —, e o jogador só descobriria isso no campo
+        seguinte, com o autocompletar do id vindo vazio e sem explicação.
+
+        A de tier livre conta em TODOS, porque ela é jogável em todos.
+        """
+        quantas: dict[int, int] = {}
+        for inc in self.incursoes.values():
+            for t in range(1, TIER_MAXIMO + 1):
+                if self._e_do_tier(inc, t):
+                    quantas[t] = quantas.get(t, 0) + 1
+        termo = atual.strip()
+        return [
+            # "incursão"/"incursões" escrito por extenso: o plural troca o
+            # ã por õ e nao sai de somar um sufixo ("incursãoes").
+            app_commands.Choice(
+                name=f"Tier {t} — {n} " + ("incursão" if n == 1 else "incursões"),
+                value=t,
+            )
+            for t, n in sorted(quantas.items())
+            if not termo or str(t).startswith(termo)
+        ][:25]
+
     @grupo.command(name="listar", description="Mostra as incursões disponíveis")
     @app_commands.describe(tier_pedido="Só as incursões deste tier (vazio: todas)")
     @app_commands.rename(tier_pedido="tier")
+    @app_commands.autocomplete(tier_pedido=_sugerir_tiers)
     async def listar(
         self,
         interaction: discord.Interaction,
@@ -888,7 +917,11 @@ class Incursoes(commands.Cog):
     # saber o tier do PERSONAGEM — e o erro sairia como "'int' object is not
     # callable", que nao aponta para nada.
     @app_commands.rename(tier_pedido="tier")
-    @app_commands.autocomplete(incursao_id=_sugerir_incursoes, personagem=_sugerir_personagens)
+    @app_commands.autocomplete(
+        tier_pedido=_sugerir_tiers,
+        incursao_id=_sugerir_incursoes,
+        personagem=_sugerir_personagens,
+    )
     async def entrar(
         self,
         interaction: discord.Interaction,

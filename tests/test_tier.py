@@ -302,6 +302,45 @@ async def caso_o_listar_filtra_e_nao_mostra_o_id():
     print("  o listar filtra por tier e esconde o id e a contagem: ok")
 
 
+async def caso_o_tier_tem_autocompletar_com_o_que_existe():
+    """A lista do tier oferece só os tiers que TÊM incursão, e quantas.
+
+    Uma lista fixa de 1 a 5 ofereceria tier vazio — hoje não há conteúdo de
+    tier 3 nem de 5 —, e o jogador só descobriria isso no campo seguinte, com
+    o autocompletar do id vindo vazio e sem explicação nenhuma.
+    """
+    conn, canal, cog, incursao = await preparar(tier_incursao=2)
+    montar_conteudo(cog, incursao_id="t2b", tier=2, salas=salas_sem_combate())
+    montar_conteudo(cog, incursao_id="t4", tier=4, salas=salas_sem_combate())
+
+    async def sugeridos(digitado=""):
+        inter = FakeInteraction(canal, JOGADORES[0])
+        return await cog._sugerir_tiers(inter, digitado)
+
+    opcoes = await sugeridos()
+    assert [o.value for o in opcoes] == [2, 4], [o.value for o in opcoes]
+    # O valor é NÚMERO: é ele que chega ao comando, que pede um int.
+    assert all(isinstance(o.value, int) for o in opcoes), opcoes
+    # E o rótulo conta quantas, com o plural certo.
+    rotulos = {o.value: o.name for o in opcoes}
+    assert rotulos[2] == "Tier 2 — 2 incursões", rotulos[2]
+    assert rotulos[4] == "Tier 4 — 1 incursão", rotulos[4]
+
+    # Digitar estreita.
+    assert [o.value for o in await sugeridos("4")] == [4]
+    assert await sugeridos("3") == []
+
+    # A de tier livre conta em TODOS, porque é jogável em todos.
+    montar_conteudo(cog, incursao_id="livre", tier=TIER_MAXIMO,
+                    salas=salas_sem_combate())
+    todos = {o.value: o.name for o in await sugeridos()}
+    assert sorted(todos) == [1, 2, 3, 4, 5], sorted(todos)
+    assert todos[3] == "Tier 3 — 1 incursão", todos[3]
+    assert todos[2] == "Tier 2 — 3 incursões", todos[2]
+
+    print("  o tier se autocompleta com o que existe, e conta quantas: ok")
+
+
 async def main():
     try:
         caso_tier_a_cada_dois_niveis()
@@ -315,6 +354,7 @@ async def main():
         await caso_recrutamento_mostra_o_tier()
         await caso_o_filtro_de_tier_estreita_a_lista_e_o_entrar()
         await caso_o_listar_filtra_e_nao_mostra_o_id()
+        await caso_o_tier_tem_autocompletar_com_o_que_existe()
     finally:
         for conn in _ABERTAS:
             try:
