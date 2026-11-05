@@ -146,18 +146,18 @@ async def caso_entrar_escolhendo_personagem():
 
     # sem dizer qual, o bot pede para escolher e nao cria run
     vago = FakeInteraction(canal, dono)
-    await cog.entrar.callback(cog, vago, "t")
+    await cog.entrar.callback(cog, vago, cog.incursoes["t"].tier, "t")
     assert "mais de um personagem" in vago.resposta, vago.resposta
     assert await db.run_do_canal(conn, CANAL) is None
 
     # nome inexistente e recusado
     errado = FakeInteraction(canal, dono)
-    await cog.entrar.callback(cog, errado, "t", personagem="Ninguem")
+    await cog.entrar.callback(cog, errado, cog.incursoes["t"].tier, "t", personagem="Ninguem")
     assert "nao tem nenhum personagem" in errado.resposta
 
     # com o nome certo, entra com aquele personagem
     ok = FakeInteraction(canal, dono)
-    await cog.entrar.callback(cog, ok, "t", personagem="Kaelen")
+    await cog.entrar.callback(cog, ok, cog.incursoes["t"].tier, "t", personagem="Kaelen")
     run = await db.run_do_canal(conn, CANAL)
     assert run is not None
     escolhido = await db.personagem_da_run(conn, run["id"], dono)
@@ -176,7 +176,7 @@ async def caso_botao_entrar_com_varios():
         conn, GUILD, convidado, "Kaelen", "monge", ["Arcanismo"], nivel=3
     )
 
-    await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), "t")
+    await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
 
@@ -215,7 +215,7 @@ async def caso_personagem_escolhido_e_o_que_joga():
     fraco = classes.classe("monge").numeros(1)
     forte = classes.classe(CLASSE_PADRAO).numeros(8)
 
-    await cog.entrar.callback(cog, FakeInteraction(canal, dono), "t", personagem="Frangote")
+    await cog.entrar.callback(cog, FakeInteraction(canal, dono), cog.incursoes["t"].tier, "t", personagem="Frangote")
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:
@@ -243,7 +243,7 @@ async def caso_intervalo_e_por_jogador():
     dono = JOGADORES[0]
     await db.criar_personagem(conn, GUILD, dono, "Reserva", CLASSE_PADRAO, [], nivel=4)
 
-    await cog.entrar.callback(cog, FakeInteraction(canal, dono), "t", personagem=f"Heroi{dono}")
+    await cog.entrar.callback(cog, FakeInteraction(canal, dono), cog.incursoes["t"].tier, "t", personagem=f"Heroi{dono}")
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:
@@ -255,7 +255,7 @@ async def caso_intervalo_e_por_jogador():
 
     # o bloqueio vale para o jogador, com qualquer personagem
     nova = FakeInteraction(canal, dono)
-    await cog.entrar.callback(cog, nova, "t", personagem="Reserva")
+    await cog.entrar.callback(cog, nova, cog.incursoes["t"].tier, "t", personagem="Reserva")
     assert "intervalo" in nova.resposta.lower(), nova.resposta
     assert await db.run_do_canal(conn, CANAL) is None
     print("  intervalo continua sendo por jogador: ok")
@@ -331,7 +331,7 @@ async def caso_retrato_do_personagem():
 
     link = "https://exemplo.invalid/vhalor.png"
     inter = FakeInteraction(canal, dono)
-    await ficha_cog.imagem.callback(ficha_cog, inter, link)
+    await ficha_cog.imagem.callback(ficha_cog, inter, personagem["nome"], link)
     assert "rosto" in inter.resposta
 
     salvo = await db.buscar_personagem(conn, personagem["id"])
@@ -340,13 +340,15 @@ async def caso_retrato_do_personagem():
 
     # link invalido nao apaga o que ja estava
     ruim = FakeInteraction(canal, dono)
-    await ficha_cog.imagem.callback(ficha_cog, ruim, "javascript:alert(1)")
+    await ficha_cog.imagem.callback(
+        ficha_cog, ruim, personagem["nome"], "javascript:alert(1)"
+    )
     assert "http" in ruim.resposta
     assert (await db.buscar_personagem(conn, personagem["id"]))["imagem"] == link
 
     # a abertura da run traz um cartao por personagem, na mesma mensagem
     antes = len(canal.mensagens)
-    await cog.entrar.callback(cog, FakeInteraction(canal, dono), "t")
+    await cog.entrar.callback(cog, FakeInteraction(canal, dono), cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:
@@ -366,7 +368,7 @@ async def caso_retrato_do_personagem():
 
     # tirar o retrato deixa o campo vazio
     limpa = FakeInteraction(canal, dono)
-    await ficha_cog.imagem.callback(ficha_cog, limpa, None)
+    await ficha_cog.imagem.callback(ficha_cog, limpa, personagem["nome"], None)
     assert "tirou" in limpa.resposta
     assert (await db.buscar_personagem(conn, personagem["id"]))["imagem"] is None
     print("  retrato: guardado, na ficha e na abertura da run: ok")

@@ -42,7 +42,6 @@ ORDEM_COMANDOS = (
     "incursao desistir",
     "incursao listar",
     "incursao status",
-    "incursao votar",
     "mercado vitrine",
     "mercado comprar",
     "mercado equipar",
@@ -51,6 +50,7 @@ ORDEM_COMANDOS = (
     "help",
     # O bloco de admin, no fim e nesta ordem.
     "ficha conferir",
+    "ficha personagens",
     "ficha remover",
     "incursao recarregar",
     "mercado anel_do_mestre",
@@ -152,13 +152,10 @@ class Ajuda(commands.Cog):
 
         total = sum(len(lista) for lista in grupos.values())
         admins = sum(1 for lista in grupos.values() for c in lista if c[2])
-        e = discord.Embed(
-            title="Comandos do bot",
-            description=(
-                "Tudo o que o bot entende. 🔒 marca o que só quem administra o servidor usa."
-            ),
-            color=E.COR_INCURSAO,
-        )
+        # Sem descricao: a lista de comandos se explica, e a linha que estava
+        # aqui ("Tudo o que o bot entende...") empurrava os comandos para
+        # baixo numa tela que ja e longa.
+        e = discord.Embed(title="Comandos do bot", color=E.COR_INCURSAO)
 
         ordenados = sorted(
             grupos.items(),

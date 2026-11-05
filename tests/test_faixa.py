@@ -186,7 +186,7 @@ async def caso_run_abre_com_o_anexo():
     retratos.baixar = _baixa_fake
     try:
         antes = len(canal.mensagens)
-        await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), "t")
+        await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), cog.incursoes["t"].tier, "t")
         run = await db.run_do_canal(conn, CANAL)
         msg = await canal.fetch_message(run["mensagem_id"])
         for user_id in JOGADORES[1:]:

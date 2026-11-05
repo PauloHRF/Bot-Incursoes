@@ -53,7 +53,7 @@ async def preparar(nivel=8):
 
 
 async def montar_run(conn, canal, cog, incursao_id):
-    await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), incursao_id)
+    await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), cog.incursoes[incursao_id].tier, incursao_id)
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:
@@ -90,7 +90,15 @@ async def caso_placar_comeca_zerado():
     inter = FakeInteraction(canal, JOGADORES[0])
     await org_cog.placar.callback(org_cog, inter)
     assert "Pontos das Organizações" in inter.resposta
-    print("  placar começa zerado: ok")
+
+    # A posição vem em número, e não em medalha: são quatro Organizações
+    # num placar que corre o ano, e o pódio dava ar de competição fechada.
+    titulos = [f.name for f in inter._mensagem_resposta.embeds[0].fields]
+    assert len(titulos) == 4, titulos
+    for posicao, titulo in zip(("1º", "2º", "3º", "4º"), titulos):
+        assert titulo.startswith(posicao), (posicao, titulo)
+    assert not any(m in " ".join(titulos) for m in ("🥇", "🥈", "🥉")), titulos
+    print("  placar começa zerado, com as posições em número: ok")
 
 
 async def caso_conclusao_credita():

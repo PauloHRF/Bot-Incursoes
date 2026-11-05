@@ -38,7 +38,7 @@ from ..incursoes import (
     monstros_de_criatura,
 )
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
-from ..rules import fmt, tier
+from ..rules import TIER_MAXIMO, fmt, tier
 from .ficha import sugerir_personagens
 
 log = logging.getLogger("incursoes.run")
@@ -766,6 +766,16 @@ class Incursoes(commands.Cog):
     # do que deixar o tier cair fora da tela por causa de um nome longo.
     LIMITE_DA_OPCAO = 100
 
+    @staticmethod
+    def _e_do_tier(incursao, tier_pedido: int) -> bool:
+        """Se esta incursao entra no filtro daquele tier.
+
+        A de tier livre entra em TODOS os filtros: ela aceita qualquer
+        personagem, e esconde-la de quem filtrou por um tier seria esconder
+        a unica que ele com certeza pode jogar.
+        """
+        return incursao.aberta_a_todos or incursao.tier == tier_pedido
+
     async def _sugerir_incursoes(
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
@@ -776,8 +786,14 @@ class Incursoes(commands.Cog):
         ele o jogador escolhia no escuro e descobria no erro.
         """
         termo = atual.lower()
+        # O tier que o jogador ja preencheu no MESMO comando: o Discord manda
+        # os outros campos em `interaction.namespace`, e e so por aqui que o
+        # filtro pode valer — a lista e montada antes de o comando rodar.
+        tier_pedido = getattr(interaction.namespace, "tier", None)
         opcoes = []
         for inc in self.incursoes.values():
+            if tier_pedido and not self._e_do_tier(inc, tier_pedido):
+                continue
             if termo not in inc.id.lower() and termo not in inc.nome.lower():
                 continue
             rotulo = E.titulo_da_incursao(inc)
@@ -790,7 +806,20 @@ class Incursoes(commands.Cog):
         return opcoes[:25]
 
     @grupo.command(name="listar", description="Mostra as incursões disponíveis")
-    async def listar(self, interaction: discord.Interaction) -> None:
+    @app_commands.describe(tier_pedido="Só as incursões deste tier (vazio: todas)")
+    @app_commands.rename(tier_pedido="tier")
+    async def listar(
+        self,
+        interaction: discord.Interaction,
+        tier_pedido: Optional[app_commands.Range[int, 1, TIER_MAXIMO]] = None,
+    ) -> None:
+        """A vitrine das incursões, para o jogador escolher.
+
+        Sem o `id` e sem a contagem de salas e de MEs: o id é coisa de
+        arquivo — o jogador escolhe na lista do `/incursao entrar` e nunca o
+        digita —, e quantas salas a run tem não muda a escolha dele, muda a
+        conta de quem escreve conteúdo.
+        """
         if not self.incursoes:
             await interaction.response.send_message(
                 "Nenhuma incursão carregada. Importe uma planilha com "
@@ -798,14 +827,33 @@ class Incursoes(commands.Cog):
                 ephemeral=True,
             )
             return
-        e = discord.Embed(title="Incursões disponíveis", color=E.COR_INCURSAO)
-        for inc in self.incursoes.values():
-            salas_no_banco = len(self.bancos[inc.organizacao].salas) if inc.organizacao in self.bancos else 0
+        escolhidas = [
+            inc for inc in self.incursoes.values()
+            if tier_pedido is None or self._e_do_tier(inc, tier_pedido)
+        ]
+        if not escolhidas:
+            await interaction.response.send_message(
+                f"Nenhuma incursão de tier {tier_pedido}. Use `/incursao listar` "
+                f"sem filtro para ver todas.",
+                ephemeral=True,
+            )
+            return
+        e = discord.Embed(
+            title=(
+                f"Incursões de tier {tier_pedido}" if tier_pedido
+                else "Incursões disponíveis"
+            ),
+            color=E.COR_INCURSAO,
+        )
+        for inc in escolhidas:
+            salas_no_banco = (
+                len(self.bancos[inc.organizacao].salas)
+                if inc.organizacao in self.bancos else 0
+            )
             e.add_field(
-                name=f"{E.titulo_da_incursao(inc)}  ·  `{inc.id}`",
+                name=E.titulo_da_incursao(inc),
                 value=(
-                    f"{inc.organizacao} — {inc.tamanho.lower()} ({inc.passos} salas + objetivo)"
-                    f" — {inc.recompensa_mes} MEs\n"
+                    f"{inc.organizacao} — {inc.tamanho.lower()}\n"
                     + E.exigencia_de_tier(inc)
                     + ("" if salas_no_banco else "\n⚠️ sem banco de salas carregado")
                 ),
@@ -820,20 +868,54 @@ class Incursoes(commands.Cog):
 
     @grupo.command(name="entrar", description="Abre o recrutamento de uma incursão neste canal")
     @app_commands.describe(
-        incursao_id="Qual incursão",
+        tier_pedido="O tier da incursão — filtra a lista do campo seguinte",
+        incursao_id="Qual incursão (só as do tier escolhido aparecem)",
         personagem="Com qual personagem voce entra (opcional se voce so tem um)",
     )
+    # O parametro se chama `tier_pedido` no Python e `tier` no Discord: o nome
+    # curto sombrearia a funcao `tier()` de rules, que este comando usa para
+    # saber o tier do PERSONAGEM — e o erro sairia como "'int' object is not
+    # callable", que nao aponta para nada.
+    @app_commands.rename(tier_pedido="tier")
     @app_commands.autocomplete(incursao_id=_sugerir_incursoes, personagem=_sugerir_personagens)
     async def entrar(
         self,
         interaction: discord.Interaction,
+        tier_pedido: app_commands.Range[int, 1, TIER_MAXIMO],
         incursao_id: str,
         personagem: Optional[str] = None,
     ) -> None:
+        """O tier vem ANTES do id porque ele filtra a lista do id.
+
+        O Discord pede os campos na ordem da assinatura e monta o
+        autocomplete com o que ja foi preenchido, entao o filtro só funciona
+        nesta ordem — com o id na frente, a lista sairia inteira.
+        """
         incursao = self.incursoes.get(incursao_id)
         if not incursao:
+            do_tier = [
+                i for i in self.incursoes.values()
+                if self._e_do_tier(i, tier_pedido)
+            ]
+            if not do_tier:
+                await interaction.response.send_message(
+                    f"Não há incursão de tier {tier_pedido} carregada. "
+                    f"Veja `/incursao listar`.",
+                    ephemeral=True,
+                )
+                return
             await interaction.response.send_message(
-                f"Não conheço a incursão `{incursao_id}`. Veja `/incursao listar`.", ephemeral=True
+                f"Não conheço a incursão `{incursao_id}`. Veja `/incursao listar`.",
+                ephemeral=True,
+            )
+            return
+        # O id pode nao ser o do tier filtrado: o jogador escolhe na lista, mas
+        # nada impede digitar outro id a mao depois de filtrar.
+        if not self._e_do_tier(incursao, tier_pedido):
+            await interaction.response.send_message(
+                f"**{incursao.nome}** não é de tier {tier_pedido} — ela é "
+                f"{E.exigencia_de_tier(incursao).split('—')[0].strip()}.",
+                ephemeral=True,
             )
             return
         if await db.run_do_canal(self.bot.db, interaction.channel_id):
@@ -3001,8 +3083,7 @@ class Incursoes(commands.Cog):
         carregadas = await self._pocoes_na_bolsa(personagem)
         if not carregadas:
             await interaction.response.send_message(
-                "Sua bolsa não tem poção nenhuma. Compre no `/mercado vitrine` "
-                "— as duas de vida estão sempre em cartaz.",
+                "Sua bolsa não tem poção nenhuma. Compre no `/mercado vitrine`.",
                 ephemeral=True,
             )
             return
@@ -5412,24 +5493,11 @@ class Incursoes(commands.Cog):
 
     # ---------------------------------------------------------- comandos
 
-    @grupo.command(name="votar", description="Vota por comando, caso os botões falhem")
-    @app_commands.describe(opcao="1, 2 ou 3 — a opção mostrada na votação")
-    async def votar_comando(
-        self, interaction: discord.Interaction, opcao: app_commands.Range[int, 1, 3]
-    ) -> None:
-        run = await self._run_do_contexto(interaction)
-        if not run:
-            return
-        if run["status"] != "escolhendo":
-            await interaction.response.send_message("Não há votação aberta agora.", ephemeral=True)
-            return
-        opcoes = await self._opcoes(run, run["linha_atual"])
-        if opcao > len(opcoes):
-            await interaction.response.send_message(
-                f"Esta votação tem {len(opcoes)} opção(ões).", ephemeral=True
-            )
-            return
-        await self.votar(interaction, run["id"], run["linha_atual"], opcoes[opcao - 1].id)
+    # Havia um `/incursao votar <1-3>` aqui, "para o caso de os botões
+    # falharem". Saiu: a votação acontece nos botões do cartão da sala, e um
+    # comando de reserva para a mesma coisa só aparecia na lista do /help
+    # fazendo o jogador se perguntar qual dos dois é o certo. O `self.votar`
+    # continua — é o que os botões chamam.
 
     @grupo.command(name="status", description="Estado atual da run neste canal")
     async def status(self, interaction: discord.Interaction) -> None:
@@ -5487,8 +5555,6 @@ class Incursoes(commands.Cog):
                     incursao,
                     onde=onde,
                     passo=passo,
-                    votos=len(votos),
-                    total=total,
                     lancamentos=lancamentos,
                     total_org=total_org,
                     caminho=await self._caminho(run),

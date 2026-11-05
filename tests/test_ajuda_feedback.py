@@ -79,7 +79,7 @@ async def caso_help_lista_tudo():
     achatado = " ".join(c[0] for c in todos)
     for esperado in (
         "/ficha registrar", "/ficha voltar", "/ficha imagem", "/ficha upar",
-        "/incursao entrar", "/incursao votar",
+        "/incursao entrar",
         "/mercado vitrine", "/mercado bolsa",
         "/organizacao placar", "/config intervalo", "/help",
     ):

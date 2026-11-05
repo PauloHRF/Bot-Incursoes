@@ -115,7 +115,12 @@ async def caso_a_marca_rende_no_golpe_da_mesma_rodada():
         assert nome in texto and "vale por" in texto, texto
         # ...e os golpes saíram na MESMA resposta, com o dado da marca.
         assert texto.count("acertou") + texto.count("CRITICO") >= 1, texto
-        assert f"{nome} {dado}" in texto, texto
+        # A prova é a marca aparecer como PARCELA do dano, e não a string
+        # exata do dado: no crítico o log dobra os dados (`2d8` sai `4d8`),
+        # e fixar o texto deixava o caso vermelho uma vez em vinte, por sorte.
+        assert f"⤷ {nome} " in texto, texto
+        if "CRITICO" not in texto:
+            assert f"{nome} {dado}" in texto, texto
         # O nome não sai duas vezes: quem chamou já escreveu a cabeça.
         assert texto.count(f"**{nome}**") == 1, texto
 

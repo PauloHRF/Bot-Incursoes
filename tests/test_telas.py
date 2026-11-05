@@ -166,7 +166,7 @@ async def preparar(salas, tier=4, nivel=8, classe=None):
 
 
 async def montar_run(conn, canal, cog):
-    await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), "t")
+    await cog.entrar.callback(cog, FakeInteraction(canal, JOGADORES[0]), cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:
@@ -449,6 +449,27 @@ async def caso_ver_e_do_dono_e_conferir_e_de_admin():
     await ficha.conferir.callback(ficha, i, FakeUsuario(outro), "Ninguem")
     assert "nao tem **Ninguem**" in leu(i), leu(i)
     assert f"Heroi{outro}" in leu(i), leu(i)
+
+    # `listar` tem o mesmo par: o do dono não aponta para ninguém, e o de
+    # terceiro é `personagens`, de admin.
+    assert {p.name for p in ficha.listar.parameters} == set(), [
+        p.name for p in ficha.listar.parameters
+    ]
+    assert ficha.personagens.default_permissions.manage_guild
+    i = FakeInteraction(canal, dono)
+    await ficha.personagens.callback(ficha, i, FakeUsuario(outro))
+    assert i._mensagem_resposta.id == -1, "/ficha personagens sai em privado"
+    # O titulo diz de QUEM e a lista; os personagens vem nos campos.
+    listados = i._mensagem_resposta.embeds[0]
+    assert str(outro) in (listados.title or ""), listados.title
+    assert f"Heroi{outro}" in {f.name for f in listados.fields}, listados.fields
+
+    # `imagem` pede o personagem PRIMEIRO, e pede sempre — a padronização
+    # vale mais que poupar o clique de quem tem um personagem só.
+    nomes = [p.name for p in ficha.imagem.parameters]
+    assert nomes == ["personagem", "link"], nomes
+    assert ficha.imagem.parameters[0].required, "o personagem virou obrigatorio"
+    assert not ficha.imagem.parameters[1].required, "o link segue opcional"
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)

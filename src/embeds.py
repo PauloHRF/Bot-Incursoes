@@ -7,7 +7,7 @@ from typing import Any, Optional, Sequence
 import discord
 
 from . import config, retratos
-from .incursoes import Incursao, Sala
+from .incursoes import Incursao, Sala, com_artigo
 from .motor import (
     CONSEQUENCIA_FALHA,
     ResolucaoSala,
@@ -1116,8 +1116,6 @@ def run_desistida(
     incursao: Incursao,
     onde: Optional[Sala] = None,
     passo: int = 0,
-    votos: int = 0,
-    total: int = 0,
     lancamentos: Optional[list[dict]] = None,
     total_org: int = 0,
     caminho: Optional[list[Sala]] = None,
@@ -1131,33 +1129,44 @@ def run_desistida(
     dos três fechos sem embed.
 
     `perdido` é o ouro do fecho que ficou para trás — o preço de desistir,
-    dito com número. As salas vencidas pagam; a conclusão não.
+    dito com número.
+
+    **O custo mora na descrição, e não num campo próprio.** Ele era o campo
+    "Ficou para trás", e o cartão terminava dizendo duas vezes a mesma coisa
+    da mesma forma ("as salas pagaram; o fecho, não" e, no rodapé, "o que
+    atravessou valeu; o que faltava, não"). Essa construção — ponto e vírgula
+    com o segundo termo sem verbo — é português escrito formal: uma vez passa,
+    duas no mesmo cartão viram maneirismo.
+
+    **Não diz quantos votaram.** Desistir precisa da maioria, e o cartão é o
+    desfecho, não a ata: o número do voto interessava enquanto a votação
+    estava aberta.
     """
     lugar = f" em **{onde.nome}**" if onde else ""
-    quanto = f" no passo {passo} de {incursao.passos}" if passo else ""
+    quanto = f", no passo {passo} de {incursao.passos}" if passo else ""
+    # Com `perdido` em 0 a frase perde essa metade em vez de dizer "0 de ouro".
+    sem = [f"os **{incursao.recompensa_mes} MEs** por participante"]
+    if perdido:
+        sem.append(f"os **{perdido}** de ouro do fecho")
     e = discord.Embed(
         title=f"🏳️ {titulo_da_incursao(incursao)} — abandonada",
         description=(
-            f"O grupo decidiu voltar{lugar}{quanto}, por {votos} de {total} votos. "
-            f"A incursão fica sem resolução, e {incursao.organizacao} vai saber "
-            f"por quem."
+            f"O grupo deu meia-volta{lugar}{quanto}. Sai sem "
+            + " e sem ".join(sem)
+            + ", que dependiam de concluir. O que as salas pagaram, o grupo leva."
         ),
         color=COR_FALHA,
     )
     campo_caminho(e, caminho)
     campo_ouro(e, ouro)
-    # O que desistir custou, com nome e numero: o bonus de fecho e os MEs
-    # nao saem de uma run abandonada.
-    deixado = [f"**{incursao.recompensa_mes} MEs** por participante"]
-    if perdido:
-        deixado.append(f"**{perdido}** de ouro do fecho")
-    e.add_field(
-        name="Ficou para trás",
-        value=" e ".join(deixado) + ". As salas vencidas pagaram; o fecho, não.",
-        inline=False,
-    )
     _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
-    return _rodape(e, "O que o grupo atravessou valeu; o que faltava, não.")
+    # A Organizacao entra como COMPLEMENTO, e nao como sujeito. Posta no
+    # comeco ela cobrava duas concordancias — "A Alianca" contra "O Vortice",
+    # e "as Sentinelas FICAM" contra "a Guilda FICA" — e ainda uma maiuscula
+    # no artigo. Assim `com_artigo` resolve tudo numa chamada.
+    return _rodape(
+        e, f"A notícia chega até {com_artigo(incursao.organizacao)}."
+    )
 
 
 def run_concluida(
@@ -1212,11 +1221,14 @@ def placar_organizacoes(pontos: dict[str, int], organizacoes: tuple[str, ...]) -
         color=COR_INCURSAO,
     )
     ranking = sorted(organizacoes, key=lambda o: pontos.get(o, 0), reverse=True)
-    medalhas = ("🥇", "🥈", "🥉", "4º")
+    # Posicao em numero, e nao medalha: o placar e de quatro Organizacoes e
+    # corre o ano inteiro, entao o ouro-prata-bronze dava ar de podio fechado
+    # a uma tabela que muda toda semana.
+    posicoes = ("1º", "2º", "3º", "4º")
     for posicao, org in enumerate(ranking):
         valor = pontos.get(org, 0)
         e.add_field(
-            name=f"{medalhas[posicao]}  {EMOJI_ORG.get(org, '•')} {org}",
+            name=f"{posicoes[posicao]}  {EMOJI_ORG.get(org, '•')} {org}",
             value=f"**{valor}** ponto(s)",
             inline=False,
         )

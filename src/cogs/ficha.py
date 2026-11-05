@@ -560,18 +560,7 @@ class Ficha(commands.Cog):
     def _classes_prontas() -> str:
         return ", ".join(sorted(c.nome for c in cl.CLASSES.values()))
 
-    @grupo.command(name="listar", description="Mostra todos os seus personagens")
-    @app_commands.describe(membro="Ver os personagens de outro jogador (opcional)")
-    async def listar(
-        self, interaction: discord.Interaction, membro: Optional[discord.Member] = None
-    ) -> None:
-        alvo = membro or interaction.user
-        personagens = await db.listar_personagens(self.bot.db, interaction.guild_id, alvo.id)
-        if not personagens:
-            quem = "Voce ainda nao tem" if alvo == interaction.user else f"{alvo.display_name} nao tem"
-            await interaction.response.send_message(f"{quem} personagem.", ephemeral=True)
-            return
-
+    def _embed_dos_personagens(self, alvo, personagens: list) -> discord.Embed:
         e = discord.Embed(
             title=f"Personagens de {alvo.display_name}", color=discord.Color.dark_gold()
         )
@@ -585,7 +574,53 @@ class Ficha(commands.Cog):
                 inline=False,
             )
         e.set_footer(text=f"{len(personagens)} personagem(ns)")
-        await interaction.response.send_message(embed=e, ephemeral=membro is None)
+        return e
+
+    @grupo.command(name="listar", description="Mostra todos os seus personagens")
+    async def listar(self, interaction: discord.Interaction) -> None:
+        """Os personagens de quem pediu, e so dele.
+
+        Tinha um parametro `membro`, e por ele qualquer um listava os
+        personagens de qualquer um. Ver os de outro passou a ser
+        `/ficha personagens`, que e de admin — como `ver` virou `conferir`.
+        """
+        personagens = await db.listar_personagens(
+            self.bot.db, interaction.guild_id, interaction.user.id
+        )
+        if not personagens:
+            await interaction.response.send_message(
+                "Voce ainda nao tem personagem. Use `/ficha registrar`.", ephemeral=True
+            )
+            return
+        await interaction.response.send_message(
+            embed=self._embed_dos_personagens(interaction.user, personagens),
+            ephemeral=True,
+        )
+
+    @grupo.command(
+        name="personagens",
+        description="(admin) Lista os personagens de outro jogador",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.describe(membro="De quem sao os personagens")
+    async def personagens(
+        self, interaction: discord.Interaction, membro: discord.Member
+    ) -> None:
+        """A lista de terceiro, para quem administra.
+
+        Em privado, como `/ficha conferir`: e conferencia, nao publicacao.
+        """
+        personagens = await db.listar_personagens(
+            self.bot.db, interaction.guild_id, membro.id
+        )
+        if not personagens:
+            await interaction.response.send_message(
+                f"{membro.display_name} nao tem personagem.", ephemeral=True
+            )
+            return
+        await interaction.response.send_message(
+            embed=self._embed_dos_personagens(membro, personagens), ephemeral=True
+        )
 
     @grupo.command(name="ver", description="Mostra a ficha com os modificadores ja calculados")
     @app_commands.describe(personagem="Qual personagem (opcional se voce so tem um)")
@@ -1176,16 +1211,24 @@ class Ficha(commands.Cog):
 
     @grupo.command(name="imagem", description="Associa um retrato ao personagem")
     @app_commands.describe(
+        personagem="Qual personagem",
         link="URL da imagem (http ou https). Deixe vazio para tirar o retrato.",
-        personagem="Qual personagem (opcional se voce so tem um)",
     )
     @app_commands.autocomplete(personagem=_sugerir_personagens)
     async def imagem(
         self,
         interaction: discord.Interaction,
+        personagem: str,
         link: Optional[app_commands.Range[str, 1, 500]] = None,
-        personagem: Optional[str] = None,
     ) -> None:
+        """O personagem vem primeiro, e e obrigatorio mesmo para quem tem um.
+
+        A ordem importa porque o Discord pede os parametros na ordem da
+        assinatura: com o `link` na frente, quem queria TIRAR o retrato
+        tinha de pular um campo para chegar no personagem. E obrigatorio
+        porque o resto do comando tem a mesma forma — padronizar vale mais
+        que poupar um clique de quem tem um personagem so.
+        """
         escolhido = await self._resolver(interaction, personagem)
         if not escolhido:
             return

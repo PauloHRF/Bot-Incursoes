@@ -206,7 +206,7 @@ async def main():
     nomes = sorted(c.qualified_name for c in bot.tree.walk_commands())
     for grupo in (
         "ficha registrar", "ficha listar", "ficha upar", "incursao entrar",
-        "incursao votar", "mercado vitrine", "mercado equipar",
+        "mercado vitrine", "mercado equipar",
         "config intervalo", "organizacao placar",
         # O remover voltou, mas so para admin: sem ele o limite de 25
         # personagens por jogador virava parede sem saida.

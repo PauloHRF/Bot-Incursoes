@@ -55,7 +55,7 @@ async def preparar(classe=CLASSE_PADRAO, nivel=8):
 
 async def montar_run(conn, canal, cog, incursao_id):
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.entrar.callback(cog, inter, incursao_id)
+    await cog.entrar.callback(cog, inter, cog.incursoes[incursao_id].tier, incursao_id)
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:

@@ -8,7 +8,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db, mercado  # noqa: E402
+from src import config, database as db, incursoes, mercado  # noqa: E402
 from src.cogs.incursao import maioria_de  # noqa: E402
 from src.cogs.incursao import Incursoes, ViewVotacao  # noqa: E402
 from fakes import (  # noqa: E402
@@ -32,7 +32,7 @@ DURAO = {"nome": "Durao", "ca": 30, "ataque": -20, "dano": "1d1", "hp": 4000}
 async def montar_run_em_votacao(conn, canal, cog, incursao_id="t"):
     """Cria uma run com os 5 jogadores, já na votação da linha 1."""
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.entrar.callback(cog, inter, incursao_id)
+    await cog.entrar.callback(cog, inter, cog.incursoes[incursao_id].tier, incursao_id)
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     for user_id in JOGADORES[1:]:
@@ -493,10 +493,30 @@ async def caso_desistir_mostra_cartao_e_paga_as_salas():
         )
     assert any("Ouro" in nome for nome in campos), list(campos)
 
-    # E o preço de desistir está dito, com número.
-    deixado = campos.get("Ficou para trás", "")
-    assert str(mercado.ouro_da_incursao(tier)) in deixado, deixado
-    assert str(incursao.recompensa_mes) in deixado, deixado
+    # E o preço de desistir está dito, com número — na DESCRIÇÃO, não num
+    # campo próprio: ele era o campo "Ficou para trás", e o cartão acabava
+    # dizendo a mesma coisa duas vezes, na mesma construção ("as salas
+    # pagaram; o fecho, não" e, no rodapé, "o que atravessou valeu; o que
+    # faltava, não").
+    assert "Ficou para trás" not in campos, list(campos)
+    descricao = embed.description or ""
+    assert str(mercado.ouro_da_incursao(tier)) in descricao, descricao
+    assert str(incursao.recompensa_mes) in descricao, descricao
+    assert "dependiam de concluir" in descricao, descricao
+
+    # Não diz quantos votaram: desistir precisa da maioria, e o cartão é o
+    # desfecho, não a ata — o número interessava enquanto a votação corria.
+    # Pela PALAVRA, e nao pelo numero: "de {total}" casava com o "no passo 1
+    # de 5" da propria frase, e o caso passava a acusar a coisa errada.
+    assert "voto" not in descricao, descricao
+
+    # O rodapé cita a Organização com o artigo certo. "Aliança" é feminina e
+    # "Sentinelas" é plural, então um artigo fixo acertaria uma das quatro —
+    # e é por isso que ela entra como complemento, e não como sujeito.
+    rodape = embed.footer.text or ""
+    assert incursoes.com_artigo(incursao.organizacao) in rodape, rodape
+    for org in incursoes.ORGANIZACOES:
+        assert org in incursoes.ARTIGO_DA_ORGANIZACAO, org
 
     # O bônus de fecho NÃO foi pago: desistir não é concluir.
     assert await cog._pagar_o_fecho(run) > 0, (

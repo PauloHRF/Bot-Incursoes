@@ -53,7 +53,7 @@ async def main() -> None:
 
     # --- recrutamento ---
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.entrar.callback(cog, inter, "t")
+    await cog.entrar.callback(cog, inter, cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
     assert run and run["status"] == "recrutando"
     assert await db.participantes(conn, run["id"]) == [JOGADORES[0]]
@@ -178,7 +178,7 @@ async def main() -> None:
 
     # depois do fim, a run do canal continua sendo essa e ninguem entra em outra
     outra = FakeInteraction(canal, JOGADORES[0])
-    await cog.entrar.callback(cog, outra, "t")
+    await cog.entrar.callback(cog, outra, cog.incursoes["t"].tier, "t")
     assert "Já existe uma incursão" in outra.resposta
 
     # --- status e desistencia ---

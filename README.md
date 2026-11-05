@@ -51,21 +51,21 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | --- | --- |
 | `/help [comando]` | Lista todos os comandos, com descrição; 🔒 marca os de admin |
 | `/ficha registrar <nome> <classe> [imagem]` | Cria um personagem no tier 1; as proficiências vêm num menu depois |
-| `/ficha listar [membro]` | Lista todos os personagens de um jogador |
+| `/ficha listar` | Lista os **seus** personagens |
 | `/ficha ver [personagem]` | Mostra a **sua** ficha, com todos os modificadores calculados |
 | `/ficha upar [personagem]` | Sobe um tier, e conduz na hora a decisão que o tier trouxer |
 | `/ficha pericias [personagem]` | Reabre o menu de proficiências da classe |
 | `/ficha voltar [personagem]` | Desce um tier e esquece a decisão daquele tier, para refazer |
-| `/ficha imagem [link] [personagem]` | Associa um retrato ao personagem (sem link, remove) |
+| `/ficha imagem <personagem> [link]` | Associa um retrato ao personagem (sem link, remove) |
 | `/ficha remover <personagem>` | Apaga um personagem seu |
 | `/ficha conferir <membro> [personagem]` | (admin) Vê a ficha de outro jogador, em privado |
-| `/incursao listar` | Mostra as incursões carregadas |
-| `/incursao entrar <id> [personagem]` | Abre o recrutamento de uma incursão no canal |
+| `/ficha personagens <membro>` | (admin) Lista os personagens de outro jogador |
+| `/incursao listar [tier]` | Mostra as incursões disponíveis, filtráveis por tier |
+| `/incursao entrar <tier> <incursão> [personagem]` | Abre o recrutamento no canal; o tier filtra a lista de incursões |
 | `/incursao sala` | Reenvia a mensagem da sala atual |
 | `/incursao teste` | Rola o teste da sala (mesmo efeito do botão) |
 | `/incursao atacar` | Ataca o primeiro inimigo de pé, na sua vez da iniciativa (mesmo efeito do botão) |
 | `/incursao habilidade` | Abre o menu das suas habilidades ativas |
-| `/incursao votar <1-3>` | Vota por comando, se os botões falharem |
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
 | `/incursao recarregar` | (admin) Relê os JSON de incursão do disco |
@@ -429,6 +429,21 @@ a emboscada é castigo por falhar, e pagar dobrado por ela seria pagar pelo erro
 **Os itens não entram no bot.** Tesouro vencido anuncia o que caiu no texto da sala; quem
 guarda poções, itens de carga e material de craft é a planilha do grupo, como já acontece
 com os MEs.
+
+### O cartão da desistência
+
+O fecho de uma run abandonada diz o preço **na descrição**, e não num campo próprio:
+*"Sai sem os 15 MEs por participante e sem os 200 de ouro do fecho, que dependiam de
+concluir. O que as salas pagaram, o grupo leva."*
+
+Não diz **quantos votaram**: desistir precisa da maioria, e o cartão é o desfecho, não a
+ata — o número do voto interessava enquanto a votação estava aberta.
+
+E o rodapé cita a Organização com o artigo certo, pela tabela
+`incursoes.ARTIGO_DA_ORGANIZACAO`: *"a Aliança"*, *"as Sentinelas"*, *"o Vórtice"*. Ela
+entra como **complemento** (`A notícia chega até...`) e não como sujeito, porque assim uma
+chamada resolve o artigo e some a concordância do verbo — *"as Sentinelas ficam"* contra
+*"a Guilda fica"*.
 
 ## Avisos no canal
 

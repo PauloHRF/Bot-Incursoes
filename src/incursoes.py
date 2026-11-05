@@ -30,6 +30,29 @@ ORGANIZACOES = (
     "Guilda dos Mortos",
     "Sentinelas do Alvorecer",
 )
+
+# O artigo de cada Organização, para a frase que a cita ganhar um ("o Vórtice
+# Oculto fica sabendo"). Escrito à mão, e não deduzido: "Aliança" é feminino,
+# "Sentinelas" é plural, e nenhuma das duas coisas sai da terminação do nome —
+# a mesma pegadinha do `consumiveis.ARTIGO_DO_BUFF`. Um teste confere que as
+# quatro estão aqui, senão a quinta Organização entraria sem artigo em
+# silêncio.
+ARTIGO_DA_ORGANIZACAO = {
+    "Vórtice Oculto": "o",
+    "Aliança das Sombras": "a",
+    "Guilda dos Mortos": "a",
+    "Sentinelas do Alvorecer": "as",
+}
+
+
+def com_artigo(organizacao: str) -> str:
+    """'o Vórtice Oculto', 'as Sentinelas do Alvorecer'.
+
+    Sem artigo conhecido devolve o nome puro: nome novo sai sem o artigo, que
+    é esquisito mas correto, em vez de sair com o artigo errado.
+    """
+    artigo = ARTIGO_DA_ORGANIZACAO.get(organizacao)
+    return f"{artigo} {organizacao}" if artigo else organizacao
 DIFICULDADES = ("Fácil", "Média", "Difícil")
 
 # Quanto a CD de uma Armadilha cai em relação à escrita na planilha. Passar numa

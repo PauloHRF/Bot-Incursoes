@@ -21,6 +21,7 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    leu,
     montar_conteudo,
     salas_sem_combate,
 )
@@ -81,7 +82,7 @@ async def caso_entrar_recusa_quem_esta_acima():
     await heroi(conn, dono, "Veterano", 12)
 
     inter = FakeInteraction(canal, dono)
-    await cog.entrar.callback(cog, inter, "t")
+    await cog.entrar.callback(cog, inter, cog.incursoes["t"].tier, "t")
     assert "tier 3" in inter.resposta and "tier 5" in inter.resposta, inter.resposta
     assert "Veterano" in inter.resposta
     assert await db.run_do_canal(conn, CANAL) is None, "não podia ter aberto a run"
@@ -96,7 +97,7 @@ async def caso_entrar_escolhe_o_que_cabe():
     novato = await heroi(conn, dono, "Novato", 3)
 
     inter = FakeInteraction(canal, dono)
-    await cog.entrar.callback(cog, inter, "t")
+    await cog.entrar.callback(cog, inter, cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
     assert run is not None, "com um personagem elegível, a run abre"
     escolhidos = await db.personagens_da_run(conn, run["id"])
@@ -107,7 +108,7 @@ async def caso_entrar_escolhe_o_que_cabe():
     await heroi(conn, dono, "Veterano", 12)
     await heroi(conn, dono, "Novato", 3)
     pedido = FakeInteraction(canal, dono)
-    await cog.entrar.callback(cog, pedido, "t", personagem="Veterano")
+    await cog.entrar.callback(cog, pedido, cog.incursoes["t"].tier, "t", personagem="Veterano")
     assert "Veterano" in pedido.resposta and "tier 2" in pedido.resposta
     assert await db.run_do_canal(conn, CANAL) is None
     print("  entrar leva o personagem que cabe, e recusa o pedido fora do tier: ok")
@@ -122,7 +123,7 @@ async def caso_botao_entrar_respeita_o_tier():
     await heroi(conn, misto, "Dois", 6)
     await heroi(conn, misto, "Alto", 20)
 
-    await cog.entrar.callback(cog, FakeInteraction(canal, anfitriao), "t")
+    await cog.entrar.callback(cog, FakeInteraction(canal, anfitriao), cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
 
@@ -150,7 +151,7 @@ async def caso_menu_velho_nao_fura_a_regra():
     pequeno = await heroi(conn, esperto, "Pequeno", 4)
     await heroi(conn, esperto, "Outro", 6)
 
-    await cog.entrar.callback(cog, FakeInteraction(canal, anfitriao), "t")
+    await cog.entrar.callback(cog, FakeInteraction(canal, anfitriao), cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
 
     # o personagem sobe de nivel depois que o menu ja estava na tela
@@ -169,7 +170,7 @@ async def caso_incursao_sem_tier_e_aberta():
     await heroi(conn, dono, "Lenda", 20)
 
     inter = FakeInteraction(canal, dono)
-    await cog.entrar.callback(cog, inter, "t")
+    await cog.entrar.callback(cog, inter, cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
     assert run is not None and await db.esta_na_run(conn, run["id"], dono)
 
@@ -183,7 +184,7 @@ async def caso_recrutamento_mostra_o_tier():
     conn, canal, cog, incursao = await preparar(tier_incursao=4)
     dono = JOGADORES[0]
     await heroi(conn, dono, "Heroi", 7)
-    await cog.entrar.callback(cog, FakeInteraction(canal, dono), "t")
+    await cog.entrar.callback(cog, FakeInteraction(canal, dono), cog.incursoes["t"].tier, "t")
     run = await db.run_do_canal(conn, CANAL)
     msg = await canal.fetch_message(run["mensagem_id"])
     campos = {f.name: f.value for f in msg.embeds[0].fields}
@@ -225,6 +226,82 @@ def caso_o_ajuste_de_cd_segue_o_bonus_de_proficiencia():
     print("  o ajuste de CD por tier segue o bonus de proficiencia: ok")
 
 
+async def caso_o_filtro_de_tier_estreita_a_lista_e_o_entrar():
+    """O tier vem antes do id, e é ele que decide o que o jogador vê.
+
+    O `/incursao entrar` pedia o id direto, e a lista do autocomplete trazia
+    todas — inclusive as que o personagem nem pode jogar. Agora o tier é o
+    primeiro campo e filtra o seguinte; `/incursao listar` aceita o mesmo
+    filtro, e nenhum dos dois mostra mais o id do arquivo.
+    """
+    conn, canal, cog, incursao = await preparar(tier_incursao=2)
+    # Uma segunda incursão, de outro tier, para o filtro ter o que esconder.
+    montar_conteudo(cog, incursao_id="t4", tier=4, salas=salas_sem_combate())
+    assert {i.tier for i in cog.incursoes.values()} == {2, 4}
+
+    # O autocomplete lê o tier que já está preenchido no mesmo comando.
+    async def sugeridas(tier_digitado):
+        inter = FakeInteraction(canal, JOGADORES[0], **{"tier": tier_digitado})
+        return {c.value for c in await cog._sugerir_incursoes(inter, "")}
+
+    assert await sugeridas(2) == {"t"}, await sugeridas(2)
+    assert await sugeridas(4) == {"t4"}, await sugeridas(4)
+    assert await sugeridas(1) == set(), await sugeridas(1)
+    # Sem tier digitado, a lista é inteira — é o caso de quem só navega.
+    assert await sugeridas(None) == {"t", "t4"}
+
+    # Entrar com o tier errado é recusado, e a resposta diz qual é o certo.
+    await heroi(conn, JOGADORES[0], "Veterano", 3)
+    errado = FakeInteraction(canal, JOGADORES[0])
+    await cog.entrar.callback(cog, errado, 4, "t", personagem="Veterano")
+    assert "não é de tier 4" in leu(errado), leu(errado)
+    assert not await db.run_do_canal(conn, CANAL), "abriu run com o tier errado"
+
+    # Tier sem incursão nenhuma avisa isso, em vez de "não conheço o id".
+    vazio = FakeInteraction(canal, JOGADORES[0])
+    await cog.entrar.callback(cog, vazio, 1, "t", personagem="Veterano")
+    assert "tier 1" in leu(vazio), leu(vazio)
+
+    # E com o tier certo a run abre.
+    ok = FakeInteraction(canal, JOGADORES[0])
+    await cog.entrar.callback(cog, ok, 2, "t", personagem="Veterano")
+    assert await db.run_do_canal(conn, CANAL), leu(ok)
+
+    print("  o tier filtra a lista e barra o entrar fora dele: ok")
+
+
+async def caso_o_listar_filtra_e_nao_mostra_o_id():
+    """A vitrine das incursões: filtro por tier, sem id e sem contagem."""
+    conn, canal, cog, incursao = await preparar(tier_incursao=2)
+    montar_conteudo(cog, incursao_id="t4", tier=4, salas=salas_sem_combate())
+
+    def campos(inter):
+        return {f.name: f.value for f in inter._mensagem_resposta.embeds[0].fields}
+
+    tudo = FakeInteraction(canal, JOGADORES[0])
+    await cog.listar.callback(cog, tudo)
+    assert len(campos(tudo)) == 2, campos(tudo)
+
+    so2 = FakeInteraction(canal, JOGADORES[0])
+    await cog.listar.callback(cog, so2, 2)
+    nomes = campos(so2)
+    assert len(nomes) == 1, nomes
+    assert "tier 2" in (so2._mensagem_resposta.embeds[0].title or "").lower()
+
+    # O id do arquivo não aparece — o jogador escolhe na lista do `entrar`.
+    texto = " ".join(list(nomes) + list(nomes.values()))
+    assert "`t`" not in texto and "t4" not in texto, texto
+    # Nem quantas salas a run tem, nem os MEs: não mudam a escolha dele.
+    assert "salas + objetivo" not in texto and "MEs" not in texto, texto
+
+    # Tier sem nada avisa, em vez de mostrar um embed vazio.
+    vazio = FakeInteraction(canal, JOGADORES[0])
+    await cog.listar.callback(cog, vazio, 5)
+    assert "tier 5" in leu(vazio), leu(vazio)
+
+    print("  o listar filtra por tier e esconde o id e a contagem: ok")
+
+
 async def main():
     try:
         caso_tier_a_cada_dois_niveis()
@@ -236,6 +313,8 @@ async def main():
         await caso_menu_velho_nao_fura_a_regra()
         await caso_incursao_sem_tier_e_aberta()
         await caso_recrutamento_mostra_o_tier()
+        await caso_o_filtro_de_tier_estreita_a_lista_e_o_entrar()
+        await caso_o_listar_filtra_e_nao_mostra_o_id()
     finally:
         for conn in _ABERTAS:
             try:
