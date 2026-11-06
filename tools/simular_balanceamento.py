@@ -510,7 +510,8 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
     """Executa uma luta com as primitivas de combate do motor."""
     grupo = montar_grupo(classe_id, tier)
     nivel = rules.nivel_do_tier(tier)
-    efeitos_classe = classes.efeitos(classe_id, nivel)
+    _, escolhas = habilidades_da_ficha(classe_id, nivel)
+    efeitos_classe = classes.efeitos(classe_id, nivel, escolhas)
     for personagem in grupo:
         personagem._nivel_simulador = nivel
         personagem._efeitos_classe_simulador = efeitos_classe
@@ -572,7 +573,8 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                             + efeitos_classe.get("acerto", 0)
                             + personagem._sequencia_simulador
                         )
-            personagem.ameaca_gerada += ameaca.gerada_por(personagem.classe)
+            acao_ameaca = (habilidade.acao or {}) if usou and habilidade else {"tipo": "golpes"}
+            personagem.ameaca_gerada += ameaca.gerada_por(personagem.classe, acao_ameaca)
 
         if estado.encerrado:
             break
