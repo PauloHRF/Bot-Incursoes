@@ -191,6 +191,7 @@ def _habilidade_do_monstro(dados: dict):
     if not habilidade:
         return None
     recarga = int(habilidade.get("recarga") or 0)
+    cada = int(habilidade.get("cada") or 2)
     return SimpleNamespace(
         nome=habilidade.get("nome") or "Habilidade especial",
         alvos=max(1, int(habilidade.get("alvos") or 1)),
@@ -324,10 +325,11 @@ def _atordoar(alvo, turnos: int, rodada: int) -> None:
         return
     if alvo.atordoado and getattr(alvo, "_atordoado_ate", 0) > 0:
         return
-    alvo._atordoado_ate = max(
-        getattr(alvo, "_atordoado_ate", rodada),
-        rodada + max(1, int(turnos or 1)) - 1,
-    )
+    duracao = max(1, int(turnos or 1))
+    # O jogador recebe o efeito na fase inimiga e perde os próximos turnos;
+    # o monstro recebe na fase dos jogadores e perde a vez desta rodada.
+    fim = rodada + duracao if isinstance(alvo, motor.Combatente) else rodada + duracao - 1
+    alvo._atordoado_ate = max(getattr(alvo, "_atordoado_ate", rodada), fim)
     alvo.atordoado = True
 
 
