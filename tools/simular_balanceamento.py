@@ -139,8 +139,8 @@ def montar_grupo(classe_id: str, tier: int) -> list[motor.Combatente]:
     """Monta cinco fichas com números, passivas, escolhas e saves reais."""
     nivel = rules.nivel_do_tier(tier)
     numeros = classes.numeros(classe_id, nivel)
-    efeitos = classes.efeitos(classe_id, nivel)
-    habilidades_ficha, _ = habilidades_da_ficha(classe_id, nivel)
+    habilidades_ficha, escolhas = habilidades_da_ficha(classe_id, nivel)
+    efeitos = classes.efeitos(classe_id, nivel, escolhas)
 
     grupo = []
     for indice in range(GRUPO):
@@ -281,6 +281,10 @@ def _usar_cura(personagem, grupo, acao, rng, cura_total):
     return curado
 
 
+def estado_rodada_simulador(alvo):
+    return getattr(alvo, "_rodada_simulador", 1)
+
+
 def _usar_grupo(personagem, grupo, acao, rng, cura_total):
     cura = 0
     for alvo in grupo:
@@ -293,12 +297,11 @@ def _usar_grupo(personagem, grupo, acao, rng, cura_total):
     efeitos = acao.get("efeitos") or {}
     if efeitos:
         for alvo in grupo:
-            _aplicar_efeitos(alvo, efeitos, acao.get("turnos", 1), 0)
+            _aplicar_efeitos(alvo, efeitos, acao.get("turnos", 1), estado_rodada_simulador(alvo))
     return cura
 
 
 def _usar_save(personagem, estado, habilidade, acao, rng, dano_total):
-    cd = classes.cd_de_habilidade(personagem.classe, 1)
     nivel = max(1, getattr(personagem, "_nivel_simulador", 1))
     cd = classes.cd_de_habilidade(personagem.classe, nivel)
     efeitos = getattr(personagem, "_efeitos_classe_simulador", {})
@@ -520,6 +523,8 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
         rodadas += 1
         estado.rodada = rodadas
         _expirar_efeitos(estado.combatentes, rodadas)
+        for combatente in estado.combatentes:
+            combatente._rodada_simulador = rodadas
 
         for personagem in list(estado.ativos):
             if estado.encerrado or inimigo.caido:
@@ -535,10 +540,15 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
             if habilidade is not None:
                 # Ações com condição de uso só consomem recurso se puderem resolver.
                 if registrar_uso(personagem, habilidade):
+                    acumuladores = {"dano": [0], "cura": [0], "recursos": [0]}
                     usou = _executar_ativa(
                         personagem, estado.combatentes, estado, habilidade, rng,
-                        rodadas, [dano_grupo], [cura_total], [recursos_gastos],
+                        rodadas, acumuladores["dano"], acumuladores["cura"],
+                        acumuladores["recursos"],
                     )
+                    dano_grupo += acumuladores["dano"][0]
+                    cura_total += acumuladores["cura"][0]
+                    recursos_gastos += acumuladores["recursos"][0]
                     if usou:
                         # Atualiza os totais após a execução.
                         pass
