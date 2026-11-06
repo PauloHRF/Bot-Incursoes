@@ -445,14 +445,16 @@ def _usar_save(personagem, estado, habilidade, acao, rng, dano_total, rodada):
                     _registrar_marca(aliado, inimigo, habilidade,
                         {"turnos": acao.get("turnos", 1), "vantagem": True}, rodada)
         if not passou and acao.get("penalidade_ataque"):
-            inimigo.penalidade_ataque = max(
-                inimigo.penalidade_ataque, acao["penalidade_ataque"]
+            _aplicar_efeitos(
+                inimigo, {"penalidade_ataque": acao["penalidade_ataque"]},
+                acao.get("turnos", 1), rodada,
             )
         if not passou and acao.get("dano_por_rodada") and not inimigo.caido:
             inimigo._dano_rodada_simulador = (
                 acao["dano_por_rodada"], acao.get("save", "CON"), cd,
                 acao.get("turnos", 3),
             )
+            inimigo._dano_rodada_repete_save = bool(acao.get("save_repete", True))
             inimigo._dano_rodada_repete_save = bool(acao.get("save_repete"))
 
 
