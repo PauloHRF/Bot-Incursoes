@@ -170,8 +170,45 @@ def montar_grupo(classe_id: str, tier: int) -> list[motor.Combatente]:
     return grupo
 
 
+def _efeito_do_golpe(dados: dict):
+    efeito = dados.get("efeito")
+    if not efeito:
+        return None
+    return SimpleNamespace(
+        nome=efeito.get("nome") or dados.get("nome") or "Efeito do golpe",
+        save=efeito.get("save", "CON"),
+        cd=int(efeito.get("cd", 10)),
+        dano=efeito.get("dano"),
+        metade=bool(efeito.get("metade")),
+        atordoa=int(efeito.get("atordoa") or 0),
+        debuff=list(efeito.get("debuff") or []),
+        save_repete=bool(efeito.get("save_repete")),
+    )
+
+
+def _habilidade_do_monstro(dados: dict):
+    habilidade = dados.get("habilidade")
+    if not habilidade:
+        return None
+    recarga = int(habilidade.get("recarga") or 0)
+    return SimpleNamespace(
+        nome=habilidade.get("nome") or "Habilidade especial",
+        alvos=max(1, int(habilidade.get("alvos") or 1)),
+        save=habilidade.get("save", "CON"),
+        cd=int(habilidade.get("cd") or 10),
+        dano=habilidade.get("dano"),
+        metade=bool(habilidade.get("metade")),
+        atordoa=int(habilidade.get("atordoa") or 0),
+        debuff=list(habilidade.get("debuff") or []),
+        recarga=recarga,
+        e_ataque=habilidade.get("save") == "ATK",
+        disponivel=lambda rodada: False,
+        recarregou=lambda rng: bool(recarga and rng and rng.randint(1, 6) >= recarga),
+    )
+
+
 def montar_inimigo(dados: dict, indice: int = 0) -> motor.Inimigo:
-    """Adapta os golpes básicos do bestiário ao modelo de combate do motor."""
+    """Adapta golpes, efeitos e habilidade especial ao modelo real do motor."""
     golpes = dados.get("golpes") or []
     quantidade = max(1, int((dados.get("meta") or {}).get("num_acoes") or 1))
     sequencia = golpes[:quantidade] or golpes[:1]
@@ -180,7 +217,7 @@ def montar_inimigo(dados: dict, indice: int = 0) -> motor.Inimigo:
             nome=str(g.get("nome") or dados.get("nome") or "Ataque"),
             ataque=int(g.get("ataque", 0)),
             dano=str(g.get("dano") or "1"),
-            efeito=None,
+            efeito=_efeito_do_golpe(g),
         )
         for g in sequencia
     ]
@@ -194,8 +231,10 @@ def montar_inimigo(dados: dict, indice: int = 0) -> motor.Inimigo:
         hp_max=max(1, int(dados.get("hp") or 1)),
         hp_atual=max(1, int(dados.get("hp") or 1)),
         saves=dados.get("saves") or {},
+        saves_vantagem=dados.get("saves_vantagem") or [],
         ataques=len(ataques),
         golpes=ataques,
+        habilidade=_habilidade_do_monstro(dados),
         matilha=bool(dados.get("matilha")),
         regeneracao=int(dados.get("regeneracao") or 0),
     )
@@ -211,48 +250,96 @@ def registrar_uso(personagem, habilidade) -> bool:
     return True
 
 
+_MAPA_EFEITOS = {
+    "ca": "ca_extra", "dano_arma": "dano_arma", "ataques": "ataques",
+    "ameaca": "ameaca_extra", "dano_extra": "dano_extra",
+    "dano_bonus": "dano_bonus", "vantagem": "vantagem",
+    "reducao_dano": "reducao_dano", "ameaca_fator": "ameaca_fator",
+    "cura_por_turno": "cura_por_turno", "critico_em": "critico_em",
+    "veneno_no_golpe": "veneno_no_golpe",
+    "penalidade_ataque": "penalidade_ataque",
+}
+_EFEITOS_ADITIVOS = {"ca", "ameaca", "dano_extra", "penalidade_ataque"}
+
+
+def _recalcular_efeitos(alvo) -> None:
+    """Recalcula efeitos ativos a partir da ficha-base, sem snapshots obsoletos."""
+    base = getattr(alvo, "_base_efeitos_simulador", None)
+    if base is None:
+        base = {
+            atributo: getattr(alvo, atributo)
+            for atributo in _MAPA_EFEITOS.values() if hasattr(alvo, atributo)
+        }
+        alvo._base_efeitos_simulador = base
+    atuais = dict(base)
+    for _expira, efeitos in getattr(alvo, "_efeitos_simulador", []):
+        for chave, valor in efeitos.items():
+            atributo = _MAPA_EFEITOS.get(chave)
+            if atributo not in atuais:
+                continue
+            atuais[atributo] = (
+                atuais[atributo] + valor if chave in _EFEITOS_ADITIVOS else valor
+            )
+    for atributo, valor in atuais.items():
+        setattr(alvo, atributo, valor)
+
+
 def _aplicar_efeitos(alvo, efeitos: dict, turnos: int, rodada: int) -> None:
-    """Aplica os mesmos campos de efeito que o motor lê durante o combate."""
-    mapa = {
-        "ca": "ca_extra",
-        "dano_arma": "dano_arma",
-        "ataques": "ataques",
-        "ameaca": "ameaca_extra",
-        "dano_extra": "dano_extra",
-        "dano_bonus": "dano_bonus",
-        "vantagem": "vantagem",
-        "reducao_dano": "reducao_dano",
-        "ameaca_fator": "ameaca_fator",
-        "cura_por_turno": "cura_por_turno",
-        "critico_em": "critico_em",
-        "veneno_no_golpe": "veneno_no_golpe",
-    }
-    aplicados = {}
-    for chave, valor in efeitos.items():
-        atributo = mapa.get(chave)
-        if atributo is None:
-            continue
-        anterior = getattr(alvo, atributo)
-        if isinstance(valor, (int, float)) and isinstance(anterior, (int, float)):
-            novo = anterior + valor if chave in ("ca", "ameaca", "dano_extra") else valor
-        else:
-            novo = valor
-        setattr(alvo, atributo, novo)
-        aplicados[atributo] = anterior
-    if aplicados:
-        alvo._efeitos_simulador.append((rodada + max(1, turnos), aplicados))
+    if not efeitos:
+        return
+    if not hasattr(alvo, "_efeitos_simulador"):
+        alvo._efeitos_simulador = []
+    _recalcular_efeitos(alvo)
+    alvo._efeitos_simulador.append((rodada + max(1, int(turnos)), dict(efeitos)))
+    _recalcular_efeitos(alvo)
 
 
 def _expirar_efeitos(combatentes, rodada: int) -> None:
-    for personagem in combatentes:
-        pendentes = []
-        for expira, anteriores in personagem._efeitos_simulador:
-            if rodada >= expira:
-                for atributo, valor in anteriores.items():
-                    setattr(personagem, atributo, valor)
-            else:
-                pendentes.append((expira, anteriores))
-        personagem._efeitos_simulador = pendentes
+    for alvo in combatentes:
+        efeitos = getattr(alvo, "_efeitos_simulador", [])
+        alvo._efeitos_simulador = [
+            (expira, valores) for expira, valores in efeitos if rodada < expira
+        ]
+        _recalcular_efeitos(alvo)
+        alvo.atordoado = rodada < getattr(alvo, "_atordoado_ate", rodada)
+        marcas = getattr(alvo, "_marcas_simulador", [])
+        alvo._marcas_simulador = [m for m in marcas if rodada < m[0]]
+        if hasattr(alvo, "dano_por_alvo"):
+            alvo.dano_por_alvo = {}
+            alvo.vantagem_contra = set()
+            for _expira, indice, dano, vantagem in alvo._marcas_simulador:
+                if dano:
+                    alvo.dano_por_alvo[indice] = dano
+                if vantagem:
+                    alvo.vantagem_contra.add(indice)
+
+
+def _atordoar(alvo, turnos: int, rodada: int) -> None:
+    if alvo.caido or alvo.atordoado:
+        return
+    alvo._atordoado_ate = max(
+        getattr(alvo, "_atordoado_ate", rodada),
+        rodada + max(1, int(turnos or 1)),
+    )
+    alvo.atordoado = True
+
+
+def _registrar_atordoamentos(investidas, rodada: int) -> None:
+    for investida in investidas:
+        if getattr(investida, "atordoou", False):
+            _atordoar(investida.alvo, getattr(investida, "atordoa_por", 1), rodada)
+
+
+def _registrar_marca(personagem, alvo, habilidade, efeitos, rodada: int) -> None:
+    if not hasattr(personagem, "_marcas_simulador"):
+        personagem._marcas_simulador = []
+    personagem._marcas_simulador.append((
+        rodada + max(1, int(efeitos.get("turnos", 1))),
+        alvo.indice,
+        (habilidade.nome, efeitos["dano_bonus"]) if efeitos.get("dano_bonus") else None,
+        bool(efeitos.get("vantagem")),
+    ))
+    _expirar_efeitos([personagem], rodada)
 
 
 def _melhor_alvo_cura(grupo):
