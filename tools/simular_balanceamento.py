@@ -320,7 +320,9 @@ def _expirar_efeitos(combatentes, rodada: int) -> None:
 
 
 def _atordoar(alvo, turnos: int, rodada: int) -> None:
-    if alvo.caido or alvo.atordoado:
+    if alvo.caido:
+        return
+    if alvo.atordoado and getattr(alvo, "_atordoado_ate", 0) > 0:
         return
     alvo._atordoado_ate = max(
         getattr(alvo, "_atordoado_ate", rodada),
@@ -449,6 +451,7 @@ def _usar_save(personagem, estado, habilidade, acao, rng, dano_total, rodada):
                 acao["dano_por_rodada"], acao.get("save", "CON"), cd,
                 acao.get("turnos", 3),
             )
+            inimigo._dano_rodada_repete_save = bool(acao.get("save_repete"))
 
 
 def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
@@ -496,10 +499,14 @@ def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
             for alvo in alvos:
                 _aplicar_efeitos(alvo, acao.get("efeitos") or {}, acao.get("turnos", 1), rodada)
         else:
-            _aplicar_efeitos(personagem, acao.get("efeitos") or {}, acao.get("turnos", 1), rodada)
+            efeitos_acao = acao.get("efeitos") or {}
+            duracao = acao.get("turnos", 1)
+            if efeitos_acao.get("vantagem") and efeitos_acao.get("ameaca"):
+                duracao += 1
+            _aplicar_efeitos(personagem, efeitos_acao, duracao, rodada)
         if (acao.get("efeitos") or {}).get("vantagem") and (acao.get("efeitos") or {}).get("ameaca"):
             personagem._reckless_ativo_simulador = True
-            personagem._reckless_ate_simulador = rodada + max(1, acao.get("turnos", 1)) - 1
+            personagem._reckless_ate_simulador = rodada + 1
         if acao.get("acoes"):
             _atacar_com_acao(personagem, estado, acao, rng, dano_total)
     elif tipo == "forma":
@@ -549,6 +556,11 @@ def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
     return True
 
 
+def _registrar_efeito_do_ataque(personagem, alvo, golpe, rodada):
+    if golpe.acertou and personagem.veneno_no_golpe and not alvo.caido:
+        _aplicar_efeitos(alvo, {"penalidade_ataque": personagem.veneno_no_golpe}, 2, rodada)
+
+
 def _atacar_com_acao(personagem, estado, acao, rng, dano_total):
     alvo = estado.alvo_preferido()
     if alvo is None:
@@ -575,6 +587,7 @@ def _atacar_com_acao(personagem, estado, acao, rng, dano_total):
             critico_forcado=bool(acao.get("critico")),
         )
         dano_total[0] += golpe.dano
+        _registrar_efeito_do_ataque(personagem, alvo, golpe, estado.rodada)
         if acao.get("atordoa") and golpe.acertou and not alvo.caido:
             _atordoar(alvo, acao.get("atordoa", 1), estado.rodada)
     if acao.get("furtividade"):
@@ -685,6 +698,7 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                         break
                     golpe = motor.atacar_inimigo(personagem, alvo, rng)
                     dano_grupo += golpe.dano
+                    _registrar_efeito_do_ataque(personagem, alvo, golpe, rodadas)
                     sequencia = efeitos_classe.get("sequencia") or {}
                     if sequencia:
                         personagem._sequencia_simulador = motor.proxima_sequencia(
@@ -737,6 +751,9 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                     dano = motor.rolar_dano(expressao, rng)
                     alvo.hp_atual = max(0, alvo.hp_atual - dano)
                     dano_grupo += dano
+                elif getattr(alvo, "_dano_rodada_repete_save", False):
+                    alvo._dano_rodada_simulador = None
+                    continue
                 restante -= 1
                 alvo._dano_rodada_simulador = (
                     (expressao, atributo, cd, restante) if restante > 0 else None
