@@ -200,10 +200,13 @@ def _habilidade_do_monstro(dados: dict):
         metade=bool(habilidade.get("metade")),
         atordoa=int(habilidade.get("atordoa") or 0),
         debuff=list(habilidade.get("debuff") or []),
-        recarga=recarga,
+        cada=int(habilidade.get("cada") or 2),
+        recarga=recarga or None,
         e_ataque=habilidade.get("save") == "ATK",
-        disponivel=lambda rodada: False,
-        recarregou=lambda rng: bool(recarga and rng and rng.randint(1, 6) >= recarga),
+        disponivel=lambda rodada: cada > 0 and rodada % cada == 0,
+        recarregou=lambda rng: (
+            True if not recarga else bool(rng and rng.randint(1, 6) >= recarga)
+        ),
     )
 
 
@@ -301,7 +304,9 @@ def _expirar_efeitos(combatentes, rodada: int) -> None:
             (expira, valores) for expira, valores in efeitos if rodada < expira
         ]
         _recalcular_efeitos(alvo)
-        alvo.atordoado = rodada < getattr(alvo, "_atordoado_ate", rodada)
+        alvo.atordoado = rodada <= getattr(alvo, "_atordoado_ate", rodada - 1)
+        if getattr(alvo, "_reckless_ate_simulador", 0) < rodada:
+            alvo._reckless_ativo_simulador = False
         marcas = getattr(alvo, "_marcas_simulador", [])
         alvo._marcas_simulador = [m for m in marcas if rodada < m[0]]
         if hasattr(alvo, "dano_por_alvo"):
@@ -319,7 +324,7 @@ def _atordoar(alvo, turnos: int, rodada: int) -> None:
         return
     alvo._atordoado_ate = max(
         getattr(alvo, "_atordoado_ate", rodada),
-        rodada + max(1, int(turnos or 1)),
+        rodada + max(1, int(turnos or 1)) - 1,
     )
     alvo.atordoado = True
 
@@ -492,6 +497,9 @@ def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
                 _aplicar_efeitos(alvo, acao.get("efeitos") or {}, acao.get("turnos", 1), rodada)
         else:
             _aplicar_efeitos(personagem, acao.get("efeitos") or {}, acao.get("turnos", 1), rodada)
+        if (acao.get("efeitos") or {}).get("vantagem") and (acao.get("efeitos") or {}).get("ameaca"):
+            personagem._reckless_ativo_simulador = True
+            personagem._reckless_ate_simulador = rodada + max(1, acao.get("turnos", 1)) - 1
         if acao.get("acoes"):
             _atacar_com_acao(personagem, estado, acao, rng, dano_total)
     elif tipo == "forma":
@@ -594,7 +602,7 @@ def _escolher_ativa(personagem, grupo, estado, rodada):
             nota = feridos / max(1, sum(c.hp_max for c in grupo)) * 100
         elif tipo == "grupo":
             feridos = sum(c.hp_max - c.hp_atual for c in grupo)
-            if feridos <= 0 and not acao.get("thp"):
+            if feridos <= 0 and not acao.get("thp") and not acao.get("efeitos") and not acao.get("melhoria"):
                 continue
             nota = 20 + feridos / max(1, sum(c.hp_max for c in grupo)) * 30
         elif tipo in ("save", "golpes", "invocar", "forma"):
@@ -624,14 +632,22 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
     inimigo = montar_inimigo(rng.choice(pool))
     estado = motor.EstadoCombate([inimigo], rodada=1, combatentes=grupo)
 
-    dano_grupo = dano_inimigo = cura_total = recursos_gastos = 0
+    dano_grupo = dano_inimigo = cura_total = recursos_gastos = thp_gasto_total = 0
+    inimigo._efeitos_simulador = []
+    inimigo._atordoado_ate = 0
+    inimigo._base_efeitos_simulador = {
+        atributo: getattr(inimigo, atributo)
+        for atributo in _MAPA_EFEITOS.values() if hasattr(inimigo, atributo)
+    }
     rodadas = 0
     while not estado.encerrado and rodadas < MAX_RODADAS:
         rodadas += 1
         estado.rodada = rodadas
-        _expirar_efeitos(estado.combatentes, rodadas)
+        _expirar_efeitos(estado.combatentes + estado.inimigos, rodadas)
         for combatente in estado.combatentes:
             combatente._rodada_simulador = rodadas
+            if combatente.cura_por_turno and not combatente.caido:
+                cura_total += motor.curar(combatente, combatente.cura_por_turno)
 
         for personagem in list(estado.ativos):
             if estado.encerrado or inimigo.caido:
@@ -647,15 +663,16 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
             if habilidade is not None:
                 # Ações com condição de uso só consomem recurso se puderem resolver.
                 if registrar_uso(personagem, habilidade):
-                    acumuladores = {"dano": [0], "cura": [0], "recursos": [0]}
+                    acumuladores = {"dano": [0], "cura": [0], "recursos": [0], "thp": [0]}
                     usou = _executar_ativa(
                         personagem, estado.combatentes, estado, habilidade, rng,
                         rodadas, acumuladores["dano"], acumuladores["cura"],
-                        acumuladores["recursos"],
+                        acumuladores["recursos"], acumuladores["thp"],
                     )
                     dano_grupo += acumuladores["dano"][0]
                     cura_total += acumuladores["cura"][0]
                     recursos_gastos += acumuladores["recursos"][0]
+                    thp_gasto_total += acumuladores["thp"][0]
                     if usou:
                         # Atualiza os totais após a execução.
                         pass
@@ -685,34 +702,33 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
         if estado.encerrado:
             break
 
-        # Regeneração, multiataques, alvos por ameaça e saves continuam no motor.
-        antes = sum(c.hp_atual + c.thp for c in estado.combatentes)
-        motor.rodada_dos_inimigos(estado, rng)
-        depois = sum(c.hp_atual + c.thp for c in estado.combatentes)
-        dano_inimigo += max(0, antes - depois)
+        # Cada criatura usa o resolvedor do motor; a reação é checada logo
+        # depois da ação da criatura que derrubou o personagem.
+        for inimigo_turno in list(estado.inimigos_vivos):
+            if estado.encerrado:
+                break
+            antes = sum(c.hp_atual + c.thp for c in estado.combatentes)
+            vez = motor.turno_do_inimigo(inimigo_turno, estado, rng)
+            _registrar_atordoamentos(vez.investidas, rodadas)
+            depois = sum(c.hp_atual + c.thp for c in estado.combatentes)
+            dano_inimigo += max(0, antes - depois)
+            for personagem in estado.combatentes:
+                if personagem.e_invocacao or not personagem.caido:
+                    continue
+                reacao = next(
+                    (h for _, h in personagem._habilidades_simulador
+                     if h.acao and h.acao.get("tipo") == "reacao"
+                     and h.acao.get("quando") == "caiu"
+                     and personagem._usos_simulador.get(h.chave_de_uso, 0) < h.vezes),
+                    None,
+                )
+                if reacao and registrar_uso(personagem, reacao):
+                    personagem.hp_atual = max(1, reacao.acao.get("hp", 1))
+                    thp = reacao.acao.get("thp")
+                    if thp:
+                        motor.ganhar_thp(personagem, motor.rolar_dano(thp, rng))
 
-        # Reação real do Bárbaro: Relentless impede a queda uma vez por combate.
-        for personagem in estado.combatentes:
-            if personagem.e_invocacao or not personagem.caido:
-                continue
-            reacao = next(
-                (h for _, h in personagem._habilidades_simulador
-                 if h.acao and h.acao.get("tipo") == "reacao"
-                 and h.acao.get("quando") == "caiu"
-                 and personagem._usos_simulador.get(h.chave_de_uso, 0) < h.vezes),
-                None,
-            )
-            if reacao:
-                registrar_uso(personagem, reacao)
-                personagem.hp_atual = max(1, reacao.acao.get("hp", 1))
-                thp = reacao.acao.get("thp")
-                if thp:
-                    motor.ganhar_thp(personagem, motor.rolar_dano(thp, rng))
-
-        # Condições temporárias de controle duram o número de turnos declarado.
         for alvo in estado.inimigos:
-            if alvo.atordoado:
-                alvo.atordoado = False
             efeito = getattr(alvo, "_dano_rodada_simulador", None)
             if efeito and not alvo.caido:
                 expressao, atributo, cd, restante = efeito
@@ -742,6 +758,8 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
         "dano_recebido": dano_inimigo,
         "cura_total": cura_total,
         "recursos_gastos": recursos_gastos,
+        "thp_gasto": thp_gasto_total,
+        "thp_restante": sum(c.thp for c in grupo),
         "hp_restante_pct": 100 * hp_restante / max(1, hp_total),
         "personagens_caidos": sum(c.caido for c in grupo),
         "inimigo": inimigo.nome,
@@ -769,6 +787,8 @@ def medir(classe_id: str, tier: int, simulacoes: int, rng: random.Random) -> dic
         "recursos_gastos_media": round(
             statistics.mean(r["recursos_gastos"] for r in resultados), 2
         ),
+        "thp_gasto_medio": round(statistics.mean(r["thp_gasto"] for r in resultados), 2),
+        "thp_restante_medio": round(statistics.mean(r["thp_restante"] for r in resultados), 2),
         "hp_restante_pct": round(
             statistics.mean(r["hp_restante_pct"] for r in resultados), 2
         ),
