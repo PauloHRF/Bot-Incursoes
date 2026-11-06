@@ -681,18 +681,18 @@ def _usar_esquiva_reativa(vez, estado) -> int:
         if investida is not None:
             investida.dano = dano_novo
             investida.absorvido = absorvido
-        restante[id(alvo)] -= dano_novo
         gastos += 1
 
     for indice, (golpe, alvo) in enumerate(vez.golpes):
-        tentar(alvo, golpe, vez.efeitos_dos_golpes.get(indice))
-        if vez.efeitos_dos_golpes.get(indice):
-            restante[id(alvo)] -= vez.efeitos_dos_golpes[indice].dano
-        if golpe.dano <= 0:
-            restante[id(alvo)] -= 0
+        tentar(alvo, golpe)
+        restante[id(alvo)] -= golpe.dano
+        efeito = vez.efeitos_dos_golpes.get(indice)
+        if efeito:
+            restante[id(alvo)] -= efeito.dano
     for investida in vez.investidas:
         if not investida.do_golpe and investida.ataque is not None:
             tentar(investida.alvo, investida.ataque, investida)
+            restante[id(investida.alvo)] -= investida.dano
     return gastos
 
 
