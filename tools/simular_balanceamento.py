@@ -67,7 +67,13 @@ def pontuar_acao(acao: dict, efeito: dict | None = None) -> float:
     if tipo == "cura":
         return 15 + 20 * acao.get("fracao", 0)
     if tipo == "grupo":
-        return 10 + media_dado(acao.get("thp", "")) * GRUPO + 30 * acao.get("cura_fracao", 0)
+        melhoria = acao.get("melhoria") or {}
+        return (
+            10 + media_dado(acao.get("thp", "")) * GRUPO
+            + 30 * acao.get("cura_fracao", 0)
+            + media_dado(melhoria.get("dano_em_todos", "")) * 3
+            + 30 * melhoria.get("cura_fracao", 0)
+        )
     if tipo == "forma":
         return 20 + max((media_dado(v) for v in (acao.get("dano") or {}).values()), default=0)
     if tipo == "invocar":
@@ -613,15 +619,29 @@ def _escolher_ativa(personagem, grupo, estado, rodada):
             continue
         tipo = acao.get("tipo")
         if tipo == "cura":
-            feridos = sum(c.hp_max - c.hp_atual for c in grupo)
+            if acao.get("alvo") == "proprio":
+                feridos = personagem.hp_max - personagem.hp_atual
+            else:
+                feridos = sum(
+                    c.hp_max - c.hp_atual for c in grupo if c is not personagem
+                )
             if feridos <= 0:
                 continue
             nota = feridos / max(1, sum(c.hp_max for c in grupo)) * 100
         elif tipo == "grupo":
             feridos = sum(c.hp_max - c.hp_atual for c in grupo)
-            if feridos <= 0 and not acao.get("thp") and not acao.get("efeitos") and not acao.get("melhoria"):
+            melhoria = acao.get("melhoria") or {}
+            tem_melhoria = (
+                melhoria.get("custo_thp")
+                and personagem.thp >= int(melhoria["custo_thp"])
+            )
+            tem_efeito = bool(acao.get("efeitos") or acao.get("thp"))
+            tem_cura = bool(acao.get("cura_fracao") or melhoria.get("cura_fracao"))
+            if feridos <= 0 and not tem_efeito and not tem_cura and not tem_melhoria:
                 continue
             nota = 20 + feridos / max(1, sum(c.hp_max for c in grupo)) * 30
+            if tem_melhoria:
+                nota += media_dado(melhoria.get("dano_em_todos", "")) * 3
         elif tipo in ("save", "golpes", "invocar", "forma"):
             nota = pontuar_acao(acao)
         elif tipo == "duracao":
