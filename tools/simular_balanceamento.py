@@ -632,6 +632,60 @@ def _inspirar_ataque(estado, atacante, inimigo, golpe, rng) -> int:
     return 0
 
 
+def _inspirar_save(vez, estado, inimigo, rodada, rng) -> int:
+    """Usa Inspiração para transformar um save falho em sucesso."""
+    metade_por_investida = {}
+    for indice, investida in vez.efeitos_dos_golpes.items():
+        golpes = getattr(inimigo, "golpes", [])
+        efeito = golpes[indice].efeito if indice < len(golpes) else None
+        metade_por_investida[id(investida)] = bool(getattr(efeito, "metade", False))
+    for investida in vez.investidas:
+        if not investida.do_golpe:
+            metade_por_investida[id(investida)] = bool(
+                getattr(inimigo.habilidade, "metade", False)
+            )
+
+    gastos = 0
+    for investida in vez.investidas:
+        resultado = investida.save
+        if resultado is None or resultado.passou:
+            continue
+        alvo = investida.alvo
+        for inspirador in estado.combatentes:
+            if inspirador is alvo or inspirador.e_invocacao or inspirador.caido or inspirador.atordoado:
+                continue
+            for _, habilidade in inspirador._habilidades_simulador:
+                acao = habilidade.acao or {}
+                if acao.get("tipo") != "reacao" or acao.get("inspira") != "save":
+                    continue
+                if inspirador._usos_simulador.get(habilidade.chave_de_uso, 0) >= habilidade.vezes:
+                    continue
+                bonus = motor.rolar_dano(acao.get("dado", "1d6"), rng)
+                if resultado.total + bonus < resultado.cd:
+                    continue
+                registrar_uso(inspirador, habilidade)
+                resultado.d20 += bonus
+                if investida.dano:
+                    alvo.thp += investida.absorvido
+                    alvo.hp_atual += investida.dano - investida.absorvido
+                    leva_metade = metade_por_investida.get(id(investida), False) and not alvo.save_anula
+                    dano_novo = max(0, int(round(investida.dano / 2))) if leva_metade else 0
+                    absorvido, _ = motor.absorver(alvo, dano_novo)
+                    investida.dano = dano_novo
+                    investida.absorvido = absorvido
+                if investida.atordou:
+                    alvo.atordoado = False
+                    alvo._atordoado_ate = rodada - 1
+                    investida.atordou = False
+                investida.debuffs = []
+                gastos += 1
+                break
+            else:
+                continue
+            break
+    return gastos
+
+
 def _usar_esquiva_reativa(vez, estado) -> int:
     """Resolve Uncanny Dodge sobre o primeiro golpe pesado de cada alvo."""
     dano_por_alvo = {}
@@ -848,6 +902,7 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
             if estado.encerrado:
                 break
             vez = motor.turno_do_inimigo(inimigo_turno, estado, rng)
+            recursos_gastos += _inspirar_save(vez, estado, inimigo_turno, rodadas, rng)
             _registrar_atordoamentos(vez.investidas, rodadas)
             recursos_gastos += _usar_esquiva_reativa(vez, estado)
             dano_inimigo += sum(golpe.dano for golpe, _alvo in vez.golpes)
