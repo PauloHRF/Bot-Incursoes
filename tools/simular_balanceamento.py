@@ -615,7 +615,7 @@ def _inspirar_ataque(estado, atacante, inimigo, golpe, rng) -> int:
     if golpe.acertou or golpe.falha_critica:
         return 0
     for inspirador in estado.combatentes:
-        if inspirador is atacante or inspirador.e_invocacao:
+        if inspirador is atacante or inspirador.e_invocacao or inspirador.caido or inspirador.atordoado:
             continue
         for _, habilidade in inspirador._habilidades_simulador:
             acao = habilidade.acao or {}
@@ -674,7 +674,7 @@ def _usar_esquiva_reativa(vez, estado) -> int:
         dano_original = golpe.dano
         alvo.thp += golpe.absorvido
         alvo.hp_atual += dano_original - golpe.absorvido
-        dano_novo = max(1, int(round(dano_original * (1 - reacao.acao.get("reduz", 0.5))))
+        dano_novo = max(1, int(round(dano_original * (1 - reacao.acao.get("reduz", 0.5)))))
         absorvido, _ = motor.absorver(alvo, dano_novo)
         golpe.dano = dano_novo
         golpe.absorvido = absorvido
