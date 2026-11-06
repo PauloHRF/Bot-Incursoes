@@ -315,15 +315,16 @@ def _expirar_efeitos(combatentes, rodada: int) -> None:
         if getattr(alvo, "_reckless_ate_simulador", 0) < rodada:
             alvo._reckless_ativo_simulador = False
         marcas = getattr(alvo, "_marcas_simulador", [])
-        alvo._marcas_simulador = [m for m in marcas if rodada < m[0]]
+        alvo._marcas_simulador = [m for m in marcas if rodada < m[1]]
         if hasattr(alvo, "dano_por_alvo"):
             alvo.dano_por_alvo = {}
             alvo.vantagem_contra = set()
-            for _expira, indice, dano, vantagem in alvo._marcas_simulador:
-                if dano:
-                    alvo.dano_por_alvo[indice] = dano
-                if vantagem:
-                    alvo.vantagem_contra.add(indice)
+            for inicio, _expira, indice, dano, vantagem in alvo._marcas_simulador:
+                if inicio <= rodada:
+                    if dano:
+                        alvo.dano_por_alvo[indice] = dano
+                    if vantagem:
+                        alvo.vantagem_contra.add(indice)
 
 
 def _atordoar(alvo, turnos: int, rodada: int) -> None:
@@ -345,11 +346,13 @@ def _registrar_atordoamentos(investidas, rodada: int) -> None:
             _atordoar(investida.alvo, getattr(investida, "atordoa_por", 1), rodada)
 
 
-def _registrar_marca(personagem, alvo, habilidade, efeitos, rodada: int) -> None:
+def _registrar_marca(personagem, alvo, habilidade, efeitos, rodada: int, inicio=None) -> None:
     if not hasattr(personagem, "_marcas_simulador"):
         personagem._marcas_simulador = []
+    inicio = rodada if inicio is None else inicio
     personagem._marcas_simulador.append((
-        rodada + max(1, int(efeitos.get("turnos", 1))),
+        inicio,
+        inicio + max(1, int(efeitos.get("turnos", 1))),
         alvo.indice,
         (habilidade.nome, efeitos["dano_bonus"]) if efeitos.get("dano_bonus") else None,
         bool(efeitos.get("vantagem")),
@@ -448,8 +451,11 @@ def _usar_save(personagem, estado, habilidade, acao, rng, dano_total, rodada):
         if not passou and acao.get("vantagem_do_grupo"):
             for aliado in estado.combatentes:
                 if not aliado.caido:
-                    _registrar_marca(aliado, inimigo, habilidade,
-                        {"turnos": acao.get("turnos", 1), "vantagem": True}, rodada)
+                    _registrar_marca(
+                        aliado, inimigo, habilidade,
+                        {"turnos": acao.get("turnos", 1), "vantagem": True},
+                        rodada, inicio=rodada + 1,
+                    )
         if not passou and acao.get("penalidade_ataque"):
             _aplicar_efeitos(
                 inimigo, {"penalidade_ataque": acao["penalidade_ataque"]},
@@ -461,7 +467,6 @@ def _usar_save(personagem, estado, habilidade, acao, rng, dano_total, rodada):
                 acao.get("turnos", 3),
             )
             inimigo._dano_rodada_repete_save = bool(acao.get("save_repete", True))
-            inimigo._dano_rodada_repete_save = bool(acao.get("save_repete"))
 
 
 def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
@@ -745,11 +750,10 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
         for inimigo_turno in list(estado.inimigos_vivos):
             if estado.encerrado:
                 break
-            antes = sum(c.hp_atual + c.thp for c in estado.combatentes)
             vez = motor.turno_do_inimigo(inimigo_turno, estado, rng)
             _registrar_atordoamentos(vez.investidas, rodadas)
-            depois = sum(c.hp_atual + c.thp for c in estado.combatentes)
-            dano_inimigo += max(0, antes - depois)
+            dano_inimigo += sum(golpe.dano for golpe, _alvo in vez.golpes)
+            dano_inimigo += sum(investida.dano for investida in vez.investidas)
             for personagem in estado.combatentes:
                 if personagem.e_invocacao or not personagem.caido:
                     continue
