@@ -827,8 +827,6 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
         _expirar_efeitos(estado.combatentes + estado.inimigos, rodadas)
         for combatente in estado.combatentes:
             combatente._rodada_simulador = rodadas
-            if combatente.cura_por_turno and not combatente.caido:
-                cura_total += motor.curar(combatente, combatente.cura_por_turno)
 
         for personagem in list(estado.ativos):
             if estado.encerrado or inimigo.caido:
@@ -918,6 +916,7 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                     None,
                 )
                 if reacao and registrar_uso(personagem, reacao):
+                    recursos_gastos += 1
                     personagem.hp_atual = max(1, reacao.acao.get("hp", 1))
                     thp = reacao.acao.get("thp")
                     if thp:
@@ -939,6 +938,10 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                 alvo._dano_rodada_simulador = (
                     (expressao, atributo, cd, restante) if restante > 0 else None
                 )
+
+        for combatente in estado.combatentes:
+            if combatente.cura_por_turno and not combatente.caido:
+                cura_total += motor.curar(combatente, combatente.cura_por_turno)
 
     hp_restante = sum(max(0, c.hp_atual) for c in grupo)
     hp_total = sum(c.hp_max for c in grupo)
