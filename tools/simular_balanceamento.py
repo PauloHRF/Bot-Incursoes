@@ -132,6 +132,8 @@ def simular_uma_luta(
                     break
                 golpe = motor.atacar_inimigo(personagem, inimigo, rng)
                 dano_grupo += golpe.dano
+            # A ameaça é gerada pela ação do personagem, não por cada golpe.
+            personagem.ameaca_gerada += ameaca.gerada_por(personagem.classe)
 
         if estado.encerrado:
             break
