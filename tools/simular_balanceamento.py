@@ -606,9 +606,94 @@ def _atacar_com_acao(personagem, estado, acao, rng, dano_total):
         if acao.get("atordoa") and golpe.acertou and not alvo.caido:
             _atordoar(alvo, acao.get("atordoa", 1), estado.rodada)
     if acao.get("furtividade"):
-        personagem._furtividade_ate_simulador = (
-            estado.rodada + acao["furtividade"]
+        personagem._furtividade_inicio_simulador = estado.rodada + 1
+        personagem._furtividade_ate_simulador = estado.rodada + acao["furtividade"]
+
+
+def _inspirar_ataque(estado, atacante, inimigo, golpe, rng) -> int:
+    """Usa Inspiração Bardica apenas quando o dado transforma o erro em acerto."""
+    if golpe.acertou or golpe.falha_critica:
+        return 0
+    for inspirador in estado.combatentes:
+        if inspirador is atacante or inspirador.e_invocacao:
+            continue
+        for _, habilidade in inspirador._habilidades_simulador:
+            acao = habilidade.acao or {}
+            if acao.get("tipo") != "reacao" or acao.get("inspira") != "ataque":
+                continue
+            if inspirador._usos_simulador.get(habilidade.chave_de_uso, 0) >= habilidade.vezes:
+                continue
+            bonus = motor.rolar_dano(acao.get("dado", "1d6"), rng)
+            golpe.bonus += bonus
+            if golpe.acertou and motor.refazer_o_golpe(atacante, inimigo, golpe, rng):
+                registrar_uso(inspirador, habilidade)
+                return 1
+            golpe.bonus -= bonus
+    return 0
+
+
+def _usar_esquiva_reativa(vez, estado) -> int:
+    """Resolve Uncanny Dodge sobre o primeiro golpe pesado de cada alvo."""
+    dano_por_alvo = {}
+    for indice, (golpe, alvo) in enumerate(vez.golpes):
+        dano_por_alvo[id(alvo)] = dano_por_alvo.get(id(alvo), 0) + golpe.dano
+        efeito = vez.efeitos_dos_golpes.get(indice)
+        if efeito:
+            dano_por_alvo[id(alvo)] += efeito.dano
+    for investida in vez.investidas:
+        if not investida.do_golpe:
+            dano_por_alvo[id(investida.alvo)] = (
+                dano_por_alvo.get(id(investida.alvo), 0) + investida.dano
+            )
+    restante = {
+        id(alvo): alvo.hp_atual + alvo.thp + dano
+        for alvo in estado.combatentes
+        for dano in [dano_por_alvo.get(id(alvo), 0)]
+    }
+    gastos = 0
+
+    def tentar(alvo, golpe, investida=None):
+        nonlocal gastos
+        if golpe is None or not golpe.acertou or golpe.dano <= 0:
+            return
+        reacao = next(
+            (h for _, h in alvo._habilidades_simulador
+             if h.acao and h.acao.get("tipo") == "reacao"
+             and h.acao.get("quando") == "sofreu_golpe"
+             and alvo._usos_simulador.get(h.chave_de_uso, 0) < h.vezes),
+            None,
         )
+        if reacao is None:
+            return
+        limiar = float(reacao.acao.get("limiar", 1 / 3))
+        estado_antes = SimpleNamespace(hp_atual=restante.get(id(alvo), 0), thp=0)
+        if not motor.vale_esquivar(estado_antes, golpe.dano, limiar):
+            return
+        if not registrar_uso(alvo, reacao):
+            return
+        dano_original = golpe.dano
+        alvo.thp += golpe.absorvido
+        alvo.hp_atual += dano_original - golpe.absorvido
+        dano_novo = max(1, int(round(dano_original * (1 - reacao.acao.get("reduz", 0.5))))
+        absorvido, _ = motor.absorver(alvo, dano_novo)
+        golpe.dano = dano_novo
+        golpe.absorvido = absorvido
+        if investida is not None:
+            investida.dano = dano_novo
+            investida.absorvido = absorvido
+        restante[id(alvo)] -= dano_novo
+        gastos += 1
+
+    for indice, (golpe, alvo) in enumerate(vez.golpes):
+        tentar(alvo, golpe, vez.efeitos_dos_golpes.get(indice))
+        if vez.efeitos_dos_golpes.get(indice):
+            restante[id(alvo)] -= vez.efeitos_dos_golpes[indice].dano
+        if golpe.dano <= 0:
+            restante[id(alvo)] -= 0
+    for investida in vez.investidas:
+        if not investida.do_golpe and investida.ataque is not None:
+            tentar(investida.alvo, investida.ataque, investida)
+    return gastos
 
 
 def _escolher_ativa(personagem, grupo, estado, rodada):
@@ -726,6 +811,10 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                     if alvo is None:
                         break
                     golpe = motor.atacar_inimigo(personagem, alvo, rng)
+                    if not golpe.acertou:
+                        recursos_gastos += _inspirar_ataque(
+                            estado, personagem, alvo, golpe, rng
+                        )
                     dano_grupo += golpe.dano
                     _registrar_efeito_do_ataque(personagem, alvo, golpe, rodadas)
                     sequencia = efeitos_classe.get("sequencia") or {}
@@ -740,7 +829,15 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                             + personagem._sequencia_simulador
                         )
             acao_ameaca = (habilidade.acao or {}) if usou and habilidade else {"tipo": "golpes"}
-            personagem.ameaca_gerada += ameaca.gerada_por(personagem.classe, acao_ameaca)
+            escondido = (
+                getattr(personagem, "_furtividade_inicio_simulador", rodadas + 1)
+                <= rodadas
+                <= getattr(personagem, "_furtividade_ate_simulador", 0)
+            )
+            if not escondido:
+                personagem.ameaca_gerada += ameaca.gerada_por(
+                    personagem.classe, acao_ameaca
+                )
 
         if estado.encerrado:
             break
@@ -752,6 +849,7 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                 break
             vez = motor.turno_do_inimigo(inimigo_turno, estado, rng)
             _registrar_atordoamentos(vez.investidas, rodadas)
+            recursos_gastos += _usar_esquiva_reativa(vez, estado)
             dano_inimigo += sum(golpe.dano for golpe, _alvo in vez.golpes)
             dano_inimigo += sum(investida.dano for investida in vez.investidas)
             for personagem in estado.combatentes:
@@ -786,13 +884,6 @@ def simular_uma_luta(classe_id: str, tier: int, rng: random.Random, pool: list[d
                 alvo._dano_rodada_simulador = (
                     (expressao, atributo, cd, restante) if restante > 0 else None
                 )
-
-        # Furtividade suspende o crescimento de ameaça durante o prazo declarado.
-        for personagem in estado.combatentes:
-            if getattr(personagem, "_furtividade_ate_simulador", 0) >= rodadas:
-                continue
-            # A ameaça por ação é acumulada pelo motor de domínio, não por golpe.
-            pass
 
     hp_restante = sum(max(0, c.hp_atual) for c in grupo)
     hp_total = sum(c.hp_max for c in grupo)
