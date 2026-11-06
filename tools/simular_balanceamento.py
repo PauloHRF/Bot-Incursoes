@@ -342,17 +342,19 @@ def _registrar_marca(personagem, alvo, habilidade, efeitos, rodada: int) -> None
     _expirar_efeitos([personagem], rodada)
 
 
-def _melhor_alvo_cura(grupo):
-    vivos_ou_caidos = [c for c in grupo if c.hp_atual < c.hp_max]
-    return max(
-        vivos_ou_caidos,
-        key=lambda c: (c.hp_max - c.hp_atual) / max(1, c.hp_max),
-        default=None,
-    )
+def _melhor_alvo_cura(grupo, excluir=None):
+    candidatos = [c for c in grupo if c is not excluir and c.hp_atual < c.hp_max]
+    return max(candidatos, key=lambda c: (c.caido, (c.hp_max-c.hp_atual)/max(1,c.hp_max)), default=None)
+
+
+def _melhor_alvo_forma(personagem, grupo):
+    aliados = [c for c in grupo if c is not personagem and not c.caido]
+    return min(aliados, key=lambda c: (c.hp_atual+c.thp)/max(1,c.hp_max),
+               default=personagem if not personagem.caido else None)
 
 
 def _usar_cura(personagem, grupo, acao, rng, cura_total):
-    alvo = personagem if acao.get("alvo") == "proprio" else _melhor_alvo_cura(grupo)
+    alvo = personagem if acao.get("alvo") == "proprio" else _melhor_alvo_cura(grupo, excluir=personagem)
     if alvo is None:
         return 0
     if acao.get("fracao") is not None:
@@ -372,23 +374,36 @@ def estado_rodada_simulador(alvo):
     return getattr(alvo, "_rodada_simulador", 1)
 
 
-def _usar_grupo(personagem, grupo, acao, rng, cura_total):
+def _usar_grupo(personagem, grupo, estado, acao, rng, cura_total, dano_total, thp_gasto):
     cura = 0
+    melhoria = acao.get("melhoria") or {}
+    aprimorada = bool(melhoria.get("custo_thp") and personagem.thp >= int(melhoria["custo_thp"]))
+    cura_fracao = melhoria.get("cura_fracao") if aprimorada else acao.get("cura_fracao")
+    efeitos = melhoria.get("efeitos") if aprimorada else (acao.get("efeitos") or {})
+    if aprimorada:
+        custo = int(melhoria["custo_thp"])
+        personagem.thp -= custo
+        thp_gasto[0] += custo
+        dano_area = melhoria.get("dano_em_todos")
+        if dano_area:
+            for inimigo in estado.inimigos_vivos:
+                dano = motor.rolar_dano(dano_area, rng)
+                inimigo.hp_atual = max(0, inimigo.hp_atual-dano)
+                dano_total[0] += dano
     for alvo in grupo:
-        if acao.get("cura_fracao"):
-            ganho = motor.curar(alvo, acao["cura_fracao"])
+        if cura_fracao:
+            ganho = motor.curar(alvo, cura_fracao)
             cura += ganho
             cura_total[0] += ganho
         if acao.get("thp"):
             motor.ganhar_thp(alvo, motor.rolar_dano(acao["thp"], rng))
-    efeitos = acao.get("efeitos") or {}
     if efeitos:
         for alvo in grupo:
             _aplicar_efeitos(alvo, efeitos, acao.get("turnos", 1), estado_rodada_simulador(alvo))
     return cura
 
 
-def _usar_save(personagem, estado, habilidade, acao, rng, dano_total):
+def _usar_save(personagem, estado, habilidade, acao, rng, dano_total, rodada):
     nivel = max(1, getattr(personagem, "_nivel_simulador", 1))
     cd = classes.cd_de_habilidade(personagem.classe, nivel)
     efeitos = getattr(personagem, "_efeitos_classe_simulador", {})
@@ -414,7 +429,12 @@ def _usar_save(personagem, estado, habilidade, acao, rng, dano_total):
             inimigo.hp_atual = max(0, inimigo.hp_atual - sofrido)
             dano_total[0] += sofrido
         if not passou and acao.get("atordoa") and not inimigo.caido:
-            inimigo.atordoado = True
+            _atordoar(inimigo, acao.get("atordoa", 1), rodada)
+        if not passou and acao.get("vantagem_do_grupo"):
+            for aliado in estado.combatentes:
+                if not aliado.caido:
+                    _registrar_marca(aliado, inimigo, habilidade,
+                        {"turnos": acao.get("turnos", 1), "vantagem": True}, rodada)
         if not passou and acao.get("penalidade_ataque"):
             inimigo.penalidade_ataque = max(
                 inimigo.penalidade_ataque, acao["penalidade_ataque"]
@@ -427,23 +447,27 @@ def _usar_save(personagem, estado, habilidade, acao, rng, dano_total):
 
 
 def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
-                    dano_total, cura_total, recursos):
+                    dano_total, cura_total, recursos, thp_gasto):
     acao = habilidade.acao or {}
     tipo = acao.get("tipo")
     if tipo == "reacao":
         return False
     if tipo == "cura":
-        if not any(c.hp_atual < c.hp_max for c in grupo):
+        pode = (personagem.hp_atual < personagem.hp_max if acao.get("alvo") == "proprio"
+                else _melhor_alvo_cura(grupo, excluir=personagem) is not None)
+        if not pode:
             return False
         _usar_cura(personagem, grupo, acao, rng, cura_total)
     elif tipo == "grupo":
-        if not any(c.hp_atual < c.hp_max or acao.get("thp") for c in grupo):
+        melhoria = acao.get("melhoria") or {}
+        pode_melhorar = melhoria.get("custo_thp") and personagem.thp >= int(melhoria["custo_thp"])
+        if not any(c.hp_atual < c.hp_max for c in grupo) and not acao.get("thp") and not acao.get("efeitos") and not pode_melhorar:
             return False
-        _usar_grupo(personagem, grupo, acao, rng, cura_total)
+        _usar_grupo(personagem, grupo, estado, acao, rng, cura_total, dano_total, thp_gasto)
     elif tipo == "save":
-        if not estado.inimigos_vivos:
+        if not estado.inimigos_vivos or (acao.get("vira_contra") and len(estado.inimigos_vivos) < 2):
             return False
-        _usar_save(personagem, estado, habilidade, acao, rng, dano_total)
+        _usar_save(personagem, estado, habilidade, acao, rng, dano_total, rodada)
     elif tipo == "duracao":
         alvo_tipo = acao.get("alvo", "proprio")
         if alvo_tipo == "inimigo":
@@ -451,14 +475,11 @@ def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
             if alvo is None:
                 return False
             efeitos = acao.get("efeitos") or {}
-            if efeitos.get("dano_bonus"):
-                personagem.dano_por_alvo[alvo.indice] = (
-                    habilidade.nome, efeitos["dano_bonus"]
-                )
-            if efeitos.get("vantagem"):
-                personagem.vantagem_contra.add(alvo.indice)
+            _registrar_marca(personagem, alvo, habilidade,
+                {**efeitos, "turnos": acao.get("turnos", 1)}, rodada)
             if efeitos.get("ameaca_fator") is not None:
-                personagem.ameaca_fator = efeitos["ameaca_fator"]
+                _aplicar_efeitos(personagem, {"ameaca_fator": efeitos["ameaca_fator"]},
+                                 acao.get("turnos", 1), rodada)
         elif alvo_tipo == "aliados":
             alvos = sorted(
                 [c for c in grupo if not c.caido and c is not personagem],
@@ -474,22 +495,20 @@ def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
         if acao.get("acoes"):
             _atacar_com_acao(personagem, estado, acao, rng, dano_total)
     elif tipo == "forma":
-        alvo = personagem
-        dano = (acao.get("dano") or {}).get(
-            min(rules.tier(getattr(personagem, "_nivel_simulador", 1)),
-                max((acao.get("dano") or {1: personagem.dano_arma})))
-        )
+        alvo = _melhor_alvo_forma(personagem, grupo) if acao.get("alvo") == "aliado" else personagem
+        if alvo is None:
+            return False
+        tabela = acao.get("dano") or {}
+        tier_atual = rules.tier(getattr(personagem, "_nivel_simulador", 1))
+        tier_dano = min(tier_atual, max(tabela)) if tabela else None
+        dano = tabela.get(tier_dano) if tier_dano is not None else None
+        efeitos_forma = {"ca": acao.get("ca", 0), "ataques": acao.get("ataques", 1)}
         if dano:
-            _aplicar_efeitos(
-                alvo,
-                {"dano_arma": dano, "ca": acao.get("ca", 0),
-                 "ataques": acao.get("ataques", 1)},
-                acao.get("turnos", 3), rodada,
-            )
+            efeitos_forma["dano_arma"] = dano
+        _aplicar_efeitos(alvo, efeitos_forma, acao.get("turnos", 3), rodada)
+        alvo.forma = acao.get("nome", "Forma")
         if acao.get("thp_por_tier"):
-            motor.ganhar_thp(
-                alvo, acao["thp_por_tier"] * rules.tier(personagem._nivel_simulador)
-            )
+            motor.ganhar_thp(alvo, acao["thp_por_tier"] * tier_atual)
     elif tipo == "invocar":
         invocado = motor.Combatente(
             user_id=100000 + personagem.user_id,
@@ -549,7 +568,7 @@ def _atacar_com_acao(personagem, estado, acao, rng, dano_total):
         )
         dano_total[0] += golpe.dano
         if acao.get("atordoa") and golpe.acertou and not alvo.caido:
-            alvo.atordoado = True
+            _atordoar(alvo, acao.get("atordoa", 1), estado.rodada)
     if acao.get("furtividade"):
         personagem._furtividade_ate_simulador = (
             estado.rodada + acao["furtividade"]
