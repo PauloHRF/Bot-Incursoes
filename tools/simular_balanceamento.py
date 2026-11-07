@@ -207,6 +207,7 @@ def _habilidade_do_monstro(dados: dict):
         metade=bool(habilidade.get("metade")),
         atordoa=int(habilidade.get("atordoa") or 0),
         debuff=list(habilidade.get("debuff") or []),
+        save_repete=bool(habilidade.get("save_repete")),
         cada=int(habilidade.get("cada") or 2),
         recarga=recarga or None,
         e_ataque=habilidade.get("save") == "ATK",
