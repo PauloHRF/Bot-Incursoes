@@ -674,10 +674,10 @@ def _inspirar_save(vez, estado, inimigo, rodada, rng) -> int:
                     absorvido, _ = motor.absorver(alvo, dano_novo)
                     investida.dano = dano_novo
                     investida.absorvido = absorvido
-                if investida.atordou:
+                if investida.atordoou:
                     alvo.atordoado = False
                     alvo._atordoado_ate = rodada - 1
-                    investida.atordou = False
+                    investida.atordoou = False
                 investida.debuffs = []
                 gastos += 1
                 break
