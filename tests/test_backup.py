@@ -144,6 +144,77 @@ def caso_a_rotacao_mantem_so_as_mais_novas():
     print("  a rotacao mantem as 14 mais novas, e so backups: ok")
 
 
+def caso_o_envio_leva_user_agent_e_o_arquivo():
+    """O POST do webhook tem de levar User-Agent, e o arquivo dentro dele.
+
+    Este caso nasceu de um 403 em produção. O Discord fica atrás do
+    Cloudflare, e ele RECUSA o User-Agent padrão do `urllib`
+    ("Python-urllib/3.x") com 403 código 1010 — antes de chegar à API. A
+    mensagem não fala de User-Agent, então o 403 parece ser do webhook, e a
+    primeira coisa que se faz é desconfiar da URL, que estava certa.
+
+    O envio não tinha caso nenhum: a suíte cobria "sem webhook, guarda local",
+    que é justamente o ramo que NÃO envia. O dublê abaixo não fala com a rede
+    — ele guarda a requisição que o `enviar` montou e o teste olha para ela.
+    """
+    pasta = BANCO.parent / "envio_do_teste"
+    shutil.rmtree(pasta, ignore_errors=True)
+    pasta.mkdir(parents=True)
+    arquivo = pasta / "incursoes-2026-11-08_0400.db.gz"
+    arquivo.write_bytes(b"conteudo-do-backup")
+
+    pedidos = []
+
+    class RespostaFalsa:
+        def read(self):
+            return b""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    def urlopen_falso(pedido, timeout=None):
+        pedidos.append(pedido)
+        return RespostaFalsa()
+
+    original = BACKUP.urllib.request.urlopen
+    BACKUP.urllib.request.urlopen = urlopen_falso
+    try:
+        BACKUP.enviar(
+            "https://discord.com/api/webhooks/1/abc", arquivo, "texto do backup"
+        )
+    finally:
+        BACKUP.urllib.request.urlopen = original
+
+    assert len(pedidos) == 1, pedidos
+    pedido = pedidos[0]
+
+    # O User-Agent, que é o conserto deste caso. `get_header` normaliza o nome.
+    agente = pedido.get_header("User-agent") or ""
+    assert agente, "sem User-Agent o Cloudflare devolve 403 antes da API"
+    assert "Python-urllib" not in agente, (
+        f"o User-Agent padrao do urllib e recusado com 403: {agente!r}"
+    )
+
+    assert pedido.method == "POST"
+    tipo = pedido.get_header("Content-type") or ""
+    assert tipo.startswith("multipart/form-data; boundary="), tipo
+    limite = tipo.split("boundary=", 1)[1]
+
+    corpo = pedido.data
+    assert limite.encode() in corpo, "o corpo tem de usar o boundary declarado"
+    assert arquivo.read_bytes() in corpo, "o arquivo nao foi para dentro do POST"
+    assert arquivo.name.encode() in corpo, "o nome do arquivo vai no filename"
+    assert b"texto do backup" in corpo, "o resumo vai no payload_json"
+    # O backup nao marca ninguem de madrugada.
+    assert b'"allowed_mentions": {"parse": []}' in corpo, corpo[:400]
+
+    shutil.rmtree(pasta, ignore_errors=True)
+    print("  o envio leva User-Agent, o arquivo e o resumo: ok")
+
+
 async def caso_sem_webhook_guarda_local_e_sai_bem():
     """Servidor sem webhook configurado não é erro — é envio não configurado.
 
@@ -181,6 +252,7 @@ async def main():
     try:
         await caso_a_copia_sai_de_um_banco_aberto_e_restaura()
         caso_a_rotacao_mantem_so_as_mais_novas()
+        caso_o_envio_leva_user_agent_e_o_arquivo()
         await caso_sem_webhook_guarda_local_e_sai_bem()
     finally:
         for conn in _ABERTAS:

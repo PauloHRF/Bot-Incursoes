@@ -47,6 +47,15 @@ TEMPO_LIMITE = 60
 # backup se ler de longe: um arquivo que diz "0 personagens" é um aviso.
 CONTAGENS = ("personagens", "runs", "pontos_lancamentos")
 
+# O Discord fica atrás do Cloudflare, e ele RECUSA o User-Agent padrão do
+# `urllib` ("Python-urllib/3.x") com **403, código 1010** — antes de a
+# requisição chegar à API. A mensagem não diz nada de User-Agent, então o 403
+# parece ser do webhook: eu perdi um tempo achando que a URL estava errada.
+#
+# O formato é o que a documentação do Discord pede de um cliente de API:
+# `DiscordBot ($url, $versao)`.
+USER_AGENT = "DiscordBot (https://github.com/PauloHRF/Bot-Incursoes, 2.0)"
+
 
 def copia_consistente(origem: Path, destino: Path) -> None:
     """Retrato do banco vivo, pela API de backup online do SQLite."""
@@ -110,7 +119,10 @@ def enviar(webhook: str, arquivo: Path, texto: str) -> None:
     pedido = urllib.request.Request(
         webhook,
         data=bytes(corpo),
-        headers={"Content-Type": f"multipart/form-data; boundary={limite}"},
+        headers={
+            "Content-Type": f"multipart/form-data; boundary={limite}",
+            "User-Agent": USER_AGENT,
+        },
         method="POST",
     )
     with urllib.request.urlopen(pedido, timeout=TEMPO_LIMITE) as resposta:
@@ -185,6 +197,20 @@ def main() -> int:
         # systemd registrar: o backup existe, só não saiu da maquina.
         print(f"o envio falhou ({erro}); a copia local ficou em {comprimido}",
               file=sys.stderr)
+        # O que o código do erro costuma querer dizer. Sem isto, 401 e 404 (a
+        # URL) e 403 (o Cloudflare) são a mesma linha vermelha, e a primeira
+        # coisa que se faz é desconfiar da URL — que nos dois últimos casos
+        # está certa.
+        codigo = getattr(erro, "code", None)
+        pistas = {
+            401: "a URL do webhook esta errada (BACKUP_WEBHOOK no .env)",
+            404: "o webhook nao existe mais: refaca ele no canal",
+            403: "o Cloudflare recusou a requisicao, nao o Discord",
+            413: "o arquivo passou do limite de upload do canal",
+            429: "limite de requisicoes; o backup de amanha tenta de novo",
+        }
+        if codigo in pistas:
+            print(f"  ({codigo}: {pistas[codigo]})", file=sys.stderr)
         return 2
     print("  enviado ao canal do Discord")
     return 0

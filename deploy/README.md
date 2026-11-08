@@ -58,7 +58,9 @@ arquivo encostaria no limite de upload do Discord. Não há nada a podar.
    ```
 
    Ele imprime o nome do arquivo, o tamanho e as contagens, e o arquivo
-   aparece no canal. Sem a linha no `.env` ele guarda só a cópia local, avisa e
+   aparece no canal. Se o envio falhar, o código HTTP diz o quê: **401/404** é
+   a URL do webhook, **403** é o Cloudflare recusando a requisição (e não o
+   Discord), **413** é arquivo grande demais para o canal. Sem a linha no `.env` ele guarda só a cópia local, avisa e
    sai bem — um servidor que ainda não configurou o envio não é um erro.
 
 4. **Instalar o timer** (confira o usuário e a pasta no `.service` antes, se os
