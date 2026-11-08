@@ -287,7 +287,18 @@ async def caso_escudo_arcano_entra_no_combate():
     # 2 por tier, e o grupo esta no tier 5
     for c in estado.vivos:
         assert c.thp == 10, (c.nome, c.thp)
-    print("  Escudo Arcano abre o combate com 10 de THP no tier 5: ok")
+
+    # E NAO empilha. `ganhar_thp` soma em vez de substituir — e correto, e a
+    # regra do xama —, e o escudo morava no remontador de estado, que roda a
+    # cada clique: cada leitura somava 10 de novo, e o THP e gravado. Agora
+    # ele e aplicado uma vez, ao abrir o combate.
+    for _ in range(4):
+        outra = await cog._estado_combate(
+            await db.buscar_run(conn, run["id"]), incursao.objetivo
+        )
+        for c in outra.vivos:
+            assert c.thp == 10, (c.nome, c.thp)
+    print("  Escudo Arcano abre o combate com 10 de THP, uma vez: ok")
 
 
 async def caso_sabedoria_arcana_pega_o_grupo():

@@ -1654,8 +1654,6 @@ class Incursoes(commands.Cog):
         self._aplicar_aura_totemica(combatentes, personagens)
         self._aplicar_infusoes(combatentes, personagens)
         self._aplicar_aura_de_save(combatentes, personagens)
-        self._aplicar_escudo_arcano(combatentes, personagens, tier_atual)
-        self._aplicar_bichinho(combatentes, personagens, tier_atual)
         # Os aliados conjurados entram como combatentes comuns, com dono: assim
         # herdam ameaca, HP, iniciativa e painel sem nada de novo. O que os
         # separa e `dono`, que faz a vez deles ser resolvida sozinha.
@@ -1719,41 +1717,54 @@ class Incursoes(commands.Cog):
         for c in combatentes:
             c.saves = {atributo: valor + melhor for atributo, valor in c.saves.items()}
 
-    @staticmethod
-    def _aplicar_bichinho(
-        combatentes: list[Combatente], personagens: list[dict[str, Any]], tier: int
-    ) -> None:
-        """O espírito animal do druida, que cuida dele desde o começo da luta.
+    async def _aplicar_aberturas(self, run: dict[str, Any]) -> None:
+        """O que vale "ao abrir o combate": a cura do bichinho e o escudo.
 
-        É a opção de cura do Wild Companion: o bicho lambe as feridas quando o
-        combate abre. As outras duas opções (dano e teste) são número puro e
-        entram pelas chaves que já existiam.
+        **Roda uma vez por combate, e grava.** As duas moravam em
+        `_combatentes`, que e o remontador de estado: ele corre a cada clique
+        e a cada redesenho do painel, entao as duas eram reaplicadas sem fim.
+        A do druida nao acumulava no banco, mas era recolocada em cima do HP
+        gravado toda vez — o druida tinha +9 permanente que voltava depois de
+        cada golpe recebido. O THP do mago era pior: `ganhar_thp` SOMA em vez
+        de substituir, e ele e gravado.
+
+        **A cura do bichinho e do GRUPO.** O bicho lambe as feridas de quem
+        esta na sala, nao so as do druida — era a intencao da habilidade, e o
+        codigo cuidava so de quem a tinha.
+
+        As outras duas opcoes do Wild Companion (dano e teste) sao numero puro
+        e entram pelas chaves que ja existiam, sem passar por aqui.
         """
-        for p in personagens:
-            por_tier = ((p.get("efeitos") or {}).get("bichinho_cura")) or 0
-            if not por_tier:
-                continue
-            quem = next((c for c in combatentes if c.user_id == p["user_id"]), None)
-            if quem is not None:
-                motor.curar_quanto(quem, por_tier * max(1, tier))
+        tier = max(1, self._tier_da_run(run) or 1)
+        personagens = await db.personagens_da_run(self.bot.db, run["id"])
+        combatentes = await self._combatentes(run)
+        por_user = {c.user_id: c for c in combatentes}
 
-    @staticmethod
-    def _aplicar_escudo_arcano(
-        combatentes: list[Combatente], personagens: list[dict[str, Any]], tier: int
-    ) -> None:
-        """Escudo Arcano: o mago entra em combate com o escudo de pé.
+        # A maior cura do grupo, e nao a soma: dois druidas com o bichinho nao
+        # curam em dobro, pelo mesmo motivo que duas passivas iguais nao somam.
+        cura = max(
+            (((p.get("efeitos") or {}).get("bichinho_cura")) or 0 for p in personagens),
+            default=0,
+        )
+        hps: dict[int, int] = {}
+        if cura:
+            for c in combatentes:
+                if c.caido:
+                    continue
+                if motor.curar_quanto(c, cura * tier):
+                    hps[c.user_id] = c.hp_atual
+        if hps:
+            await db.definir_hp_varios(self.bot.db, run["id"], hps)
 
-        No livro ele recarrega a cada magia de abjuração; aqui recarrega a
-        cada combate, que é o que o bot tem de ciclo. É o que deixa o d6 de
-        vida do mago jogável sem mexer na tabela dele.
-        """
+        thps: dict[int, int] = {}
         for p in personagens:
             por_tier = ((p.get("efeitos") or {}).get("escudo_arcano")) or 0
-            if not por_tier:
-                continue
-            quem = next((c for c in combatentes if c.user_id == p["user_id"]), None)
-            if quem is not None:
-                motor.ganhar_thp(quem, por_tier * max(1, tier))
+            quem = por_user.get(p["user_id"])
+            if por_tier and quem is not None:
+                motor.ganhar_thp(quem, por_tier * tier)
+                thps[quem.user_id] = quem.thp
+        if thps:
+            await db.definir_thp_varios(self.bot.db, run["id"], thps)
 
     @staticmethod
     def _aplicar_aura_totemica(
@@ -1941,6 +1952,14 @@ class Incursoes(commands.Cog):
         # TIER_MAXIMO, e ai a sala cai no maior tier que ela tem escrito.
         inimigos = sala.monstros_do_tier(self._tier_da_run(run))
         await db.iniciar_combate(self.bot.db, run["id"], self._passo(run), sala.id, inimigos)
+
+        # O que vale "ao abrir o combate" acontece AQUI, uma vez, e vai para o
+        # banco. Estava em `_combatentes`, que e o remontador de estado — ele
+        # roda a cada clique, a cada redesenho do painel, a cada leitura. Na
+        # pratica a cura do bichinho era recolocada depois de cada dano (o
+        # druida tinha +9 permanente que voltava sozinho), e o THP do mago
+        # empilhava, porque `ganhar_thp` SOMA em vez de substituir.
+        await self._aplicar_aberturas(run)
 
         incursao = self._incursao_da_run(run)
         e_objetivo = bool(incursao and sala.id == incursao.objetivo.id)

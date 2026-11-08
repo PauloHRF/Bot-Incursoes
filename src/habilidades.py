@@ -977,7 +977,8 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "cura, morde junto, ou avisa do perigo.",
                        escolha={"tipo": "opcao", "opcoes": [
                            {"id": "bichinho_curandeiro", "nome": "Lambe as feridas",
-                            "texto": "Cura 3 por tier ao abrir o combate",
+                            "texto": "Cura 3 por tier em TODO o grupo, uma vez, "
+                                     "ao abrir o combate",
                             "efeito": {"bichinho_cura": 3}},
                            {"id": "bichinho_mordedor", "nome": "Morde junto",
                             "texto": "+2 de dano em todo golpe dele",

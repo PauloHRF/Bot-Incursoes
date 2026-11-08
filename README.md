@@ -536,6 +536,13 @@ combate **é o turno** daquela rodada, no lugar do ataque. São treze:
 | reação | *Relentless*, *Sobrevivente — socorro*, *Flash of Genius*, *Inspiração Bárdica* |
 | condição no alvo | *Stunning Strike* |
 
+**O que vale "ao abrir o combate"** — a cura do bichinho do Druida e o Escudo Arcano do
+Mago — acontece **uma vez, quando o combate abre**, e é gravado no banco. As duas moravam
+no remontador de estado, que roda a cada clique e a cada redesenho do painel: a cura era
+recolocada em cima do HP gravado toda vez (o druida tinha +9 permanente que voltava depois
+de cada golpe recebido) e o THP do Mago somava a cada leitura, porque `ganhar_thp` soma em
+vez de substituir. E a cura do bichinho é do **grupo**, não só de quem tem a habilidade.
+
 **Vida temporária (THP)** absorve o dano antes do HP e não empilha — vale sempre a maior,
 como em 5e. Some quando um combate novo começa, e aparece no painel como `30/40 +7 THP`.
 A *Convocação totêmica* do Xamã se apoia nela: com 18+ no d20 ele ganha 2 THP, e **enquanto

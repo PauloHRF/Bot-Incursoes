@@ -1191,7 +1191,7 @@ A forma que ele veste. Escolhe uma: Urso, Lobo ou Aranha.
 
 Um espírito animal o acompanha. Escolhe o que ele faz: cura, morde junto, ou avisa do perigo.
 
-* **Lambe as feridas** — Cura 3 por tier ao abrir o combate
+* **Lambe as feridas** — Cura 3 por tier em TODO o grupo, uma vez, ao abrir o combate
 * **Morde junto** — +2 de dano em todo golpe dele
 * **Avisa do perigo** — +3 em todo teste de perícia
 

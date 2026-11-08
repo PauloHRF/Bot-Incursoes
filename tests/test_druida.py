@@ -232,17 +232,56 @@ async def caso_aranha_envenena_quem_acerta():
 # ----------------------------------------------------------- o bichinho
 
 
-async def caso_bichinho_cura_ao_abrir():
-    conn, canal, cog, incursao, run = await preparar(
-        escolhas={"bichinho_t2": "bichinho_curandeiro"}
-    )
-    ferido = JOGADORES[1]
-    await db.definir_hp(conn, run["id"], ferido, 20)
-    estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
-                                       incursao.objetivo)
-    # 3 por tier, no tier 5: 15 de cura ao montar o combate
-    assert estado.combatente(ferido).hp_atual == 35, estado.combatente(ferido).hp_atual
-    print("  o bichinho curandeiro lambe 15 de ferida ao abrir o combate: ok")
+async def caso_bichinho_cura_o_grupo_uma_vez_ao_abrir():
+    """O bicho lambe as feridas do GRUPO, uma vez, quando o combate abre.
+
+    Duas coisas estavam erradas. A cura cuidava so de quem tinha a
+    habilidade, e a intencao era o grupo. E ela morava em `_combatentes`, o
+    remontador de estado, que roda a cada clique e a cada redesenho do painel
+    — entao era reaplicada sem fim: nao acumulava no banco, mas era recolocada
+    em cima do HP gravado toda vez, e o druida tinha +9 permanente que voltava
+    depois de cada golpe recebido.
+
+    Agora ela acontece em `_abrir_combate`, uma vez, e vai para o BANCO.
+    """
+    # O bichinho e de UM so. Com os tres tendo a habilidade, "cura so quem
+    # tem" e "cura o grupo" dariam o mesmo resultado, e o caso nao provaria
+    # qual das duas o codigo faz.
+    conn, canal, cog, incursao, run = await preparar(quantos=3)
+    dono = JOGADORES[0]
+    ficha = await db.personagem_por_nome(conn, GUILD, dono, f"Heroi{dono}")
+    await db.definir_escolha(conn, ficha["id"], "bichinho_t2", "bichinho_curandeiro")
+    for user_id in JOGADORES[1:3]:
+        outra = await db.personagem_por_nome(conn, GUILD, user_id, f"Heroi{user_id}")
+        assert not ((outra.get("efeitos") or {}).get("bichinho_cura")), user_id
+
+    # O combate que `preparar` abriu nao serve: o grupo estava inteiro, e
+    # cura em quem esta cheio nao aparece. Fere todos e abre outro passo.
+    for user_id in JOGADORES[:3]:
+        await db.definir_hp(conn, run["id"], user_id, 20)
+    await db.atualizar_run(conn, run["id"], linha_atual=incursao.passos + 2)
+    run = await db.buscar_run(conn, run["id"])
+    await cog._abrir_combate(run, incursao.objetivo)
+    run = await db.buscar_run(conn, run["id"])
+
+    # 3 por tier, no tier 5: 15 de cura, em TODO o grupo, e gravada.
+    no_banco = await db.hp_dos_participantes(conn, run["id"])
+    for user_id in JOGADORES[:3]:
+        assert no_banco[user_id] == 35, (user_id, no_banco[user_id])
+
+    # E nao volta: remontar o estado quantas vezes for nao cura de novo.
+    for _ in range(4):
+        estado = await cog._estado_combate(
+            await db.buscar_run(conn, run["id"]), incursao.objetivo
+        )
+        for user_id in JOGADORES[:3]:
+            assert estado.combatente(user_id).hp_atual == 35, (
+                user_id, estado.combatente(user_id).hp_atual
+            )
+    depois = await db.hp_dos_participantes(conn, run["id"])
+    assert depois == no_banco, (no_banco, depois)
+
+    print("  o bichinho lambe 15 do grupo inteiro, uma vez e sem voltar: ok")
 
 
 def caso_as_outras_duas_opcoes_do_bichinho():
@@ -373,7 +412,7 @@ async def main():
         await caso_lobo_morde_duas_vezes()
         await caso_forma_lunar_dobra_o_thp()
         await caso_aranha_envenena_quem_acerta()
-        await caso_bichinho_cura_ao_abrir()
+        await caso_bichinho_cura_o_grupo_uma_vez_ao_abrir()
         caso_as_outras_duas_opcoes_do_bichinho()
         await caso_aura_of_vitality_regenera_o_grupo()
         await caso_conjure_animals_traz_o_bando()
