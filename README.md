@@ -90,8 +90,11 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 3. Ao chegar a 5 jogadores a run começa sozinha; quem abriu pode começar antes com **Começar**.
    Aí o bot posta a **lore de abertura** junto com o grupo — uma linha por personagem com
    tier, CA, ataque e HP, e os retratos lado a lado numa faixa só.
-4. Cada passo sorteia 3 salas do banco da Organização na hora em que abre, deixando de fora
-   as que o grupo já atravessou. Todos votam pelos botões, e a votação fecha
+4. O caminho é feito de **paradas**, e nem toda parada é sala: a Média para uma vez para
+   descansar e a Longa duas, sempre nos mesmos lugares (ver *O descanso*). **Descanso é
+   parada a mais, não sala a menos** — a Média tem 5 salas e 6 paradas, a Longa 7 e 9.
+   Cada parada de sala sorteia 3 salas do banco da Organização na hora em que abre,
+   deixando de fora as que o grupo já atravessou e a de Descanso, que não é mais sorteada. Todos votam pelos botões, e a votação fecha
    assim que uma sala junta a **maioria do grupo** (3 de 5) — quem ainda não votou não
    segura o grupo. Enquanto ninguém tem maioria, a votação continua aberta, **sem prazo**:
    a run espera o tempo que precisar. Se todos votarem e der empate (2×2×1), ninguém avança
@@ -105,7 +108,8 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
    do personagem, não pelo apelido de Discord. Quem está caído sai das duas listas e da
    conta: a sala fecha quando os de pé rolarem. **O dado de cada um só aparece no fecho da
    sala**, de uma vez; durante a rolagem o cartão diz quem, não quanto.
-6. Depois de 3, 5 ou 7 salas (conforme o tamanho da incursão), o grupo enfrenta o Objetivo,
+6. Depois de todas as paradas (3, 5 ou 7 salas conforme o tamanho, mais os descansos do
+   caminho), o grupo enfrenta o Objetivo,
    que é sempre um combate. O desfecho vem em dois embeds: um com a vitória, como o grupo
    saiu, os MEs e os pontos de Organização, e outro com a **lore de fecho** — o epílogo só
    existe se o grupo voltar vivo.
@@ -274,7 +278,7 @@ viver no repositório para a conta ficar presa.
 | **Armadilha** | desarmada, ninguém se machuca | **Dano** (-20% do HP) + um debuff de Armadilha |
 | **Evento** | um **prêmio** para o grupo | um debuff de Evento ou um ponto de **Exaustão** |
 | **Tesouro** | o texto de recompensa da sala | nada — e chance de acordar **Mímicos** |
-| **Descanso** | cura metade do HP e cada um tira **uma** condição | — |
+| **Descanso** | cura metade do HP e cada um tira **uma** condição; não é sorteado nem votado | — |
 | **Combate** | **o dobro do ouro** de uma sala, no fecho da run | o combate perdido encerra a run |
 
 A sala de **Combate** paga dobrado porque é a única que cobra HP, e o HP não volta entre
@@ -407,6 +411,18 @@ nem Cura a um grupo inteiro.
 
 ### O descanso
 
+O descanso é **parada fixa do caminho**, pelo tamanho da incursão, e não sala sorteada:
+
+| Tamanho | Paradas | Onde o grupo descansa |
+|---|---|---|
+| Curta | 3 | em lugar nenhum |
+| Média | 6 | a 4ª parada — depois da terceira sala |
+| Longa | 9 | a 4ª parada, e a 8ª — depois da sexta sala, a **Última Vigília** |
+
+Ele chega **sem votação**. Era sala como qualquer outra, com três opções para o grupo
+escolher; só que as três eram a mesma coisa, e escolher entre três cópias de uma coisa não
+é escolher. Agora a parada abre direto no descanso.
+
 Cura metade do HP máximo (não mais tudo) e deixa **cada personagem** limpar **uma** coisa
 sua: 1 stack de um debuff, ou 1 ponto de Exaustão. É uma limpeza por pessoa, não uma para
 o grupo — e é a única saída da Exaustão.
@@ -420,6 +436,32 @@ A sala fecha quando todos escolheram, do mesmo jeito que a sala de teste fecha q
 rolaram — e **quem não carrega nada entra já marcado**, então um grupo limpo atravessa o
 descanso sem clique nenhum. Quem caiu continua voltando com metade do HP. O estado vive em
 `run_descansos`, então um restart devolve os botões a quem ainda falta.
+
+### A Última Vigília
+
+A segunda parada de descanso da Longa, depois da sexta sala, não é o descanso de sempre.
+Falta uma sala para o objetivo, e aqui há o que decidir: o grupo escolhe entre **3 trocas**
+sorteadas de um catálogo de 6, e a **maioria vale para todos** — essa é votada, como uma
+sala, porque as três opções fazem coisas diferentes.
+
+| Troca | Cura | O preço |
+|---|---|---|
+| Recuperar o fôlego | 20% do HP máximo + 10% de vida temporária | nada |
+| Forçar a marcha | 40% | 1 ponto de Exaustão em cada um |
+| Queimar as reservas | 50% | 2 pontos de Exaustão em cada um |
+| Lavar as feridas | 10% | — e tira **todo debuff** do grupo |
+| Revirar o lugar | 15% | — e o grupo leva o ouro de **uma sala** |
+| Velar os mortos | não cura ninguém | — e o grupo inteiro sai com **um buff** |
+
+A moeda cara é a **Exaustão**: ela não decai com o combate, só sai no descanso normal — e o
+normal já passou, lá na quarta parada. Quem chega à vigília com três pontos e vota em
+*queimar as reservas* sai da incursão ali mesmo, com o objetivo a uma sala de distância. O
+ouro da run continua dele: ele jogou até aqui.
+
+A vigília **conta como descanso** para as habilidades *por descanso*, e **não** conta como
+sala superada — descansar não é vencer nada, e o ouro das salas é por sala vencida. As três
+trocas da mesa saem de uma semente `run:parada`, então reabrir o cartão mostra as mesmas
+três: a mesa não muda debaixo de quem está decidindo.
 
 ### O Mímico do baú
 

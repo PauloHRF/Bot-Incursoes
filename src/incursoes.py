@@ -63,6 +63,43 @@ DESCONTO_CD_ARMADILHA = 3
 # Quantas salas o grupo atravessa antes do objetivo, por tamanho.
 TAMANHOS = {"Curta": 3, "Média": 5, "Longa": 7}
 
+# Os dois tipos de descanso. O normal é o de sempre: cura metade e deixa cada
+# um limpar uma condição. O duro é uma troca — cura mais, e cobra.
+DESCANSO_NORMAL = "normal"
+DESCANSO_DURO = "duro"
+
+# Onde o descanso entra no caminho, pelo tamanho da incursão. A chave é a
+# PARADA, e descanso é parada a mais: na Média as salas ficam nas paradas
+# 1, 2, 3, 5 e 6, com o descanso na 4.
+#
+# O descanso deixou de ser sorteado. Ele era uma sala do banco como as outras,
+# então um grupo podia atravessar uma Longa inteira sem nenhum — e outro
+# pegava dois. O que a sala do meio do caminho cobra é HP, e o HP não volta
+# entre salas: sem descanso garantido, a run longa era decidida pelo sorteio.
+DESCANSOS_DO_CAMINHO: dict[int, dict[int, str]] = {
+    3: {},
+    5: {4: DESCANSO_NORMAL},
+    7: {4: DESCANSO_NORMAL, 8: DESCANSO_DURO},
+}
+
+
+# A sala do descanso duro não vem de banco: ela é a mesma em toda Organização,
+# porque o que decide ali são as TROCAS e não a ficção do lugar. Existe como
+# `Sala` para o resto da máquina não precisar saber que ela é especial — ela
+# entra em `run_salas`, conta como parada vencida e aparece no caminho do fecho
+# como qualquer outra.
+ID_DO_DESCANSO_DURO = "DESCANSO_DURO"
+
+
+def paradas_do_caminho(passos: int) -> int:
+    """As salas mais os descansos daquele tamanho."""
+    return passos + len(DESCANSOS_DO_CAMINHO.get(passos, {}))
+
+
+def descanso_da_parada(passos: int, parada: int) -> Optional[str]:
+    """Que descanso cai naquela parada, ou None quando ela é sala sorteada."""
+    return DESCANSOS_DO_CAMINHO.get(passos, {}).get(parada)
+
 # Quantas opções o grupo recebe em cada passo.
 OPCOES_POR_PASSO = 3
 
@@ -376,6 +413,24 @@ class BancoDeSalas:
         }
 
 
+def sala_do_descanso_duro() -> Sala:
+    """A parada do descanso duro, igual em toda Organização.
+
+    Função e não constante de módulo porque `Sala` tem campos de lista: uma
+    instância só, compartilhada por todas as runs, seria estado global.
+    """
+    return Sala(
+        id=ID_DO_DESCANSO_DURO,
+        nome="A Última Vigília",
+        tipo="Descanso",
+        descricao=(
+            "Falta uma sala, e o grupo sabe disso. Aqui não há cama, não há "
+            "fogo e não há tempo: há o que cada um está disposto a gastar "
+            "para chegar de pé na última porta."
+        ),
+    )
+
+
 @dataclass
 class Incursao:
     id: str
@@ -394,8 +449,21 @@ class Incursao:
 
     @property
     def passos(self) -> int:
-        """Quantas salas o grupo atravessa antes do objetivo."""
+        """Quantas SALAS o grupo atravessa antes do objetivo."""
         return TAMANHOS[self.tamanho]
+
+    @property
+    def paradas(self) -> int:
+        """Quantas PARADAS o caminho tem: as salas mais os descansos.
+
+        Descanso é parada a mais, e não sala: a Média tem as cinco salas dela
+        e o descanso entre a terceira e a quarta, seis paradas no total.
+        """
+        return paradas_do_caminho(self.passos)
+
+    def descanso_da_parada(self, parada: int) -> Optional[str]:
+        """`DESCANSO_NORMAL`, `DESCANSO_DURO` ou None (sala sorteada)."""
+        return descanso_da_parada(self.passos, parada)
 
     @property
     def aberta_a_todos(self) -> bool:

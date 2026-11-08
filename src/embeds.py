@@ -7,7 +7,7 @@ from typing import Any, Optional, Sequence
 import discord
 
 from . import config, retratos
-from .incursoes import Incursao, Sala, com_artigo
+from .incursoes import DESCANSOS_DO_CAMINHO, Incursao, Sala, com_artigo
 from .motor import (
     CONSEQUENCIA_FALHA,
     ResolucaoSala,
@@ -31,6 +31,25 @@ EMOJI_TIPO = {
     "Evento": "🔍",
     "Tesouro": "💰",
 }
+
+
+def resumo_do_caminho(incursao) -> str:
+    """O que o caminho tem: as salas, e as paradas de descanso pelo tamanho.
+
+    A Longa para duas vezes para descansar e a Curta nenhuma, e isso muda a
+    conta de quem escolhe entre elas — dizer só o número de salas escondia
+    metade do caminho.
+    """
+    descansos = len(DESCANSOS_DO_CAMINHO.get(incursao.passos, {}))
+    salas = f"{incursao.passos} salas"
+    if not descansos:
+        return f"{salas} até o objetivo, sem descanso"
+    # Por extenso: "2 descansos" ao lado de "um descanso" fica desalinhado, e
+    # o caminho nunca tem mais de dois.
+    quais = {1: "um descanso", 2: "dois descansos"}.get(
+        descansos, f"{descansos} descansos"
+    )
+    return f"{salas} e {quais} até o objetivo"
 
 
 def anexo_da_imagem(caminho: Optional[str]) -> tuple[Optional[discord.File], Optional[str]]:
@@ -225,7 +244,7 @@ def lore_abertura(incursao: Incursao, quantos: int) -> discord.Embed:
     e.add_field(name="Organização", value=incursao.organizacao, inline=True)
     e.add_field(
         name="Caminho",
-        value=f"{incursao.tamanho} — {incursao.passos} salas até o objetivo",
+        value=f"{incursao.tamanho} — {resumo_do_caminho(incursao)}",
         inline=True,
     )
     e.add_field(name="Grupo", value=f"{quantos} aventureiro(s)", inline=True)
@@ -253,7 +272,7 @@ def votacao(
 ) -> discord.Embed:
     maioria = total // 2 + 1
     e = discord.Embed(
-        title=f"Sala {linha} de {passos} — para onde o grupo vai?",
+        title=f"Parada {linha} de {passos} — para onde o grupo vai?",
         description=(
             f"Cada jogador escolhe uma saída. A votação fecha assim que uma sala "
             f"chegar a **{maioria}** voto(s) — o grupo não espera quem faltar."
@@ -348,7 +367,11 @@ def sala_aberta(
     else:
         rodape = "Sem teste: o grupo recupera o fôlego."
 
-    e.add_field(name="Sala", value=f"{linha} de {passos}" if passos else str(linha), inline=True)
+    e.add_field(
+        name="Parada",
+        value=f"{linha} de {passos}" if passos else str(linha),
+        inline=True,
+    )
     arquivo, url = anexo_da_imagem(sala.imagem)
     if url:
         e.set_image(url=url)
@@ -510,6 +533,72 @@ def descanso(
     return _rodape(e, "Sem teste nesta sala.")
 
 
+def descanso_duro(
+    sala: Sala,
+    trocas: list,
+    votos: dict[int, str],
+    total: int,
+    parada: int = 0,
+    paradas: int = 0,
+) -> discord.Embed:
+    """A última vigília: três trocas, e a maioria decide por todos.
+
+    O descanso normal não tem tela de escolha porque ele é sempre o mesmo —
+    escolher entre três cópias da mesma coisa não é escolher. Aqui há o que
+    decidir, então ele é votado como uma sala.
+    """
+    e = discord.Embed(
+        title=f"🌙 {sala.nome}",
+        description=sala.descricao,
+        color=COR_SALA,
+    )
+    contagem: dict[str, int] = {}
+    for escolhida in votos.values():
+        contagem[escolhida] = contagem.get(escolhida, 0) + 1
+    for i, troca in enumerate(trocas):
+        quantos = contagem.get(troca.id, 0)
+        marcador = (
+            f" — **{quantos} voto{'s' if quantos != 1 else ''}**" if quantos else ""
+        )
+        e.add_field(
+            name=f"{EMOJI_OPCAO[i]} {troca.nome}{marcador}",
+            value=troca.texto,
+            inline=False,
+        )
+    if parada and paradas:
+        e.add_field(
+            name="Parada",
+            value=f"{parada} de {paradas}",
+            inline=True,
+        )
+    lider = max(contagem.values()) if contagem else 0
+    alvo = total // 2 + 1
+    rodape = (
+        "Maioria formada."
+        if lider >= alvo
+        else f"{len(votos)} de {total} votaram · a troca vale para o grupo inteiro."
+    )
+    return _rodape(e, rodape)
+
+
+def descanso_duro_feito(troca, linhas: list) -> discord.Embed:
+    """O que a troca escolhida fez com o grupo.
+
+    Fica no canal depois que o cartao da escolha sai: e o registro do preco
+    que o grupo aceitou pagar, e a Exaustao daqui dura o resto da incursao.
+    """
+    e = discord.Embed(
+        title=f"🌙 A Última Vigília — {troca.nome}",
+        description=troca.texto,
+        color=COR_SUCESSO,
+    )
+    if linhas:
+        e.add_field(
+            name="O que ficou", value="\n".join(linhas)[:1024], inline=False
+        )
+    return e
+
+
 def linha_de_condicoes(carregadas: dict[str, int]) -> str:
     """As condições de um personagem em linha: '😨 Medo ×2 · 🐌 Letargia'."""
     from . import condicoes
@@ -549,8 +638,8 @@ def status(
     e.add_field(
         name="Sala",
         value=(
-            f"{max(1, run['linha_atual'])} de {incursao.passos}  "
-            f"{progresso_da_run(max(0, run['linha_atual'] - 1), incursao.passos)}"
+            f"{max(1, run['linha_atual'])} de {incursao.paradas}  "
+            f"{progresso_da_run(max(0, run['linha_atual'] - 1), incursao.paradas)}"
         ),
         inline=True,
     )
@@ -1075,8 +1164,11 @@ def campo_caminho(
     # Passou ou falhou, e nao a dificuldade: a dificuldade e a CD escrita no
     # banco, numero de quem monta a sala. Quem le o fecho quer saber em qual
     # sala o grupo se deu mal.
+    # Descanso nao leva ✅ nem ❌: nao ha o que vencer numa parada de
+    # descanso, e o ❌ dizia que o grupo tinha falhado em descansar.
     linhas = [
-        f"{i}. {'✅' if venceu else '❌'} {EMOJI_TIPO.get(s.tipo, '•')} **{s.nome}**"
+        f"{i}. {'➖' if s.tipo == 'Descanso' else ('✅' if venceu else '❌')}"
+        f" {EMOJI_TIPO.get(s.tipo, '•')} **{s.nome}**"
         for i, (s, venceu) in enumerate(caminho, start=1)
     ]
     bloco = "\n".join(linhas)
@@ -1154,7 +1246,7 @@ def run_desistida(
     estava aberta.
     """
     lugar = f" em **{onde.nome}**" if onde else ""
-    quanto = f", no passo {passo} de {incursao.passos}" if passo else ""
+    quanto = f", na parada {passo} de {incursao.paradas}" if passo else ""
     # Com `perdido` em 0 a frase perde essa metade em vez de dizer "0 de ouro".
     sem = [f"os **{incursao.recompensa_mes} MEs** por participante"]
     if perdido:

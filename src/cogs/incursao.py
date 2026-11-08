@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from datetime import datetime
 from typing import Any, Optional
 
@@ -17,6 +18,7 @@ from discord.ext import commands
 from .. import (
     ameaca,
     bestiario,
+    incursoes,
     classes as cl,
     condicoes,
     config,
@@ -136,6 +138,34 @@ class ViewVotacao(discord.ui.View):
         super().__init__(timeout=None)
         for i, sala in enumerate(opcoes):
             self.add_item(BotaoVoto(cog, run_id, linha, i, sala))
+
+
+class ViewTrocaDoDescanso(discord.ui.View):
+    """As trocas do descanso duro. Uma por botao, votadas pela maioria.
+
+    Reusa o caminho do voto de sala: as trocas sorteadas ficam em `run_mapa`
+    como as salas, o voto em `run_votos`, e a maioria fecha. Nada de tabela
+    nova — o que muda e o que o id significa.
+    """
+
+    def __init__(self, cog: "Incursoes", run_id: int, parada: int, trocas: list):
+        super().__init__(timeout=None)
+        for i, troca in enumerate(trocas):
+            botao = discord.ui.Button(
+                label=troca.nome[:80],
+                emoji=E.EMOJI_OPCAO[i] if i < len(E.EMOJI_OPCAO) else None,
+                style=discord.ButtonStyle.primary,
+                custom_id=f"inc:troca:{run_id}:{parada}:{troca.id}",
+            )
+            botao.callback = self._fazer(parada, troca.id)
+            self.add_item(botao)
+        self.cog = cog
+        self.run_id = run_id
+
+    def _fazer(self, parada: int, troca_id: str):
+        async def votar(interaction: discord.Interaction) -> None:
+            await self.cog.votar_troca(interaction, self.run_id, parada, troca_id)
+        return votar
 
 
 class ViewSala(discord.ui.View):
@@ -713,6 +743,10 @@ class Incursoes(commands.Cog):
             return None
         if sala_id == incursao.objetivo.id:
             return incursao.objetivo
+        # A parada do descanso duro nao vem de banco: ela e a mesma em toda
+        # Organizacao, porque o que decide ali sao as TROCAS.
+        if sala_id == incursoes.ID_DO_DESCANSO_DURO:
+            return incursoes.sala_do_descanso_duro()
         banco = self.bancos.get(incursao.organizacao)
         return banco.sala(sala_id) if banco else None
 
@@ -749,7 +783,11 @@ class Incursoes(commands.Cog):
         if not banco:
             return []
         visitadas = await db.salas_visitadas(self.bot.db, run["id"])
-        opcoes = motor.sortear_passo(banco.salas, visitadas)
+        # O Descanso sai do bolo: ele deixou de ser sorteado e virou parada
+        # fixa do caminho. Sem isto o grupo podia pegar um segundo descanso na
+        # votacao, e o caminho fixo deixaria de valer.
+        sorteaveis = [sala for sala in banco.salas if sala.tipo != "Descanso"]
+        opcoes = motor.sortear_passo(sorteaveis, visitadas)
         await db.gravar_opcoes(self.bot.db, run["id"], passo, opcoes)
         return opcoes
 
@@ -1244,6 +1282,18 @@ class Incursoes(commands.Cog):
     # ------------------------------------------------------------ votação
 
     async def _abrir_votacao(self, run: dict[str, Any], linha: int) -> None:
+        """Abre a parada `linha`: a votação das salas, ou o descanso dela.
+
+        Descanso deixou de ser sorteado. Ele era sala do banco como as outras,
+        então um grupo atravessava uma Longa inteira sem nenhum e outro pegava
+        dois — e o que a sala do caminho cobra é HP, que não volta entre salas.
+        Agora ele é parada FIXA, pelo tamanho da incursão
+        (`incursoes.DESCANSOS_DO_CAMINHO`), e parada a mais, não sala a menos.
+
+        O normal nem passa por votação: ele é sempre o mesmo, e escolher entre
+        três cópias da mesma coisa não é escolha. O duro é votado, porque ali
+        há o que decidir.
+        """
         incursao = self._incursao_da_run(run)
         canal = await self._canal(run)
         if not (incursao and canal):
@@ -1252,6 +1302,34 @@ class Incursoes(commands.Cog):
         # passo nao ha sala anterior: o que esta la e o recrutamento, que fica.
         if linha > 1:
             await self._apagar_passo_anterior(run)
+
+        descanso = incursao.descanso_da_parada(linha)
+        if descanso == incursoes.DESCANSO_NORMAL:
+            await db.atualizar_run(
+                self.bot.db, run["id"], status="escolhendo", linha_atual=linha,
+                sala_atual=None, votacao_expira_em=None,
+            )
+            atual = await db.buscar_run(self.bot.db, run["id"])
+            sala = self._sala_de_descanso(incursao)
+            if sala is None:
+                await canal.send(
+                    "O banco desta Organização não tem sala de Descanso, e o "
+                    "caminho pede uma aqui. O grupo segue sem descansar."
+                )
+                await self._seguir_do_descanso(atual, linha)
+                return
+            await self._entrar_na_sala(atual, sala)
+            return
+        if descanso == incursoes.DESCANSO_DURO:
+            await db.atualizar_run(
+                self.bot.db, run["id"], status="escolhendo", linha_atual=linha,
+                sala_atual=None, votacao_expira_em=None,
+            )
+            await self._abrir_descanso_duro(
+                await db.buscar_run(self.bot.db, run["id"]), linha
+            )
+            return
+
         opcoes = await self._opcoes(run, linha)
         if not opcoes:
             try:
@@ -1270,7 +1348,7 @@ class Incursoes(commands.Cog):
         view = ViewVotacao(self, run["id"], linha, opcoes)
         mensagem = await canal.send(
             f"🗳️ {await self._chamar(run)} — escolham por onde seguir.",
-            embed=E.votacao(incursao, linha, opcoes, votos, total, incursao.passos),
+            embed=E.votacao(incursao, linha, opcoes, votos, total, incursao.paradas),
             view=view,
         )
         await db.atualizar_run(
@@ -1316,7 +1394,7 @@ class Incursoes(commands.Cog):
         if interaction.message is not None:
             try:
                 await interaction.message.edit(
-                    embed=E.votacao(incursao, linha, opcoes, votos, total, incursao.passos),
+                    embed=E.votacao(incursao, linha, opcoes, votos, total, incursao.paradas),
                     view=ViewVotacao(self, run_id, linha, opcoes),
                 )
             except discord.HTTPException:
@@ -1463,7 +1541,7 @@ class Incursoes(commands.Cog):
             _, faltam_rolar = await self._quem_rolou(run, [])
         embed, arquivo = E.sala_aberta(
             sala, run["linha_atual"], (), faltam_rolar,
-            incursao.passos if incursao else None,
+            incursao.paradas if incursao else None,
             # O tier, senao o cartao mostra a CD do tier 1 e `motor.testar`
             # cobra a do tier da run: o grupo via um numero e rolava contra
             # outro.
@@ -1583,7 +1661,7 @@ class Incursoes(commands.Cog):
         """O passo atual do caminho. O objetivo fica um depois do último."""
         incursao = self._incursao_da_run(run)
         if run["status"] == "objetivo" and incursao:
-            return incursao.passos + 1
+            return incursao.paradas + 1
         return run["linha_atual"]
 
     def _tier_da_run(self, run: dict[str, Any]) -> Optional[int]:
@@ -4929,11 +5007,9 @@ class Incursoes(commands.Cog):
         # Exaustao tem prazo NULL e nao sao tocadas: duram a incursao.
         await self._vencer_prazo_das_condicoes(run)
 
-        passo = run["linha_atual"]
-        if passo < incursao.passos:
-            await self._abrir_votacao(await db.buscar_run(self.bot.db, run["id"]), passo + 1)
-        else:
-            await self._chegar_ao_objetivo(await db.buscar_run(self.bot.db, run["id"]))
+        await self._seguir_do_descanso(
+            await db.buscar_run(self.bot.db, run["id"]), run["linha_atual"]
+        )
 
     async def _vencer_prazo_das_condicoes(self, run: dict[str, Any]) -> None:
         """Fecha um combate: toda condição perde 1 stack, menos a Exaustão."""
@@ -5050,7 +5126,7 @@ class Incursoes(commands.Cog):
             ja_rolaram, faltam_rolar = await self._quem_rolou(run, registros)
             embed, _ = E.sala_aberta(
                 sala, run["linha_atual"], ja_rolaram, faltam_rolar,
-                incursao.passos, tier=self._tier_da_run(run),
+                incursao.paradas, tier=self._tier_da_run(run),
             )
             if interaction.message is not None:
                 try:
@@ -5108,14 +5184,268 @@ class Incursoes(commands.Cog):
             await self._soltar_mimicos(run, sala)
             return
 
+        await self._seguir_do_descanso(run, run["linha_atual"])
+
+    # ------------------------------------------------------------ descanso
+
+    async def _seguir_do_descanso(self, run: dict[str, Any], parada: int) -> None:
+        """Fecha a parada e abre a seguinte — ou o objetivo, se era a última.
+
+        Conta PARADAS e não salas: com o descanso virando parada a mais, a
+        Média tem seis e a Longa nove. Estava escrito em dois lugares com
+        `passos` no lugar de `paradas`, e os dois passariam direto para o
+        objetivo no meio do caminho.
+        """
         incursao = self._incursao_da_run(run)
-        passo = run["linha_atual"]
-        if incursao and passo < incursao.passos:
-            await self._abrir_votacao(run, passo + 1)
+        if not incursao:
+            return
+        if parada < incursao.paradas:
+            await self._abrir_votacao(run, parada + 1)
         else:
             await self._chegar_ao_objetivo(run)
 
-    # ------------------------------------------------------------ descanso
+    def _sala_de_descanso(self, incursao: Incursao) -> Optional[Sala]:
+        """A sala de Descanso do banco da Organização, que o caminho usa.
+
+        O descanso fixo reusa a sala que o banco já tem — a Cela do Coveiro da
+        Guilda, a Adega Falsa das Sombras — em vez de inventar uma genérica:
+        a ficção é de cada Organização, e ela já estava escrita.
+        """
+        banco = self.bancos.get(incursao.organizacao)
+        if not banco:
+            return None
+        return next((s for s in banco.salas if s.tipo == "Descanso"), None)
+
+    def _trocas_da_parada(self, run_id: int, parada: int) -> list:
+        """As três trocas desta parada — sempre as mesmas três.
+
+        Derivadas da semente `run:parada` em vez de gravadas: assim o mapa da
+        run continua sendo o mapa das SALAS, e redesenhar o cartão, ou reabri-lo
+        depois de um restart, devolve a mesma mesa.
+        """
+        return consequencias.trocas_oferecidas(
+            rng=random.Random(f"{run_id}:{parada}")
+        )
+
+    async def _abrir_descanso_duro(self, run: dict[str, Any], parada: int) -> None:
+        """O descanso da Longa depois da sexta sala: três trocas, uma escolha.
+
+        Reusa o caminho do voto de sala inteiro: as trocas sorteadas ficam em
+        `run_mapa` como as salas ficariam, o voto em `run_votos`, e a maioria
+        fecha. O que muda é o que o id guardado significa — e por isso não há
+        tabela nova nem um segundo jeito de votar.
+        """
+        incursao = self._incursao_da_run(run)
+        canal = await self._canal(run)
+        if not (incursao and canal):
+            return
+        sala = incursoes.sala_do_descanso_duro()
+        trocas = self._trocas_da_parada(run["id"], parada)
+        if not trocas:
+            await canal.send(
+                "Não achei as trocas deste descanso. O grupo segue sem descansar."
+            )
+            await self._seguir_do_descanso(run, parada)
+            return
+
+        total = len(await db.participantes_de_pe(self.bot.db, run["id"]))
+        votos = await db.votos_da_linha(self.bot.db, run["id"], parada)
+        mensagem = await canal.send(
+            f"🌙 {await self._chamar(run)} — falta uma sala. O que o grupo "
+            f"gasta para chegar nela?",
+            embed=E.descanso_duro(
+                sala, trocas, votos, total, parada, incursao.paradas
+            ),
+            view=ViewTrocaDoDescanso(self, run["id"], parada, trocas),
+        )
+        # A run fica em 'escolhendo', como numa votacao de sala: e esse o
+        # estado que `tomar_a_sala` exige para fechar a parada uma unica vez.
+        await db.atualizar_run(
+            self.bot.db, run["id"], status="escolhendo", sala_atual=None,
+            linha_atual=parada, mensagem_id=mensagem.id,
+        )
+
+    async def votar_troca(
+        self, interaction: discord.Interaction, run_id: int, parada: int, troca_id: str
+    ) -> None:
+        """Um voto na troca do descanso duro. A maioria fecha, como na sala."""
+        run = await db.buscar_run(self.bot.db, run_id)
+        if not run or run["linha_atual"] != parada or run["status"] != "escolhendo":
+            await interaction.response.send_message(
+                "Este descanso já passou.", ephemeral=True
+            )
+            return
+        if not await db.esta_na_run(self.bot.db, run_id, interaction.user.id):
+            await interaction.response.send_message(
+                "Você não faz parte desta run.", ephemeral=True
+            )
+            return
+        if not await db.esta_de_pe(self.bot.db, run_id, interaction.user.id):
+            await interaction.response.send_message(
+                "Você está caído — quem está no chão não decide o descanso.",
+                ephemeral=True,
+            )
+            return
+        oferecidas = {t.id for t in self._trocas_da_parada(run_id, parada)}
+        troca = consequencias.TROCA_POR_ID.get(troca_id)
+        if troca is None or troca_id not in oferecidas:
+            await interaction.response.send_message(
+                "Essa troca não está na mesa deste descanso.", ephemeral=True
+            )
+            return
+
+        await db.registrar_voto(
+            self.bot.db, run_id, parada, interaction.user.id, troca_id
+        )
+        await interaction.response.send_message(
+            f"Voto em **{troca.nome}** registrado.", ephemeral=True
+        )
+        self._guardar_efemera(run_id, interaction)
+
+        votos = await db.votos_da_linha(self.bot.db, run_id, parada)
+        total = len(await db.participantes_de_pe(self.bot.db, run_id))
+        contagem: dict[str, int] = {}
+        for escolhida in votos.values():
+            contagem[escolhida] = contagem.get(escolhida, 0) + 1
+        vencedora, quantos = max(
+            contagem.items(), key=lambda par: par[1], default=("", 0)
+        )
+        if quantos < maioria_de(total):
+            await self._redesenhar_descanso_duro(run, parada, votos, total)
+            return
+        # So UM clique fecha a parada: `tomar_a_sala` e o mesmo atomico que a
+        # votacao de sala usa, e sem ele cinco cliques simultaneos aplicariam
+        # a troca cinco vezes.
+        if not await db.tomar_a_sala(
+            self.bot.db, run_id, parada, incursoes.ID_DO_DESCANSO_DURO
+        ):
+            return
+        await self._resolver_descanso_duro(
+            await db.buscar_run(self.bot.db, run_id), parada,
+            consequencias.TROCA_POR_ID[vencedora],
+        )
+
+    async def _redesenhar_descanso_duro(
+        self, run: dict[str, Any], parada: int, votos: dict, total: int
+    ) -> None:
+        """Reescreve o cartao com a contagem de votos de agora."""
+        incursao = self._incursao_da_run(run)
+        canal = await self._canal(run)
+        if not (incursao and canal and run.get("mensagem_id")):
+            return
+        trocas = self._trocas_da_parada(run["id"], parada)
+        try:
+            mensagem = await canal.fetch_message(run["mensagem_id"])
+            await mensagem.edit(
+                embed=E.descanso_duro(
+                    incursoes.sala_do_descanso_duro(), trocas, votos, total,
+                    parada, incursao.paradas,
+                ),
+                view=ViewTrocaDoDescanso(self, run["id"], parada, trocas),
+            )
+        except discord.HTTPException:
+            pass
+
+    async def _resolver_descanso_duro(
+        self, run: dict[str, Any], parada: int, troca
+    ) -> None:
+        """Aplica a troca escolhida no grupo inteiro, e segue o caminho."""
+        canal = await self._canal(run)
+        tier = max(1, self._tier_da_run(run) or 1)
+        await db.registrar_visita(
+            self.bot.db, run["id"], parada, incursoes.ID_DO_DESCANSO_DURO
+        )
+        await self._limpar_botoes(run)
+        await self._limpar_efemeras(run["id"])
+        combatentes = await self._combatentes(run)
+        linhas: list[str] = []
+
+        hps: dict[int, int] = {}
+        thps: dict[int, int] = {}
+        for c in combatentes:
+            nota = []
+            if troca.cura_pct:
+                # `curar_quanto` ja levanta quem caiu e ja aplica a Debilidade
+                # e o Vigor: a cura da vigilia e cura como qualquer outra, e
+                # nao o valor fixado que o descanso normal usa nos caidos.
+                quanto = motor.curar_quanto(
+                    c, max(1, (c.hp_max * troca.cura_pct) // 100)
+                )
+                if quanto:
+                    hps[c.user_id] = c.hp_atual
+                    nota.append(f"+{quanto} de HP")
+            if troca.thp_pct:
+                ganho = max(1, (c.hp_max * troca.thp_pct) // 100)
+                motor.ganhar_thp(c, ganho)
+                thps[c.user_id] = c.thp
+                nota.append(f"+{ganho} de vida temporária")
+            if nota:
+                linhas.append(f"• **{c.nome}** {', '.join(nota)}")
+        if hps:
+            await db.definir_hp_varios(self.bot.db, run["id"], hps)
+        if thps:
+            await db.definir_thp_varios(self.bot.db, run["id"], thps)
+
+        if troca.exaustao:
+            for c in combatentes:
+                for _ in range(troca.exaustao):
+                    await db.aplicar_condicao(
+                        self.bot.db, run["id"], c.user_id, condicoes.EXAUSTAO
+                    )
+            linhas.append(
+                f"🫩 Todos levam **{troca.exaustao} ponto(s) de Exaustão** — "
+                f"ela não decai com o combate, e só o descanso normal a tira."
+            )
+        if troca.limpa_debuffs:
+            carregadas = await db.condicoes_da_run(self.bot.db, run["id"])
+            limpos = 0
+            for user_id, minhas in carregadas.items():
+                for cid in consequencias.a_limpar(minhas, (condicoes.DEBUFF,)):
+                    while await db.reduzir_condicao(
+                        self.bot.db, run["id"], user_id, cid
+                    ):
+                        pass
+                    limpos += 1
+            linhas.append(
+                f"✨ **{limpos} debuff(s)** saem do grupo."
+                if limpos
+                else "✨ Não havia debuff nenhum para lavar."
+            )
+        if troca.ouro_de_sala:
+            quanto = mercado.ouro_da_sala(tier)
+            pagos = 0
+            for p in await db.quem_recebe_da_run(self.bot.db, run["id"]):
+                if await db.lancar_ouro(
+                    self.bot.db, p["id"], quanto, "Revirou o lugar",
+                    run_id=run["id"], chave=f"troca:{parada}",
+                ):
+                    pagos += 1
+            linhas.append(f"💰 **+{quanto}** de ouro para {pagos} personagem(ns).")
+        if troca.buff:
+            # Sem debuff nem machucado declarados, `premio_do_evento` sorteia
+            # so entre os 12 buffs — que e o que a troca promete.
+            premio = consequencias.premio_do_evento()
+            ganho = consequencias.CondicaoAplicada(premio)
+            for c in combatentes:
+                ganho.stacks[c.nome] = await db.aplicar_condicao(
+                    self.bot.db, run["id"], c.user_id, premio
+                )
+            nome, valor = E.painel_da_condicao(ganho)
+            linhas.append(f"**{nome}**")
+            linhas.append(valor)
+
+        # O descanso duro tambem recarrega as habilidades por descanso: ele e
+        # descanso, por mais caro que seja.
+        # NAO e "sala superada": `_pagar_as_salas` paga por superada, e
+        # descansar nao e vencer nada — o normal tambem nao e marcado.
+        await db.contar_descanso(self.bot.db, run["id"])
+        if canal:
+            await canal.send(embed=E.descanso_duro_feito(troca, linhas))
+        await self._expulsar_estourados(await db.buscar_run(self.bot.db, run["id"]))
+        await self._seguir_do_descanso(
+            await db.buscar_run(self.bot.db, run["id"]), parada
+        )
+
 
     # O descanso tira uma coisa: um stack de debuff, ou um ponto de Exaustao.
     # A Exaustao tem botao proprio porque e a unica que nao decai com o
@@ -5534,7 +5864,7 @@ class Incursoes(commands.Cog):
             log.warning("Mímico não encontrado no bestiário; emboscada cancelada")
             incursao = self._incursao_da_run(run)
             passo = run["linha_atual"]
-            if incursao and passo < incursao.passos:
+            if incursao and passo < incursao.paradas:
                 await self._abrir_votacao(run, passo + 1)
             else:
                 await self._chegar_ao_objetivo(run)

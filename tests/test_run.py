@@ -16,6 +16,7 @@ from src import config, database as db, embeds as E  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
+    passar_o_descanso,
     GUILD,
     JOGADORES,
     FakeBot,
@@ -87,8 +88,25 @@ async def main() -> None:
 
     # --- as salas do caminho ---
     rolagens: list = []
-    for linha in range(1, incursao.passos + 1):
+    descansos = 0
+    # PARADAS e nao salas: o descanso e parada a mais, e numa Media ele cai na
+    # quarta. Ele chega sem votacao — e por isso que a trava do laco e aqui.
+    for linha in range(1, incursao.paradas + 1):
         run = await db.buscar_run(conn, run["id"])
+        if incursao.descanso_da_parada(linha):
+            # Ninguem votou nada aqui, e e nisso que o descanso normal e
+            # diferente: a parada nao sorteia opcao, entao nao ha o que votar.
+            assert not await db.opcoes_do_passo(conn, run["id"], linha), (
+                "o descanso normal nao sorteia opcao nenhuma"
+            )
+            await passar_o_descanso(cog, conn, canal, run["id"])
+            atual = await db.buscar_run(conn, run["id"])
+            assert atual["linha_atual"] == linha + 1, (
+                f"parada {linha}: o descanso nao passou, ficou em "
+                f"{atual['linha_atual']}"
+            )
+            descansos += 1
+            continue
         assert run["status"] == "escolhendo" and run["linha_atual"] == linha
 
         alvo = next(s for s in await cog._opcoes(run, linha) if s.tem_teste)
@@ -145,6 +163,17 @@ async def main() -> None:
             esperada = alvo.cd_efetiva(incursao.tier)
             assert 1 <= r["d20"] <= 20 and r["pericia"] in alvo.pericias
             assert r["cd"] == esperada, (r["cd"], esperada, incursao.tier)
+
+    # A Media tem UM descanso, e ele e a quarta parada: seis paradas para
+    # cinco salas. Sem isto, trocar o mapa de descansos passaria em silencio.
+    assert descansos == 1, f"esperava um descanso na Media, houve {descansos}"
+    assert incursao.paradas == incursao.passos + 1
+    descanso = cog._sala_de_descanso(incursao)
+    visitadas = await db.salas_visitadas(conn, run["id"])
+    assert visitadas.count(descanso.id) == 1, visitadas
+    assert visitadas.index(descanso.id) == 3, (
+        f"o descanso deveria ser a quarta parada, veio em {visitadas}"
+    )
 
     # --- objetivo ---
     run = await db.buscar_run(conn, run["id"])

@@ -74,6 +74,35 @@ O Descanso também zera os usos das habilidades de escopo `descanso` e tira um s
 
 O Descanso **não** cura tudo, de propósito: ele cura uma fatia e ainda deixa o grupo escolher o que limpar.
 
+### Onde o descanso acontece
+
+O descanso é **parada fixa do caminho**, pelo tamanho da incursão, e não sala sorteada. Ele chega **sem votação**: é sempre a mesma coisa, e escolher entre três cópias dela não é escolher. Os botões de limpeza continuam, porque a limpeza é de cada um — e é a única saída da Exaustão.
+
+| Tamanho | Paradas de descanso |
+|---|---|
+| Curta | nenhuma |
+| Média | 4ª — descanso fixo |
+| Longa | 4ª — descanso fixo, 8ª — a Última Vigília |
+
+## A Última Vigília
+
+A segunda parada da Longa, depois da sexta sala, não é o descanso fixo: é uma **escolha**. Falta uma sala para o objetivo, e o grupo decide o que gasta para chegar nela. São **3 trocas** sorteadas de um catálogo de 6, votadas pela maioria como uma sala — a troca vence para o grupo inteiro, não para quem votou.
+
+Toda troca cura mais que o descanso fixo e cobra por isso. A moeda cara é a **Exaustão**: ela não decai com o combate, só sai no descanso fixo, e em 5 pontos tira o personagem da incursão — e a vigília acontece quando falta uma sala.
+
+| Troca | Cura | O que cobra | O que dá além da cura |
+|---|---|---|---|
+| Recuperar o fôlego | 20% + 10% de THP | nada | — |
+| Forçar a marcha | 40% | 1 ponto de Exaustão em cada um | — |
+| Queimar as reservas | 50% | 2 pontos de Exaustão em cada um | — |
+| Lavar as feridas | 10% | nada | tira **todo debuff** do grupo |
+| Revirar o lugar | 15% | nada | paga o ouro de **uma sala** |
+| Velar os mortos | — | nada | dá **um buff** ao grupo inteiro |
+
+Três delas não cobram: pagam de outro jeito. **Lavar as feridas** cura pouco e tira todo debuff do grupo (a Exaustão não é debuff e fica); **revirar o lugar** cura pouco e paga o ouro de uma sala, porque o grupo procurou em vez de dormir; **velar os mortos** não cura ninguém e dá ao grupo inteiro um buff da tabela.
+
+A vigília **conta como descanso** para as habilidades de escopo `descanso`, e **não** conta como sala superada: descansar não é vencer nada, e o ouro das salas é por sala vencida.
+
 ## Cura
 
 **Toda cura do bot é porcentagem do HP máximo, nunca dado.** Um dado fixo encolhe conforme o grupo sobe de tier: 2d8 é metade da vida no tier 1 e um arranhão no tier 5. A porcentagem vale igual na faixa inteira.

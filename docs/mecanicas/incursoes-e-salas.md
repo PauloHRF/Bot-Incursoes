@@ -4,13 +4,17 @@
 
 Uma incursão guarda a lore de abertura, a lore de fecho, o tamanho e a **sala final**. As salas do meio não são escritas nela: são sorteadas do banco da Organização quando a run começa, então duas runs da mesma incursão percorrem caminhos diferentes.
 
-| Tamanho | Passos até o objetivo |
-|---|---|
-| Curta | 3 |
-| Média | 5 |
-| Longa | 7 |
+| Tamanho | Salas | Paradas | Descansos no caminho |
+|---|---|---|---|
+| Curta | 3 | 3 | nenhum |
+| Média | 5 | 6 | a 4ª (fixo) |
+| Longa | 7 | 9 | a 4ª (fixo) e a 8ª (vigília) |
 
-A cada passo o grupo vota entre **3 salas** sorteadas do banco. **Não há prazo:** a run espera indefinidamente, mas não espera quem falta depois que o resultado já está decidido.
+**Descanso é parada a mais, não sala a menos.** Uma Média tem as cinco salas dela e para uma vez para descansar, então são seis paradas; a Longa tem sete salas e nove paradas.
+
+As paradas de descanso **não são votadas como sala**: elas são fixas pelo tamanho da incursão, e a sala de Descanso do banco saiu do sorteio das opções. Ver `combate.md`.
+
+A cada parada de sala o grupo vota entre **3 salas** sorteadas do banco. **Não há prazo:** a run espera indefinidamente, mas não espera quem falta depois que o resultado já está decidido.
 
 A apuração, em ordem:
 

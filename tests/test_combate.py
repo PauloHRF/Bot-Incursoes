@@ -24,8 +24,11 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    abrir_o_descanso,
     atacar_ate_cair,
+    parada_de_descanso,
     criar_grupo,
+    passar_o_descanso,
     montar_conteudo,
     salas_de_combate,
     salas_sem_combate,
@@ -343,19 +346,23 @@ async def caso_derrota_total():
 async def caso_descanso_cura():
     """A sala de Descanso levanta os caídos e cura uma fatia de quem está vivo."""
     conn, canal, cog = await preparar()
-    # banco so de Descanso: o primeiro passo cura o grupo na certa
+    # Media, porque e o menor tamanho que tem parada de descanso: na Curta nao
+    # ha descanso nenhum, e o descanso deixou de ser sala que se vota.
     incursao, _ = montar_conteudo(
-        cog, incursao_id="cura", salas=salas_sem_combate(tipo="Descanso")
+        cog, incursao_id="cura", tamanho="Média", salas=salas_sem_combate(9)
     )
     run = await montar_run(conn, canal, cog, "cura")
 
     # machuca o grupo antes do descanso
     await db.definir_hp_varios(conn, run["id"], {JOGADORES[0]: 0, JOGADORES[1]: 5})
 
-    msg = await canal.fetch_message(run["mensagem_id"])
-    alvo = (await cog._opcoes(run, 1))[0]
-    for user_id in JOGADORES:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
+    parada = parada_de_descanso(incursao)
+    run = await abrir_o_descanso(cog, conn, canal, run["id"])
+    # Ninguem votou: o descanso e parada do caminho, e a cura abaixo e prova
+    # de que ele aconteceu sem um unico clique de votacao.
+    assert not await db.opcoes_do_passo(conn, run["id"], parada), (
+        "o descanso normal nao sorteia opcao nenhuma"
+    )
 
     # o HP maximo vem da classe: o teste compara com a tabela, nao com um numero solto
     maximo = classes.classe(CLASSE_PADRAO).numeros(8).hp
@@ -371,7 +378,8 @@ async def caso_descanso_cura():
     assert hps[JOGADORES[1]] == esperado, (
         f"machucado deveria ir a {esperado}, veio {hps[JOGADORES[1]]}"
     )
-    assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == 2
+    await passar_o_descanso(cog, conn, canal, run["id"])
+    assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == parada + 1
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)

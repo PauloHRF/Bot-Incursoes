@@ -30,7 +30,7 @@ A Graça tira **um stack de um debuff de alguém** do grupo, sorteado entre todo
 ### Combate e Descanso
 
 - **Combate** não tem teste de perícia: resolve na iniciativa. Quem cai sofre dano e fica fora do resto do combate.
-- **Descanso** não tem como falhar: cura uma fatia e cada um limpa uma condição sua. Ver `combate.md`.
+- **Descanso** não tem como falhar: cura uma fatia e cada um limpa uma condição sua. Não é sorteado nem votado — é parada fixa do caminho. Ver `combate.md`.
 
 ## Os debuffs de cada fonte
 

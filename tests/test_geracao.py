@@ -18,6 +18,7 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    atravessar_o_caminho,
     criar_grupo,
     montar_conteudo,
     salas_sem_combate,
@@ -95,26 +96,8 @@ def caso_sorteio_puro():
 
 
 async def atravessar(conn, canal, cog, run, incursao, ate=None):
-    """Leva o grupo passo a passo, sempre pela primeira opção. Devolve as visitadas."""
-    escolhidas = []
-    for passo in range(1, (ate or incursao.passos) + 1):
-        run = await db.buscar_run(conn, run["id"])
-        if run["status"] != "escolhendo":
-            break
-        alvo = (await cog._opcoes(run, passo))[0]
-        escolhidas.append(alvo.id)
-        msg = await canal.fetch_message(run["mensagem_id"])
-        for user_id in JOGADORES:
-            await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], passo, alvo.id)
-        atual = await db.buscar_run(conn, run["id"])
-        if atual["status"] == "em_sala":
-            msg_sala = await canal.fetch_message(atual["mensagem_id"])
-            for user_id in JOGADORES:
-                agora = await db.buscar_run(conn, run["id"])
-                if agora["status"] != "em_sala":
-                    break
-                await cog.rolar(FakeInteraction(canal, user_id, msg_sala), run["id"], alvo.id)
-    return escolhidas
+    """Leva o grupo parada por parada. Mora nos dublês: quatro suítes usam."""
+    return await atravessar_o_caminho(cog, conn, canal, run, incursao, ate=ate)
 
 
 async def caso_sala_visitada_nao_volta():
@@ -130,7 +113,12 @@ async def caso_sala_visitada_nao_volta():
     escolhidas = await atravessar(conn, canal, cog, run, incursao)
     assert len(escolhidas) == incursao.passos
     assert len(set(escolhidas)) == len(escolhidas), f"o grupo repetiu sala: {escolhidas}"
-    assert await db.salas_visitadas(conn, run["id"]) == escolhidas
+    # O descanso tambem e visita, e nao e escolha de ninguem: ele entra no
+    # caminho sem passar pela lista de salas votadas.
+    descanso = cog._sala_de_descanso(incursao)
+    visitadas = await db.salas_visitadas(conn, run["id"])
+    assert visitadas.count(descanso.id) == 1, visitadas
+    assert [s for s in visitadas if s != descanso.id] == escolhidas
 
     # nenhuma opcao de um passo era uma sala ja visitada antes dele
     mapa = await db.mapa_da_run(conn, run["id"])

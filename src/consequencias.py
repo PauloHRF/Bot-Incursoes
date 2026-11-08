@@ -73,6 +73,82 @@ def emboscada_do_tier(tier: Optional[int] = None) -> tuple[tuple[str, int], ...]
     abaixo = [t for t in escritos if t <= tier]
     return A_EMBOSCADA[abaixo[-1] if abaixo else escritos[0]]
 
+# ------------------------------------------------- o descanso duro
+#
+# A parada que a Longa traz depois da sexta sala. O descanso normal é sempre o
+# mesmo e por isso nem é votado; este é uma ESCOLHA, com três trocas sorteadas
+# do catálogo abaixo e decididas pela maioria, como uma sala.
+#
+# Toda troca é "cura mais, e cobra" — menos a primeira, que é a opção de quem
+# chegou inteiro e não quer dever nada. A Exaustão é a moeda cara: ela não
+# decai com o combate, só sai no descanso normal, e em 5 pontos tira o
+# personagem da incursão.
+TROCAS_POR_DESCANSO = 3
+
+
+@dataclass(frozen=True)
+class Troca:
+    """Uma escolha do descanso duro: o que ela cura e o que ela cobra."""
+
+    id: str
+    nome: str
+    texto: str
+    # Fração do HP máximo que cada um recupera.
+    cura_pct: int = 0
+    # Vida temporária, também em fração do HP máximo.
+    thp_pct: int = 0
+    # Pontos de Exaustão em cada um do grupo.
+    exaustao: int = 0
+    # Tira TODO debuff de TODO mundo (a Exaustão não é debuff e fica).
+    limpa_debuffs: bool = False
+    # Paga ao grupo o ouro de uma sala superada.
+    ouro_de_sala: bool = False
+    # Dá ao grupo inteiro um dos 12 buffs do catálogo, sorteado.
+    buff: bool = False
+
+
+CATALOGO_DE_TROCAS: tuple[Troca, ...] = (
+    Troca("folego", "Recuperar o fôlego",
+          "Cura **20%** do HP máximo e dá **10%** de vida temporária. "
+          "Não cobra nada.",
+          cura_pct=20, thp_pct=10),
+    Troca("marcha", "Forçar a marcha",
+          "Cura **40%**, e cada um leva **1 ponto de Exaustão**.",
+          cura_pct=40, exaustao=1),
+    Troca("reservas", "Queimar as reservas",
+          "Cura **50%**, e cada um leva **2 pontos de Exaustão**.",
+          cura_pct=50, exaustao=2),
+    Troca("feridas", "Lavar as feridas",
+          "Cura só **10%**, e tira **todos os debuffs** do grupo. "
+          "A Exaustão não é debuff e fica.",
+          cura_pct=10, limpa_debuffs=True),
+    Troca("revirar", "Revirar o lugar",
+          "Cura **15%**, e o grupo leva o ouro de **uma sala** por ter "
+          "procurado em vez de dormir.",
+          cura_pct=15, ouro_de_sala=True),
+    Troca("velar", "Velar os mortos",
+          "Não cura ninguém, e o grupo inteiro sai com **um buff** da tabela.",
+          buff=True),
+)
+
+TROCA_POR_ID = {t.id: t for t in CATALOGO_DE_TROCAS}
+
+
+def trocas_oferecidas(
+    quantas: int = TROCAS_POR_DESCANSO, rng: Optional[random.Random] = None
+) -> list[Troca]:
+    """As trocas que este descanso duro põe na mesa, sorteadas sem repetição.
+
+    Sorteadas e não fixas pelo mesmo motivo que as salas: a decisão interessa
+    quando o grupo não sabe o que vem. Com o catálogo inteiro na tela, a
+    escolha seria sempre a mesma.
+    """
+    gerador = _rng(rng)
+    return gerador.sample(
+        list(CATALOGO_DE_TROCAS), min(quantas, len(CATALOGO_DE_TROCAS))
+    )
+
+
 # Os prêmios de Evento que não são buff com stack.
 CURA = "cura"
 GRACA = "graca"

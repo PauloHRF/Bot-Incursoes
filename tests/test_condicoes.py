@@ -33,7 +33,9 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    abrir_o_descanso,
     criar_grupo,
+    parada_de_descanso,
     montar_conteudo,
     sala,
 )
@@ -308,7 +310,7 @@ def caso_graca_sorteia_sem_reposicao():
 # --------------------------------------------------------------- integração
 
 
-async def preparar(salas, tier=4, nivel=8):
+async def preparar(salas, tier=4, nivel=8, tamanho="Curta"):
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -323,7 +325,7 @@ async def preparar(salas, tier=4, nivel=8):
     await criar_grupo(conn, nivel=nivel)
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
-    incursao, _ = montar_conteudo(cog, tamanho="Curta", tier=tier, salas=salas)
+    incursao, _ = montar_conteudo(cog, tamanho=tamanho, tier=tier, salas=salas)
     return conn, canal, cog, incursao
 
 
@@ -960,20 +962,23 @@ async def caso_tesouro_falho_sem_mimico_segue():
 
 async def caso_descanso_limpa_um_por_personagem():
     """O descanso é uma limpeza POR personagem, e cada um escolhe a sua."""
-    conn, canal, cog, incursao = await preparar(salas_de("Descanso", None))
+    conn, canal, cog, incursao = await preparar(
+        salas_de("Evento", 10, quantas=9), tamanho="Média"
+    )
     run = await montar_run(conn, canal, cog)
     um, outro = JOGADORES[0], JOGADORES[1]
     await db.aplicar_condicao(conn, run["id"], um, "medo")
     await db.aplicar_condicao(conn, run["id"], um, "exaustao")
     await db.aplicar_condicao(conn, run["id"], outro, "envenenado")
 
-    alvo = (await cog._opcoes(run, 1))[0]
+    # O descanso e parada do caminho, nao sala que se vota: o teste abre a
+    # parada que o fecho da terceira sala abriria.
+    run = await abrir_o_descanso(cog, conn, canal, run["id"])
+    parada = run["linha_atual"]
+    alvo = cog._sala_de_descanso(incursao)
     msg = await canal.fetch_message(run["mensagem_id"])
-    for user_id in JOGADORES:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
-    run = await db.buscar_run(conn, run["id"])
 
-    assert run["linha_atual"] == 1, "o descanso deveria esperar as escolhas"
+    assert run["linha_atual"] == parada, "o descanso deveria esperar as escolhas"
     assert await cog._limpezas_disponiveis(run) == {"debuff", "exaustao"}
     assert set(await cog._descanso_pendente(run)) == {um, outro}
 
@@ -991,7 +996,7 @@ async def caso_descanso_limpa_um_por_personagem():
         FakeInteraction(canal, um, msg), run["id"], alvo.id, "debuff"
     )
     assert "medo" in await db.condicoes_de(conn, run["id"], um)
-    assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == 1
+    assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == parada
 
     # Categoria que o personagem nao carrega nao gasta a escolha dele.
     i = FakeInteraction(canal, outro, msg)
@@ -1004,7 +1009,7 @@ async def caso_descanso_limpa_um_por_personagem():
         FakeInteraction(canal, outro, msg), run["id"], alvo.id, "debuff"
     )
     assert "envenenado" not in await db.condicoes_de(conn, run["id"], outro)
-    assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == 2
+    assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == parada + 1
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
@@ -1022,20 +1027,23 @@ async def caso_o_descanso_deixa_o_desfecho_no_canal():
     descanso era o único que não deixava nada, porque não tem rolagem e
     chega em `_concluir_sala` sem resolução nenhuma.
     """
-    conn, canal, cog, incursao = await preparar(salas_de("Descanso", None))
+    conn, canal, cog, incursao = await preparar(
+        salas_de("Evento", 10, quantas=9), tamanho="Média"
+    )
     run = await montar_run(conn, canal, cog)
     ferido = JOGADORES[0]
     await db.definir_hp(conn, run["id"], ferido, 5)
 
-    alvo = (await cog._opcoes(run, 1))[0]
+    # Nenhum voto: o descanso e parada do caminho, e chega sozinho.
+    parada = parada_de_descanso(incursao)
+    run = await abrir_o_descanso(cog, conn, canal, run["id"])
+    alvo = cog._sala_de_descanso(incursao)
     msg = await canal.fetch_message(run["mensagem_id"])
-    for user_id in JOGADORES:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
 
     # Ninguém carrega condição, então o descanso fecha sozinho e a run já
     # está na votação do passo 2 — a mudança de sala que apagava o cartão.
     depois = await db.buscar_run(conn, run["id"])
-    assert depois["linha_atual"] == 2, depois["linha_atual"]
+    assert depois["linha_atual"] == parada + 1, depois["linha_atual"]
 
     nomes = {
         p["user_id"]: p["nome"] for p in await db.personagens_da_run(conn, run["id"])
@@ -1073,7 +1081,9 @@ async def caso_cartao_do_descanso_mostra_o_grupo_inteiro():
     dos dois ramos do embed: o campo do HP desaparecia por inteiro no
     primeiro clique de limpeza.
     """
-    conn, canal, cog, incursao = await preparar(salas_de("Descanso", None))
+    conn, canal, cog, incursao = await preparar(
+        salas_de("Evento", 10, quantas=9), tamanho="Média"
+    )
     run = await montar_run(conn, canal, cog)
     ferido, caido, inteiro = JOGADORES[0], JOGADORES[1], JOGADORES[2]
     await db.definir_hp(conn, run["id"], ferido, 5)
@@ -1085,11 +1095,11 @@ async def caso_cartao_do_descanso_mostra_o_grupo_inteiro():
     # redesenho, que e o que este caso quer olhar, nunca acontece.
     await db.aplicar_condicao(conn, run["id"], inteiro, "envenenado")
 
-    alvo = (await cog._opcoes(run, 1))[0]
+    # Nenhum voto: o descanso e parada do caminho, e chega sozinho.
+    parada = parada_de_descanso(incursao)
+    run = await abrir_o_descanso(cog, conn, canal, run["id"])
+    alvo = cog._sala_de_descanso(incursao)
     msg = await canal.fetch_message(run["mensagem_id"])
-    for user_id in JOGADORES:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
-    run = await db.buscar_run(conn, run["id"])
 
     async def campo_do_hp():
         cartao = await canal.fetch_message(run["mensagem_id"])
@@ -1121,17 +1131,19 @@ async def caso_cartao_do_descanso_mostra_o_grupo_inteiro():
 
 async def caso_descanso_e_a_saida_da_exaustao():
     """A Exaustão não decai, então o descanso é a única saída dela."""
-    conn, canal, cog, incursao = await preparar(salas_de("Descanso", None))
+    conn, canal, cog, incursao = await preparar(
+        salas_de("Evento", 10, quantas=9), tamanho="Média"
+    )
     run = await montar_run(conn, canal, cog)
     vitima = JOGADORES[0]
     for _ in range(3):
         await db.aplicar_condicao(conn, run["id"], vitima, "exaustao")
 
-    alvo = (await cog._opcoes(run, 1))[0]
+    # Nenhum voto: o descanso e parada do caminho, e chega sozinho.
+    parada = parada_de_descanso(incursao)
+    run = await abrir_o_descanso(cog, conn, canal, run["id"])
+    alvo = cog._sala_de_descanso(incursao)
     msg = await canal.fetch_message(run["mensagem_id"])
-    for user_id in JOGADORES:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
-    run = await db.buscar_run(conn, run["id"])
 
     await cog.limpar_no_descanso(
         FakeInteraction(canal, vitima, msg), run["id"], alvo.id, "exaustao"
@@ -1147,16 +1159,20 @@ async def caso_descanso_e_a_saida_da_exaustao():
 
 async def caso_descanso_sem_nada_a_limpar():
     """Grupo limpo não trava no descanso: atravessa sem clique."""
-    conn, canal, cog, incursao = await preparar(salas_de("Descanso", None))
+    conn, canal, cog, incursao = await preparar(
+        salas_de("Evento", 10, quantas=9), tamanho="Média"
+    )
     run = await montar_run(conn, canal, cog)
-    alvo = (await cog._opcoes(run, 1))[0]
+    # Nenhum voto: o descanso e parada do caminho, e chega sozinho.
+    parada = parada_de_descanso(incursao)
+    run = await abrir_o_descanso(cog, conn, canal, run["id"])
+    alvo = cog._sala_de_descanso(incursao)
     msg = await canal.fetch_message(run["mensagem_id"])
-    for user_id in JOGADORES:
-        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
-    run = await db.buscar_run(conn, run["id"])
 
     assert await cog._limpezas_disponiveis(run) == set()
-    assert run["linha_atual"] == 2, "grupo limpo atravessa o descanso sozinho"
+    assert run["linha_atual"] == parada + 1, (
+        "grupo limpo atravessa o descanso sozinho"
+    )
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)

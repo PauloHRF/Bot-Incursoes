@@ -393,6 +393,87 @@ def combate() -> str:
         "O Descanso **não** cura tudo, de propósito: ele cura uma fatia e "
         "ainda deixa o grupo escolher o que limpar.",
         "",
+        "### Onde o descanso acontece",
+        "",
+        "O descanso é **parada fixa do caminho**, pelo tamanho da incursão, e "
+        "não sala sorteada. Ele chega **sem votação**: é sempre a mesma coisa, "
+        "e escolher entre três cópias dela não é escolher. Os botões de limpeza "
+        "continuam, porque a limpeza é de cada um — e é a única saída da "
+        "Exaustão.",
+        "",
+    ]
+    L += tabela(
+        ["Tamanho", "Paradas de descanso"],
+        [
+            [
+                nome,
+                ", ".join(
+                    f"{parada}ª — "
+                    + ("descanso fixo" if qual == I.DESCANSO_NORMAL
+                       else "a Última Vigília")
+                    for parada, qual in sorted(
+                        I.DESCANSOS_DO_CAMINHO.get(passos, {}).items()
+                    )
+                ) or "nenhuma",
+            ]
+            for nome, passos in I.TAMANHOS.items()
+        ],
+    )
+    L += [
+        "## A Última Vigília",
+        "",
+        "A segunda parada da Longa, depois da sexta sala, não é o descanso "
+        "fixo: é uma **escolha**. Falta uma sala para o objetivo, e o grupo "
+        f"decide o que gasta para chegar nela. São **{C.TROCAS_POR_DESCANSO} "
+        f"trocas** sorteadas de um catálogo de {len(C.CATALOGO_DE_TROCAS)}, "
+        "votadas pela maioria como uma sala — a troca vence para o grupo "
+        "inteiro, não para quem votou.",
+        "",
+        "Toda troca cura mais que o descanso fixo e cobra por isso. A moeda "
+        "cara é a **Exaustão**: ela não decai com o combate, só sai no "
+        f"descanso fixo, e em {cond.TETO_EXAUSTAO} pontos tira o personagem "
+        "da incursão — e a vigília acontece quando falta uma sala.",
+        "",
+    ]
+    def o_preco(t) -> str:
+        if t.exaustao:
+            ponto = "ponto" if t.exaustao == 1 else "pontos"
+            return f"{t.exaustao} {ponto} de Exaustão em cada um"
+        return "nada"
+
+    def em_troca(t) -> str:
+        if t.limpa_debuffs:
+            return "tira **todo debuff** do grupo"
+        if t.ouro_de_sala:
+            return "paga o ouro de **uma sala**"
+        if t.buff:
+            return "dá **um buff** ao grupo inteiro"
+        return "—"
+
+    L += tabela(
+        ["Troca", "Cura", "O que cobra", "O que dá além da cura"],
+        [
+            [
+                t.nome,
+                (f"{t.cura_pct}%" if t.cura_pct else "—")
+                + (f" + {t.thp_pct}% de THP" if t.thp_pct else ""),
+                o_preco(t),
+                em_troca(t),
+            ]
+            for t in C.CATALOGO_DE_TROCAS
+        ],
+    )
+    L += [
+        "Três delas não cobram: pagam de outro jeito. **Lavar as feridas** "
+        "cura pouco e tira todo debuff do grupo (a Exaustão não é debuff e "
+        "fica); **revirar o lugar** cura pouco e paga o ouro de uma sala, "
+        "porque o grupo procurou em vez de dormir; **velar os mortos** não "
+        "cura ninguém e dá ao grupo inteiro um buff da tabela.",
+        "",
+        "A vigília **conta como descanso** para as habilidades de escopo "
+        "`descanso`, e **não** conta como sala superada: descansar não é "
+        "vencer nada, e o ouro das salas é por sala vencida.",
+        "",
         "## Cura",
         "",
         "**Toda cura do bot é porcentagem do HP máximo, nunca dado.** Um dado "
@@ -566,11 +647,32 @@ def incursoes_e_salas() -> str:
         "",
     ]
     L += tabela(
-        ["Tamanho", "Passos até o objetivo"],
-        [[nome, str(passos)] for nome, passos in I.TAMANHOS.items()],
+        ["Tamanho", "Salas", "Paradas", "Descansos no caminho"],
+        [
+            [
+                nome,
+                str(passos),
+                str(I.paradas_do_caminho(passos)),
+                " e ".join(
+                    f"a {parada}ª ({'fixo' if qual == I.DESCANSO_NORMAL else 'vigília'})"
+                    for parada, qual in sorted(
+                        I.DESCANSOS_DO_CAMINHO.get(passos, {}).items()
+                    )
+                ) or "nenhum",
+            ]
+            for nome, passos in I.TAMANHOS.items()
+        ],
     )
     L += [
-        f"A cada passo o grupo vota entre **{I.OPCOES_POR_PASSO} salas** "
+        "**Descanso é parada a mais, não sala a menos.** Uma Média tem as "
+        "cinco salas dela e para uma vez para descansar, então são seis "
+        "paradas; a Longa tem sete salas e nove paradas.",
+        "",
+        "As paradas de descanso **não são votadas como sala**: elas são fixas "
+        "pelo tamanho da incursão, e a sala de Descanso do banco saiu do "
+        "sorteio das opções. Ver `combate.md`.",
+        "",
+        f"A cada parada de sala o grupo vota entre **{I.OPCOES_POR_PASSO} salas** "
         "sorteadas do banco. **Não há prazo:** a run espera indefinidamente, "
         "mas não espera quem falta depois que o resultado já está decidido.",
         "",
@@ -776,7 +878,8 @@ def consequencias_md() -> str:
         "**Combate** não tem teste de perícia: resolve na iniciativa. Quem "
         "cai sofre dano e fica fora do resto do combate.",
         "**Descanso** não tem como falhar: cura uma fatia e cada um limpa uma "
-        "condição sua. Ver `combate.md`.",
+        "condição sua. Não é sorteado nem votado — é parada fixa do caminho. "
+        "Ver `combate.md`.",
     ])
     L += [
         "## Os debuffs de cada fonte",

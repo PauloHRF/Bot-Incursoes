@@ -13,6 +13,7 @@ import copy  # noqa: E402
 import discord  # noqa: E402
 
 from src import database as db, motor  # noqa: E402
+from src import incursoes  # noqa: E402
 from src.incursoes import banco_de_dict, de_dict  # noqa: E402
 
 GUILD = 1
@@ -547,9 +548,12 @@ def montar_conteudo(
             ),
         }
     )
-    banco = banco_de_dict(
-        {"organizacao": organizacao, "salas": salas if salas is not None else salas_sem_combate()}
-    )
+    do_banco = list(salas if salas is not None else salas_sem_combate())
+    # O caminho procura uma sala de Descanso no banco da Organizacao, e a
+    # Media e a Longa param numa. Entra uma se o teste nao trouxe.
+    if not any(s["tipo"] == "Descanso" for s in do_banco):
+        do_banco.append(sala("DESC", "Descanso"))
+    banco = banco_de_dict({"organizacao": organizacao, "salas": do_banco})
     cog.incursoes[incursao.id] = incursao
     cog.bancos[banco.organizacao] = banco
     return incursao, banco
@@ -599,3 +603,115 @@ async def atacar_ate_cair(conn, canal, cog, run_id, sala_id, limite=30):
             ultima = FakeInteraction(canal, c.user_id, msg)
             await cog.atacar(ultima, run_id, sala_id)
     return ultima
+
+
+# ------------------------------------------------------- paradas de descanso
+#
+# O descanso deixou de ser sala sorteada e votada: ele é PARADA FIXA do
+# caminho (`incursoes.DESCANSOS_DO_CAMINHO`). Não dá mais para chegar nele
+# clicando numa opção, então quem testa o que ele faz usa o que está aqui.
+
+
+def parada_de_descanso(incursao, qual=incursoes.DESCANSO_NORMAL) -> int:
+    """Em que parada desta incursão mora o descanso `qual`."""
+    mapa = incursoes.DESCANSOS_DO_CAMINHO.get(incursao.passos, {})
+    return next((p for p, tipo in mapa.items() if tipo == qual), 0)
+
+
+async def abrir_o_descanso(cog, conn, canal, run_id, qual=incursoes.DESCANSO_NORMAL):
+    """Abre a parada de descanso pelo mesmo caminho que o cog abre.
+
+    Não grava estado na mão: chama `_abrir_votacao` na parada do descanso, que
+    é exatamente o que o fecho da sala anterior chamaria. A run precisa ser de
+    um tamanho que TENHA aquele descanso — Média para o normal, Longa para o
+    duro.
+    """
+    run = await db.buscar_run(conn, run_id)
+    incursao = cog.incursoes[run["incursao_id"]]
+    parada = parada_de_descanso(incursao, qual)
+    assert parada, (
+        f"a incursão de {incursao.passos} salas não tem descanso {qual}"
+    )
+    await db.atualizar_run(
+        conn, run_id, status="escolhendo", sala_atual=None, linha_atual=parada - 1
+    )
+    await cog._abrir_votacao(await db.buscar_run(conn, run_id), parada)
+    return await db.buscar_run(conn, run_id)
+
+
+async def passar_o_descanso(cog, conn, canal, run_id, troca_id=None):
+    """Atravessa a parada de descanso em que o grupo está, normal ou dura.
+
+    O normal chega sem votação e para nos botões de limpeza; quem carrega algo
+    clica em "Seguir" e a parada fecha. O duro chega com três trocas e fecha na
+    maioria — sem `troca_id`, o grupo vota na primeira da mesa.
+    """
+    run = await db.buscar_run(conn, run_id)
+    parada = run["linha_atual"]
+    if run["sala_atual"] == incursoes.ID_DO_DESCANSO_DURO or (
+        run["status"] == "escolhendo" and cog._incursao_da_run(run)
+        and cog._incursao_da_run(run).descanso_da_parada(parada)
+        == incursoes.DESCANSO_DURO
+    ):
+        trocas = cog._trocas_da_parada(run_id, parada)
+        escolhida = troca_id or trocas[0].id
+        msg = await canal.fetch_message(run["mensagem_id"])
+        for user_id in await db.participantes_de_pe(conn, run_id):
+            await cog.votar_troca(
+                FakeInteraction(canal, user_id, msg), run_id, parada, escolhida
+            )
+            if (await db.buscar_run(conn, run_id))["linha_atual"] != parada:
+                break
+        return escolhida
+    # Descanso normal: cada pendente gasta (ou dispensa) a limpeza dele.
+    for _ in range(len(JOGADORES) + 1):
+        atual = await db.buscar_run(conn, run_id)
+        if atual["linha_atual"] != parada:
+            return None
+        faltam = await cog._descanso_pendente(atual)
+        if not faltam:
+            return None
+        msg = await canal.fetch_message(atual["mensagem_id"])
+        for user_id in faltam:
+            await cog.limpar_no_descanso(
+                FakeInteraction(canal, user_id, msg),
+                run_id,
+                atual["sala_atual"],
+                "nada",
+            )
+    return None
+
+
+async def atravessar_o_caminho(cog, conn, canal, run, incursao, ate=None):
+    """Leva o grupo parada por parada, sempre pela primeira opção.
+
+    Conta PARADAS e não salas: numa Média são seis e numa Longa nove, porque o
+    descanso é parada a mais. Devolve só os ids das SALAS escolhidas — o
+    descanso não é escolha de ninguém.
+    """
+    escolhidas = []
+    for parada in range(1, (ate or incursao.paradas) + 1):
+        atual = await db.buscar_run(conn, run["id"])
+        if incursao.descanso_da_parada(parada):
+            await passar_o_descanso(cog, conn, canal, run["id"])
+            continue
+        if atual["status"] != "escolhendo":
+            break
+        alvo = (await cog._opcoes(atual, parada))[0]
+        escolhidas.append(alvo.id)
+        msg = await canal.fetch_message(atual["mensagem_id"])
+        for user_id in JOGADORES:
+            await cog.votar(
+                FakeInteraction(canal, user_id, msg), run["id"], parada, alvo.id
+            )
+        depois = await db.buscar_run(conn, run["id"])
+        if depois["status"] == "em_sala":
+            msg_sala = await canal.fetch_message(depois["mensagem_id"])
+            for user_id in JOGADORES:
+                agora = await db.buscar_run(conn, run["id"])
+                if agora["status"] != "em_sala":
+                    break
+                await cog.rolar(
+                    FakeInteraction(canal, user_id, msg_sala), run["id"], alvo.id
+                )
+    return escolhidas
