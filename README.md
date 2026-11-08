@@ -20,7 +20,7 @@ Design completo: `Incursões 2.0 — Bot de Discord (design).md`.
 ```bash
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
-cp .env.example .env    # preencha DISCORD_TOKEN e GUILD_ID
+cp .env.example .env    # preencha DISCORD_TOKEN e GUILD_IDS
 .venv/Scripts/python.exe -m src.main
 ```
 
@@ -41,7 +41,16 @@ uma run inteira simulada com dublês do Discord):
 4. Aba **OAuth2** → **URL Generator** → scopes `bot` + `applications.commands` → permissões:
    *Send Messages*, *Embed Links*, *Attach Files*, *Read Message History*, *Use Slash Commands*
 5. Abra a URL gerada e adicione o bot ao seu servidor de testes
-6. No Discord, com o Modo Desenvolvedor ligado, clique com o botão direito no servidor → **Copiar ID do servidor** → `GUILD_ID` no `.env`
+6. No Discord, com o Modo Desenvolvedor ligado, clique com o botão direito no servidor → **Copiar ID do servidor** → `GUILD_IDS` no `.env`
+
+`GUILD_IDS` aceita vários servidores separados por vírgula
+(`GUILD_IDS=111,222`), e é só onde os comandos de barra ficam **registrados** —
+preenchido, eles aparecem na hora em cada um; vazio, o registro é global e vale
+em qualquer servidor onde o bot entre, mas a primeira propagação leva até ~1h.
+
+Isso **não** separa os dados: o banco separa por servidor pela coluna
+`guild_id` das tabelas, então um bot em três servidores usa um banco só — e um
+backup só cobre todos.
 
 Não são necessários *privileged intents* (o bot não lê o conteúdo das mensagens).
 

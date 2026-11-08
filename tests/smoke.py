@@ -196,6 +196,66 @@ async def main():
     except ErroDeValidacao as exc:
         assert len(exc.problemas) >= 2
 
+    # --- em que guildas os comandos sao registrados ---
+    #
+    # `guildas_de` e pura de proposito: e ela que tem regra, e um id de guilda
+    # errado no .env custa os comandos de um servidor inteiro.
+    assert config.guildas_de("") == ()
+    assert config.guildas_de("123") == (123,)
+    assert config.guildas_de(" 123 , 456 ") == (123, 456), "espaco e virgula"
+    assert config.guildas_de("123,456") == (123, 456)
+    assert config.guildas_de("123;456") == (123, 456), "ponto e virgula tambem"
+    assert config.guildas_de("123,123") == (123,), "guilda repetida sincroniza uma vez"
+    assert config.guildas_de("456,123") == (456, 123), "a ordem do .env e mantida"
+    for lixo in ("0", "abc", "-5", "12.5", ","):
+        assert config.guildas_de(lixo) == (), f"{lixo!r} nao e id de guilda"
+    assert config.guildas_de("123,abc,,456") == (123, 456), "lixo no meio nao derruba"
+
+    # E o bot usa ESSA lista para decidir o caminho: uma guilda por POST, ou um
+    # POST global. Sincronizar de verdade pede rede, entao o teste troca o
+    # `tree` por um dublê e olha para onde o bot mandou.
+    from src.main import IncursoesBot as _Bot
+
+    class TreeFalsa:
+        def __init__(self):
+            self.copiadas = []
+            self.sincronizadas = []
+
+        def copy_global_to(self, guild):
+            self.copiadas.append(guild.id)
+
+        async def sync(self, guild=None):
+            self.sincronizadas.append(guild.id if guild else None)
+            return []
+
+    async def para_onde(ids):
+        bot = _Bot()
+        falsa = TreeFalsa()
+        # `bot.tree` e propriedade de leitura: o atributo por tras tem o nome
+        # mangled da classe que o cria (`BotBase.__tree`).
+        bot._BotBase__tree = falsa
+        original = config.GUILD_IDS
+        config.GUILD_IDS = ids
+        try:
+            await bot._sincronizar()
+        finally:
+            config.GUILD_IDS = original
+            await bot.close()
+        return falsa
+
+    falsa = await para_onde((111, 222))
+    assert falsa.sincronizadas == [111, 222], falsa.sincronizadas
+    assert falsa.copiadas == [111, 222], (
+        "cada guilda precisa receber a copia dos comandos globais antes do sync"
+    )
+
+    falsa = await para_onde(())
+    assert falsa.sincronizadas == [None], (
+        f"sem guilda no .env o registro e global, veio {falsa.sincronizadas}"
+    )
+    assert falsa.copiadas == [], "o sync global nao copia para guilda nenhuma"
+    print("GUILD_IDS: registra por guilda, ou global sem nenhuma")
+
     # --- todos os cogs do bot carregam e registram seus comandos? ---
     from src.main import COGS, IncursoesBot
 
@@ -229,6 +289,44 @@ async def main():
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print(f"{len(nomes)} comandos registrados")
+
+    # --- e a linha que LE o .env? ---
+    #
+    # O parser acima e puro e bem coberto, mas quem decide o que ele recebe e
+    # uma linha de modulo. Uma sabotagem que trocava essa linha por
+    # `.split(",")[0]` — um id so, silenciosamente — passava por tudo: o teste
+    # chamava `guildas_de` direto e sobrescrevia `GUILD_IDS` na mao. O jeito de
+    # testar a linha e recarregar o modulo com um ambiente posto.
+    #
+    # Os dois valores vao EXPLICITOS no ambiente, nunca ausentes: `load_dotenv`
+    # nao sobrescreve o que ja esta no ambiente, mas preenche o que falta — com
+    # a variavel ausente, o teste passaria a depender do .env desta maquina.
+    import importlib
+    import os
+
+    guardado = {k: os.environ.get(k) for k in ("GUILD_IDS", "GUILD_ID")}
+    db_path = config.DB_PATH
+    try:
+        os.environ["GUILD_IDS"] = "111,222"
+        os.environ["GUILD_ID"] = "999"
+        assert importlib.reload(config).GUILD_IDS == (111, 222), (
+            "GUILD_IDS do .env tem de virar a lista inteira, e ganhar do singular"
+        )
+        os.environ["GUILD_IDS"] = ""
+        os.environ["GUILD_ID"] = "333"
+        assert importlib.reload(config).GUILD_IDS == (333,), (
+            "sem GUILD_IDS, o GUILD_ID antigo ainda vale"
+        )
+    finally:
+        for chave, valor in guardado.items():
+            if valor is None:
+                os.environ.pop(chave, None)
+            else:
+                os.environ[chave] = valor
+        importlib.reload(config)
+        config.DB_PATH = db_path
+    print("GUILD_IDS: a linha que le o .env faz a lista e aceita o nome antigo")
+
 
 
 asyncio.run(main())

@@ -9,7 +9,33 @@ RAIZ = Path(__file__).resolve().parent.parent
 load_dotenv(RAIZ / ".env")
 
 TOKEN = os.getenv("DISCORD_TOKEN", "")
-GUILD_ID = int(os.getenv("GUILD_ID") or 0)
+
+
+def guildas_de(cru: str) -> tuple[int, ...]:
+    """Le uma lista de ids de guilda separados por virgula.
+
+    Funcao pura, e separada da leitura do ambiente, porque e ela que tem
+    regra: ignora espaco, vazio e lixo, e tira repetido mantendo a ordem —
+    sincronizar duas vezes na mesma guilda e dois POST para o mesmo lugar.
+    """
+    vistos: dict[int, None] = {}
+    for parte in cru.replace(";", ",").split(","):
+        parte = parte.strip()
+        if parte.isdigit() and int(parte) > 0:
+            vistos[int(parte)] = None
+    return tuple(vistos)
+
+
+# Em que guildas os comandos de barra sao REGISTRADOS. Isto nao tem nada a ver
+# com os dados: o banco separa por servidor pela coluna `guild_id` das tabelas,
+# e um bot em tres servidores usa um banco so.
+#
+# Com guilda(s), os comandos aparecem NA HORA, em cada uma. Vazio, o registro e
+# global: vale em todo servidor onde o bot esta, inclusive nos que entrarem
+# depois, mas a primeira propagacao leva ate ~1h.
+#
+# GUILD_ID (singular) e o nome antigo e continua valendo, como INTERVALO_DIAS.
+GUILD_IDS = guildas_de(os.getenv("GUILD_IDS") or os.getenv("GUILD_ID") or "")
 DB_PATH = RAIZ / os.getenv("DB_PATH", "data/incursoes.db")
 # A semana vira na segunda-feira 00:00 deste fuso (padrao: horario de Brasilia).
 # Fuso fixo em vez de zoneinfo: o Brasil nao tem mais horario de verao, e assim o

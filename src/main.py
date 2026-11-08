@@ -32,14 +32,38 @@ class IncursoesBot(commands.Bot):
         for cog in COGS:
             await self.load_extension(cog)
 
-        if config.GUILD_ID:
-            guilda = discord.Object(id=config.GUILD_ID)
-            self.tree.copy_global_to(guild=guilda)
-            sincronizados = await self.tree.sync(guild=guilda)
-            log.info("%d comandos sincronizados na guilda %s", len(sincronizados), config.GUILD_ID)
-        else:
+        await self._sincronizar()
+
+    async def _sincronizar(self) -> None:
+        """Registra os comandos: em cada guilda do .env, ou globalmente.
+
+        Por guilda e um POST por guilda, e os comandos aparecem na hora.
+        Globalmente e um POST so, vale em qualquer servidor onde o bot entre
+        depois, e a primeira propagacao leva ate ~1h.
+
+        Uma guilda que falha nao derruba o bot: um id errado no .env, ou um
+        servidor de onde o bot foi removido, devolve 403 — e perder os
+        comandos de um servidor por isso e muito melhor que nao subir.
+        """
+        if not config.GUILD_IDS:
             sincronizados = await self.tree.sync()
-            log.info("%d comandos sincronizados globalmente (pode levar ~1h)", len(sincronizados))
+            log.info(
+                "%d comandos sincronizados globalmente (pode levar ~1h)",
+                len(sincronizados),
+            )
+            return
+        for guild_id in config.GUILD_IDS:
+            guilda = discord.Object(id=guild_id)
+            self.tree.copy_global_to(guild=guilda)
+            try:
+                sincronizados = await self.tree.sync(guild=guilda)
+            except discord.HTTPException as erro:
+                log.error("guilda %s: nao deu para sincronizar (%s)", guild_id, erro)
+                continue
+            log.info(
+                "%d comandos sincronizados na guilda %s",
+                len(sincronizados), guild_id,
+            )
 
     async def on_ready(self) -> None:
         log.info("Conectado como %s (id %s)", self.user, self.user.id)
