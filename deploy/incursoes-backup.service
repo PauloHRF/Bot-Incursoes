@@ -11,8 +11,8 @@ After=network-online.target
 Type=oneshot
 # AJUSTE: usuario, pasta e o python do venv, se os seus forem outros.
 User=ubuntu
-WorkingDirectory=/home/ubuntu/BotIncursao
-ExecStart=/home/ubuntu/BotIncursao/.venv/bin/python tools/backup.py
+WorkingDirectory=/home/ubuntu/Bot-Incursoes
+ExecStart=/home/ubuntu/Bot-Incursoes/.venv/bin/python tools/backup.py
 # O script le o BACKUP_WEBHOOK do .env pelo proprio config do projeto, entao
 # nao ha segredo nenhum neste arquivo — ele pode viver no git.
 TimeoutStartSec=300

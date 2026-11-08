@@ -42,7 +42,7 @@ arquivo encostaria no limite de upload do Discord. Não há nada a podar.
 2. **Pôr a URL no `.env`**, na instância, pelo `nano` — como o token:
 
    ```bash
-   nano ~/BotIncursao/.env
+   nano ~/Bot-Incursoes/.env
    ```
 
    Acrescentar a linha:
@@ -54,7 +54,7 @@ arquivo encostaria no limite de upload do Discord. Não há nada a podar.
 3. **Provar que funciona, antes de automatizar:**
 
    ```bash
-   cd ~/BotIncursao && .venv/bin/python tools/backup.py
+   cd ~/Bot-Incursoes && .venv/bin/python tools/backup.py
    ```
 
    Ele imprime o nome do arquivo, o tamanho e as contagens, e o arquivo
@@ -62,10 +62,11 @@ arquivo encostaria no limite de upload do Discord. Não há nada a podar.
    sai bem — um servidor que ainda não configurou o envio não é um erro.
 
 4. **Instalar o timer** (confira o usuário e a pasta no `.service` antes, se os
-   seus não forem `ubuntu` e `/home/ubuntu/BotIncursao`):
+   seus não forem `ubuntu` e `/home/ubuntu/Bot-Incursoes` — é o que
+   `systemctl cat incursoes` mostra no `User=` e no `WorkingDirectory=`):
 
    ```bash
-   sudo cp ~/BotIncursao/deploy/incursoes-backup.* /etc/systemd/system/
+   sudo cp ~/Bot-Incursoes/deploy/incursoes-backup.* /etc/systemd/system/
    ```
 
    ```bash
@@ -81,7 +82,7 @@ arquivo encostaria no limite de upload do Discord. Não há nada a podar.
 ### Restaurar
 
 ```bash
-cd ~/BotIncursao && sudo systemctl stop <servico-do-bot>
+cd ~/Bot-Incursoes && sudo systemctl stop incursoes
 ```
 
 ```bash
