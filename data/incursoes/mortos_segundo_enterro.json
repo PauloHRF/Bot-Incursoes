@@ -1,0 +1,30 @@
+{
+  "id": "mortos_segundo_enterro",
+  "nome": "O Segundo Enterro",
+  "organizacao": "Guilda dos Mortos",
+  "tamanho": "Média",
+  "tier": 3,
+  "lore_inicial": "Em março a Guilda arquivou um homem sob o nome errado. O erro era de uma letra, passou pelas três conferências e virou linha definitiva no livro — e o livro, para a Guilda, vale mais que o corpo.\n\nO corpo não concordou. Voltou em abril, bateu no portão de ossos e pediu para ver o registro. A Guilda enterrou de novo, mais fundo, e anotou o segundo enterro na margem. Em maio ele voltou acompanhado: veio com o conferente que assinou a letra errada, e o conferente está do lado dele agora.\n\nA Guilda não quer mais enterrar. Quer a margem limpa.",
+  "lore_final": "A margem fica limpa com duas linhas novas, as duas do mesmo dia, as duas com o nome certo. O conferente entra numa terceira, e ninguém na Guilda discute o que ele estava fazendo lá embaixo.\n\nO portão de ossos ganha uma conferência a mais — a quarta — e o livro ganha uma regra: nome com uma letra de diferença de outro nome volta para a mesa, sempre.",
+  "imagem_capa": null,
+  "recompensa_mes": 10,
+  "pontos_conclusao": 10,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "O Nome Errado",
+    "tipo": "Combate",
+    "descricao": "A câmara do registro é a única sala seca da necrópole, e é onde eles esperam. O homem está de pé ao lado da mesa, com o livro aberto na página dele; o conferente está sentado, ainda de avental, ainda com a pena.\n\nNenhum dos dois ataca enquanto o grupo não toca no livro. Os dois atacam no instante em que alguém toca.\n\nO que chora nas paredes vem atrás deles, e não vem por vingança — vem porque está no mesmo livro.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "10 MEs por participante + pontos com a Guilda dos Mortos",
+    "pontos_organizacao": 0,
+    "monstros": [
+      { "nome": "Revenante", "quantidade": 2 },
+      { "nome": "Espectro", "quantidade": 3 },
+      { "nome": "Carniçal" }
+    ]
+  }
+}

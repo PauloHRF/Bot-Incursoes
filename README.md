@@ -742,8 +742,8 @@ reler tudo sem reiniciar.
 ### O que já está escrito
 
 As quatro Organizações têm banco. **O tier 1 tem três entradas e o tier 2 tem quatro,
-uma por Organização** — personagem novo não fica preso a uma só —, e os tiers acima têm
-uma cada:
+uma por Organização** — personagem novo não fica preso a uma só. O tier 3 tem uma e o
+tier 4 tem duas:
 
 | Incursão | Tier | Tamanho | Organização | Objetivo |
 | --- | --- | --- | --- | --- |
@@ -754,10 +754,11 @@ uma cada:
 | *A Cobrança de Terça* | 2 | Média | Aliança das Sombras | Homem-Tigre + 4 Homens-Rato |
 | *O Ossuário de Vael* | 2 | Média | Guilda dos Mortos | Múmia + 2 Ogros Zumbi + Carniçal |
 | *O Poço dos Olhos* | 2 | Média | Vórtice Oculto | 2 Nothics + Devorador de Intelecto + *o que estava na água* |
+| *O Segundo Enterro* | 3 | Média | Guilda dos Mortos | 2 Revenantes + 3 Espectros + Carniçal |
 | *A Cripta do Vórtice* | 4 | Média | Vórtice Oculto | Observador + 2 Nothics |
 | *A Brecha de Fogo Pálido* | 4 | Longa | Sentinelas do Alvorecer | Diabo Ósseo + Vrock + 2 Diabos Barbados |
 
-**Os nove objetivos medidos**, com `tools/simular_combate.py` contra um grupo misto de 5
+**Os dez objetivos medidos**, com `tools/simular_combate.py` contra um grupo misto de 5
 no nível do tier e **sem nenhuma habilidade ativa** — é um piso, não um prognóstico: a
 mesa de verdade tem cura, buff e magia de dano por cima disto. As duas colunas são as duas
 maneiras de chegar: intacto (desviando dos combates) e gasto, com os 65% de HP que o
@@ -772,8 +773,21 @@ caminho calibrado cobra.
 | *O Poço dos Olhos* | 2 | 97% | 67% |
 | *A Sala dos Nomes* | 2 | 97% | 74% |
 | *A Cobrança de Terça* | 2 | 99% | 75% |
+| *O Segundo Enterro* | 3 | **50%** | 10% |
 | *A Brecha de Fogo Pálido* | 4 | 96% | 62% |
 | *A Cripta do Vórtice* | 4 | 97% | 61% |
+
+*O Segundo Enterro* é a única **feita para ser 50%**, e por isso ela é o contraexemplo da
+régua: as outras nove são de 78% a 99% chegando intactas. Ela também é a prova de que a
+coluna da esquerda é a que importa — chegando com 65% do HP ela cai para 10%, porque num
+objetivo apertado o HP de entrada decide mais que a formação. Quem for jogá-la precisa
+chegar inteiro, e isso significa votar Descanso e desviar de combate no caminho.
+
+**E o número depende mais da MESA que da sala.** Medindo o mesmo objetivo com cinco cópias
+da mesma classe (`tools/simular_combate.py --classe`), a vitória vai de **85% com cinco
+bárbaros a 0% com cinco magos, clérigos ou xamãs** — cinco patrulheiros ficam em 54%. Os
+50% da tabela são de mesa mista, que é o que um grupo de verdade monta; eles não são
+promessa para nenhuma composição em particular.
 
 Os números saíram da **composição**, e não de estatística inventada: as criaturas são as
 do bestiário, com os golpes e as habilidades que elas têm lá. Para endurecer ou abrandar
