@@ -8,6 +8,7 @@ import collections
 import random
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
@@ -354,7 +355,10 @@ async def caso_o_save_desfeito_devolve_o_thp():
     investida.dano, investida.absorvido = 7, no_thp
     assert (no_thp, no_hp) == (7, 0), (no_thp, no_hp)
 
-    await cog._inspirar_o_save(run, estado, [investida])
+    feito = motor.RodadaInimiga(
+        investidas=[investida], vida_inicial={alvo.user_id: (hp_cheio, thp_antes)}
+    )
+    await cog._inspirar_o_save(run, estado, feito)
     assert investida.dano == 0, "falhando por 1, o d10 sempre cobre"
     assert alvo.thp == thp_antes, (alvo.thp, thp_antes)
     assert alvo.hp_atual == hp_cheio, (alvo.hp_atual, hp_cheio)
@@ -374,7 +378,7 @@ async def caso_inspiracao_no_save_devolve_o_dano():
         "Algoz", "Grito", alvo,
         save=motor.ResultadoSave(alvo.nome, "CAR", 5, 5, 99), dano=7,
     )
-    await cog._inspirar_o_save(run, estado, [investida])
+    await cog._inspirar_o_save(run, estado, motor.RodadaInimiga(investidas=[investida]))
     assert investida.dano == 7, "nao devia mexer: o dado nao cobre"
     gastos = await db.usos_da_run(conn, run_id, JOGADORES[0])
     assert not any(c[0] == "inspira_save" for c in gastos), gastos
@@ -389,15 +393,66 @@ async def caso_inspiracao_no_save_devolve_o_dano():
     )
     # O motor ja descontou o dano antes de a reacao rodar: sem isso o alvo
     # estaria com a vida cheia e a devolucao nao teria onde aparecer.
+    hp_antes, thp_antes = alvo.hp_atual, alvo.thp
     alvo.hp_atual -= 7
     ferido = alvo.hp_atual
-    await cog._inspirar_o_save(run, estado, [perto])
+    feito = motor.RodadaInimiga(
+        investidas=[perto], vida_inicial={alvo.user_id: (hp_antes, thp_antes)}
+    )
+    await cog._inspirar_o_save(run, estado, feito)
     assert perto.dano == 0, "falhando por 1, o d10 sempre cobre"
     assert not perto.atordoou, "resistindo, o atordoamento sai tambem"
     assert alvo.hp_atual == ferido + 7, (ferido, alvo.hp_atual)
     gastos = await db.usos_da_run(conn, run_id, JOGADORES[0])
     assert any(c[0] == "inspira_save" for c in gastos), gastos
     print("  Inspiracao no save devolve o dano e tira o atordoamento: ok")
+
+
+async def caso_inspiracao_recalcula_dano_e_grava_hp():
+    """O save socorrido usa metade/anulacao sem transformar overkill em cura."""
+    casos = [
+        # HP, THP, dano, metade, anula, reducao, corte, HP final, THP final
+        (10, 0, 100, True, False, 0, 0, 0, 0),
+        (10, 0, 100, False, False, 0, 0, 10, 0),
+        (50, 0, 21, True, False, 0, 0, 40, 0),
+        (50, 0, 20, False, False, 0, 0, 50, 0),
+        (50, 15, 20, True, False, 0, 0, 50, 5),
+        (10, 5, 100, False, False, 0, 0, 10, 5),
+        (10, 5, 100, True, True, 0, 0, 10, 5),
+        (50, 0, 21, True, False, 0.5, 2, 47, 0),
+    ]
+    for hp, thp, dano, metade, anula, reducao, corte, hp_final, thp_final in casos:
+        monstro = {
+            **CRUEL,
+            "habilidade": {"nome": "Teste", "save": "CAR", "cd": 22,
+                           "dano": str(dano), "metade": metade, "alvos": 1, "cada": 1},
+        }
+        conn, canal, cog, incursao, run_id = await preparar(
+            escolhas={"inspiracao_t2": "inspira_save"}, monstro=monstro, monstros=1
+        )
+        run = await em_combate(conn, cog, incursao, run_id)
+        estado = await cog._estado_combate(run, incursao.objetivo)
+        alvo = estado.combatentes[1]
+        alvo.hp_atual, alvo.thp = hp, thp
+        alvo.save_anula = anula
+        alvo.reducao_dano, alvo.reducao_plana = reducao, corte
+        await db.definir_hp(conn, run_id, alvo.user_id, hp)
+        await db.definir_thp(conn, run_id, alvo.user_id, thp)
+        inimigo = estado.inimigos[0]
+        d20 = inimigo.habilidade.cd - alvo.saves["CAR"] - 1
+        with patch.object(motor, "rolar_d20", return_value=d20), \
+             patch.object(motor, "sortear_alvos", return_value=[alvo]):
+            await cog._vez_do_inimigo(run, estado, inimigo, [])
+        assert (alvo.hp_atual, alvo.thp) == (hp_final, thp_final), (
+            hp, thp, dano, metade, alvo.hp_atual, alvo.thp
+        )
+        hps = await db.hp_dos_participantes(conn, run_id)
+        pessoas = {p["user_id"]: p for p in await db.personagens_da_run(conn, run_id)}
+        assert hps[alvo.user_id] == hp_final, hps
+        assert pessoas[alvo.user_id]["thp"] == thp_final, pessoas[alvo.user_id]
+        gastos = await db.usos_da_run(conn, run_id, JOGADORES[0])
+        assert any(chave[0] == "inspira_save" for chave in gastos), gastos
+    print("  Inspiracao recalcula dano letal, metade, THP e reducoes no banco: ok")
 
 
 # -------------------------------------------------------- Jack of All Trades
@@ -505,6 +560,7 @@ async def main():
         await caso_o_golpe_socorrido_da_o_dano_cheio()
         await caso_o_save_desfeito_devolve_o_thp()
         await caso_inspiracao_no_save_devolve_o_dano()
+        await caso_inspiracao_recalcula_dano_e_grava_hp()
         caso_jack_of_all_trades_so_no_que_falta()
         caso_as_outras_duas_do_repertorio()
         await caso_ottos_dance_so_prende()

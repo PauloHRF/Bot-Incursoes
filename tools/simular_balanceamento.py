@@ -635,17 +635,6 @@ def _inspirar_ataque(estado, atacante, inimigo, golpe, rng) -> int:
 
 def _inspirar_save(vez, estado, inimigo, rodada, rng) -> int:
     """Usa Inspiração para transformar um save falho em sucesso."""
-    metade_por_investida = {}
-    for indice, investida in vez.efeitos_dos_golpes.items():
-        golpes = getattr(inimigo, "golpes", [])
-        efeito = golpes[indice].efeito if indice < len(golpes) else None
-        metade_por_investida[id(investida)] = bool(getattr(efeito, "metade", False))
-    for investida in vez.investidas:
-        if not investida.do_golpe:
-            metade_por_investida[id(investida)] = bool(
-                getattr(inimigo.habilidade, "metade", False)
-            )
-
     gastos = 0
     for investida in vez.investidas:
         resultado = investida.save
@@ -665,20 +654,10 @@ def _inspirar_save(vez, estado, inimigo, rodada, rng) -> int:
                 if resultado.total + bonus < resultado.cd:
                     continue
                 registrar_uso(inspirador, habilidade)
-                resultado.d20 += bonus
-                if investida.dano:
-                    alvo.thp += investida.absorvido
-                    alvo.hp_atual += investida.dano - investida.absorvido
-                    leva_metade = metade_por_investida.get(id(investida), False) and not alvo.save_anula
-                    dano_novo = max(0, int(round(investida.dano / 2))) if leva_metade else 0
-                    absorvido, _ = motor.absorver(alvo, dano_novo)
-                    investida.dano = dano_novo
-                    investida.absorvido = absorvido
-                if investida.atordoou:
-                    alvo.atordoado = False
+                atordoou = investida.atordoou
+                motor.refazer_o_save(vez, investida, bonus)
+                if atordoou:
                     alvo._atordoado_ate = rodada - 1
-                    investida.atordoou = False
-                investida.debuffs = []
                 gastos += 1
                 break
             else:
