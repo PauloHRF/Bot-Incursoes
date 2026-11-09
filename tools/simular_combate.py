@@ -82,11 +82,12 @@ def um_combate(
     reacoes_acionadas: dict[str, int] = {}
     recursos_por_habilidade: dict[str, int] = {}
     personagens_que_agiram: set[int] = set()
+    personagens_com_queda_contabilizada: set[int] = set()
     quedas_antes_de_agir = 0
 
     def registrar_reacao(habilidade):
         reacoes_acionadas[habilidade.nome] = reacoes_acionadas.get(habilidade.nome, 0) + 1
-        registrar_habilidade(habilidade)
+        registrar_habilidade(habilidade, recursos=1)
 
     def registrar_habilidade(habilidade, dano=0, cura=0, recursos=0):
         nome = habilidade.nome
@@ -114,9 +115,18 @@ def um_combate(
                 if inimigo is None or inimigo.caido:
                     continue
                 resultado = motor.turno_do_inimigo(inimigo, estado, rng)
+                usos_antes_inspiracao = {
+                    (c.user_id, h.chave_de_uso): c._usos_simulador.get(h.chave_de_uso, 0)
+                    for c in estado.combatentes for _, h in c._habilidades_simulador
+                }
                 recursos_gastos += sb._inspirar_save(
                     resultado, estado, inimigo, rodada, rng
                 )
+                for c in estado.combatentes:
+                    for _, h in c._habilidades_simulador:
+                        chave = (c.user_id, h.chave_de_uso)
+                        if (h.acao or {}).get("tipo") == "reacao" and c._usos_simulador.get(h.chave_de_uso, 0) > usos_antes_inspiracao.get(chave, 0):
+                            registrar_reacao(h)
                 sb._registrar_atordoamentos(resultado.investidas, rodada)
                 for investida in resultado.investidas:
                     if investida.atordoou:
@@ -128,7 +138,16 @@ def um_combate(
                             ),
                             "perdeu": False,
                         }
+                usos_antes_esquiva = {
+                    (c.user_id, h.chave_de_uso): c._usos_simulador.get(h.chave_de_uso, 0)
+                    for c in estado.combatentes for _, h in c._habilidades_simulador
+                }
                 recursos_gastos += sb._usar_esquiva_reativa(resultado, estado)
+                for c in estado.combatentes:
+                    for _, h in c._habilidades_simulador:
+                        chave = (c.user_id, h.chave_de_uso)
+                        if (h.acao or {}).get("tipo") == "reacao" and c._usos_simulador.get(h.chave_de_uso, 0) > usos_antes_esquiva.get(chave, 0):
+                            registrar_reacao(h)
                 dano_inimigo += sum(g.dano for g, _ in resultado.golpes)
                 dano_inimigo += sum(i.dano for i in resultado.investidas)
 
@@ -159,8 +178,10 @@ def um_combate(
             if personagem is None:
                 continue
             if personagem.caido:
-                if personagem.user_id not in personagens_que_agiram:
+                if (personagem.user_id not in personagens_que_agiram
+                        and personagem.user_id not in personagens_com_queda_contabilizada):
                     quedas_antes_de_agir += 1
+                    personagens_com_queda_contabilizada.add(personagem.user_id)
                 continue
             if personagem.atordoado:
                 turnos_perdidos += 1
