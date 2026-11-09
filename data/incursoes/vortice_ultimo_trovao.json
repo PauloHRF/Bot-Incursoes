@@ -1,0 +1,30 @@
+{
+  "id": "vortice_ultimo_trovao",
+  "nome": "O Último Trovão",
+  "organizacao": "Vórtice Oculto",
+  "tamanho": "Longa",
+  "tier": 5,
+  "lore_inicial": "O Vórtice Oculto acompanha há décadas uma tempestade que não se desloca. Ela permanece sobre uma cadeia de montanhas sem rios ou cidades, e seus relâmpagos atingem sempre o mesmo pico. Os instrumentos da Organização registravam um fenômeno natural impossível até que, há um mês, começaram a captar uma segunda pulsação sob a montanha.\\n\\nUma equipe de reconhecimento encontrou uma necrópole escavada na rocha e um dragão morto que continuava respirando. O relatório terminou no meio de uma frase. Desde então, a tempestade aumentou e os relâmpagos passaram a seguir qualquer pessoa que carregue metal.\\n\\nO Vórtice concluiu que um dracolich azul está usando a necrópole como âncora para manter a tempestade presa ao mundo. A missão é chegar ao núcleo da estrutura, destruir a âncora e impedir que a criatura transforme a região numa extensão de seu domínio.",
+  "lore_final": "Quando o dracolich cai, a tempestade perde sua forma. Os relâmpagos deixam de perseguir os vivos e se espalham pelo céu até desaparecerem atrás das montanhas. No interior da necrópole, as inscrições azuis apagam uma a uma, como estrelas vistas ao amanhecer.\\n\\nO Vórtice recolhe os instrumentos e lacra as entradas. O relatório oficial descreve o fenômeno como encerrado, mas uma cópia permanece guardada numa caixa sem identificação. Nela, alguém acrescentou uma última observação: o trovão cessou; a coisa que o produzia, não necessariamente.",
+  "imagem_capa": null,
+  "recompensa_mes": 20,
+  "pontos_conclusao": 20,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "O Coração da Tempestade",
+    "tipo": "Combate",
+    "descricao": "A câmara se abre para um vazio vertical atravessado por relâmpagos azuis. No centro flutua um foco de cristal negro, ligado por veios luminosos às paredes e ao esqueleto colossal que repousa sobre uma plataforma de pedra.\\n\\nO dragão ergue a cabeça. A carne desapareceu há muito, mas as escamas permanecem presas aos ossos, e a energia elétrica percorre suas costelas como sangue. Quando ele abre as asas, a tempestade inteira parece caber na câmara.\\n\\nO Dracolich Azul Adulto protege o foco que o mantém ancorado. Destruí-lo exige vencer a criatura primeiro — e enfrentar o último trovão que ela ainda guarda.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "20 MEs por participante + pontos com o Vórtice Oculto",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Dracolich Azul Adulto"
+      }
+    ]
+  }
+}
