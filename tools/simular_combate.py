@@ -78,6 +78,15 @@ def um_combate(
     dano_grupo = dano_inimigo = cura_total = recursos_gastos = thp_gasto = 0
     ataques_basicos = 0
     habilidades_usadas: dict[str, dict[str, int]] = {}
+    dano_periodico = cura_passiva = turnos_perdidos = 0
+    reacoes_acionadas: dict[str, int] = {}
+    recursos_por_habilidade: dict[str, int] = {}
+    personagens_que_agiram: set[int] = set()
+    quedas_antes_de_agir = 0
+
+    def registrar_reacao(habilidade):
+        reacoes_acionadas[habilidade.nome] = reacoes_acionadas.get(habilidade.nome, 0) + 1
+        registrar_habilidade(habilidade)
 
     def registrar_habilidade(habilidade, dano=0, cura=0, recursos=0):
         nome = habilidade.nome
@@ -87,6 +96,8 @@ def um_combate(
         item["dano"] += int(dano)
         item["cura"] += int(cura)
         item["recursos"] += int(recursos)
+        if recursos:
+            recursos_por_habilidade[nome] = recursos_por_habilidade.get(nome, 0) + int(recursos)
 
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
         rodada = estado.rodada
@@ -137,6 +148,7 @@ def um_combate(
                     )
                     if reacao and sb.registrar_uso(c, reacao):
                         recursos_gastos += 1
+                        registrar_reacao(reacao)
                         c.hp_atual = max(1, reacao.acao.get("hp", 1))
                         thp = reacao.acao.get("thp")
                         if thp:
@@ -144,13 +156,19 @@ def um_combate(
                 continue
 
             personagem = estado.combatente(vez.ident)
-            if personagem is None or personagem.caido:
+            if personagem is None:
+                continue
+            if personagem.caido:
+                if personagem.user_id not in personagens_que_agiram:
+                    quedas_antes_de_agir += 1
                 continue
             if personagem.atordoado:
+                turnos_perdidos += 1
                 if personagem.user_id in presos:
                     presos[personagem.user_id]["perdeu"] = True
                 continue
 
+            personagens_que_agiram.add(personagem.user_id)
             habilidade = sb._escolher_ativa(
                 personagem, estado.combatentes, estado, rodada
             )
@@ -240,6 +258,7 @@ def um_combate(
                     dano = motor.rolar_dano(expressao, rng)
                     alvo.hp_atual = max(0, alvo.hp_atual - dano)
                     dano_grupo += dano
+                    dano_periodico += dano
                 elif getattr(alvo, "_dano_rodada_repete_save", False):
                     alvo._dano_rodada_simulador = None
                     continue
@@ -250,7 +269,9 @@ def um_combate(
 
         for c in estado.combatentes:
             if c.cura_por_turno and not c.caido:
-                cura_total += motor.curar(c, c.cura_por_turno)
+                ganho_passivo = motor.curar(c, c.cura_por_turno)
+                cura_total += ganho_passivo
+                cura_passiva += ganho_passivo
 
         # Um personagem atordoado perde a vez e, quando aplicável, repete o save.
         for user_id, preso in list(presos.items()):
@@ -305,6 +326,12 @@ def um_combate(
         "hp_restante": sum(max(0, c.hp_atual) for c in grupo),
         "ataques_basicos": ataques_basicos,
         "habilidades_usadas": habilidades_usadas,
+        "dano_periodico": dano_periodico,
+        "cura_passiva": cura_passiva,
+        "turnos_perdidos": turnos_perdidos,
+        "quedas_antes_de_agir": quedas_antes_de_agir,
+        "reacoes_acionadas": reacoes_acionadas,
+        "recursos_por_habilidade": recursos_por_habilidade,
     }
 
 
@@ -318,6 +345,9 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
     vitorias, rodadas, caidos = 0, [], []
     curas, recursos, danos, recebidos, ataques = [], [], [], [], []
     habilidades_totais: dict[str, dict[str, int]] = {}
+    dano_periodico_total = cura_passiva_total = turnos_perdidos_total = quedas_antes_de_agir_total = 0
+    reacoes_totais: dict[str, int] = {}
+    recursos_habilidade_totais: dict[str, int] = {}
     for _ in range(args.repeticoes):
         grupo = []
         for i in range(tamanho):
@@ -357,6 +387,14 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
         danos.append(resultado["dano_grupo"])
         recebidos.append(resultado["dano_recebido"])
         ataques.append(resultado["ataques_basicos"])
+        dano_periodico_total += resultado["dano_periodico"]
+        cura_passiva_total += resultado["cura_passiva"]
+        turnos_perdidos_total += resultado["turnos_perdidos"]
+        quedas_antes_de_agir_total += resultado["quedas_antes_de_agir"]
+        for nome, usos in resultado["reacoes_acionadas"].items():
+            reacoes_totais[nome] = reacoes_totais.get(nome, 0) + usos
+        for nome, gasto in resultado["recursos_por_habilidade"].items():
+            recursos_habilidade_totais[nome] = recursos_habilidade_totais.get(nome, 0) + gasto
         for nome, dados in resultado["habilidades_usadas"].items():
             total = habilidades_totais.setdefault(
                 nome, {"usos": 0, "dano": 0, "cura": 0, "recursos": 0}
@@ -374,6 +412,12 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
         "recebido": statistics.mean(recebidos),
         "ataques_basicos": statistics.mean(ataques),
         "habilidades": habilidades_totais,
+        "dano_periodico": dano_periodico_total,
+        "cura_passiva": cura_passiva_total,
+        "turnos_perdidos": turnos_perdidos_total,
+        "quedas_antes_de_agir": quedas_antes_de_agir_total,
+        "reacoes": reacoes_totais,
+        "recursos_habilidade": recursos_habilidade_totais,
     }
 
 
@@ -523,6 +567,18 @@ def main() -> int:
     for tamanho in (5, 4, 3, 2):
         r = simular(monstros, tamanho, args, rng)
         print(f"{tamanho:>6}  {r['taxa']:>7.1%}  {r['rodadas']:>8.1f}  {r['caidos']:>7.1f}  {r['cura']:>8.1f}  {r['recursos']:>8.1f}  {r['ataques_basicos']:>8.1f}")
+        print(f"  Efeitos indiretos: dano periódico {r['dano_periodico']} | cura passiva {r['cura_passiva']}")
+        print(f"  Incapacitação: turnos perdidos por atordoamento {r['turnos_perdidos']} | quedas antes da primeira ação {r['quedas_antes_de_agir']}")
+        print("  Reações acionadas (total no grupo):")
+        for nome, usos in sorted(r["reacoes"].items()):
+            print(f"    {nome}: {usos} acionamentos")
+        if not r["reacoes"]:
+            print("    nenhuma")
+        print("  Recursos gastos por habilidade ativa:")
+        for nome, gasto in sorted(r["recursos_habilidade"].items()):
+            print(f"    {nome}: {gasto}")
+        if not r["recursos_habilidade"]:
+            print("    nenhum")
         print("  Habilidades ativas efetivamente usadas (total no grupo):")
         if not r["habilidades"]:
             print("    nenhuma")
