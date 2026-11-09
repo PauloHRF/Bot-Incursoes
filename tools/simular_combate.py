@@ -78,30 +78,58 @@ def um_combate(
     dano_grupo = dano_inimigo = cura_total = recursos_gastos = thp_gasto = 0
     ataques_basicos = 0
     habilidades_usadas: dict[str, dict[str, int]] = {}
+    # O dano imediato de uma magia nao e dano periodico; este ultimo
+    # precisa ser associado a habilidade que deixou o efeito no inimigo.
+    fontes_periodicas: dict[int, object] = {}
     dano_periodico = cura_passiva = turnos_perdidos = 0
+    thp_gerado = turnos_caidos = turnos_inimigos_atordoados = 0
+    rodadas_executadas = 0
+    personagens_derrubados: set[int] = set()
     reacoes_acionadas: dict[str, int] = {}
     recursos_por_habilidade: dict[str, int] = {}
     personagens_que_agiram: set[int] = set()
     personagens_com_queda_contabilizada: set[int] = set()
     quedas_antes_de_agir = 0
 
-    def registrar_reacao(habilidade):
-        reacoes_acionadas[habilidade.nome] = reacoes_acionadas.get(habilidade.nome, 0) + 1
-        registrar_habilidade(habilidade, recursos=1)
-
-    def registrar_habilidade(habilidade, dano=0, cura=0, recursos=0):
+    def registrar_habilidade(habilidade, *, usos=0, dano=0, cura=0,
+                             recursos=0, thp=0, periodico=0):
+        """Registra a acao que aconteceu, nao o saldo da chave de recarga."""
         nome = habilidade.nome
         item = habilidades_usadas.setdefault(
-            nome, {"usos": 0, "dano": 0, "cura": 0, "recursos": 0}
+            nome, {"usos": 0, "dano": 0, "cura": 0,
+                   "recursos": 0, "thp": 0, "periodico": 0}
         )
+        item["usos"] += int(usos)
         item["dano"] += int(dano)
         item["cura"] += int(cura)
         item["recursos"] += int(recursos)
+        item["thp"] += int(thp)
+        item["periodico"] += int(periodico)
         if recursos:
-            recursos_por_habilidade[nome] = recursos_por_habilidade.get(nome, 0) + int(recursos)
+            recursos_por_habilidade[nome] = (
+                recursos_por_habilidade.get(nome, 0) + int(recursos)
+            )
+
+    def registrar_reacao(habilidade):
+        reacoes_acionadas[habilidade.nome] = (
+            reacoes_acionadas.get(habilidade.nome, 0) + 1
+        )
+        registrar_habilidade(habilidade, usos=1, recursos=1)
+
+    def observar_quedas():
+        nonlocal quedas_antes_de_agir
+        for c in grupo:
+            if c.e_invocacao or not c.caido:
+                continue
+            personagens_derrubados.add(c.user_id)
+            if (c.user_id not in personagens_que_agiram
+                    and c.user_id not in personagens_com_queda_contabilizada):
+                quedas_antes_de_agir += 1
+                personagens_com_queda_contabilizada.add(c.user_id)
 
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
         rodada = estado.rodada
+        rodadas_executadas += 1
         sb._expirar_efeitos(estado.combatentes + estado.inimigos, rodada)
         for c in estado.combatentes:
             c._rodada_simulador = rodada
@@ -114,6 +142,8 @@ def um_combate(
                 inimigo = estado.inimigo(vez.ident)
                 if inimigo is None or inimigo.caido:
                     continue
+                if inimigo.atordoado:
+                    turnos_inimigos_atordoados += 1
                 resultado = motor.turno_do_inimigo(inimigo, estado, rng)
                 usos_antes_inspiracao = {
                     (c.user_id, h.chave_de_uso): c._usos_simulador.get(h.chave_de_uso, 0)
@@ -150,6 +180,9 @@ def um_combate(
                             registrar_reacao(h)
                 dano_inimigo += sum(g.dano for g, _ in resultado.golpes)
                 dano_inimigo += sum(i.dano for i in resultado.investidas)
+                # Depois das reacoes defensivas, mas antes das reacoes
+                # "caiu": uma queda seguida de recuperacao ainda e queda.
+                observar_quedas()
 
                 # Reações que disparam quando um personagem cai a 0 HP.
                 for c in estado.combatentes:
@@ -171,17 +204,19 @@ def um_combate(
                         c.hp_atual = max(1, reacao.acao.get("hp", 1))
                         thp = reacao.acao.get("thp")
                         if thp:
+                            antes = c.thp
                             motor.ganhar_thp(c, motor.rolar_dano(thp, rng))
+                            gerado = c.thp - antes
+                            thp_gerado += gerado
+                            registrar_habilidade(reacao, thp=gerado)
                 continue
 
             personagem = estado.combatente(vez.ident)
             if personagem is None:
                 continue
             if personagem.caido:
-                if (personagem.user_id not in personagens_que_agiram
-                        and personagem.user_id not in personagens_com_queda_contabilizada):
-                    quedas_antes_de_agir += 1
-                    personagens_com_queda_contabilizada.add(personagem.user_id)
+                observar_quedas()
+                turnos_caidos += 1
                 continue
             if personagem.atordoado:
                 turnos_perdidos += 1
@@ -199,6 +234,7 @@ def um_combate(
                 acumuladores = {
                     "dano": [0], "cura": [0], "recursos": [0], "thp": [0]
                 }
+                thp_antes = {id(c): c.thp for c in estado.combatentes}
                 usou = sb._executar_ativa(
                     personagem, estado.combatentes, estado, habilidade, rng,
                     rodada, acumuladores["dano"], acumuladores["cura"],
@@ -210,10 +246,23 @@ def um_combate(
                 thp_gasto += acumuladores["thp"][0]
                 if usou:
                     acao_usada = habilidade.acao or acao_usada
-                    registrar_habilidade(
-                        habilidade, acumuladores["dano"][0],
-                        acumuladores["cura"][0], acumuladores["recursos"][0],
+                    # A melhoria de grupo pode gastar THP do conjurador.
+                    # Reconstituimos esse gasto para medir apenas THP criado.
+                    ganho_thp = sum(
+                        max(0, c.thp - thp_antes.get(id(c), 0)
+                            + (acumuladores["thp"][0] if c is personagem else 0))
+                        for c in estado.combatentes
                     )
+                    thp_gerado += ganho_thp
+                    registrar_habilidade(
+                        habilidade, usos=1, dano=acumuladores["dano"][0],
+                        cura=acumuladores["cura"][0],
+                        recursos=acumuladores["recursos"][0], thp=ganho_thp,
+                    )
+                    if (habilidade.acao or {}).get("dano_por_rodada"):
+                        for alvo in estado.inimigos:
+                            if getattr(alvo, "_dano_rodada_simulador", None):
+                                fontes_periodicas[alvo.indice] = habilidade
                 else:
                     personagem._usos_simulador[habilidade.chave_de_uso] -= 1
 
@@ -225,9 +274,24 @@ def um_combate(
                     golpe = motor.atacar_inimigo(personagem, alvo, rng)
                     ataques_basicos += 1
                     if not golpe.acertou:
+                        usos_antes_ataque = {
+                            (c.user_id, h.chave_de_uso):
+                                c._usos_simulador.get(h.chave_de_uso, 0)
+                            for c in estado.combatentes
+                            for _, h in c._habilidades_simulador
+                            if (h.acao or {}).get("inspira") == "ataque"
+                        }
                         recursos_gastos += sb._inspirar_ataque(
                             estado, personagem, alvo, golpe, rng
                         )
+                        for c in estado.combatentes:
+                            for _, h in c._habilidades_simulador:
+                                if (h.acao or {}).get("inspira") != "ataque":
+                                    continue
+                                chave = (c.user_id, h.chave_de_uso)
+                                if (c._usos_simulador.get(h.chave_de_uso, 0)
+                                        > usos_antes_ataque.get(chave, 0)):
+                                    registrar_reacao(h)
                     dano_grupo += golpe.dano
                     sb._registrar_efeito_do_ataque(
                         personagem, alvo, golpe, rodada
@@ -280,6 +344,9 @@ def um_combate(
                     alvo.hp_atual = max(0, alvo.hp_atual - dano)
                     dano_grupo += dano
                     dano_periodico += dano
+                    fonte = fontes_periodicas.get(alvo.indice)
+                    if fonte is not None:
+                        registrar_habilidade(fonte, dano=dano, periodico=dano)
                 elif getattr(alvo, "_dano_rodada_repete_save", False):
                     alvo._dano_rodada_simulador = None
                     continue
@@ -319,32 +386,25 @@ def um_combate(
 
         estado.rodada += 1
 
-    # Contabiliza também reações acionadas fora do turno do personagem.
-    for c in grupo:
-        chaves_contabilizadas = set()
-        for _, habilidade in c._habilidades_simulador:
-            chave = habilidade.chave_de_uso
-            if chave in chaves_contabilizadas:
-                continue
-            chaves_contabilizadas.add(chave)
-            usos = c._usos_simulador.get(chave, 0)
-            if usos:
-                item = habilidades_usadas.setdefault(
-                    habilidade.nome,
-                    {"usos": 0, "dano": 0, "cura": 0, "recursos": 0},
-                )
-                item["usos"] += usos
-
+    # Nao reconstrua o numero de usos via _usos_simulador: habilidades
+    # alternativas (ex.: as duas tradicoes do xama) dividem a mesma chave.
+    # Cada ativacao ja foi contabilizada no momento em que aconteceu.
     return {
         "inimigos_derrotados": estado.inimigos_derrotados,
-        "rodadas": estado.rodada - 1,
-        "caidos": len(estado.caidos),
+        "rodadas": rodadas_executadas,
+        "caidos": sum(c.caido for c in grupo if not c.e_invocacao),
+        "personagens_derrubados": len(personagens_derrubados),
+        "turnos_caidos": turnos_caidos,
+        "turnos_inimigos_atordoados": turnos_inimigos_atordoados,
+        "limite_rodadas": not estado.encerrado,
         "dano_grupo": dano_grupo,
         "dano_recebido": dano_inimigo,
         "cura": cura_total,
         "recursos": recursos_gastos,
         "thp_gasto": thp_gasto,
-        "hp_restante": sum(max(0, c.hp_atual) for c in grupo),
+        "hp_restante": sum(max(0, c.hp_atual) for c in grupo if not c.e_invocacao),
+        "thp_gerado": thp_gerado,
+        "thp_restante": sum(c.thp for c in grupo if not c.e_invocacao),
         "ataques_basicos": ataques_basicos,
         "habilidades_usadas": habilidades_usadas,
         "dano_periodico": dano_periodico,
