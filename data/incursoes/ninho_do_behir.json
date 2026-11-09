@@ -1,0 +1,30 @@
+{
+  "id": "ninho_do_behir",
+  "nome": "Ninho do Behir",
+  "organizacao": "Guilda dos Mortos",
+  "tamanho": "Média",
+  "tier": 3,
+  "lore_inicial": "A Guilda dos Mortos mantém galerias subterrâneas muito além dos salões onde os corpos são arquivados. Algumas foram escavadas para ampliar o ossuário; outras já estavam lá quando a Guilda chegou. Todas têm um registro, até as que deveriam permanecer fechadas.\n\nHá seis dias, os carregadores ouviram um trovão vindo de baixo da Galeria dos Nomes. Depois vieram o cheiro de ozônio, marcas profundas nas paredes e o desaparecimento de três equipes. A última coisa encontrada foi uma placa de identificação da Guilda, derretida por dentro.\n\nA criatura abriu um caminho até as galerias antigas e fez delas seu território. A Guilda identificou o predador: um Behir. Quer o ninho destruído, a passagem isolada e qualquer resto dos carregadores recuperado. Não há negociação sobre a criatura.",
+  "lore_final": "O último clarão ilumina a câmara por um instante. Depois, só resta o cheiro de pedra queimada e o corpo enorme do Behir, imóvel entre os ovos partidos e os restos das equipes desaparecidas.\n\nA Guilda lacra a passagem com pedra, ferro e os nomes de quem não voltou. Os registros dos carregadores são encerrados — desta vez sem deixar margem para um segundo enterro. Por algumas semanas, ninguém desce às galerias antigas. A Guilda chama isso de prudência; os coveiros chamam de esperar o próximo trovão.",
+  "imagem_capa": null,
+  "recompensa_mes": 10,
+  "pontos_conclusao": 10,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "A Câmara do Ninho",
+    "tipo": "Combate",
+    "descricao": "A passagem termina numa caverna larga, atravessada por veios de cristal que estalam com eletricidade. Ossos, ferramentas e placas da Guilda estão espalhados pelo chão. No centro, entre pedras vitrificadas pelo calor, há um ninho feito de destroços e carcaças.\n\nO Behir se desenrola das paredes da câmara. As escamas refletem os clarões azulados, e o ar se enche de estática quando ele abre a mandíbula. Não está protegendo apenas alimento: está defendendo o ninho e tudo o que acumulou nele.\n\nA criatura é um Behir adulto, com suas capacidades originais. A Guilda quer a ameaça eliminada, não afugentada.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "10 MEs por participante + pontos com a Guilda dos Mortos",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Behir"
+      }
+    ]
+  }
+}
