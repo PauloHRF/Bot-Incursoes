@@ -197,49 +197,74 @@ def _resolucao_de_evento(alvo_progresso, *dados):
     )
 
 
-def caso_sala_vencida_nao_anuncia_castigo():
-    """Sala vencida com alguém falhando o dado: a tela não pode prometer castigo.
+def caso_quem_falhou_e_so_o_nome():
+    """O campo "Quem falhou" é a lista de nomes, e mais nada.
 
-    A regra do motor é "a sala é do grupo": vencida, não cobra de NINGUÉM —
-    nem de quem rolou 3. O campo "Quem falhou" não olhava se a sala tinha sido
-    vencida e imprimia, do lado do nome, a consequência da falha: *carrega uma
-    maldição ou um ponto de Exaustão pelo resto da incursão*. Ninguém levava
-    nada — o motor nunca aplicou —, mas o grupo lia aquilo e contava a maldição
-    como recebida. Era um erro só da tela, e é por isso que durou: o banco
-    estava certo, e quem conferia o banco não via problema nenhum.
+    Ele imprimia, do lado do nome, o que a falha custa — *carrega uma maldição
+    ou um ponto de Exaustão pelo resto da incursão* —, e aquilo estava errado
+    das duas formas. Na sala VENCIDA o motor não cobra de ninguém, nem de quem
+    rolou 3: o grupo lia uma maldição que ninguém tinha levado. Na sala
+    PERDIDA ele cobra de TODOS que a encararam, e não só de quem falhou o
+    próprio dado, então nomear estes ao lado da consequência dizia o contrário
+    do que acontece.
+
+    Nada entrou no lugar. O que cada um levou está no painel da condição, com
+    o stack por cabeça — e é lá que ele tem de ser lido.
     """
     vencida = _resolucao_de_evento(6, 18, 3)  # 18 passa e já estoura o alvo
     assert vencida.superada and vencida.quem_falhou, "o caso precisa das duas"
     campos = {f.name: f.value for f in E.resultado_sala(vencida).fields}
-    tudo = "\n".join(campos.values())
 
-    # Nenhuma palavra de castigo na tela de uma sala vencida.
+    assert campos["Quem falhou"] == "Heroi2", campos["Quem falhou"]
+    # E nenhuma palavra de castigo em lugar nenhum da tela de uma sala vencida.
+    tudo = "\n".join(campos.values())
     for proibida in ("maldição", "Exaustão", "debuff", "leva dano"):
         assert proibida not in tudo, (proibida, tudo)
-    quem = campos.get("Quem falhou", "")
-    assert "Heroi2" in quem, quem
-    assert "não paga nada" in quem, quem
-    # Singular com um só: "Heroi2 — não somaram" era o que saía.
-    assert "não somou progresso" in quem, quem
 
-    # E a sala PERDIDA cobra do grupo, nao so de quem falhou o dado: a outra
-    # metade da mesma regra, que o campo antigo tambem dizia errado.
+    # Na sala perdida tambem: so o nome. O que ela cobra vem do desfecho, no
+    # painel da condicao, e nao deste campo.
     perdida = _resolucao_de_evento(99, 18, 3)
     assert not perdida.superada
     quem = next(
         f.value for f in E.resultado_sala(perdida).fields if f.name == "Quem falhou"
     )
-    assert "todos que a encararam" in quem, quem
-    assert "inclusive quem passou" in quem, quem
-    assert "maldição" in quem, quem
-    # Dois falhando volta ao plural.
+    assert quem == "Heroi2", quem
+
+    # Dois falhando: os dois nomes, separados por virgula.
     dois = _resolucao_de_evento(6, 18, 3, 2)
     quem = next(
         f.value for f in E.resultado_sala(dois).fields if f.name == "Quem falhou"
     )
-    assert "não somaram progresso" in quem, quem
+    assert quem == "Heroi2, Heroi3", quem
 
-    print("  sala vencida nao anuncia castigo, e a perdida cobra do grupo: ok")
+    print("  o campo 'Quem falhou' e so a lista de nomes: ok")
+
+
+def caso_o_critico_nao_explica_a_regra():
+    """O crítico mostra o 💥, o 20 e o dano — e não "(dados dobrados)".
+
+    Dobrar os dados no 20 natural é regra que a mesa sabe de cor, e a frase
+    aparecia três vezes: na linha do golpe, no resumo privado de quem atacou e
+    no contra-ataque do monstro. Em combate longo era a mesma explicação
+    repetida a cada crítico.
+    """
+    from types import SimpleNamespace
+
+    golpe = SimpleNamespace(
+        atacante="Heroi1", d20=20, bonus=5, total=25, ca_alvo=15,
+        critico=True, falha_critica=False, acertou=True, dano=22,
+    )
+    linhas = [
+        E.linha_golpe(golpe),
+        E.resumo_do_golpe([(golpe, "Aranha")]),
+        E.texto_do_contra_ataque(golpe, "Heroi1"),
+    ]
+    for linha in linhas:
+        assert "dobrad" not in linha, linha
+        # O que importa continua lá: que foi critico e quanto doeu.
+        assert "CRITICO" in linha, linha
+        assert "22" in linha, linha
+    print("  o critico nao repete a regra dos dados dobrados: ok")
 
 
 # ------------------------------------------------------ com banco e canal
@@ -442,8 +467,10 @@ async def caso_evento_vencido_nao_deixa_debuff_em_ninguem():
     embed = resultados[-1].embeds[0]
     campos = {f.name: f.value for f in embed.fields}
     assert "superada" in (embed.title or ""), embed.title
-    assert "Quem falhou" in campos, campos
-    assert "não paga nada" in campos["Quem falhou"], campos["Quem falhou"]
+    assert campos.get("Quem falhou"), campos
+    # So o nome: a tela de uma sala vencida nao fala de castigo nenhum.
+    for proibida in ("maldição", "Exaustão", "debuff"):
+        assert proibida not in " ".join(campos.values()), (proibida, campos)
 
     # O banco: ninguem carrega nada de ruim. O Evento vencido DA um buff para
     # todos, entao o que se cobra nao e "nenhuma condicao" — e nenhuma ruim.
@@ -506,7 +533,6 @@ async def caso_evento_perdido_cobra_de_quem_passou_tambem():
     assert "superada" not in (embed.title or ""), embed.title
     # Sem ninguem passando o caso nao prova nada: e a asserção que o protege.
     assert "✅" in campos["Rolagens"], campos["Rolagens"]
-    assert "todos que a encararam" in campos["Quem falhou"], campos["Quem falhou"]
 
     # E no banco: quem passou carrega a maldicao igual aos outros.
     carregadas = await db.condicoes_da_run(conn, run["id"])
@@ -702,7 +728,8 @@ async def main():
     caso_painel_avisa_o_teto()
     caso_cartao_nomeia_quem_rolou_e_quem_falta()
     caso_o_caminho_diz_passou_ou_falhou()
-    caso_sala_vencida_nao_anuncia_castigo()
+    caso_quem_falhou_e_so_o_nome()
+    caso_o_critico_nao_explica_a_regra()
 
     await caso_o_cartao_vai_marcando_quem_rolou()
     await caso_quem_esta_caido_nao_entra_na_conta()

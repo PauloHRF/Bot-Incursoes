@@ -9,7 +9,6 @@ import discord
 from . import config, retratos
 from .incursoes import DESCANSOS_DO_CAMINHO, Incursao, Sala, com_artigo
 from .motor import (
-    CONSEQUENCIA_FALHA,
     ResolucaoSala,
     barra,
     dobrar_dados,
@@ -410,33 +409,22 @@ def resultado_sala(
 
     falharam = resolucao.quem_falhou
     if falharam:
-        nomes = ", ".join(r.personagem for r in falharam)
-        # Um só falhando é o caso comum, e "Bruno — não somaram" era feio.
-        um_so = len(falharam) == 1
-        somou = "não somou progresso" if um_so else "não somaram progresso"
-        paga = "não paga nada" if um_so else "não pagam nada"
-        if resolucao.superada:
-            # **A sala vencida não cobra de ninguém**, nem de quem rolou mal —
-            # é o que `_consequencias_da_sala` faz. Este campo anunciava aqui a
-            # consequência da FALHA ("carrega uma maldição ou um ponto de
-            # Exaustão"), que o motor não aplica numa sala superada: o grupo
-            # lia na tela um castigo que ninguém tinha levado, e a regra
-            # parecia quebrada. O erro era só da tela, e por isso durou.
-            valor = (
-                f"{nomes} — {somou}, e **{paga}**: "
-                "a sala é do grupo, e o grupo venceu."
-            )
-        else:
-            # A outra metade da regra, e o outro erro do campo antigo: a sala
-            # perdida cobra de TODOS que a encararam, e não só de quem falhou
-            # o próprio dado (ver `_quem_encarou`, no cog). Nomear só estes ao
-            # lado da consequência dizia o contrário do que o motor faz.
-            valor = (
-                f"{nomes} — {somou}. E a sala perdida cobra de "
-                "**todos que a encararam**, inclusive quem passou: "
-                f"{CONSEQUENCIA_FALHA.get(sala.tipo, 'não contribui')}."
-            )
-        e.add_field(name="Quem falhou", value=valor, inline=False)
+        # Só os nomes. O campo anunciava aqui o que a falha custa, tirado de
+        # `motor.CONSEQUENCIA_FALHA`, e aquilo estava errado das duas formas:
+        # na sala VENCIDA o motor não cobra de ninguém, nem de quem rolou mal,
+        # e na sala PERDIDA ele cobra de TODOS que a encararam, não só destes
+        # (ver `_quem_encarou`, no cog). O grupo lia uma maldição que ninguém
+        # tinha levado.
+        #
+        # Nenhum texto no lugar: o que cada um levou DE VERDADE está logo
+        # abaixo, no painel da condição, com o stack por cabeça e o prazo. A
+        # regra de dobrar ou não dobrar o dado a mesa já sabe de cor — a tela
+        # só precisa dizer quem é quem.
+        e.add_field(
+            name="Quem falhou",
+            value=", ".join(r.personagem for r in falharam),
+            inline=False,
+        )
 
     if resolucao.superada and sala.recompensa:
         e.add_field(name="Recompensa", value=sala.recompensa, inline=False)
@@ -708,8 +696,10 @@ def linha_golpe(g) -> str:
     rolagem = f"🎲 {g.d20} {fmt(g.bonus)} = **{g.total}** vs CA {g.ca_alvo}"
     if g.critico:
         return (
+            # Sem "(dados dobrados)": o 💥 e o **20** já dizem o que houve, e
+            # dobrar os dados no crítico é regra que a mesa sabe de cor.
             f"{EMOJI_CRITICO} **CRITICO!** {g.atacante} · 🎲 **20** → "
-            f"**{g.dano}** de dano (dados dobrados)"
+            f"**{g.dano}** de dano"
         )
     if g.falha_critica:
         return f"{EMOJI_FALHA_CRITICA} {g.atacante} · 🎲 **1** → erro critico, passa longe"
@@ -757,7 +747,7 @@ def resumo_do_golpe(golpes: list[tuple]) -> str:
         if golpe.critico:
             linhas.append(
                 f"{EMOJI_CRITICO} 🎲 **{golpe.d20}** — **CRITICO!** "
-                f"**{golpe.dano}** de dano em {alvo_nome}, com os dados dobrados."
+                f"**{golpe.dano}** de dano em {alvo_nome}."
             )
         elif golpe.falha_critica:
             linhas.append(
@@ -894,7 +884,7 @@ def texto_do_contra_ataque(contra, alvo_nome: str) -> str:
     if contra.critico:
         return (
             f"{EMOJI_CRITICO} **CRITICO!** 🎲 **20** → **{contra.dano}** de dano "
-            f"em {alvo_nome} (dados dobrados)"
+            f"em {alvo_nome}"
         )
     if contra.falha_critica:
         return f"{EMOJI_FALHA_CRITICA} 🎲 **1** → erro critico, {alvo_nome} escapa"
