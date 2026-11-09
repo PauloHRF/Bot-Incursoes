@@ -885,18 +885,40 @@ async def adicionar_participante(
     user_id: int,
     personagem_id: int,
     tier: Optional[int] = None,
+    limite: Optional[int] = None,
 ) -> bool:
-    """False se o jogador já estava na run.
+    """False se o jogador ja estava na run, ou se ela ja esta cheia.
 
     `tier` e o do personagem AGORA, gravado na entrada: e com ele que o
     `/ficha alterar` sabe se aquele tier ja foi jogado. Sem ele a coluna
     fica NULL e nao trava nada.
+
+    **A lotacao e conferida DENTRO do INSERT**, e nao antes dele. O cog
+    tambem olha o tamanho do grupo antes de chamar aqui, mas aquela
+    conferencia le e decide com um `await` no meio: duas entradas no mesmo
+    instante passavam as duas por ela e o grupo comecava com **seis**. Um
+    statement so nao tem esse meio — quem perde a corrida leva False.
+
+    O `NOT EXISTS` faz o trabalho que era do `INSERT OR IGNORE`: com o
+    `SELECT ... WHERE` nao da para usar `OR IGNORE` para isso, porque o teto
+    e o duplicado precisam das duas condicoes no mesmo lugar.
+
+    E o direito ao ouro so e gravado quando a entrada ACONTECE: antes os dois
+    INSERTs saiam sempre, e com a entrada podendo falhar isso daria direito ao
+    ouro da run a quem nao entrou nela.
     """
+    teto = config.TAMANHO_GRUPO if limite is None else limite
     cur = await conn.execute(
-        "INSERT OR IGNORE INTO run_participantes"
-        " (run_id, user_id, personagem_id, tier) VALUES (?, ?, ?, ?)",
-        (run_id, user_id, personagem_id, tier),
+        "INSERT INTO run_participantes (run_id, user_id, personagem_id, tier)"
+        " SELECT ?, ?, ?, ?"
+        " WHERE (SELECT COUNT(*) FROM run_participantes WHERE run_id = ?) < ?"
+        "   AND NOT EXISTS (SELECT 1 FROM run_participantes"
+        "                   WHERE run_id = ? AND user_id = ?)",
+        (run_id, user_id, personagem_id, tier, run_id, teto, run_id, user_id),
     )
+    if not cur.rowcount:
+        await conn.commit()
+        return False
     # Entrar da direito ao ouro desta run, e o direito nao se perde depois:
     # quem for ejetado por Exaustao no meio continua nesta lista. E so quem
     # desiste ANTES de a run comecar que sai dela.
@@ -906,7 +928,7 @@ async def adicionar_participante(
         (run_id, user_id, personagem_id),
     )
     await conn.commit()
-    return cur.rowcount > 0
+    return True
 
 
 async def tiers_jogados(conn: aiosqlite.Connection, personagem_id: int) -> set[int]:
@@ -2425,19 +2447,33 @@ async def comprar(
 ) -> bool:
     """Debita o preco e poe o item na bolsa. False quando falta ouro.
 
-    O saldo e conferido e debitado sem commit no meio, num unico commit no
-    fim: o bot usa uma conexao so, que serializa escrita, entao dois cliques
-    ao mesmo tempo nao compram o mesmo ouro duas vezes.
+    **O saldo e conferido DENTRO do INSERT**, e e isso que importa aqui: um
+    statement so, sem `await` no meio, entao duas compras no mesmo instante
+    nao podem ser aprovadas contra o mesmo ouro.
+
+    Antes eram dois passos — `if await ouro(...) < preco: return False` e
+    depois o INSERT —, e o comentario que vivia aqui garantia que a conexao
+    unica bastava para serializar os dois. **Nao basta, e o erro era esse.**
+    A conexao serializa cada statement, nao a sequencia: o `await` da leitura
+    devolve o controle ao loop, a outra corrotina le o mesmo saldo e as duas
+    passam pela conferencia. Com 100 de ouro, duas compras de 80 eram
+    aprovadas e o saldo ficava em **-60**.
+
+    A soma dentro do `WHERE` ve tambem o que esta pendente nesta transacao, e
+    nao so o que foi commitado: a segunda compra ja desconta a primeira antes
+    do commit, que e o que faz a conta fechar sem trava nenhuma.
     """
     if preco < 0:
         return False
-    if await ouro(conn, personagem_id) < preco:
-        return False
-    await conn.execute(
+    cur = await conn.execute(
         "INSERT INTO ouro_lancamentos (personagem_id, motivo, ouro)"
-        " VALUES (?, ?, ?)",
-        (personagem_id, f"Compra: {item_id}", -preco),
+        " SELECT ?, ?, ?"
+        " WHERE (SELECT COALESCE(SUM(ouro), 0) FROM ouro_lancamentos"
+        "        WHERE personagem_id = ?) >= ?",
+        (personagem_id, f"Compra: {item_id}", -preco, personagem_id, preco),
     )
+    if not cur.rowcount:
+        return False
     await _por_na_bolsa(conn, personagem_id, item_id)
     await conn.commit()
     return True

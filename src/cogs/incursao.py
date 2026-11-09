@@ -1150,10 +1150,22 @@ class Incursoes(commands.Cog):
             )
             return
 
-        await db.adicionar_participante(
+        if not await db.adicionar_participante(
             self.bot.db, run_id, interaction.user.id, personagem_id,
             tier=tier(personagem["nivel"]),
-        )
+        ):
+            # Quem decide a lotacao e o INSERT, que a confere no proprio
+            # statement. A conferencia de cima continua ali porque da a frase
+            # na hora no caso comum, mas ela le e decide com um `await` no
+            # meio: dois cliques no mesmo instante passavam os dois por ela.
+            # Aqui so se traduz o "nao deu" em motivo.
+            await interaction.response.send_message(
+                "Você já está no grupo."
+                if await db.esta_na_run(self.bot.db, run_id, interaction.user.id)
+                else "O grupo encheu antes de você: a última vaga foi de outra pessoa.",
+                ephemeral=True,
+            )
+            return
         await interaction.response.send_message(
             f"Voce entrou com **{personagem['nome']}** (tier {tier(personagem['nivel'])}).",
             ephemeral=True,
