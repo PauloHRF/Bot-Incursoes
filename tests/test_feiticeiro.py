@@ -30,9 +30,11 @@ from fakes import (  # noqa: E402
 _ABERTAS = []
 
 SACO = {**INDEFESO, "hp": 500, "ataque": 1, "dano": "1d1"}
+# Cai com qualquer magia: e com ele que se testa o FIM do combate.
+VELA = {**INDEFESO, "hp": 1, "ataque": 1, "dano": "1d1"}
 
 
-async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2):
+async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2, monstro=None):
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -49,7 +51,7 @@ async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2):
     cog = Incursoes(FakeBot(conn, canal))
     incursao, _ = montar_conteudo(
         cog, tamanho="Curta", salas=salas_sem_combate(),
-        monstro_objetivo=SACO, inimigos_objetivo=monstros,
+        monstro_objetivo=monstro or SACO, inimigos_objetivo=monstros,
     )
     run_id = await db.criar_run(conn, GUILD, CANAL, incursao.id, JOGADORES[0])
     for user_id in JOGADORES[:quantos]:
@@ -176,6 +178,15 @@ async def caso_quickened_deixa_o_turno_livre():
         conn, run["id"], cog._passo(run), estado.rodada, JOGADORES[0]
     )
     assert not gasto, f"o turno devia ficar livre, e veio {gasto}"
+    # E o combate NAO foi encerrado: o alvo tem 500 de HP e segue de pe. A
+    # magia rapida passou a reparar no fim do combate (ver
+    # `caso_quickened_que_mata_o_ultimo_encerra_o_combate`), e encerrar sempre
+    # em vez de so quando acaba seria pior que o bug de antes: pagaria a sala
+    # e abriria a parada seguinte com inimigo vivo na mesa.
+    assert (run["id"], cog._passo(run)) not in cog._encerrados, (
+        "a magia rapida encerrou um combate que nao acabou"
+    )
+    assert (await db.buscar_run(conn, run["id"]))["status"] == "objetivo"
     # e ele ainda ataca na mesma rodada
     inter = FakeInteraction(canal, JOGADORES[0])
     await cog.atacar(inter, run["id"], "OBJ", alvo)
@@ -185,6 +196,68 @@ async def caso_quickened_deixa_o_turno_livre():
     # 4d8 da magia (4-32) mais o cantrip 4d10 (4-40): o total passa de 8
     assert levou >= 8, levou
     print(f"  Quickened: ele lanca E ataca no mesmo turno ({levou} de dano): ok")
+
+
+async def caso_quickened_que_mata_o_ultimo_encerra_o_combate():
+    """Matando o último inimigo com a magia rápida, o combate FECHA.
+
+    A magia rápida resolve na hora, fora da vez — e por isso não passa por
+    `_avancar`, que era o único lugar que reparava no fim do combate. Com o
+    último inimigo caindo por ela, a run ficava em `objetivo` **sem inimigo
+    vivo**: atacar respondia *"esse inimigo já caiu — escolha outro alvo"*, e
+    não havia outro para escolher. A incursão não tinha saída, e sair dela
+    pedia mexer no banco na mão.
+
+    O caso irmão é `caso_quickened_deixa_o_turno_livre`, que garante a outra
+    metade: quando o combate NÃO acaba, o turno continua livre para atacar.
+    Fechar o combate cedo demais quebraria aquele, que é o motivo de a
+    habilidade existir.
+    """
+    conn, canal, cog, incursao, run = await preparar(
+        escolhas={"magia_feit_t1": "chromatic_orb", "metamagia_t4": "quickened"},
+        monstros=1, monstro=VELA,
+    )
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    passo = cog._passo(run)
+    alvo = estado.inimigos[0].indice
+
+    await cog.usar_habilidade(
+        FakeInteraction(canal, JOGADORES[0]), run["id"], "OBJ",
+        "chromatic_orb", [alvo],
+    )
+
+    atual = await db.buscar_run(conn, run["id"])
+    depois = await cog._estado_combate(atual, incursao.objetivo)
+    assert depois is None or depois.encerrado, "o inimigo de 1 HP tinha de cair"
+    assert atual["status"] != "objetivo", (
+        f"a run ficou em `{atual['status']}` sem inimigo vivo: e o travamento"
+    )
+    assert atual["status"] == "sucesso", atual["status"]
+    # E o fecho foi reivindicado: e ele que paga o ouro e segue a run.
+    assert (run["id"], passo) in cog._encerrados, cog._encerrados
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  Quickened que mata o ultimo inimigo encerra o combate: ok")
+
+
+def caso_o_fecho_do_combate_e_tomado_uma_vez():
+    """Dois caminhos chegam ao fim do mesmo combate; só um o encerra.
+
+    `_encerrar_combate` paga o ouro da sala e abre a parada seguinte, então
+    rodar duas vezes pagaria duas vezes. A reivindicação é síncrona de
+    propósito: sem `await` entre olhar e marcar, o loop de eventos não tem
+    onde entrar.
+    """
+    cog = Incursoes.__new__(Incursoes)
+    cog._encerrados = set()
+    assert cog._tomar_o_fecho_do_combate(7, 3) is True
+    assert cog._tomar_o_fecho_do_combate(7, 3) is False, "encerrou duas vezes"
+    # Outra parada da mesma run e outro combate, e tem o fecho dela.
+    assert cog._tomar_o_fecho_do_combate(7, 4) is True
+    # E uma run nao tranca o combate da outra.
+    assert cog._tomar_o_fecho_do_combate(8, 3) is True
+    print("  o fecho de um combate e tomado uma vez so: ok")
 
 
 # ------------------------------------------------------- Grilhoes Planares
@@ -308,6 +381,8 @@ async def main():
         await caso_twinned_pega_um_alvo_a_mais()
         await caso_heightened_poe_desvantagem_no_save()
         await caso_quickened_deixa_o_turno_livre()
+        await caso_quickened_que_mata_o_ultimo_encerra_o_combate()
+        caso_o_fecho_do_combate_e_tomado_uma_vez()
         await caso_grilhoes_acorrenta_e_sangra()
         caso_a_corrente_tem_escape()
         await caso_polymorph_veste_um_aliado()

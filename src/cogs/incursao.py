@@ -2414,8 +2414,7 @@ class Incursoes(commands.Cog):
                 if estado.encerrado:
                     ativo = False
                     # Quem chegar aqui depois nao encerra o mesmo combate de novo.
-                    if (run["id"], passo) not in self._encerrados:
-                        self._encerrados.add((run["id"], passo))
+                    if self._tomar_o_fecho_do_combate(run["id"], passo):
                         encerrar = (run, estado)
                     break
                 ordem = await self._garantir_iniciativa(run, estado)
@@ -2933,6 +2932,25 @@ class Incursoes(commands.Cog):
                 f"{await self._chamar(run, [c.user_id for c in seguinte.ativos])} "
                 f"— escolham a ação; ela sai na ordem da iniciativa."
             )
+
+    def _tomar_o_fecho_do_combate(self, run_id: int, passo: int) -> bool:
+        """Reivindica o direito de encerrar ESTE combate. Uma vez por combate.
+
+        **Dois caminhos** chegam ao fim de um combate: a iniciativa, em
+        `_avancar`, e a magia que resolve na hora — o Quickened Spell, que
+        sai fora da vez e por isso nao passa por lá. Os dois podem chegar no
+        mesmo instante, e `_encerrar_combate` paga o ouro da sala e abre a
+        parada seguinte: rodar duas vezes pagaria duas vezes.
+
+        **E sincrono de propósito.** Entre o `in` e o `add` nao existe
+        `await`, entao o loop de eventos nao tem onde entrar e a reivindicacao
+        e indivisivel sem trava nenhuma. Um `async def` aqui abriria
+        exatamente o buraco que ele existe para fechar.
+        """
+        if (run_id, passo) in self._encerrados:
+            return False
+        self._encerrados.add((run_id, passo))
+        return True
 
     async def _encerrar_combate(self, run: dict[str, Any], sala: Sala, estado) -> None:
         """Um dos lados caiu: fecha o painel e segue a run (ou a encerra)."""
@@ -3546,7 +3564,21 @@ class Incursoes(commands.Cog):
             )
             await self._dizer(interaction, texto)
             self._guardar_efemera(run_id, interaction)
-            await self._atualizar_painel(run, sala, estado)
+            # A magia rapida resolve AQUI e nao passa por `_avancar`, que e o
+            # unico lugar que repara no fim do combate. Matando o ultimo
+            # inimigo com ela, a run ficava em `objetivo` sem inimigo vivo:
+            # atacar respondia "esse inimigo ja caiu, escolha outro alvo" e
+            # nao havia outro para escolher. A incursao nao tinha saida.
+            #
+            # O estado e relido do banco, como `_avancar` faz: a magia pode ter
+            # mexido em mais do que o objeto em maos sabe.
+            atual = await db.buscar_run(self.bot.db, run_id) or run
+            depois = await self._estado_combate(atual, sala)
+            if depois is not None and depois.encerrado:
+                if self._tomar_o_fecho_do_combate(run_id, passo):
+                    await self._encerrar_combate(atual, sala, depois)
+                return
+            await self._atualizar_painel(atual, sala, depois or estado)
             return
 
         if not await db.marcar_turno(
