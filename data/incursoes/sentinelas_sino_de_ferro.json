@@ -1,0 +1,30 @@
+{
+  "id": "sentinelas_sino_de_ferro",
+  "nome": "O Sino de Ferro",
+  "organizacao": "Sentinelas do Alvorecer",
+  "tamanho": "Longa",
+  "tier": 4,
+  "lore_inicial": "O Mosteiro de Santa Vigília foi construído sobre uma fundição antiga, e as Sentinelas do Alvorecer ergueram seus selos usando o ferro que encontraram nas galerias inferiores. Durante séculos, o sino da torre marcou as trocas de guarda. Nunca falhou uma badalada.\\n\\nHá três noites, o sino começou a tocar durante o dia. A cada toque, uma armadura do arsenal se levanta e caminha até a torre. Os guardas tentaram desmontá-las; as peças voltaram a se juntar antes do amanhecer. Ontem, o próprio portão interno foi arrancado das dobradiças.\\n\\nA Ordem acredita que a fundição despertou algo que deveria ter permanecido imóvel. A missão é descer até a câmara de moldagem, interromper o sino e destruir o que está convocando as armaduras.",
+  "lore_final": "Quando o último golpe cessa, o sino perde o brilho avermelhado e fica mudo. As armaduras espalhadas pela fundição desabam ao mesmo tempo, como se alguém tivesse cortado um único fio que as mantinha de pé.\\n\\nAs Sentinelas fecham a escadaria com uma porta nova e gravam os nomes dos que morreram na primeira expedição. O sino não será derretido: a Ordem prefere mantê-lo ali, imóvel e vigiado. Ninguém sabe se isso é prudência ou se ainda esperam ouvir uma badalada que não venha de dentro.",
+  "imagem_capa": null,
+  "recompensa_mes": 15,
+  "pontos_conclusao": 15,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "A Câmara de Moldagem",
+    "tipo": "Combate",
+    "descricao": "A câmara é quente apesar dos fornos apagados. No centro, um sino de ferro negro está suspenso por correntes grossas, e cada vibração faz as ferramentas nas bancadas se arrastarem alguns centímetros.\\n\\nA criatura diante dele parece uma estátua de guerra, mas o metal do corpo se move como água espessa. Uma das mãos segura uma espada grande demais para qualquer soldado; a outra está marcada por fuligem antiga. Quando o grupo cruza a linha de moldagem, o sino toca uma vez — e o guardião avança.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "15 MEs por participante + pontos com as Sentinelas do Alvorecer",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Golem de Ferro"
+      }
+    ]
+  }
+}
