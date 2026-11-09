@@ -175,6 +175,73 @@ def caso_o_caminho_diz_passou_ou_falhou():
     print("  o caminho marca passou ou falhou, sem a dificuldade: ok")
 
 
+def _resolucao_de_evento(alvo_progresso, *dados):
+    """Uma sala de Evento resolvida com os dados dados, sem banco nenhum.
+
+    O primeiro de `dados` é de quem passa fácil; os outros entram como estão.
+    """
+    evento = Sala(
+        id="EV", nome="O Mercador Cego", tipo="Evento", descricao="",
+        pericias=["Intuição"], cd=12, alvo_progresso=alvo_progresso,
+    )
+    return motor.ResolucaoSala(
+        sala=evento,
+        resultados=[
+            motor.ResultadoTeste(
+                user_id=i, personagem=f"Heroi{i}", pericia="Intuição",
+                d20=d20, modificador=4, cd=12,
+            )
+            for i, d20 in enumerate(dados, start=1)
+        ],
+        total_participantes=len(dados),
+    )
+
+
+def caso_sala_vencida_nao_anuncia_castigo():
+    """Sala vencida com alguém falhando o dado: a tela não pode prometer castigo.
+
+    A regra do motor é "a sala é do grupo": vencida, não cobra de NINGUÉM —
+    nem de quem rolou 3. O campo "Quem falhou" não olhava se a sala tinha sido
+    vencida e imprimia, do lado do nome, a consequência da falha: *carrega uma
+    maldição ou um ponto de Exaustão pelo resto da incursão*. Ninguém levava
+    nada — o motor nunca aplicou —, mas o grupo lia aquilo e contava a maldição
+    como recebida. Era um erro só da tela, e é por isso que durou: o banco
+    estava certo, e quem conferia o banco não via problema nenhum.
+    """
+    vencida = _resolucao_de_evento(6, 18, 3)  # 18 passa e já estoura o alvo
+    assert vencida.superada and vencida.quem_falhou, "o caso precisa das duas"
+    campos = {f.name: f.value for f in E.resultado_sala(vencida).fields}
+    tudo = "\n".join(campos.values())
+
+    # Nenhuma palavra de castigo na tela de uma sala vencida.
+    for proibida in ("maldição", "Exaustão", "debuff", "leva dano"):
+        assert proibida not in tudo, (proibida, tudo)
+    quem = campos.get("Quem falhou", "")
+    assert "Heroi2" in quem, quem
+    assert "não paga nada" in quem, quem
+    # Singular com um só: "Heroi2 — não somaram" era o que saía.
+    assert "não somou progresso" in quem, quem
+
+    # E a sala PERDIDA cobra do grupo, nao so de quem falhou o dado: a outra
+    # metade da mesma regra, que o campo antigo tambem dizia errado.
+    perdida = _resolucao_de_evento(99, 18, 3)
+    assert not perdida.superada
+    quem = next(
+        f.value for f in E.resultado_sala(perdida).fields if f.name == "Quem falhou"
+    )
+    assert "todos que a encararam" in quem, quem
+    assert "inclusive quem passou" in quem, quem
+    assert "maldição" in quem, quem
+    # Dois falhando volta ao plural.
+    dois = _resolucao_de_evento(6, 18, 3, 2)
+    quem = next(
+        f.value for f in E.resultado_sala(dois).fields if f.name == "Quem falhou"
+    )
+    assert "não somaram progresso" in quem, quem
+
+    print("  sala vencida nao anuncia castigo, e a perdida cobra do grupo: ok")
+
+
 # ------------------------------------------------------ com banco e canal
 
 
@@ -331,6 +398,126 @@ async def caso_a_sala_deixa_o_painel_da_condicao():
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print("  a sala perdida deixa a maldição em painel próprio: ok")
+
+
+async def caso_evento_vencido_nao_deixa_debuff_em_ninguem():
+    """A prova no banco: Evento vencido com uma falha no dado, e nada de ruim.
+
+    O caso de cima garante que a TELA não promete castigo; este garante que o
+    banco não guarda nenhum. São as duas metades da mesma queixa da mesa — "a
+    sala deu sucesso e o Bruno tomou maldição" —, e só uma delas era verdade.
+
+    O dado é roteirizado porque a ordem importa: a sala fecha no instante em
+    que o alvo é atingido, então a falha tem de vir ANTES do acerto grande.
+    Com o acerto primeiro a sala fecharia com uma rolagem só, e ninguém teria
+    falhado — não haveria caso.
+    """
+    salas = [
+        sala(f"E{i}", "Evento", cd=20, alvo_progresso=3, pericias=["Intuição"])
+        for i in range(1, 7)
+    ]
+    conn, canal, cog = await preparar(salas)
+    run = await montar_run(conn, canal, cog)
+    alvo, run = await abrir_sala(conn, canal, cog, run)
+
+    # 1 falha contra CD 20; 20 passa e estoura o alvo de 3.
+    roteiro = [1, 20, 20, 20, 20]
+    de_verdade = motor.rolar_d20
+    motor.rolar_d20 = lambda *a, **k: roteiro.pop(0) if roteiro else 20
+    try:
+        msg = await canal.fetch_message(run["mensagem_id"])
+        for user_id in JOGADORES:
+            atual = await db.buscar_run(conn, run["id"])
+            if atual["status"] != "em_sala":
+                break
+            await cog.rolar(FakeInteraction(canal, user_id, msg), run["id"], alvo.id)
+    finally:
+        motor.rolar_d20 = de_verdade
+
+    resultados = [
+        m for m in canal.mensagens
+        if m.embeds and any(f.name == "Rolagens" for f in m.embeds[0].fields)
+    ]
+    assert resultados, "esperava o resultado da sala no canal"
+    embed = resultados[-1].embeds[0]
+    campos = {f.name: f.value for f in embed.fields}
+    assert "superada" in (embed.title or ""), embed.title
+    assert "Quem falhou" in campos, campos
+    assert "não paga nada" in campos["Quem falhou"], campos["Quem falhou"]
+
+    # O banco: ninguem carrega nada de ruim. O Evento vencido DA um buff para
+    # todos, entao o que se cobra nao e "nenhuma condicao" — e nenhuma ruim.
+    carregadas = await db.condicoes_da_run(conn, run["id"])
+    ruins = {
+        (user_id, cid)
+        for user_id, minhas in carregadas.items()
+        for cid, stacks in minhas.items()
+        if stacks > 0 and C.POR_ID[cid].ruim
+    }
+    assert not ruins, f"sala vencida deixou condicao ruim: {ruins}"
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  evento vencido nao deixa debuff nem exaustao em ninguem: ok")
+
+
+async def caso_evento_perdido_cobra_de_quem_passou_tambem():
+    """A outra metade: sala perdida cobra de TODOS que a encararam.
+
+    O caso irmão do de cima. Juntos eles são a regra inteira — "a sala é do
+    grupo, nos dois sentidos": vencida não cobra de ninguém, perdida cobra de
+    todos, e o dado de cada um decide o PROGRESSO, não quem paga.
+
+    O painel da maldição já era testado, mas com CD impossível: todo mundo
+    falhava, então `quem_falhou` era o grupo inteiro e trocar "quem encarou"
+    por "quem falhou" não mudava nada na tela. Aqui alguém PASSA e a sala se
+    perde de todo jeito — é a única forma de a diferença aparecer.
+    """
+    salas = [
+        sala(f"E{i}", "Evento", cd=20, alvo_progresso=99, pericias=["Intuição"])
+        for i in range(1, 7)
+    ]
+    conn, canal, cog = await preparar(salas)
+    run = await montar_run(conn, canal, cog)
+    alvo, run = await abrir_sala(conn, canal, cog, run)
+
+    # O primeiro passa; os outros falham. O alvo de 99 nao se alcanca, entao a
+    # sala se perde mesmo com um acerto grande dentro dela.
+    roteiro = [20, 1, 1, 1, 1]
+    de_verdade = motor.rolar_d20
+    motor.rolar_d20 = lambda *a, **k: roteiro.pop(0) if roteiro else 1
+    try:
+        msg = await canal.fetch_message(run["mensagem_id"])
+        for user_id in JOGADORES:
+            atual = await db.buscar_run(conn, run["id"])
+            if atual["status"] != "em_sala":
+                break
+            await cog.rolar(FakeInteraction(canal, user_id, msg), run["id"], alvo.id)
+    finally:
+        motor.rolar_d20 = de_verdade
+
+    resultados = [
+        m for m in canal.mensagens
+        if m.embeds and any(f.name == "Rolagens" for f in m.embeds[0].fields)
+    ]
+    assert resultados, "esperava o resultado da sala no canal"
+    embed = resultados[-1].embeds[0]
+    campos = {f.name: f.value for f in embed.fields}
+    assert "superada" not in (embed.title or ""), embed.title
+    # Sem ninguem passando o caso nao prova nada: e a asserção que o protege.
+    assert "✅" in campos["Rolagens"], campos["Rolagens"]
+    assert "todos que a encararam" in campos["Quem falhou"], campos["Quem falhou"]
+
+    # E no banco: quem passou carrega a maldicao igual aos outros.
+    carregadas = await db.condicoes_da_run(conn, run["id"])
+    for user_id in JOGADORES:
+        minhas = carregadas.get(user_id, {})
+        ruins = [c for c, n in minhas.items() if n > 0 and C.POR_ID[c].ruim]
+        assert ruins, f"{user_id} encarou a sala perdida e nao pagou nada"
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  evento perdido cobra de todos, inclusive de quem passou: ok")
 
 
 async def caso_stack_e_por_personagem_e_nao_do_ultimo_do_laco():
@@ -515,10 +702,13 @@ async def main():
     caso_painel_avisa_o_teto()
     caso_cartao_nomeia_quem_rolou_e_quem_falta()
     caso_o_caminho_diz_passou_ou_falhou()
+    caso_sala_vencida_nao_anuncia_castigo()
 
     await caso_o_cartao_vai_marcando_quem_rolou()
     await caso_quem_esta_caido_nao_entra_na_conta()
     await caso_a_sala_deixa_o_painel_da_condicao()
+    await caso_evento_vencido_nao_deixa_debuff_em_ninguem()
+    await caso_evento_perdido_cobra_de_quem_passou_tambem()
     await caso_stack_e_por_personagem_e_nao_do_ultimo_do_laco()
     await caso_ficha_mostra_a_iniciativa()
     await caso_os_campos_da_ficha_sao_os_quatro_nomes_limpos()

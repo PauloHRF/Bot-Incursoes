@@ -410,9 +410,33 @@ def resultado_sala(
 
     falharam = resolucao.quem_falhou
     if falharam:
-        consequencia = CONSEQUENCIA_FALHA.get(sala.tipo, "não contribui")
         nomes = ", ".join(r.personagem for r in falharam)
-        e.add_field(name="Quem falhou", value=f"{nomes} — {consequencia}.", inline=False)
+        # Um só falhando é o caso comum, e "Bruno — não somaram" era feio.
+        um_so = len(falharam) == 1
+        somou = "não somou progresso" if um_so else "não somaram progresso"
+        paga = "não paga nada" if um_so else "não pagam nada"
+        if resolucao.superada:
+            # **A sala vencida não cobra de ninguém**, nem de quem rolou mal —
+            # é o que `_consequencias_da_sala` faz. Este campo anunciava aqui a
+            # consequência da FALHA ("carrega uma maldição ou um ponto de
+            # Exaustão"), que o motor não aplica numa sala superada: o grupo
+            # lia na tela um castigo que ninguém tinha levado, e a regra
+            # parecia quebrada. O erro era só da tela, e por isso durou.
+            valor = (
+                f"{nomes} — {somou}, e **{paga}**: "
+                "a sala é do grupo, e o grupo venceu."
+            )
+        else:
+            # A outra metade da regra, e o outro erro do campo antigo: a sala
+            # perdida cobra de TODOS que a encararam, e não só de quem falhou
+            # o próprio dado (ver `_quem_encarou`, no cog). Nomear só estes ao
+            # lado da consequência dizia o contrário do que o motor faz.
+            valor = (
+                f"{nomes} — {somou}. E a sala perdida cobra de "
+                "**todos que a encararam**, inclusive quem passou: "
+                f"{CONSEQUENCIA_FALHA.get(sala.tipo, 'não contribui')}."
+            )
+        e.add_field(name="Quem falhou", value=valor, inline=False)
 
     if resolucao.superada and sala.recompensa:
         e.add_field(name="Recompensa", value=sala.recompensa, inline=False)
