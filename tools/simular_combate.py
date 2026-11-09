@@ -454,7 +454,8 @@ def main() -> int:
         print(f"Classe '{args.classe}' nao existe.", file=sys.stderr)
         return 1
     n = do_grupo.numeros(args.nivel)
-    e = classes.efeitos(args.classe, args.nivel)
+    _habilidades, escolhas = sb.habilidades_da_ficha(args.classe, args.nivel)
+    e = classes.efeitos(args.classe, args.nivel, escolhas)
     print(
         f"Grupo: {do_grupo.nome} nivel {args.nivel} (tier {tier(args.nivel)}) — "
         f"CA {n.ca}, acerto {n.acerto:+d}, dano {n.dano}, {n.hp} HP"
