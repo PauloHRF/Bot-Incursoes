@@ -50,7 +50,9 @@ em qualquer servidor onde o bot entre, mas a primeira propagação leva até ~1h
 
 Isso **não** separa os dados: o banco separa por servidor pela coluna
 `guild_id` das tabelas, então um bot em três servidores usa um banco só — e um
-backup só cobre todos.
+backup só cobre todos. Se o canal do backup fica num servidor e você não quer
+que ele receba as fichas dos outros, `BACKUP_GUILDA` no `.env` filtra o arquivo
+enviado (a cópia local segue inteira). Veja [deploy/README.md](deploy/README.md).
 
 Não são necessários *privileged intents* (o bot não lê o conteúdo das mensagens).
 

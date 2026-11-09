@@ -18,7 +18,9 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from src import config, database as db  # noqa: E402
-from fakes import GUILD, JOGADORES, criar_grupo  # noqa: E402
+from fakes import (  # noqa: E402
+    CANAL, CLASSE_PADRAO, GUILD, JOGADORES, TREINADAS, criar_grupo,
+)
 
 BANCO = Path(__file__).resolve().parent / "teste_backup.db"
 _ABERTAS = []
@@ -215,6 +217,286 @@ def caso_o_envio_leva_user_agent_e_o_arquivo():
     print("  o envio leva User-Agent, o arquivo e o resumo: ok")
 
 
+OUTRA = 777  # a outra guilda: o servidor de testes do dono
+INTRUSO = "ZarpadorDaOutraGuilda"
+
+
+async def _povoar_duas_guildas(conn):
+    """Dados nas duas guildas, e nas tabelas-filhas das duas.
+
+    Interessa encher também o que NÃO tem `guild_id` (itens, ouro, salas
+    visitadas): é ali que um filtro malfeito deixa órfão.
+    """
+    # O grupo da nossa guilda ja veio do `preparar()`.
+    nosso = (await db.listar_personagens(conn, GUILD, JOGADORES[0]))[0]["id"]
+    nossa_run = await db.criar_run(conn, GUILD, CANAL, "cripta", JOGADORES[0])
+    await db.adicionar_participante(conn, nossa_run, JOGADORES[0], nosso)
+    await db.registrar_visita(conn, nossa_run, 1, "SALA_A")
+    await db.lancar_ouro(conn, nosso, 50, "nossa", run_id=nossa_run)
+    await db.lancar_pontos(conn, GUILD, "Guarda", 3, "nossa", run_id=nossa_run)
+    await db.dar_item(conn, nosso, "corda")
+
+    intruso = await db.criar_personagem(
+        conn, OUTRA, 9001, INTRUSO, CLASSE_PADRAO, list(TREINADAS), nivel=5
+    )
+    outra_run = await db.criar_run(conn, OUTRA, 199, "cripta", 9001)
+    await db.adicionar_participante(conn, outra_run, 9001, intruso)
+    await db.registrar_visita(conn, outra_run, 1, "SALA_Z")
+    await db.lancar_ouro(conn, intruso, 999, "da outra", run_id=outra_run)
+    await db.lancar_pontos(conn, OUTRA, "Culto", 7, "da outra", run_id=outra_run)
+    await db.dar_item(conn, intruso, "adaga")
+    await conn.execute(
+        "INSERT INTO jogadores (guild_id, user_id, ultima_incursao)"
+        " VALUES (?, ?, ?)", (OUTRA, 9001, "cripta"),
+    )
+    await conn.execute(
+        "INSERT INTO config_guilda (guild_id, intervalo_semanas) VALUES (?, ?)",
+        (OUTRA, 9),
+    )
+    await conn.commit()
+    return {"nossa_run": nossa_run, "outra_run": outra_run, "intruso": intruso}
+
+
+async def caso_a_fatia_leva_so_uma_guilda_e_sem_rastro():
+    """A fatia de uma guilda não leva NADA da outra — nem nas páginas livres.
+
+    Duas regras moram aqui, e as duas são fáceis de perder sem perceber:
+
+    As dezenove tabelas que não têm `guild_id` penduram em `runs` e
+    `personagens` com ON DELETE CASCADE. Elas só saem se as chaves
+    estrangeiras estiverem LIGADAS — e o SQLite nasce com elas desligadas. Com
+    o pragma esquecido, a fatia fica com o ouro e os itens de personagens que
+    não existem mais nela: um banco que não bate consigo mesmo.
+
+    E apagar não é remover. As páginas apagadas ficam no arquivo, na lista de
+    livres, com o conteúdo intacto; o nome do personagem da outra guilda se lê
+    com um editor hexadecimal. É o `VACUUM` que reescreve o banco só com as
+    páginas vivas. Por isso o caso procura o nome nos BYTES do arquivo, e não
+    num SELECT: o SELECT já estaria limpo com a regra pela metade.
+    """
+    conn = await preparar()
+    criados = await _povoar_duas_guildas(conn)
+    pasta = BANCO.parent / "fatia_do_teste"
+    shutil.rmtree(pasta, ignore_errors=True)
+    pasta.mkdir(parents=True)
+
+    inteiro = BACKUP.contar(BANCO)
+    assert inteiro["personagens"] == len(JOGADORES) + 1, inteiro
+
+    copia = pasta / "copia.db"
+    BACKUP.copia_consistente(BANCO, copia)
+    BACKUP.deixar_so_a_guilda(copia, GUILD)
+
+    # As contagens que a mensagem do canal vai citar passam a ser as da fatia.
+    assert BACKUP.contar(copia) == {
+        "personagens": len(JOGADORES), "runs": 1, "pontos_lancamentos": 1
+    }, BACKUP.contar(copia)
+
+    volta = sqlite3.connect(copia)
+    try:
+        assert volta.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+
+        # As tabelas com `guild_id` saem do PRÓPRIO esquema, e não da lista do
+        # backup. Se o caso lesse a lista, apagar uma tabela dela deixaria o
+        # caso verde: ele deixaria de olhar justamente a que foi esquecida.
+        # Assim ele também cobra a lista de uma tabela nova, no dia em que
+        # alguém criar uma com `guild_id` e não lembrar deste arquivo.
+        todas = [
+            t for (t,) in volta.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        ]
+        com_guilda = [
+            t for t in todas
+            if any(
+                coluna[1] == "guild_id"
+                for coluna in volta.execute(f"PRAGMA table_info({t})")
+            )
+        ]
+        assert sorted(com_guilda) == sorted(BACKUP.TABELAS_DA_GUILDA), (
+            "o esquema tem tabela com guild_id fora de TABELAS_DA_GUILDA",
+            sorted(com_guilda), sorted(BACKUP.TABELAS_DA_GUILDA),
+        )
+        for tabela in com_guilda:
+            sobrou = volta.execute(
+                f"SELECT COUNT(*) FROM {tabela} WHERE guild_id != ?", (GUILD,)
+            ).fetchone()[0]
+            assert sobrou == 0, (tabela, sobrou)
+
+        # E as filhas foram com elas, pelo CASCADE: nada aponta para a run nem
+        # para o personagem da outra guilda.
+        orfas = {
+            "run_participantes": ("run_id", criados["outra_run"]),
+            "run_salas": ("run_id", criados["outra_run"]),
+            "ouro_lancamentos": ("personagem_id", criados["intruso"]),
+            "personagem_itens": ("personagem_id", criados["intruso"]),
+        }
+        for tabela, (coluna, valor) in orfas.items():
+            quantas = volta.execute(
+                f"SELECT COUNT(*) FROM {tabela} WHERE {coluna} = ?", (valor,)
+            ).fetchone()[0]
+            assert quantas == 0, (tabela, quantas)
+
+        # O que é nosso ficou inteiro: a fatia não é só "menor", é certa.
+        assert volta.execute(
+            "SELECT COUNT(*) FROM run_salas WHERE run_id = ?",
+            (criados["nossa_run"],),
+        ).fetchone()[0] == 1
+        assert volta.execute(
+            "SELECT COUNT(*) FROM personagem_itens WHERE item_id = 'corda'"
+        ).fetchone()[0] == 1
+        assert volta.execute(
+            "SELECT SUM(ouro) FROM ouro_lancamentos"
+        ).fetchone()[0] == 50
+    finally:
+        volta.close()
+
+    # A prova do VACUUM: o nome nao esta nem nos bytes crus do arquivo.
+    assert INTRUSO.encode() not in copia.read_bytes(), (
+        "o nome da outra guilda continua legivel no arquivo: faltou o VACUUM"
+    )
+
+    await conn.close()
+    shutil.rmtree(pasta, ignore_errors=True)
+    BANCO.unlink(missing_ok=True)
+    print("  a fatia leva so uma guilda, sem orfao e sem rastro: ok")
+
+
+async def caso_main_envia_a_fatia_e_guarda_o_inteiro():
+    """Com `--guilda`, o que SAI é a fatia e o que FICA é o banco inteiro.
+
+    A cópia local é o cinto de restaurar, e é de propósito que ela não é
+    filtrada: perder o canal custa um download, perder a máquina custa tudo.
+    Quem é filtrado é o anexo — o canal de um servidor não recebe as fichas
+    de outro.
+    """
+    conn = await preparar()
+    await _povoar_duas_guildas(conn)
+    pasta = BANCO.parent / "envio_da_fatia"
+    shutil.rmtree(pasta, ignore_errors=True)
+    BACKUP.PASTA = pasta
+    BACKUP.os.environ["BACKUP_WEBHOOK"] = "https://discord.com/api/webhooks/1/abc"
+    BACKUP.os.environ["BACKUP_GUILDA"] = str(GUILD)
+    BACKUP.sys.argv = ["backup.py"]
+
+    pedidos = []
+
+    class RespostaFalsa:
+        def read(self):
+            return b""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    original = BACKUP.urllib.request.urlopen
+    BACKUP.urllib.request.urlopen = lambda p, timeout=None: (
+        pedidos.append(p) or RespostaFalsa()
+    )
+    try:
+        assert BACKUP.main() == 0
+    finally:
+        BACKUP.urllib.request.urlopen = original
+        BACKUP.os.environ.pop("BACKUP_GUILDA", None)
+        BACKUP.os.environ.pop("BACKUP_WEBHOOK", None)
+
+    # A copia local: uma so, com o nome de sempre, e com as DUAS guildas.
+    guardadas = list(pasta.glob("incursoes-*.db.gz"))
+    assert len(guardadas) == 1, guardadas
+    inteiro = restaurar(guardadas[0], pasta / "local.db")
+    try:
+        assert sorted(
+            g for (g,) in inteiro.execute("SELECT DISTINCT guild_id FROM personagens")
+        ) == [GUILD, OUTRA]
+    finally:
+        inteiro.close()
+
+    # O anexo: o nome diz a guilda, e dentro dele so ela.
+    assert len(pedidos) == 1, pedidos
+    corpo = pedidos[0].data
+    assert f"-g{GUILD}.db.gz".encode() in corpo, "o nome do anexo nao diz a guilda"
+    # Sem o "só": o `json.dumps` do payload escapa o acento (`s\\u00f3`).
+    assert f"os dados da guilda {GUILD}".encode() in corpo, (
+        "a mensagem tem de avisar que o arquivo NAO e o banco inteiro"
+    )
+    # E as contagens da mensagem sao as do ANEXO, nao as do banco da maquina:
+    # sao 5 personagens na fatia e 6 no banco. Uma mensagem que cita o banco
+    # inteiro ao lado de um arquivo filtrado ensina a ler o numero errado.
+    assert f"{len(JOGADORES)} personagens".encode() in corpo, corpo[:400]
+    assert f"{len(JOGADORES) + 1} personagens".encode() not in corpo, (
+        "a mensagem contou o banco inteiro, e o anexo e so a fatia"
+    )
+    anexo = pasta / "anexo.db.gz"
+    comeco = corpo.index(b"\x1f\x8b")  # o cabecalho do gzip
+    anexo.write_bytes(corpo[comeco:corpo.rindex(b"\r\n--")])
+    fatia = restaurar(anexo, pasta / "fatia.db")
+    try:
+        assert [
+            g for (g,) in fatia.execute("SELECT DISTINCT guild_id FROM personagens")
+        ] == [GUILD]
+        assert INTRUSO.encode() not in anexo.read_bytes()
+    finally:
+        fatia.close()
+
+    # E a fatia nao ficou no disco: a pasta de envio sai junto.
+    assert not (pasta / "enviando").exists(), "a fatia ficou guardada"
+
+    await conn.close()
+    shutil.rmtree(pasta, ignore_errors=True)
+    BANCO.unlink(missing_ok=True)
+    print("  main() envia a fatia e guarda o banco inteiro: ok")
+
+
+async def caso_backup_guilda_invalido_nao_envia_nada():
+    """`BACKUP_GUILDA` com lixo PARA o backup, e não manda o banco inteiro.
+
+    Seguir sem filtrar seria o pior dos dois: o canal de um servidor
+    receberia, calado, as fichas do outro. Falhar custa um backup; seguir
+    custa os dados.
+    """
+    conn = await preparar()
+    pasta = BANCO.parent / "guilda_invalida"
+    shutil.rmtree(pasta, ignore_errors=True)
+    BACKUP.PASTA = pasta
+    BACKUP.os.environ["BACKUP_WEBHOOK"] = "https://discord.com/api/webhooks/1/abc"
+    BACKUP.os.environ["BACKUP_GUILDA"] = "o-id-do-servidor"
+    BACKUP.sys.argv = ["backup.py"]
+
+    pedidos = []
+
+    class RespostaFalsa:
+        def read(self):
+            return b""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    # Um dublê que FUNCIONA, de propósito: se ele estourasse, o caso ficaria
+    # vermelho por estar quebrado e não por o backup ter enviado o banco.
+    original = BACKUP.urllib.request.urlopen
+    BACKUP.urllib.request.urlopen = lambda p, timeout=None: (
+        pedidos.append(p) or RespostaFalsa()
+    )
+    try:
+        assert BACKUP.main() == 1, "lixo em BACKUP_GUILDA tem de parar o backup"
+    finally:
+        BACKUP.urllib.request.urlopen = original
+        BACKUP.os.environ.pop("BACKUP_GUILDA", None)
+        BACKUP.os.environ.pop("BACKUP_WEBHOOK", None)
+
+    assert pedidos == [], "mandou o banco mesmo sem saber qual guilda filtrar"
+
+    await conn.close()
+    shutil.rmtree(pasta, ignore_errors=True)
+    BANCO.unlink(missing_ok=True)
+    print("  BACKUP_GUILDA invalido para o backup e nao envia nada: ok")
+
+
 async def caso_sem_webhook_guarda_local_e_sai_bem():
     """Servidor sem webhook configurado não é erro — é envio não configurado.
 
@@ -253,6 +535,9 @@ async def main():
         await caso_a_copia_sai_de_um_banco_aberto_e_restaura()
         caso_a_rotacao_mantem_so_as_mais_novas()
         caso_o_envio_leva_user_agent_e_o_arquivo()
+        await caso_a_fatia_leva_so_uma_guilda_e_sem_rastro()
+        await caso_main_envia_a_fatia_e_guarda_o_inteiro()
+        await caso_backup_guilda_invalido_nao_envia_nada()
         await caso_sem_webhook_guarda_local_e_sai_bem()
     finally:
         for conn in _ABERTAS:

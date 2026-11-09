@@ -51,6 +51,23 @@ arquivo encostaria no limite de upload do Discord. Não há nada a podar.
    BACKUP_WEBHOOK=https://discord.com/api/webhooks/...
    ```
 
+   **Se o bot estiver em mais de um servidor**, acrescente também a guilda cujos
+   dados devem ir no arquivo:
+
+   ```
+   BACKUP_GUILDA=<id do servidor>
+   ```
+
+   O banco é um arquivo só, com todos os servidores dentro. Sem esta linha o
+   anexo é o banco **inteiro** — o canal de um servidor receberia as fichas do
+   outro. Com ela, o arquivo enviado leva só aquela guilda, e a mensagem no
+   canal avisa que ele não é o banco completo. A cópia **local** continua
+   inteira de propósito: ela é o cinto de restaurar, e perder o canal custa um
+   download, perder a máquina custa tudo.
+
+   Um valor que não seja um id **para** o backup em vez de mandar tudo: falhar
+   custa um backup, seguir custa os dados do outro servidor.
+
 3. **Provar que funciona, antes de automatizar:**
 
    ```bash
@@ -58,7 +75,10 @@ arquivo encostaria no limite de upload do Discord. Não há nada a podar.
    ```
 
    Ele imprime o nome do arquivo, o tamanho e as contagens, e o arquivo
-   aparece no canal. Se o envio falhar, o código HTTP diz o quê: **401/404** é
+   aparece no canal. Com `BACKUP_GUILDA`, imprime uma linha a mais com as
+   contagens da fatia — se ela disser `0 personagens`, o id está errado. Para
+   testar sem mexer no `.env`: `tools/backup.py --guilda <id>`. Se o envio
+   falhar, o código HTTP diz o quê: **401/404** é
    a URL do webhook, **403** é o Cloudflare recusando a requisição (e não o
    Discord), **413** é arquivo grande demais para o canal. Sem a linha no `.env` ele guarda só a cópia local, avisa e
    sai bem — um servidor que ainda não configurou o envio não é um erro.
