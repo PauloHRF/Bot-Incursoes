@@ -76,6 +76,18 @@ def um_combate(
     ordem = motor.rolar_iniciativas(estado, rng)
     presos: dict[int, dict] = {}
     dano_grupo = dano_inimigo = cura_total = recursos_gastos = thp_gasto = 0
+    ataques_basicos = 0
+    habilidades_usadas: dict[str, dict[str, int]] = {}
+
+    def registrar_habilidade(habilidade, dano=0, cura=0, recursos=0):
+        nome = habilidade.nome
+        item = habilidades_usadas.setdefault(
+            nome, {"usos": 0, "dano": 0, "cura": 0, "recursos": 0}
+        )
+        item["usos"] += 1
+        item["dano"] += int(dano)
+        item["cura"] += int(cura)
+        item["recursos"] += int(recursos)
 
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
         rodada = estado.rodada
@@ -160,6 +172,10 @@ def um_combate(
                 thp_gasto += acumuladores["thp"][0]
                 if usou:
                     acao_usada = habilidade.acao or acao_usada
+                    registrar_habilidade(
+                        habilidade, acumuladores["dano"][0],
+                        acumuladores["cura"][0], acumuladores["recursos"][0],
+                    )
                 else:
                     personagem._usos_simulador[habilidade.chave_de_uso] -= 1
 
@@ -169,6 +185,7 @@ def um_combate(
                     if alvo is None:
                         break
                     golpe = motor.atacar_inimigo(personagem, alvo, rng)
+                    ataques_basicos += 1
                     if not golpe.acertou:
                         recursos_gastos += sb._inspirar_ataque(
                             estado, personagem, alvo, golpe, rng
@@ -271,6 +288,8 @@ def um_combate(
         "recursos": recursos_gastos,
         "thp_gasto": thp_gasto,
         "hp_restante": sum(max(0, c.hp_atual) for c in grupo),
+        "ataques_basicos": ataques_basicos,
+        "habilidades_usadas": habilidades_usadas,
     }
 
 
@@ -282,7 +301,8 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
     saves = classes.saves(args.classe, args.nivel, efeitos)
 
     vitorias, rodadas, caidos = 0, [], []
-    curas, recursos, danos, recebidos = [], [], [], []
+    curas, recursos, danos, recebidos, ataques = [], [], [], [], []
+    habilidades_totais: dict[str, dict[str, int]] = {}
     for _ in range(args.repeticoes):
         grupo = []
         for i in range(tamanho):
@@ -321,6 +341,13 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
         recursos.append(resultado["recursos"])
         danos.append(resultado["dano_grupo"])
         recebidos.append(resultado["dano_recebido"])
+        ataques.append(resultado["ataques_basicos"])
+        for nome, dados in resultado["habilidades_usadas"].items():
+            total = habilidades_totais.setdefault(
+                nome, {"usos": 0, "dano": 0, "cura": 0, "recursos": 0}
+            )
+            for chave in total:
+                total[chave] += dados[chave]
 
     return {
         "taxa": vitorias / args.repeticoes,
@@ -330,6 +357,8 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
         "recursos": statistics.mean(recursos),
         "dano": statistics.mean(danos),
         "recebido": statistics.mean(recebidos),
+        "ataques_basicos": statistics.mean(ataques),
+        "habilidades": habilidades_totais,
     }
 
 
@@ -463,11 +492,31 @@ def main() -> int:
         + (f", critico com {e['critico_em']}+" if e["critico_em"] < 20 else "")
         + f"  ({args.repeticoes} combates por linha)"
     )
+    habilidades_disponiveis, _ = sb.habilidades_da_ficha(args.classe, args.nivel)
+    passivas = [h.nome for _, h in habilidades_disponiveis if not h.acionavel]
+    ativas = [h.nome for _, h in habilidades_disponiveis
+              if h.acionavel and (h.acao or {}).get("tipo") != "reacao"]
+    reativas = [h.nome for _, h in habilidades_disponiveis
+                if (h.acao or {}).get("tipo") == "reacao"]
     print()
-    print(f"{'grupo':>6}  {'vitória':>8}  {'rodadas':>8}  {'caídos':>7}  {'cura':>8}  {'recursos':>8}")
+    print("Habilidades carregadas:")
+    print("  Passivas: " + (", ".join(passivas) if passivas else "nenhuma"))
+    print("  Ativas: " + (", ".join(ativas) if ativas else "nenhuma"))
+    print("  Reações: " + (", ".join(reativas) if reativas else "nenhuma"))
+    print()
+    print(f"{'grupo':>6}  {'vitória':>8}  {'rodadas':>8}  {'caídos':>7}  {'cura':>8}  {'recursos':>8}  {'ataques':>8}")
     for tamanho in (5, 4, 3, 2):
         r = simular(monstros, tamanho, args, rng)
-        print(f"{tamanho:>6}  {r['taxa']:>7.1%}  {r['rodadas']:>8.1f}  {r['caidos']:>7.1f}  {r['cura']:>8.1f}  {r['recursos']:>8.1f}")
+        print(f"{tamanho:>6}  {r['taxa']:>7.1%}  {r['rodadas']:>8.1f}  {r['caidos']:>7.1f}  {r['cura']:>8.1f}  {r['recursos']:>8.1f}  {r['ataques_basicos']:>8.1f}")
+        print("  Habilidades ativas efetivamente usadas (total no grupo):")
+        if not r["habilidades"]:
+            print("    nenhuma")
+        else:
+            for nome, dados in sorted(r["habilidades"].items()):
+                print(
+                    f"    {nome}: {dados['usos']} usos | dano {dados['dano']} | "
+                    f"cura {dados['cura']} | recursos {dados['recursos']}"
+                )
     return 0
 
 
