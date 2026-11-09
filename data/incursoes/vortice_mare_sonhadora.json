@@ -1,0 +1,30 @@
+{
+  "id": "vortice_mare_sonhadora",
+  "nome": "A Maré Sonhadora",
+  "organizacao": "Vórtice Oculto",
+  "tamanho": "Longa",
+  "tier": 4,
+  "lore_inicial": "O Vórtice Oculto mantém um observatório costeiro que não aparece em mapas. Foi construído para medir correntes planares, mas há semanas os instrumentos registram uma maré que sobe mesmo quando o oceano recua. Os pescadores da região começaram a sonhar com uma cidade submersa e acordam falando línguas que nunca aprenderam.\\n\\nDois agentes enviados para investigar voltaram sem reconhecer os próprios nomes. O terceiro não voltou, mas continua enviando relatórios escritos com a letra dele. O último descreve uma presença antiga sob as ruínas de um farol, capaz de alcançar mentes através da água.\\n\\nA Organização quer que a expedição encontre a fonte da influência, recupere o prisma de medição e elimine a criatura antes que a maré alcance a cidade.",
+  "lore_final": "O prisma é retirado do pedestal e a pressão invisível que pesava sobre a costa desaparece. Os sonhos cessam aos poucos; alguns pescadores ainda se lembram da cidade submersa, mas já não conseguem descrevê-la.\\n\\nO Vórtice recolhe os relatórios e sela o observatório. O nome do agente desaparecido é removido da escala, embora ninguém admita ter dado essa ordem. Na superfície, o mar volta a obedecer à lua. Por enquanto, isso basta para a Organização.",
+  "imagem_capa": null,
+  "recompensa_mes": 15,
+  "pontos_conclusao": 15,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "O Santuário Afogado",
+    "tipo": "Combate",
+    "descricao": "A escadaria termina sob a linha d'água, mas a câmara está seca. Uma película transparente cobre as paredes e pulsa como se respirasse. No centro repousa o prisma, suspenso sobre um tanque escuro.\\n\\nUma massa colossal se move no tanque. Tentáculos deslizam pela borda e uma cabeça antiga emerge, com olhos que parecem reconhecer cada integrante do grupo. A voz não chega pelos ouvidos: surge diretamente nos pensamentos, oferecendo lembranças que ninguém contou ao Vórtice.\\n\\nQuando o prisma é tocado, a criatura abandona o tanque. A água sobe pelas paredes e o combate começa.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "15 MEs por participante + pontos com o Vórtice Oculto",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Aboleth"
+      }
+    ]
+  }
+}
