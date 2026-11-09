@@ -84,7 +84,6 @@ def um_combate(
         item = habilidades_usadas.setdefault(
             nome, {"usos": 0, "dano": 0, "cura": 0, "recursos": 0}
         )
-        item["usos"] += 1
         item["dano"] += int(dano)
         item["cura"] += int(cura)
         item["recursos"] += int(recursos)
@@ -277,6 +276,17 @@ def um_combate(
             preso["perdeu"] = False
 
         estado.rodada += 1
+
+    # Contabiliza também reações acionadas fora do turno do personagem.
+    for c in grupo:
+        for _, habilidade in c._habilidades_simulador:
+            usos = c._usos_simulador.get(habilidade.chave_de_uso, 0)
+            if usos:
+                item = habilidades_usadas.setdefault(
+                    habilidade.nome,
+                    {"usos": 0, "dano": 0, "cura": 0, "recursos": 0},
+                )
+                item["usos"] += usos
 
     return {
         "inimigos_derrotados": estado.inimigos_derrotados,
