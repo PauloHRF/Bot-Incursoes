@@ -21,12 +21,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src import classes, motor  # noqa: E402
 from src.rules import tier  # noqa: E402
 from src.incursoes import Monstro, carregar, carregar_banco  # noqa: E402
+# Reutiliza o catálogo e os resolvedores de habilidades já auditados no
+# simulador de balanceamento. Este arquivo continua sendo a única alteração.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import simular_balanceamento as sb  # noqa: E402
+
 
 LIMITE_RODADAS = 50
 
 
-def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: random.Random):
-    """Uma sala inteira na ordem da iniciativa: o grupo foca o primeiro de pé."""
+
+def um_combate(
+    monstros: list[Monstro],
+    grupo: list[motor.Combatente],
+    rng: random.Random,
+    classe_id: str,
+    nivel: int,
+    efeitos_classe: dict,
+):
+    """Uma sala inteira, usando as ações de classe e a iniciativa do motor."""
     estado = motor.EstadoCombate(
         [
             motor.Inimigo(
@@ -44,86 +57,279 @@ def um_combate(monstros: list[Monstro], grupo: list[motor.Combatente], rng: rand
         1,
         grupo,
     )
+    for c in grupo:
+        c._nivel_simulador = nivel
+        c._efeitos_classe_simulador = efeitos_classe
+        c._rodada_simulador = 1
+        c._marcas_simulador = []
+        c._reckless_ativo_simulador = False
+        c._atordoado_ate = 0
+    for inimigo in estado.inimigos:
+        inimigo._efeitos_simulador = []
+        inimigo._atordoado_ate = 0
+        inimigo._base_efeitos_simulador = {
+            atributo: getattr(inimigo, atributo)
+            for atributo in sb._MAPA_EFEITOS.values()
+            if hasattr(inimigo, atributo)
+        }
+
     ordem = motor.rolar_iniciativas(estado, rng)
-    # Quem esta atordoado: perde a proxima vez; se o efeito e do tipo "refaz o
-    # save no fim do turno", so sai quando passar no teste depois de perder uma.
     presos: dict[int, dict] = {}
+    dano_grupo = dano_inimigo = cura_total = recursos_gastos = thp_gasto = 0
+
     while not estado.encerrado and estado.rodada <= LIMITE_RODADAS:
+        rodada = estado.rodada
+        sb._expirar_efeitos(estado.combatentes + estado.inimigos, rodada)
+        for c in estado.combatentes:
+            c._rodada_simulador = rodada
+
         for vez in ordem:
             if estado.encerrado:
                 break
+
             if vez.tipo == motor.INIMIGO:
                 inimigo = estado.inimigo(vez.ident)
-                feito = motor.turno_do_inimigo(inimigo, estado, rng)
-                for investida in feito.investidas:
+                if inimigo is None or inimigo.caido:
+                    continue
+                resultado = motor.turno_do_inimigo(inimigo, estado, rng)
+                recursos_gastos += sb._inspirar_save(
+                    resultado, estado, inimigo, rodada, rng
+                )
+                sb._registrar_atordoamentos(resultado.investidas, rodada)
+                for investida in resultado.investidas:
                     if investida.atordoou:
                         presos[investida.alvo.user_id] = {
-                            "repete": (investida.save.atributo, investida.save.cd)
-                            if investida.repete_save
-                            else None,
+                            "repete": (
+                                (investida.save.atributo, investida.save.cd)
+                                if investida.repete_save and investida.save
+                                else None
+                            ),
                             "perdeu": False,
                         }
+                recursos_gastos += sb._usar_esquiva_reativa(resultado, estado)
+                dano_inimigo += sum(g.dano for g, _ in resultado.golpes)
+                dano_inimigo += sum(i.dano for i in resultado.investidas)
+
+                # Reações que disparam quando um personagem cai a 0 HP.
+                for c in estado.combatentes:
+                    if c.e_invocacao or not c.caido:
+                        continue
+                    reacao = next(
+                        (
+                            h for _, h in c._habilidades_simulador
+                            if h.acao
+                            and h.acao.get("tipo") == "reacao"
+                            and h.acao.get("quando") == "caiu"
+                            and c._usos_simulador.get(h.chave_de_uso, 0) < h.vezes
+                        ),
+                        None,
+                    )
+                    if reacao and sb.registrar_uso(c, reacao):
+                        recursos_gastos += 1
+                        c.hp_atual = max(1, reacao.acao.get("hp", 1))
+                        thp = reacao.acao.get("thp")
+                        if thp:
+                            motor.ganhar_thp(c, motor.rolar_dano(thp, rng))
                 continue
-            c = estado.combatente(vez.ident)
-            if c.caido:
+
+            personagem = estado.combatente(vez.ident)
+            if personagem is None or personagem.caido:
                 continue
-            if c.user_id in presos:
-                preso = presos[c.user_id]
-                preso["perdeu"] = True
-                if preso["repete"] is None:
-                    presos.pop(c.user_id)
-                    c.atordoado = False
+            if personagem.atordoado:
+                if personagem.user_id in presos:
+                    presos[personagem.user_id]["perdeu"] = True
                 continue
-            for _ in range(max(1, c.ataques)):
-                alvo = estado.alvo_preferido()
-                if alvo is None:
-                    break
-                motor.atacar_inimigo(c, alvo, rng)
+
+            habilidade = sb._escolher_ativa(
+                personagem, estado.combatentes, estado, rodada
+            )
+            usou = False
+            acao_usada = {"tipo": "golpes"}
+            if habilidade is not None and sb.registrar_uso(personagem, habilidade):
+                acumuladores = {
+                    "dano": [0], "cura": [0], "recursos": [0], "thp": [0]
+                }
+                usou = sb._executar_ativa(
+                    personagem, estado.combatentes, estado, habilidade, rng,
+                    rodada, acumuladores["dano"], acumuladores["cura"],
+                    acumuladores["recursos"], acumuladores["thp"],
+                )
+                dano_grupo += acumuladores["dano"][0]
+                cura_total += acumuladores["cura"][0]
+                recursos_gastos += acumuladores["recursos"][0]
+                thp_gasto += acumuladores["thp"][0]
+                if usou:
+                    acao_usada = habilidade.acao or acao_usada
+                else:
+                    personagem._usos_simulador[habilidade.chave_de_uso] -= 1
+
+            if not usou and not estado.encerrado:
+                for _ in range(max(1, personagem.ataques)):
+                    alvo = estado.alvo_preferido()
+                    if alvo is None:
+                        break
+                    golpe = motor.atacar_inimigo(personagem, alvo, rng)
+                    if not golpe.acertou:
+                        recursos_gastos += sb._inspirar_ataque(
+                            estado, personagem, alvo, golpe, rng
+                        )
+                    dano_grupo += golpe.dano
+                    sb._registrar_efeito_do_ataque(
+                        personagem, alvo, golpe, rodada
+                    )
+                    sequencia = efeitos_classe.get("sequencia") or {}
+                    if sequencia:
+                        personagem._sequencia_simulador = motor.proxima_sequencia(
+                            personagem._sequencia_simulador, golpe.acertou,
+                            sequencia.get("por_acerto", 1),
+                            sequencia.get("teto", 2),
+                        )
+                        personagem.bonus_ataque = (
+                            classes.numeros(classe_id, nivel).acerto
+                            + efeitos_classe.get("acerto", 0)
+                            + personagem._sequencia_simulador
+                        )
+
+            escondido = (
+                getattr(personagem, "_furtividade_inicio_simulador", rodada + 1)
+                <= rodada
+                <= getattr(personagem, "_furtividade_ate_simulador", 0)
+            )
+            if not escondido:
+                personagem.ameaca_gerada += sb.ameaca.gerada_por(
+                    personagem.classe, acao_usada
+                )
+
+        # Invocações agem uma vez por rodada; elas entram na iniciativa prática
+        # logo após a sequência principal, sem criar uma segunda rolagem global.
+        for invocado in [
+            c for c in estado.combatentes
+            if c.e_invocacao and not c.caido
+        ]:
+            alvo = estado.alvo_preferido()
+            if alvo is not None:
+                golpe = motor.atacar_inimigo(invocado, alvo, rng)
+                dano_grupo += golpe.dano
+
         if estado.encerrado:
             break
-        estado.rodada += 1
+
+        # Dano periódico e cura passiva são resolvidos ao fim da rodada.
+        for alvo in estado.inimigos:
+            efeito = getattr(alvo, "_dano_rodada_simulador", None)
+            if efeito and not alvo.caido:
+                expressao, atributo, cd, restante = efeito
+                save = motor.salvar_inimigo(alvo, atributo, cd, rng)
+                if not save.passou:
+                    dano = motor.rolar_dano(expressao, rng)
+                    alvo.hp_atual = max(0, alvo.hp_atual - dano)
+                    dano_grupo += dano
+                elif getattr(alvo, "_dano_rodada_repete_save", False):
+                    alvo._dano_rodada_simulador = None
+                    continue
+                restante -= 1
+                alvo._dano_rodada_simulador = (
+                    (expressao, atributo, cd, restante) if restante > 0 else None
+                )
+
+        for c in estado.combatentes:
+            if c.cura_por_turno and not c.caido:
+                cura_total += motor.curar(c, c.cura_por_turno)
+
+        # Um personagem atordoado perde a vez e, quando aplicável, repete o save.
         for user_id, preso in list(presos.items()):
             if preso["repete"] is None or not preso["perdeu"]:
+                if preso["repete"] is None and preso["perdeu"]:
+                    c = estado.combatente(user_id)
+                    if c:
+                        c.atordoado = False
+                        c._atordoado_ate = rodada
+                    presos.pop(user_id)
                 continue
             c = estado.combatente(user_id)
+            if c is None or c.caido:
+                presos.pop(user_id)
+                continue
             atributo, cd = preso["repete"]
             if motor.salvar_combatente(c, atributo, cd, rng).passou:
                 c.atordoado = False
+                c._atordoado_ate = rodada
                 presos.pop(user_id)
-    return estado
+            else:
+                c._atordoado_ate = rodada + 1
+            preso["perdeu"] = False
+
+        estado.rodada += 1
+
+    return {
+        "inimigos_derrotados": estado.inimigos_derrotados,
+        "rodadas": estado.rodada - 1,
+        "caidos": len(estado.caidos),
+        "dano_grupo": dano_grupo,
+        "dano_recebido": dano_inimigo,
+        "cura": cura_total,
+        "recursos": recursos_gastos,
+        "thp_gasto": thp_gasto,
+        "hp_restante": sum(max(0, c.hp_atual) for c in grupo),
+    }
 
 
 def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> dict:
-    numeros = classes.classe(args.classe).numeros(args.nivel)
-    efeitos = classes.efeitos(args.classe, args.nivel)
+    ficha_classe = classes.classe(args.classe)
+    numeros = ficha_classe.numeros(args.nivel)
+    habilidades_ficha, escolhas = sb.habilidades_da_ficha(args.classe, args.nivel)
+    efeitos = classes.efeitos(args.classe, args.nivel, escolhas)
+    saves = classes.saves(args.classe, args.nivel, efeitos)
+
     vitorias, rodadas, caidos = 0, [], []
+    curas, recursos, danos, recebidos = [], [], [], []
     for _ in range(args.repeticoes):
-        grupo = [
-            motor.Combatente(
+        grupo = []
+        for i in range(tamanho):
+            c = motor.Combatente(
                 user_id=i,
-                nome=f"P{i}",
-                ca=numeros.ca,
-                bonus_ataque=numeros.acerto,
+                nome=f"P{i + 1}",
+                ca=numeros.ca + efeitos.get("ca", 0),
+                bonus_ataque=numeros.acerto + efeitos.get("acerto", 0),
                 dano_arma=numeros.dano,
                 hp_max=numeros.hp,
                 hp_atual=numeros.hp,
-                ataques=efeitos["ataques"],
-                critico_em=efeitos["critico_em"],
-                dano_extra=efeitos["dano_extra"],
-                dano_ferido=efeitos["dano_ferido"],
-                saves=classes.saves(args.classe, args.nivel, efeitos),
+                ataques=efeitos.get("ataques", 1),
+                critico_em=efeitos.get("critico_em", 20),
+                dano_extra=efeitos.get("dano_extra", 0),
+                dano_ferido=efeitos.get("dano_ferido", 0),
+                dano_bonus=efeitos.get("dano_bonus", ""),
+                reducao_dano=efeitos.get("reducao_dano", 0.0),
+                ameaca=sb.ameaca.inicial(args.classe) + efeitos.get("ameaca", 0),
+                classe=args.classe,
+                saves=saves,
             )
-            for i in range(tamanho)
-        ]
-        estado = um_combate(monstros, grupo, rng)
-        if estado.inimigos_derrotados:
+            c._habilidades_simulador = habilidades_ficha
+            c._usos_simulador = {}
+            c._efeitos_simulador = []
+            c._sequencia_simulador = 0
+            grupo.append(c)
+
+        resultado = um_combate(
+            monstros, grupo, rng, args.classe, args.nivel, efeitos
+        )
+        if resultado["inimigos_derrotados"]:
             vitorias += 1
-            rodadas.append(estado.rodada)
-        caidos.append(len(estado.caidos))
+        rodadas.append(resultado["rodadas"])
+        caidos.append(resultado["caidos"])
+        curas.append(resultado["cura"])
+        recursos.append(resultado["recursos"])
+        danos.append(resultado["dano_grupo"])
+        recebidos.append(resultado["dano_recebido"])
+
     return {
         "taxa": vitorias / args.repeticoes,
         "rodadas": statistics.mean(rodadas) if rodadas else float("nan"),
         "caidos": statistics.mean(caidos),
+        "cura": statistics.mean(curas),
+        "recursos": statistics.mean(recursos),
+        "dano": statistics.mean(danos),
+        "recebido": statistics.mean(recebidos),
     }
 
 
@@ -257,10 +463,10 @@ def main() -> int:
         + f"  ({args.repeticoes} combates por linha)"
     )
     print()
-    print(f"{'grupo':>6}  {'vitória':>8}  {'rodadas':>8}  {'caídos':>7}")
+    print(f"{'grupo':>6}  {'vitória':>8}  {'rodadas':>8}  {'caídos':>7}  {'cura':>8}  {'recursos':>8}")
     for tamanho in (5, 4, 3, 2):
         r = simular(monstros, tamanho, args, rng)
-        print(f"{tamanho:>6}  {r['taxa']:>7.1%}  {r['rodadas']:>8.1f}  {r['caidos']:>7.1f}")
+        print(f"{tamanho:>6}  {r['taxa']:>7.1%}  {r['rodadas']:>8.1f}  {r['caidos']:>7.1f}  {r['cura']:>8.1f}  {r['recursos']:>8.1f}")
     return 0
 
 
