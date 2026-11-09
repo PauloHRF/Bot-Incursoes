@@ -1,0 +1,30 @@
+{
+  "id": "sentinelas_coroa_em_chamas",
+  "nome": "A Coroa em Chamas",
+  "organizacao": "Sentinelas do Alvorecer",
+  "tamanho": "Longa",
+  "tier": 5,
+  "lore_inicial": "A fortaleza de Vigília Rubra foi erguida para guardar uma das antigas passagens entre os planos. As Sentinelas mantiveram o portal fechado por gerações, alimentando os selos com juramentos, relíquias e o fogo de uma chama que nunca se apagava.\\n\\nHá nove dias, a chama ficou negra. O calor atravessa as muralhas, os sinos derretem sem tocar e os sentinelas mortos retornam como sombras incandescentes. Um mensageiro conseguiu escapar com uma única frase: alguém abriu o outro lado.\\n\\nA Ordem identificou a presença de um Balor na câmara do portal. Não se trata de recuperar um posto avançado: se a criatura atravessar a fortaleza, a passagem poderá permanecer aberta. A expedição deve alcançar o coração da fortaleza, romper o vínculo do demônio com o portal e destruí-lo.",
+  "lore_final": "A última explosão ilumina a fortaleza inteira. O portal se contrai sobre si mesmo, e a chama negra volta a arder em vermelho dentro do selo restaurado. Por alguns instantes, as Sentinelas não conseguem distinguir o silêncio da vitória do silêncio que precede outra invasão.\\n\\nOs sobreviventes recolhem as armas e fecham a fortaleza. O nome de cada integrante da expedição é gravado na muralha externa, ao lado dos guardiões que morreram mantendo a passagem contida. A Ordem não celebra: registra que o mundo continuou do lado de cá.",
+  "imagem_capa": null,
+  "recompensa_mes": 20,
+  "pontos_conclusao": 20,
+  "objetivo": {
+    "id": "OBJ",
+    "nome": "O Trono da Fenda",
+    "tipo": "Combate",
+    "descricao": "A câmara final é um salão circular aberto sobre um abismo de fogo. Correntes enormes prendem um portal vertical, e cada elo está marcado com juramentos antigos das Sentinelas. No centro, uma figura colossal segura uma espada em brasa e um chicote que se move como uma serpente viva.\\n\\nO Balor não tenta fugir. Ele espera diante da passagem, certo de que a fortaleza já lhe pertence. O calor distorce o ar, e o chão começa a rachar quando a equipe entra no salão. Para fechar a fenda, será necessário derrotar o demônio e sobreviver à destruição que sua queda pode provocar.",
+    "dificuldade": null,
+    "cd": null,
+    "alvo_progresso": null,
+    "pericias": [],
+    "imagem": null,
+    "recompensa": "20 MEs por participante + pontos com as Sentinelas do Alvorecer",
+    "pontos_organizacao": 0,
+    "monstros": [
+      {
+        "nome": "Balor"
+      }
+    ]
+  }
+}
