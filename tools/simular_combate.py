@@ -279,8 +279,13 @@ def um_combate(
 
     # Contabiliza também reações acionadas fora do turno do personagem.
     for c in grupo:
+        chaves_contabilizadas = set()
         for _, habilidade in c._habilidades_simulador:
-            usos = c._usos_simulador.get(habilidade.chave_de_uso, 0)
+            chave = habilidade.chave_de_uso
+            if chave in chaves_contabilizadas:
+                continue
+            chaves_contabilizadas.add(chave)
+            usos = c._usos_simulador.get(chave, 0)
             if usos:
                 item = habilidades_usadas.setdefault(
                     habilidade.nome,
