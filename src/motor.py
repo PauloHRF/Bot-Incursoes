@@ -987,6 +987,9 @@ class Investida:
     repete_save: bool = False
     # Veio do acerto de um golpe (a garra que paralisa), nao de acao propria.
     do_golpe: bool = False
+    # Dano deste MESMO lance se a falha virar sucesso pela Inspiracao.
+    # A metade do dano rolado vem antes das reducoes e arredonda para baixo.
+    dano_no_sucesso: int = 0
 
     @property
     def escapou(self) -> bool:
@@ -1074,6 +1077,7 @@ def impor_save(
     meia_entra = getattr(efeito, "metade", False) and not alvo.save_anula
     if efeito.dano and (not resultado.passou or meia_entra):
         cheio = rolar_dano(efeito.dano, rng)
+        investida.dano_no_sucesso = reduzido(alvo, cheio // 2) if meia_entra else 0
         sofrido = reduzido(alvo, cheio if not resultado.passou else cheio // 2)
         investida.dano = sofrido
         investida.absorvido, _ = absorver(alvo, sofrido)
@@ -1106,6 +1110,9 @@ class RodadaInimiga:
     efeitos_dos_golpes: dict[int, Investida] = field(default_factory=dict)
     # Quanto a criatura regenerou no comeco da vez.
     regenerou: int = 0
+    # Antes da criatura agir: necessario para refazer dano letal sem curar
+    # o excesso que absorver() descartou ao limitar o HP a zero.
+    vida_inicial: dict[int, tuple[int, int]] = field(default_factory=dict)
 
     @property
     def atingidos(self) -> list[Combatente]:
@@ -1120,6 +1127,40 @@ class RodadaInimiga:
         return saida
 
 
+def refazer_o_save(vez: RodadaInimiga, investida: Investida, bonus: int) -> bool:
+    """Converte a falha em sucesso e refaz o dano da criatura naquele alvo.
+
+    Reaplica todos os golpes e efeitos na ordem original: desfazer so o dano
+    de uma investida poderia ressuscitar quem caiu num golpe posterior.
+    Os dados nao sao rolados novamente e o HP nunca excede o que havia.
+    `vez` e o resultado de turno_do_inimigo, com a vida anterior a acao.
+    """
+    resultado = investida.save
+    if resultado is None or resultado.passou or resultado.total + bonus < resultado.cd:
+        return False
+    alvo = investida.alvo
+    hp, thp = vez.vida_inicial[alvo.user_id]
+    resultado.modificador += bonus
+    investida.dano = investida.dano_no_sucesso
+    if investida.atordoou:
+        investida.atordoou = False
+        alvo.atordoado = False
+    investida.debuffs = []
+    investida.repete_save = False
+
+    alvo.hp_atual, alvo.thp = hp, thp
+    for indice, (golpe, atingido) in enumerate(vez.golpes):
+        if atingido is alvo:
+            golpe.absorvido, _ = absorver(alvo, golpe.dano)
+        efeito = vez.efeitos_dos_golpes.get(indice)
+        if efeito is not None and efeito.alvo is alvo:
+            efeito.absorvido, _ = absorver(alvo, efeito.dano)
+    for efeito in vez.investidas:
+        if not efeito.do_golpe and efeito.alvo is alvo:
+            efeito.absorvido, _ = absorver(alvo, efeito.dano)
+    return True
+
+
 def turno_do_inimigo(
     inimigo: Inimigo, estado: EstadoCombate, rng: Optional[random.Random] = None
 ) -> RodadaInimiga:
@@ -1130,7 +1171,9 @@ def turno_do_inimigo(
     sorteado — o bot não faz tática, então não concentra tudo numa pessoa.
     Caída ou atordoada, perde a vez; e não se ataca quem já está no chão.
     """
-    vez = RodadaInimiga()
+    vez = RodadaInimiga(vida_inicial={
+        c.user_id: (c.hp_atual, c.thp) for c in estado.combatentes
+    })
     if inimigo.caido or inimigo.atordoado or not estado.vivos:
         return vez
     if inimigo.regeneracao and inimigo.hp_atual < inimigo.hp_max:

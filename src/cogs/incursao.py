@@ -2869,7 +2869,7 @@ class Incursoes(commands.Cog):
         # Inspiracao no save: antes de gravar qualquer coisa. Mexer aqui evita
         # escrever no banco o dano, o atordoamento e a condicao que o bardo
         # acabou de impedir — e so depois apaga-los.
-        await self._inspirar_o_save(run, estado, feito.investidas)
+        await self._inspirar_o_save(run, estado, feito)
         for atingido in feito.atingidos:
             await self._gravar_hp_do_combatente(run, atingido)
         if inimigo.habilidade:
@@ -4577,15 +4577,14 @@ class Incursoes(commands.Cog):
                  f"golpe de {golpe.atacante} — acerta por **{golpe.dano}**"],
             )
 
-    async def _inspirar_o_save(self, run: dict[str, Any], estado, investidas) -> None:
+    async def _inspirar_o_save(self, run: dict[str, Any], estado, feito) -> None:
         """Inspiração no save: quem falhou por pouco passa a resistir.
 
-        Desfaz o que a falha custou, como o Uncanny Dodge já faz com o dano:
-        devolve o HP, limpa o atordoamento e a condição. Mexer antes seria
-        melhor, mas `impor_save` é do motor puro e não conhece o bardo.
+        O motor refaz o dano a partir da vida anterior a acao da criatura,
+        respeitando metade no sucesso, vida temporaria e os outros golpes.
         """
         passo = self._passo(run)
-        for investida in investidas:
+        for investida in feito.investidas:
             if investida.save is None or investida.save.passou:
                 continue
             p, habilidade, dado = await self._inspiracao_de(run, "save")
@@ -4608,25 +4607,13 @@ class Incursoes(commands.Cog):
                 )
                 continue
             alvo = investida.alvo
-            # Desfazer tem de devolver cada parte no lugar de onde saiu: o que
-            # a vida temporaria segurou volta para o THP, e so o resto para o
-            # HP. Somar tudo no HP gastava o THP de graca e, com a vida cheia,
-            # o min() engolia a devolucao — o save resistido nao devolvia nada.
-            devolvido = investida.dano
-            alvo.thp += investida.absorvido
-            alvo.hp_atual = min(
-                alvo.hp_max, alvo.hp_atual + (devolvido - investida.absorvido)
-            )
-            investida.dano = 0
-            investida.absorvido = 0
-            if investida.atordoou:
-                investida.atordoou = False
-                alvo.atordoado = False
-            investida.debuffs = []
+            dano_anterior = investida.dano
+            motor.refazer_o_save(feito, investida, ajuda)
+            evitado = dano_anterior - investida.dano
             self._registrar(
                 run, estado.rodada,
                 [f"🎵 **{habilidade.nome}**: {p['nome']} sopra **+{ajuda}** no "
-                 f"save de {alvo.nome} — resiste, e devolve **{devolvido}** de dano"],
+                 f"save de {alvo.nome} — resiste, e evita **{evitado}** de dano"],
             )
 
     async def _socorrer_o_teste(self, run: dict[str, Any], resultado) -> None:
