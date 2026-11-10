@@ -8,6 +8,7 @@ então duas runs da mesma incursão percorrem caminhos diferentes.
 from __future__ import annotations
 
 import json
+import random
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -329,6 +330,25 @@ class Monstro:
         return dados
 
 
+def _do_tier(
+    por_tier: dict[int, list[Monstro]], tier: Optional[int]
+) -> list[Monstro]:
+    """O tier exato, senão o maior escrito abaixo, senão o menor escrito.
+
+    Serve à variante por tema, que não tem lista solta para onde cair: ou ela
+    responde alguma coisa, ou quem chama desce para o combate padrão.
+    """
+    if not por_tier:
+        return []
+    if tier:
+        if tier in por_tier:
+            return por_tier[tier]
+        abaixo = [t for t in por_tier if t <= tier]
+        if abaixo:
+            return por_tier[max(abaixo)]
+    return por_tier[min(por_tier)]
+
+
 @dataclass
 class Sala:
     id: str
@@ -352,17 +372,59 @@ class Sala:
     # cheia de Monster Manual: cinco Gárgulas de 52 HP viravam 416 HP numa
     # sala de tier 2, e o grupo era dizimado sempre.
     monstros_por_tier: dict[int, list[Monstro]] = field(default_factory=dict)
+    # O combate que ESTE tema encontra nesta sala: tema -> tier -> criaturas.
+    # Esparso de propósito. Os dois eixos multiplicam — uma sala que já escreve
+    # três tiers, com dois temas, viraria seis listas —, então a variante é
+    # escrita só onde o autor quer uma, e a sala sem nenhuma se comporta
+    # exatamente como antes do tema existir.
+    monstros_por_tema: dict[str, dict[int, list[Monstro]]] = field(
+        default_factory=dict
+    )
     recompensa: Optional[str] = None
     pontos_organizacao: int = 0
 
-    def monstros_do_tier(self, tier: Optional[int] = None) -> list[Monstro]:
-        """As criaturas que ESTE tier encontra nesta sala.
+    def tema_em_jogo(
+        self, pedidos: Sequence[str], rng: Optional[Any] = None
+    ) -> Optional[str]:
+        """Qual tema desta sala vale neste caminho, ou None.
 
-        O tier exato quando ele está escrito; senão o maior tier escrito
-        abaixo dele, porque conteúdo de tier baixo é jogável por grupo alto
-        e o contrário não. Sem nenhum, a lista solta de `monstros`, que é o
-        que o conteúdo antigo tem.
+        Só vale o tema que a sala TEM e a incursão PEDIU. Sem filtro de tema,
+        ou sem tema na sala, não há tema em jogo e o combate é o padrão.
+
+        Com mais de um candidato a escolha é sorteada, e quem chama passa um
+        `rng` semeado pela run: a mesma sala, na mesma run, tem que dar sempre
+        o mesmo tema, senão o combate mudaria a cada vez que a tela fosse
+        redesenhada ou o bot reiniciasse.
         """
+        pedidos = set(pedidos or ())
+        candidatos = [t for t in self.temas if t in pedidos]
+        if not candidatos:
+            return None
+        if len(candidatos) == 1:
+            return candidatos[0]
+        return (rng or random).choice(candidatos)
+
+    def monstros_do_tier(
+        self, tier: Optional[int] = None, tema: Optional[str] = None
+    ) -> list[Monstro]:
+        """As criaturas que ESTE tier encontra nesta sala, neste tema.
+
+        Três degraus, nesta ordem:
+
+        1. a variante do tema, com a mesma queda por tier dentro dela;
+        2. `monstros_por_tier`, que é o combate padrão da sala;
+        3. a lista solta `monstros`, que é o que o conteúdo antigo tem.
+
+        Dentro de cada um, o tier exato quando está escrito; senão o maior
+        tier escrito abaixo dele, porque conteúdo de tier baixo é jogável por
+        grupo alto e o contrário não.
+        """
+        if tema:
+            do_tema = self.monstros_por_tema.get(tema)
+            if do_tema:
+                achados = _do_tier(do_tema, tier)
+                if achados:
+                    return achados
         if tier and self.monstros_por_tier:
             if tier in self.monstros_por_tier:
                 return self.monstros_por_tier[tier]
@@ -447,6 +509,21 @@ class Sala:
                 str(tier): [m.para_dict() for m in lista]
                 for tier, lista in sorted(self.monstros_por_tier.items())
             },
+            # Só quando há variante: sala sem nenhuma não ganha um objeto
+            # vazio no arquivo.
+            **(
+                {
+                    "monstros_por_tema": {
+                        tema: {
+                            str(tier): [m.para_dict() for m in lista]
+                            for tier, lista in sorted(por_tier.items())
+                        }
+                        for tema, por_tier in sorted(self.monstros_por_tema.items())
+                    }
+                }
+                if self.monstros_por_tema
+                else {}
+            ),
         }
 
 
@@ -983,6 +1060,46 @@ def _conferir_tamanho(
         )
 
 
+def _por_tier_de_dict(
+    bruto: Any, onde: str, campo: str, problemas: list[str]
+) -> dict[int, list[Monstro]]:
+    """`{"2": [...], "4": [...]}` virado em criaturas, conferindo o tier.
+
+    Um só para os dois eixos: `monstros_por_tier` e cada variante de
+    `monstros_por_tema` têm a mesma forma, e duas cópias desta leitura
+    acabariam divergindo em qual tier é válido ou em quantas criaturas cabem.
+    """
+    saida: dict[int, list[Monstro]] = {}
+    if not isinstance(bruto, dict):
+        if bruto:
+            problemas.append(
+                f"{onde}: {campo} precisa ser um objeto com o tier na chave, "
+                f'como {{"2": [...]}}.'
+            )
+        return saida
+    for chave, lista in bruto.items():
+        numero = _inteiro(chave)
+        if numero is None or not 1 <= numero <= TIER_MAXIMO:
+            problemas.append(
+                f"{onde}: '{chave}' nao e um tier de 1 a {TIER_MAXIMO} em {campo}."
+            )
+            continue
+        do_tier: list[Monstro] = []
+        for item in lista or []:
+            do_tier.extend(
+                _monstros_de_dict(item, f"{onde}: tier {numero}", problemas)
+            )
+        if len(do_tier) > MAX_INIMIGOS:
+            problemas.append(
+                f"{onde}: tier {numero} tem {len(do_tier)} criaturas na mesma "
+                f"sala; o maximo e {MAX_INIMIGOS}."
+            )
+            do_tier = do_tier[:MAX_INIMIGOS]
+        if do_tier:
+            saida[numero] = do_tier
+    return saida
+
+
 def _temas_de_dict(bruto: Any, onde: str, problemas: list[str]) -> list[str]:
     """A lista de temas, conferida contra TEMAS e sem repetição.
 
@@ -1230,28 +1347,35 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
     # As criaturas por tier do grupo. A mesma sala serve incursoes de tiers
     # diferentes, e o que muda entre eles e QUEM mora nela — nao o tamanho
     # da mesma criatura.
-    por_tier: dict[int, list[Monstro]] = {}
-    for chave, lista in (dados.get("monstros_por_tier") or {}).items():
-        numero = _inteiro(chave)
-        if numero is None or not 1 <= numero <= TIER_MAXIMO:
+    por_tier = _por_tier_de_dict(
+        dados.get("monstros_por_tier"), onde, "monstros_por_tier", problemas
+    )
+
+    por_tema: dict[str, dict[int, list[Monstro]]] = {}
+    for chave, bruto_tema in (dados.get("monstros_por_tema") or {}).items():
+        tema = _INDICE_TEMAS.get(chave_comparacao(str(chave)))
+        if not tema:
             problemas.append(
-                f"{onde}: '{chave}' nao e um tier de 1 a {TIER_MAXIMO} em "
-                f"monstros_por_tier."
+                f"{onde}: '{chave}' não é um tema em monstros_por_tema. "
+                f"Use um de: {', '.join(TEMAS)}."
             )
             continue
-        do_tier: list[Monstro] = []
-        for bruto in lista or []:
-            do_tier.extend(
-                _monstros_de_dict(bruto, f"{onde}: tier {numero}", problemas)
-            )
-        if len(do_tier) > MAX_INIMIGOS:
+        if tema not in temas:
+            # Variante de um tema que a sala nao carrega nunca seria escolhida:
+            # so entra em jogo o tema que a sala TEM e a incursao PEDIU. Sem
+            # este erro, o combate escrito morreria calado no arquivo.
             problemas.append(
-                f"{onde}: tier {numero} tem {len(do_tier)} criaturas na mesma "
-                f"sala; o maximo e {MAX_INIMIGOS}."
+                f"{onde}: monstros_por_tema tem '{tema}', mas a sala não "
+                f"carrega esse tema em 'temas' "
+                f"({', '.join(temas) if temas else 'nenhum'}). Essa variante "
+                f"nunca seria usada."
             )
-            do_tier = do_tier[:MAX_INIMIGOS]
-        if do_tier:
-            por_tier[numero] = do_tier
+            continue
+        do_tema = _por_tier_de_dict(
+            bruto_tema, f"{onde}: tema {tema}", "monstros_por_tema", problemas
+        )
+        if do_tema:
+            por_tema[tema] = do_tema
 
     if tipo == "Combate":
         if not brutos and not por_tier:
@@ -1264,7 +1388,7 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
                 f"{onde}: {len(monstros)} criaturas na mesma sala; o máximo é {MAX_INIMIGOS}."
             )
             monstros = monstros[:MAX_INIMIGOS]
-    elif brutos or por_tier:
+    elif brutos or por_tier or por_tema:
         problemas.append(f"{onde}: só salas de Combate têm criatura.")
 
     return Sala(
@@ -1280,6 +1404,7 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
         imagem=(str(dados.get("imagem")).strip() or None) if dados.get("imagem") else None,
         monstros=monstros,
         monstros_por_tier=por_tier,
+        monstros_por_tema=por_tema,
         recompensa=(str(dados.get("recompensa")).strip() or None) if dados.get("recompensa") else None,
         pontos_organizacao=pontos_sala,
     )

@@ -309,6 +309,7 @@ def sala_aberta(
     faltam: Sequence[str] = (),
     passos: Optional[int] = None,
     tier: Optional[int] = None,
+    tema: Optional[str] = None,
 ) -> tuple[discord.Embed, Optional[discord.File]]:
     """O cartão da sala, reescrito a cada rolagem.
 
@@ -347,9 +348,11 @@ def sala_aberta(
         )
         rodape = "Cada jogador rola uma vez, com a melhor perícia que tiver entre as listadas."
     elif sala.e_combate:
-        # Quem mora na sala depende do tier do grupo: a mesma sala tem uma
-        # lista por tier, e nada é esticado por multiplicador.
-        criaturas = sala.monstros_do_tier(tier)
+        # Quem mora na sala depende do tier do grupo e do tema da dungeon: a
+        # mesma sala tem uma lista por tier e pode ter uma por tema, e nada é
+        # esticado por multiplicador. O `tema` vem de quem chama, já sorteado
+        # pela run, para o cartão mostrar o bando que o combate vai abrir.
+        criaturas = sala.monstros_do_tier(tier, tema)
         e.add_field(
             name="⚔️ " + (
                 criaturas[0].nome

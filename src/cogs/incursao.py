@@ -1665,6 +1665,7 @@ class Incursoes(commands.Cog):
             # cobra a do tier da run: o grupo via um numero e rolava contra
             # outro.
             tier=self._tier_da_run(run),
+            tema=self._tema_da_sala(run, sala),
         )
         view = ViewSala(self, run["id"], sala.id) if sala.tem_teste else None
         chamada = (
@@ -2147,7 +2148,9 @@ class Incursoes(commands.Cog):
         # um tier por run, para o cartao da sala nunca mostrar uma criatura
         # e o combate abrir com outra. Incursao aberta a todos vale
         # TIER_MAXIMO, e ai a sala cai no maior tier que ela tem escrito.
-        inimigos = sala.monstros_do_tier(self._tier_da_run(run))
+        inimigos = sala.monstros_do_tier(
+            self._tier_da_run(run), self._tema_da_sala(run, sala)
+        )
         await db.iniciar_combate(self.bot.db, run["id"], self._passo(run), sala.id, inimigos)
 
         # O que vale "ao abrir o combate" acontece AQUI, uma vez, e vai para o
@@ -5413,6 +5416,7 @@ class Incursoes(commands.Cog):
             embed, _ = E.sala_aberta(
                 sala, run["linha_atual"], ja_rolaram, faltam_rolar,
                 incursao.paradas, tier=self._tier_da_run(run),
+                tema=self._tema_da_sala(run, sala),
             )
             if interaction.message is not None:
                 try:
@@ -5501,6 +5505,26 @@ class Incursoes(commands.Cog):
         if not banco:
             return None
         return next((s for s in banco.salas if s.tipo == "Descanso"), None)
+
+    def _tema_da_sala(self, run: dict[str, Any], sala: Sala) -> Optional[str]:
+        """O tema que vale para esta sala nesta run, ou None.
+
+        Só entra em jogo o tema que a sala TEM e a incursão PEDIU no filtro.
+        Com mais de um candidato a escolha é sorteada — e semeada por
+        `run:sala`, do mesmo jeito que `_trocas_da_parada`: o mesmo par dá
+        sempre o mesmo tema, então redesenhar o cartão ou reiniciar o bot não
+        troca o bando no meio do combate, e nada precisa ser gravado.
+
+        O cartão da sala e a abertura do combate chamam os dois daqui, pela
+        mesma razão que o tier: senão a sala mostraria uma criatura e o
+        combate abriria com outra.
+        """
+        incursao = self._incursao_da_run(run)
+        if incursao is None:
+            return None
+        return sala.tema_em_jogo(
+            incursao.filtro.temas, random.Random(f"{run['id']}:{sala.id}")
+        )
 
     def _trocas_da_parada(self, run_id: int, parada: int) -> list:
         """As três trocas desta parada — sempre as mesmas três.

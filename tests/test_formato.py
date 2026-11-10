@@ -119,6 +119,24 @@ def caso_os_exemplos_do_documento_sao_validos():
                 "salas": [bloco, {**bloco, "id": "X1"}, {**bloco, "id": "X2"}],
             })
             assert len(banco.salas) == 3
+        elif "monstros_por_tema" in bloco:
+            # A variante por tema so vale dentro de uma sala que CARREGA esses
+            # temas, e o documento promete exatamente isso: por isso a sala de
+            # apoio leva os dois temas do exemplo, e nao uma lista qualquer.
+            sala = I._sala_de_dict(
+                {**SALA_BASE, **bloco, "temas": ["cripta", "natureza"]},
+                "doc", (problemas := []),
+            )
+            assert sala is not None and not problemas, problemas
+            assert set(sala.monstros_por_tema) == {"cripta", "natureza"}
+            do_tema = sala.monstros_do_tier(2, "cripta")
+            assert do_tema and do_tema[0].nome.startswith("Carniçal"), do_tema
+            # E o degrau de baixo continua valendo: tema sem variante escrita
+            # cai no bando padrao da sala.
+            padrao = sala.monstros_do_tier(2, "urbano")
+            assert [m.nome for m in padrao] == [
+                m.nome for m in sala.monstros_do_tier(2)
+            ], padrao
         elif "monstros_por_tier" in bloco:
             sala = I._sala_de_dict(
                 {**SALA_BASE, **bloco, "monstros": []}, "doc", (problemas := [])

@@ -11,8 +11,12 @@ tetos de texto, e o **filtro da incursão com a conferência cruzada** — o tem
 agora decide sorteio. Quem descreve o formato em vigor é sempre
 `docs/formato-das-incursoes.md`.
 
-**O que ainda é só contrato**: `monstros_por_tema` (seção 5), o estúdio (11) e
-o sugeridor (10).
+Mais o **combate por tema** (seção 5), com uma correção de rota: a escolha
+entre temas **não** virou coluna em `run_salas`. Ela é semeada por `run:sala`,
+como `_trocas_da_parada` já fazia com as trocas do descanso duro — mesma
+estabilidade, zero migração.
+
+**O que ainda é só contrato**: o estúdio (seção 11) e o sugeridor (10).
 
 Uma correção de rota que o código impôs: o campo do filtro se chama `filtro`,
 e não `salas` como esta seção 3 dizia. O detector de tipo de arquivo do
@@ -205,12 +209,15 @@ cripta e para Aranha numa de natureza.
 Falta uma regra que nenhum dos dois eixos precisou até agora: **se a dungeon
 pediu dois temas e a sala tem variante dos dois, qual combate sai?**
 
-Proposta: sortear entre os temas em comum **no momento em que a sala é
-sorteada**, e gravar a escolha na linha da sala. Sortear na hora de abrir a
-sala faria o combate mudar a cada vez que a tela recarregasse.
+*Resolvido, e melhor do que esta seção propunha.* A proposta era sortear ao
+sortear a sala e **gravar** a escolha numa coluna `tema` em `run_salas` — a
+única mudança de banco de dados do documento. Não foi preciso: o projeto já
+tinha o padrão certo em `_trocas_da_parada`, que deriva as trocas do descanso
+duro de uma semente `run:parada` em vez de gravá-las.
 
-Isso pede uma coluna `tema` em `run_salas`, e é a única mudança de banco de
-dados de todo este documento.
+`_tema_da_sala` faz o mesmo com `run:sala`. A mesma sala, na mesma run, dá
+sempre o mesmo tema — o cartão mostra o bando com que o combate vai abrir, e
+um restart não troca o bando no meio da luta. **Nenhuma migração.**
 
 ---
 
@@ -501,7 +508,12 @@ para ser difícil —, mas ninguém exporta uma máquina de TPK sem saber.
    `tools/relatorio_de_pool.py`. Duas decisões que só apareceram no código: a
    chave do campo é `filtro` (ver o topo), e a incursão cujo filtro não fecha
    **sai do catálogo** em vez de travar na parada 4 com o grupo dentro.
-6. `monstros_por_tema` + a coluna `tema` em `run_salas` (seção 5).
+6. ~~`monstros_por_tema` + a coluna `tema` em `run_salas`.~~ **Feito, sem a
+   coluna.** A variante por tema entrou esparsa (três degraus: tema, tier,
+   lista solta), o validador recusa variante de um tema que a sala não carrega
+   — senão o combate escrito morre calado —, e a escolha entre temas é semeada
+   por `run:sala` em vez de gravada. O cartão da sala e a abertura do combate
+   leem o mesmo tema, pela mesma razão que já liam o mesmo tier.
 7. O estúdio: página + servidor local, reusando `simular_combate` (seção 11).
 8. O sugeridor com busca por taxa alvo (seção 10).
 

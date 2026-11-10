@@ -19,6 +19,7 @@ falta.
 from __future__ import annotations
 
 import json
+import random
 import sys
 import tempfile
 from pathlib import Path
@@ -415,6 +416,173 @@ def caso_o_filtro_sobrevive_ao_para_dict():
     print("  o filtro sobrevive ao para_dict, e o vazio não aparece: ok")
 
 
+# ------------------------------------------------ 3c. combate por tema
+
+
+CRIATURA = {"ca": 13, "ataque": 4, "dano": "1d6", "hp": 12}
+
+
+def sala_com_variantes(**extra):
+    base = sala_crua(
+        id="C01", tipo="Combate", dificuldade=None, cd=None,
+        alvo_progresso=None, pericias=[],
+        temas=["arcano", "natureza", "cripta"],
+        monstros_por_tier={"2": [dict(CRIATURA, nome="Grick")]},
+        monstros_por_tema={
+            "cripta": {"2": [dict(CRIATURA, nome="Ghoul")]},
+            "natureza": {"2": [dict(CRIATURA, nome="Aranha")]},
+        },
+    )
+    base.update(extra)
+    return base
+
+
+def _sala_valida(bruta):
+    banco = I.banco_de_dict(banco_cru(salas=[bruta]))
+    return banco.salas[0]
+
+
+def caso_a_variante_do_tema_troca_o_bando():
+    sala = _sala_valida(sala_com_variantes())
+    nomes = lambda tema: [m.nome for m in sala.monstros_do_tier(2, tema)]
+    assert nomes(None) == ["Grick"], nomes(None)
+    assert nomes("cripta") == ["Ghoul"], nomes("cripta")
+    assert nomes("natureza") == ["Aranha"], nomes("natureza")
+    # Tema que a sala carrega mas nao tem variante cai no bando padrao.
+    assert nomes("arcano") == ["Grick"], nomes("arcano")
+    print("  a variante do tema troca o bando, e sem variante cai no padrão: ok")
+
+
+def caso_a_variante_do_tema_tem_a_mesma_queda_por_tier():
+    """Dentro da variante vale a mesma regra: exato, senão o maior abaixo."""
+    sala = _sala_valida(
+        sala_com_variantes(
+            monstros_por_tema={
+                "cripta": {
+                    "2": [dict(CRIATURA, nome="Ghoul")],
+                    "4": [dict(CRIATURA, nome="Múmia")],
+                }
+            }
+        )
+    )
+    nomes = lambda tier: [m.nome for m in sala.monstros_do_tier(tier, "cripta")]
+    assert nomes(2) == ["Ghoul"] and nomes(4) == ["Múmia"]
+    assert nomes(3) == ["Ghoul"], "tier 3 tinha que cair no maior escrito abaixo"
+    assert nomes(5) == ["Múmia"], nomes(5)
+    print("  a variante por tema cai por tier como o resto: ok")
+
+
+def caso_variante_de_tema_que_a_sala_nao_carrega_e_recusada():
+    """Senão o combate escrito morre calado: esse tema nunca entra em jogo."""
+    problemas = recusa(
+        banco_cru(
+            salas=[
+                sala_com_variantes(
+                    temas=["arcano"],
+                    monstros_por_tema={
+                        "cripta": {"2": [dict(CRIATURA, nome="Ghoul")]}
+                    },
+                )
+            ]
+        ),
+        I.banco_de_dict,
+    )
+    assert any("nunca seria usada" in p for p in problemas), problemas
+    print("  variante de um tema que a sala não carrega é recusada: ok")
+
+
+def caso_tema_inventado_em_monstros_por_tema_e_recusado():
+    problemas = recusa(
+        banco_cru(
+            salas=[
+                sala_com_variantes(
+                    monstros_por_tema={
+                        "vulcanico": {"2": [dict(CRIATURA, nome="Ghoul")]}
+                    }
+                )
+            ]
+        ),
+        I.banco_de_dict,
+    )
+    assert any("vulcanico" in p for p in problemas), problemas
+    print("  tema inventado em monstros_por_tema é recusado: ok")
+
+
+def caso_o_tema_em_jogo_e_a_interseccao():
+    sala = _sala_valida(sala_com_variantes())
+    assert sala.tema_em_jogo([]) is None, "sem filtro não há tema em jogo"
+    assert sala.tema_em_jogo(["urbano"]) is None, "tema que a sala não tem não vale"
+    assert sala.tema_em_jogo(["cripta"]) == "cripta"
+    assert sala.tema_em_jogo(["cripta", "urbano"]) == "cripta"
+
+    sem_tema = _sala_valida(
+        sala_com_variantes(temas=[], monstros_por_tema={})
+    )
+    assert sem_tema.tema_em_jogo(["cripta"]) is None, (
+        "sala sem tema entra no filtro, mas não ganha tema em jogo"
+    )
+    print("  o tema em jogo é a intersecção sala × filtro: ok")
+
+
+def caso_a_escolha_entre_temas_e_estavel_na_mesma_run():
+    """A mesma sala, na mesma run, tem que dar sempre o mesmo tema.
+
+    Senão o bando mudaria a cada redesenho do cartão e a cada restart — e o
+    cartão mostraria uma criatura enquanto o combate abriria com outra.
+    """
+    sala = _sala_valida(sala_com_variantes())
+    pedidos = ["cripta", "natureza"]
+    escolhas = {
+        sala.tema_em_jogo(pedidos, random.Random(f"7:{sala.id}")) for _ in range(40)
+    }
+    assert len(escolhas) == 1, f"a escolha oscilou na mesma run: {escolhas}"
+
+    # E runs diferentes podem cair em temas diferentes: a semente é o par.
+    por_run = {
+        sala.tema_em_jogo(pedidos, random.Random(f"{n}:{sala.id}")) for n in range(60)
+    }
+    assert por_run == {"cripta", "natureza"}, por_run
+    print("  a escolha de tema é estável na run e varia entre runs: ok")
+
+
+def caso_o_cartao_da_sala_mostra_o_bando_do_tema():
+    """O cartão e o combate têm que mostrar o MESMO bando.
+
+    O cartão é desenhado antes de `iniciar_combate`, e os dois leem a sala por
+    caminhos diferentes. Se só um deles soubesse do tema, o grupo veria uma
+    criatura no cartão e lutaria contra outra.
+    """
+    from src import embeds as E
+
+    sala = _sala_valida(sala_com_variantes())
+
+    def texto_do_cartao(**kwargs):
+        embed, _ = E.sala_aberta(sala, 1, tier=2, **kwargs)
+        return " ".join(f"{c.name} {c.value}" for c in embed.fields)
+
+    assert "Ghoul" in texto_do_cartao(tema="cripta")
+    assert "Aranha" in texto_do_cartao(tema="natureza")
+    assert "Grick" in texto_do_cartao(), "sem tema o cartão mostra o bando padrão"
+    assert "Ghoul" not in texto_do_cartao()
+    print("  o cartão da sala mostra o bando do tema: ok")
+
+
+def caso_a_variante_sobrevive_ao_para_dict():
+    sala = _sala_valida(sala_com_variantes())
+    voltou = _sala_valida(sala.para_dict())
+    assert [m.nome for m in voltou.monstros_do_tier(2, "cripta")] == ["Ghoul"]
+    # Sala sem variante nao ganha o campo vazio no arquivo.
+    simples = _sala_valida(
+        sala_crua(
+            id="C02", tipo="Combate", dificuldade=None, cd=None,
+            alvo_progresso=None, pericias=[],
+            monstros=[dict(CRIATURA, nome="Grick")],
+        )
+    )
+    assert "monstros_por_tema" not in simples.para_dict()
+    print("  a variante sobrevive ao para_dict, e o vazio não aparece: ok")
+
+
 # --------------------------------------------- 3b. a sala de Descanso do banco
 
 
@@ -608,6 +776,14 @@ for caso in (
     caso_excluir_id_que_nao_existe_e_so_aviso,
     caso_filtro_que_nao_filtra_e_avisado,
     caso_o_filtro_sobrevive_ao_para_dict,
+    caso_a_variante_do_tema_troca_o_bando,
+    caso_a_variante_do_tema_tem_a_mesma_queda_por_tier,
+    caso_variante_de_tema_que_a_sala_nao_carrega_e_recusada,
+    caso_tema_inventado_em_monstros_por_tema_e_recusado,
+    caso_o_tema_em_jogo_e_a_interseccao,
+    caso_a_escolha_entre_temas_e_estavel_na_mesma_run,
+    caso_o_cartao_da_sala_mostra_o_bando_do_tema,
+    caso_a_variante_sobrevive_ao_para_dict,
     caso_banco_sem_descanso_e_avisado,
     caso_banco_com_uma_sala_de_descanso_passa_calado,
     caso_banco_com_duas_salas_de_descanso_e_avisado,

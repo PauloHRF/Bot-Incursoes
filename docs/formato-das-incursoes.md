@@ -179,6 +179,7 @@ A mesma estrutura serve para o `objetivo` da incursão e para cada item de
 | `temas` | não | em que lugares a sala cabe (abaixo). Vazio = cabe em qualquer um |
 | `monstros` | sim, se `Combate` | lista de criaturas, no máximo 6 |
 | `monstros_por_tier` | alternativa | `{"2": [...], "4": [...]}` |
+| `monstros_por_tema` | não | o bando que cada tema encontra (abaixo) |
 | `pontos_organizacao` | não (`0`) | pontos ao vencer esta sala |
 | `recompensa` | não | texto solto, só mostrado no cartão |
 | `imagem` | não | URL |
@@ -245,6 +246,38 @@ A mesma sala serve incursões de tiers diferentes, e o que muda entre elas é
 O grupo pega o tier exato quando ele está escrito; senão, o maior tier escrito
 **abaixo** dele — conteúdo de tier baixo é jogável por grupo alto, e o
 contrário não. As chaves são texto, de `"1"` a `"5"`.
+
+### `monstros_por_tema` — o mesmo lugar, outro bando
+
+A mesma sala pode servir dungeons de temas diferentes com criaturas
+diferentes. Dentro de cada tema vale a estrutura por tier de sempre:
+
+```json
+"monstros_por_tema": {
+  "cripta": { "2": [{ "nome": "Carniçal", "quantidade": 4 }] },
+  "natureza": { "2": [{ "nome": "Aranha Gigante", "quantidade": 3 }] }
+}
+```
+
+A busca tem três degraus: a variante do tema, senão `monstros_por_tier`, senão
+`monstros`. Então **escreva variante só onde quer uma** — tema que a sala
+carrega sem variante escrita cai no bando padrão, e sala sem
+`monstros_por_tema` se comporta como antes do tema existir.
+
+Isso importa porque os dois eixos **multiplicam**: uma sala que já escreve três
+tiers, com dois temas, viraria seis listas de criatura.
+
+Duas regras que o validador cobra:
+
+- **o tema da variante tem de estar em `temas` da sala.** Só entra em jogo o
+  tema que a sala tem *e* a incursão pediu; variante de um tema que a sala não
+  carrega nunca seria escolhida, e morreria calada no arquivo;
+- **só sala de `Combate` tem criatura**, aqui como em `monstros`.
+
+Quando a dungeon pede mais de um tema e a sala tem variante para vários, o bot
+sorteia — e a escolha é fixa para aquele par de run e sala, então o cartão
+mostra o bando com que o combate vai abrir, e um restart não troca o bando no
+meio da luta.
 
 ---
 

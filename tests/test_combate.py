@@ -30,6 +30,7 @@ from fakes import (  # noqa: E402
     criar_grupo,
     passar_o_descanso,
     montar_conteudo,
+    sala,
     salas_de_combate,
     salas_sem_combate,
 )
@@ -169,6 +170,46 @@ async def caso_combate_no_meio_do_mapa():
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
     print("  combate no meio do mapa devolve à votação: ok")
+
+
+async def caso_o_tema_da_dungeon_troca_o_bando_da_sala():
+    """A sala de combate abre com a variante do tema que a dungeon pediu.
+
+    É o único teste que atravessa até o combate de verdade com uma variante
+    por tema: o resto prova a escolha e a leitura; este prova que o bando
+    escolhido é o que entra em `iniciar_combate`.
+    """
+    conn, canal, cog = await preparar()
+    bicho = {"ca": 1, "ataque": 0, "dano": "1d1", "hp": 1}
+    salas = [
+        sala(
+            f"C{i}",
+            "Combate",
+            temas=["cripta"],
+            monstros=[dict(bicho, nome="Padrão")],
+            monstros_por_tema={"cripta": {"1": [dict(bicho, nome="Ghoul")]}},
+        )
+        for i in (1, 2, 3)
+    ]
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="tematica", salas=salas, filtro={"temas": ["cripta"]}
+    )
+    run = await montar_run(conn, canal, cog, "tematica")
+
+    msg = await canal.fetch_message(run["mensagem_id"])
+    alvo = (await cog._opcoes(run, 1))[0]
+    for user_id in JOGADORES:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
+
+    run = await db.buscar_run(conn, run["id"])
+    estado = await cog._estado_combate(run, alvo)
+    nomes = {i.nome.split(" ")[0] for i in estado.inimigos}
+    assert nomes == {"Ghoul"}, (
+        f"o combate abriu com o bando padrão em vez da variante de cripta: {nomes}"
+    )
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o tema da dungeon troca o bando que o combate abre: ok")
 
 
 async def caso_rodadas_e_contra_ataque():
@@ -717,6 +758,7 @@ async def _casos():
     await caso_hp_inicial()
     await caso_vitoria_no_objetivo()
     await caso_combate_no_meio_do_mapa()
+    await caso_o_tema_da_dungeon_troca_o_bando_da_sala()
     await caso_rodadas_e_contra_ataque()
     await caso_combate_nao_polui_o_canal()
     await caso_sala_de_combate_nao_duplica_entrada()
