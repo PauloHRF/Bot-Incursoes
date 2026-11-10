@@ -11,7 +11,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 
 from . import condicoes
 from .rules import (
@@ -54,6 +54,30 @@ def com_artigo(organizacao: str) -> str:
     artigo = ARTIGO_DA_ORGANIZACAO.get(organizacao)
     return f"{artigo} {organizacao}" if artigo else organizacao
 DIFICULDADES = ("Fácil", "Média", "Difícil")
+
+# A classificação temática da sala, para a dungeon poder pedir só um tipo de
+# lugar. Lista FECHADA de propósito: tema livre em texto tira a sala do sorteio
+# em silêncio quando vem digitado errado, que é exatamente o acidente das salas
+# de Descanso escritas à mão — estão nos arquivos e não existem no jogo.
+#
+# Tema é ETIQUETA, e não gaveta: a sala carrega TODOS os temas em que ela cabe.
+# A conta obriga. O maior banco tem 13 salas utilizáveis e uma Longa atravessa
+# 7 (9 para oferecer 3 portas em toda parada, porque o sorteio nunca repete
+# sala). Tema que dividisse o banco em gavetas não daria uma Longa em gaveta
+# nenhuma; tema que se acumula na mesma sala mantém o pool inteiro de pé.
+#
+# Sala sem tema nenhum serve a qualquer tema — é o que deixa todo arquivo
+# escrito antes disto continuar valendo sem ser tocado.
+TEMAS = (
+    "urbano",
+    "cripta",
+    "fortaleza",
+    "arcano",
+    "sagrado",
+    "natureza",
+    "agua",
+    "escuridao",
+)
 
 # Quanto a CD de uma Armadilha cai em relação à escrita na planilha. Passar numa
 # armadilha não dá nada — só evita o dano e o debuff —, então ela precisa ser
@@ -106,6 +130,18 @@ OPCOES_POR_PASSO = 3
 # Quantas criaturas uma sala de combate pode ter.
 MAX_INIMIGOS = 6
 
+# Os tetos do Discord para um embed. O texto da sala e a lore vão DIRETO para
+# `description=`, e o nome vai para `title=`, sem corte: acima destes números o
+# Discord recusa a mensagem inteira, e a sala quebra na hora em que o grupo
+# abre a porta. Por isso aqui é recusa de validação, e não aviso — falhar no
+# arquivo é barato, falhar na frente de cinco pessoas no meio da run não é.
+#
+# O aviso (texto legal mas longo demais para um celular) é outra coisa e mora
+# em `tools/validar_conteudo.py`, que é onde avisos podem viver sem barrar.
+LIMITE_TITULO = 256
+LIMITE_DESCRICAO = 4096
+LIMITE_CAMPO = 1024
+
 # Quantos golpes uma criatura pode dar por rodada, e quantos alvos a habilidade
 # dela pode pegar de uma vez.
 MAX_ATAQUES_DO_MONSTRO = 8
@@ -128,6 +164,7 @@ EXPR_DANO = re.compile(
 _INDICE_TIPOS = {chave_comparacao(t): t for t in TIPOS_SALA}
 _INDICE_ORGS = {chave_comparacao(o): o for o in ORGANIZACOES}
 _INDICE_DIFS = {chave_comparacao(d): d for d in DIFICULDADES}
+_INDICE_TEMAS = {chave_comparacao(t): t for t in TEMAS}
 _INDICE_TAMANHOS = {chave_comparacao(t): t for t in TAMANHOS}
 
 
@@ -302,6 +339,9 @@ class Sala:
     cd: Optional[int] = None
     alvo_progresso: Optional[int] = None
     pericias: list[str] = field(default_factory=list)
+    # Em que lugares esta sala cabe. Vazio quer dizer "cabe em qualquer um",
+    # e não "não cabe em nenhum": ver o comentário de TEMAS.
+    temas: list[str] = field(default_factory=list)
     imagem: Optional[str] = None
     monstros: list[Monstro] = field(default_factory=list)
     # As criaturas por tier do GRUPO. A ficha escrita vale como ela está:
@@ -364,6 +404,22 @@ class Sala:
             return max(1, base - DESCONTO_CD_ARMADILHA)
         return base
 
+    def serve_ao_tema(self, pedidos: Sequence[str]) -> bool:
+        """Se esta sala entra num filtro que pediu aqueles temas.
+
+        Duas portas abertas, e as duas de propósito: sem tema pedido entra
+        tudo (é a incursão que não filtra), e sala sem tema escrito entra
+        sempre (é o conteúdo de antes do tema, que não pode sumir).
+
+        A comparação é OU e não E: a sala entra se tiver QUALQUER um dos temas
+        pedidos. Exigir todos esvaziaria o pool — ver o comentário de TEMAS.
+        """
+        if not pedidos:
+            return True
+        if not self.temas:
+            return True
+        return any(t in self.temas for t in pedidos)
+
     @property
     def tem_teste(self) -> bool:
         return self.tipo in TIPOS_COM_TESTE
@@ -382,6 +438,7 @@ class Sala:
             "cd": self.cd,
             "alvo_progresso": self.alvo_progresso,
             "pericias": self.pericias,
+            "temas": self.temas,
             "imagem": self.imagem,
             "recompensa": self.recompensa,
             "pontos_organizacao": self.pontos_organizacao,
@@ -845,6 +902,53 @@ def monstros_de_criatura(
     return [] if problemas else monstros
 
 
+def _conferir_tamanho(
+    texto: str, limite: int, rotulo: str, onde: str, problemas: list[str]
+) -> None:
+    """Barra o texto que o Discord recusaria. Ver os LIMITE_* lá em cima."""
+    if len(texto) > limite:
+        problemas.append(
+            f"{onde}: {rotulo} tem {len(texto)} caracteres e o Discord recusa "
+            f"acima de {limite}. A mensagem inteira falharia na hora de mostrar "
+            f"isto aos jogadores."
+        )
+
+
+def _temas_de_dict(bruto: Any, onde: str, problemas: list[str]) -> list[str]:
+    """A lista de temas, conferida contra TEMAS e sem repetição.
+
+    Aceita lista (`["arcano", "agua"]`) e também texto separado por vírgula
+    (`"arcano, agua"`), porque é o que sai da planilha e é o que quem escreve
+    JSON à mão acaba digitando.
+
+    Tema desconhecido é PROBLEMA e não aviso: aceitar em silêncio é o jeito de
+    a sala sumir do sorteio sem ninguém notar.
+    """
+    if bruto is None or bruto == "":
+        return []
+    if isinstance(bruto, str):
+        brutos: list[Any] = [p for p in bruto.split(",") if p.strip()]
+    elif isinstance(bruto, (list, tuple)):
+        brutos = list(bruto)
+    else:
+        problemas.append(
+            f"{onde}: 'temas' precisa ser uma lista ou texto separado por vírgula."
+        )
+        return []
+
+    temas: list[str] = []
+    for item in brutos:
+        canonico = _INDICE_TEMAS.get(chave_comparacao(str(item)))
+        if not canonico:
+            problemas.append(
+                f"{onde}: tema '{str(item).strip()}' não existe. "
+                f"Use um de: {', '.join(TEMAS)}."
+            )
+        elif canonico not in temas:
+            temas.append(canonico)
+    return temas
+
+
 def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Optional[Sala]:
     sala_id = str(dados.get("id") or "").strip()
     if not sala_id:
@@ -855,6 +959,7 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
     nome = str(dados.get("nome") or "").strip()
     if not nome:
         problemas.append(f"{onde}: falta o nome.")
+    _conferir_tamanho(nome, LIMITE_TITULO, "o nome", onde, problemas)
 
     tipo = _INDICE_TIPOS.get(chave_comparacao(str(dados.get("tipo") or "")))
     if not tipo:
@@ -866,6 +971,9 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
     descricao = str(dados.get("descricao") or "").strip()
     if not descricao:
         problemas.append(f"{onde}: falta a descrição mostrada aos jogadores.")
+    _conferir_tamanho(descricao, LIMITE_DESCRICAO, "a descrição", onde, problemas)
+
+    temas = _temas_de_dict(dados.get("temas"), onde, problemas)
 
     dificuldade = None
     cd = _inteiro(dados.get("cd"))
@@ -960,6 +1068,7 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
         cd=cd,
         alvo_progresso=alvo,
         pericias=pericias,
+        temas=temas,
         imagem=(str(dados.get("imagem")).strip() or None) if dados.get("imagem") else None,
         monstros=monstros,
         monstros_por_tier=por_tier,
@@ -1015,6 +1124,7 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
     nome = str(dados.get("nome") or "").strip()
     if not nome:
         problemas.append("A incursão precisa de um nome.")
+    _conferir_tamanho(nome, LIMITE_TITULO, "o nome", "a incursão", problemas)
 
     organizacao = _INDICE_ORGS.get(chave_comparacao(str(dados.get("organizacao") or "")))
     if not organizacao:
@@ -1027,8 +1137,14 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
     lore_inicial = str(dados.get("lore_inicial") or dados.get("descricao") or "").strip()
     if not lore_inicial:
         problemas.append("Falta a lore de abertura (lore_inicial).")
+    _conferir_tamanho(
+        lore_inicial, LIMITE_DESCRICAO, "a lore de abertura", "a incursão", problemas
+    )
 
     lore_final = str(dados.get("lore_final") or "").strip() or None
+    _conferir_tamanho(
+        lore_final or "", LIMITE_DESCRICAO, "a lore de fecho", "a incursão", problemas
+    )
 
     tamanho = _INDICE_TAMANHOS.get(chave_comparacao(str(dados.get("tamanho") or "Média")))
     if not tamanho:
@@ -1115,3 +1231,49 @@ def carregar_bancos(pasta: Path) -> dict[str, BancoDeSalas]:
         banco = carregar_banco(arquivo)
         bancos[banco.organizacao] = banco
     return bancos
+
+
+def _um_por_um(pasta: Path, carregar_um) -> tuple[list[Any], list[str]]:
+    """Carrega arquivo por arquivo, guardando o problema de cada um que falhar.
+
+    O arquivo que não fecha não interrompe os outros: ele entra na lista de
+    problemas com o nome dele na frente, e o laço segue.
+    """
+    bons: list[Any] = []
+    problemas: list[str] = []
+    for arquivo in sorted(Path(pasta).glob("*.json")):
+        try:
+            bons.append(carregar_um(arquivo))
+        except ErroDeValidacao as erro:
+            # `.problemas`, e não `args[0]`: args[0] é o resumo ("2 problema(s)
+            # encontrado(s)"), e iterar uma string devolve letra por letra.
+            problemas.extend(f"{arquivo.name}: {d}" for d in erro.problemas)
+        except json.JSONDecodeError as erro:
+            problemas.append(
+                f"{arquivo.name}: JSON inválido na linha {erro.lineno}, "
+                f"coluna {erro.colno}: {erro.msg}"
+            )
+        except OSError as erro:
+            problemas.append(f"{arquivo.name}: não deu para ler o arquivo: {erro}")
+    return bons, problemas
+
+
+def carregar_todas_tolerante(pasta: Path) -> tuple[dict[str, Incursao], list[str]]:
+    """As incursões que deram, mais a lista do que ficou de fora.
+
+    `carregar_todas` aborta no primeiro arquivo inválido, e quem chamava ela no
+    boot subia o bot SEM NENHUMA incursão: a vírgula errada de um colaborador
+    tirava o catálogo inteiro do ar, e não só a dungeon dele. Aqui o arquivo
+    ruim fica de fora sozinho, e quem chama decide como contar o problema.
+
+    As duas continuam existindo de propósito: ferramenta e teste querem a
+    versão que levanta, porque lá um arquivo quebrado é para parar tudo.
+    """
+    carregadas, problemas = _um_por_um(pasta, carregar)
+    return {i.id: i for i in carregadas}, problemas
+
+
+def carregar_bancos_tolerante(pasta: Path) -> tuple[dict[str, BancoDeSalas], list[str]]:
+    """O mesmo para os bancos de salas. Ver `carregar_todas_tolerante`."""
+    carregados, problemas = _um_por_um(pasta, carregar_banco)
+    return {b.organizacao: b for b in carregados}, problemas

@@ -162,6 +162,19 @@ def caso_as_listas_do_documento_sao_as_do_codigo():
         f"a lista de debuffs do documento não é a do código\n"
         f"  só no doc: {do_doc - do_codigo}\n  só no código: {do_codigo - do_doc}"
     )
+    # Os temas: a lista do documento e EXATA, pelo mesmo motivo das perícias.
+    # Tema a mais no código e ausente do documento é tema que ninguém usa;
+    # tema a mais no documento é sala recusada na validação.
+    trecho = re.search(r"e \*\*só estes oito\*\*: (.+?)\.\n", TEXTO, re.DOTALL)
+    assert trecho, "a lista de temas mudou de forma no documento"
+    do_doc = set(re.findall(r"`([a-z]+)`", trecho.group(1)))
+    assert do_doc == set(I.TEMAS), (
+        f"a lista de temas do documento não é a do código\n"
+        f"  só no doc: {do_doc - set(I.TEMAS)}\n  só no código: {set(I.TEMAS) - do_doc}"
+    )
+    assert len(I.TEMAS) == 8, (
+        f"o documento diz 'só estes oito' e o código tem {len(I.TEMAS)}"
+    )
     print("  as listas do documento sao as do codigo: ok")
 
 
@@ -174,6 +187,10 @@ def caso_os_limites_documentados_sao_os_de_verdade():
         "alvos de uma habilidade": (6, I.MAX_ALVOS),
         "tier máximo": (5, TIER_MAXIMO),
         "desconto de CD da Armadilha": (3, I.DESCONTO_CD_ARMADILHA),
+        # Estes dois são do Discord: o documento promete um teto que o bot
+        # cobra, e os dois têm que ser o mesmo número.
+        "teto do nome": (256, I.LIMITE_TITULO),
+        "teto da descrição e da lore": (4096, I.LIMITE_DESCRICAO),
     }
     for o_que, (no_doc, no_codigo) in documentados.items():
         assert no_doc == no_codigo, (

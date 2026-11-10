@@ -10,9 +10,13 @@ Antes de mandar o arquivo, rode:
 python tools/validar_conteudo.py minha_dungeon.json
 ```
 
-Isso **não é formalidade**. O bot carrega as incursões todas de uma vez, e um
-arquivo inválido faz ele subir **sem nenhuma incursão** — não sem a sua, sem
-nenhuma. Um erro de vírgula tira o catálogo inteiro do ar até alguém arrumar.
+Isso **não é formalidade**. O bot carrega arquivo por arquivo e pula o
+inválido: o resto do catálogo sobe, e a **sua** dungeon é a que não existe. O
+aviso sai no log do servidor e na resposta do `/incursao recarregar` — os dois
+longe de você. Sem validar antes, você descobre pelo silêncio.
+
+(Já foi pior: um erro de vírgula derrubava o catálogo inteiro, porque o bot
+abortava no primeiro arquivo ruim e subia sem incursão nenhuma.)
 
 ---
 
@@ -115,6 +119,7 @@ A mesma estrutura serve para o `objetivo` da incursão e para cada item de
   "cd": 13,
   "alvo_progresso": 8,
   "pericias": ["Acrobacia", "Percepção"],
+  "temas": ["fortaleza", "arcano"],
   "pontos_organizacao": 2
 }
 ```
@@ -129,6 +134,7 @@ A mesma estrutura serve para o `objetivo` da incursão e para cada item de
 | `cd` | sim, se tem teste | número: a CD **no tier 1** (ver abaixo) |
 | `alvo_progresso` | sim, se tem teste | número > 0: a soma de margens que vence a sala |
 | `pericias` | sim, se tem teste | uma ou mais das 18 (abaixo). Cada jogador rola a melhor que tiver |
+| `temas` | não | em que lugares a sala cabe (abaixo). Vazio = cabe em qualquer um |
 | `monstros` | sim, se `Combate` | lista de criaturas, no máximo 6 |
 | `monstros_por_tier` | alternativa | `{"2": [...], "4": [...]}` |
 | `pontos_organizacao` | não (`0`) | pontos ao vencer esta sala |
@@ -162,6 +168,22 @@ sala de tier 2.
 **Não escreva sala de `Descanso`.** O descanso deixou de ser sorteado e virou
 parada fixa do caminho. Uma sala de Descanso no banco fica no arquivo sem nunca
 aparecer no jogo — o validador avisa quando encontra uma.
+
+### `temas` — em que lugares a sala cabe
+
+Oito temas, e **só estes oito**: `urbano`, `cripta`, `fortaleza`, `arcano`,
+`sagrado`, `natureza`, `agua`, `escuridao`. Tema que não está na lista é
+recusado pelo validador, de propósito: aceito em silêncio, ele tiraria a sala
+do sorteio sem ninguém notar.
+
+**Marque todos os temas em que a sala cabe, e não o "principal".** O tema é
+etiqueta, não gaveta. A conta obriga: o maior banco tem 13 salas utilizáveis e
+uma Longa atravessa 7 — 9 para oferecer 3 portas em toda parada, porque o
+sorteio nunca repete sala. Tema que dividisse o banco em gavetas não daria uma
+Longa em gaveta nenhuma. Uma sala com dois ou três temas conta nos três pools.
+
+**Sala sem `temas` cabe em qualquer um.** É por isso que todo arquivo escrito
+antes disto continua valendo sem ser tocado.
 
 ### `monstros_por_tier`
 
@@ -311,6 +333,15 @@ escrito. Para **incursões** não existe planilha — elas são JSON escrito à 
 | Alvos de uma habilidade | 1 a 6 |
 | `tier` | 1 a 5 |
 | `recarga` | 2 a 6 |
+| `nome` (sala e incursão) | máximo 256 caracteres |
+| `descricao`, `lore_inicial`, `lore_final` | máximo 4096 caracteres |
+
+Os dois últimos são do Discord, e não do bot: o texto da sala e a lore vão
+**direto** para o embed, sem corte. Acima do teto o Discord recusa a mensagem
+inteira — a sala quebraria na hora em que o grupo abre a porta, e não na hora
+de validar. Por isso são recusa, e não aviso. O validador ainda avisa bem
+antes do teto (80 num nome, 600 numa descrição de sala, 1500 numa lore), porque
+parede de texto na tela de um celular é ruim muito antes de ser inválida.
 
 ## Depois de escrever
 

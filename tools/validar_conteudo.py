@@ -7,12 +7,16 @@ Existe para quem escreve conteúdo poder conferir sozinho. É o MESMO validador
 que o bot usa (`incursoes.de_dict` e `incursoes.banco_de_dict`), então passar
 aqui é passar no bot — não há segunda régua.
 
-E há uma razão forte para ele existir: o bot carrega as incursões com
-`carregar_todas`, que **estoura no primeiro arquivo inválido**. No boot o
-`_carregar_tolerante` segura a exceção para o bot subir, e sobe *sem nenhuma
-incursão*. Ou seja: um arquivo quebrado de um colaborador não tira só a
-dungeon dele — tira o catálogo inteiro do ar. Rodar isto antes de copiar o
-arquivo para `data/` é o que impede esse acidente.
+O bot hoje carrega arquivo por arquivo (`carregar_todas_tolerante`): o inválido
+fica de fora sozinho e o resto do catálogo sobe. Ele já foi pior — um JSON
+quebrado abortava o carregamento inteiro e o bot subia *sem nenhuma incursão*,
+então a vírgula errada de um colaborador tirava todas as dungeons do ar.
+
+Isso não dispensa validar antes: o arquivo que fica de fora **fica de fora**.
+A dungeon simplesmente não existe para quem for jogar, e o aviso mora no log
+do servidor e na resposta do `/incursao recarregar` — ou seja, longe de quem
+escreveu. Rodar isto antes de mandar o arquivo é o que evita descobrir isso
+pelo lado errado.
 
 Sai com 0 quando está tudo bem e 1 quando há qualquer problema, para dar em
 gancho de git ou em CI.
@@ -23,11 +27,14 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from src.incursoes import (  # noqa: E402
+    LIMITE_DESCRICAO,
+    LIMITE_TITULO,
     ErroDeValidacao,
     arquivo_da_organizacao,
     banco_de_dict,
@@ -36,6 +43,13 @@ from src.incursoes import (  # noqa: E402
 
 PASTA_INCURSOES = RAIZ / "data" / "incursoes"
 PASTA_BANCOS = RAIZ / "data" / "bancos"
+
+# Onde o texto deixa de caber bem num celular, muito antes de o Discord
+# recusar. O teto duro (LIMITE_*) é recusa e mora na validação; estes são
+# aviso, porque texto comprido é escolha de quem escreve e não erro.
+AVISO_TITULO = 80
+AVISO_DESCRICAO_SALA = 600
+AVISO_LORE = 1500
 
 
 def _tipo_do_arquivo(dados: dict) -> str:
@@ -66,7 +80,9 @@ def conferir(caminho: Path) -> list[str]:
     try:
         converter(bruto)
     except ErroDeValidacao as erro:
-        return list(erro.args[0]) if erro.args else [str(erro)]
+        # `.problemas` e nao `args[0]`: args[0] e o resumo ("2 problema(s)
+        # encontrado(s)"), e list() de uma string devolve letra por letra.
+        return list(erro.problemas)
     return []
 
 
@@ -77,7 +93,24 @@ def avisos(caminho: Path, bruto: dict) -> list[str]:
     faz o que o autor espera.
     """
     saida: list[str] = []
+
+    def comprido(texto: Any, aviso: int, teto: int, rotulo: str) -> None:
+        tamanho = len(str(texto or ""))
+        if aviso < tamanho <= teto:
+            saida.append(
+                f"{rotulo} tem {tamanho} caracteres. Cabe (o Discord recusa só "
+                f"acima de {teto}), mas acima de {aviso} vira parede de texto "
+                f"na tela de um celular."
+            )
+
     if _tipo_do_arquivo(bruto) == "banco":
+        for sala in bruto.get("salas") or []:
+            onde = f"a sala {sala.get('id') or '?'}"
+            comprido(sala.get("nome"), AVISO_TITULO, LIMITE_TITULO, f"o nome de {onde}")
+            comprido(
+                sala.get("descricao"), AVISO_DESCRICAO_SALA, LIMITE_DESCRICAO,
+                f"a descrição de {onde}",
+            )
         descansos = [
             s.get("id") for s in bruto.get("salas") or []
             if str(s.get("tipo") or "").strip().lower().startswith("descans")
@@ -91,6 +124,13 @@ def avisos(caminho: Path, bruto: dict) -> list[str]:
                 "fica no arquivo sem nunca aparecer no jogo."
             )
         return saida
+
+    comprido(bruto.get("nome"), AVISO_TITULO, LIMITE_TITULO, "o nome da incursão")
+    comprido(
+        bruto.get("lore_inicial") or bruto.get("descricao"),
+        AVISO_LORE, LIMITE_DESCRICAO, "a lore de abertura",
+    )
+    comprido(bruto.get("lore_final"), AVISO_LORE, LIMITE_DESCRICAO, "a lore de fecho")
 
     organizacao = str(bruto.get("organizacao") or "").strip()
     if organizacao:
@@ -150,8 +190,8 @@ def main() -> int:
     if com_problema:
         print(
             f"{com_problema} de {len(alvos)} arquivo(s) com problema. Nenhum "
-            f"deles pode entrar em data/: um arquivo invalido faz o bot subir "
-            f"SEM NENHUMA incursao, e nao so sem a dele."
+            f"deles pode entrar em data/: o bot pula o arquivo invalido, entao "
+            f"a dungeon simplesmente NAO EXISTE para quem for jogar."
         )
         return 1
     print(f"{len(alvos)} arquivo(s) conferido(s), nenhum problema.")

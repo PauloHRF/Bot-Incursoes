@@ -44,6 +44,35 @@ def cr_de(criatura: dict[str, Any]) -> float:
         return 0.0
 
 
+# O vocabulário de ambiente do Monster Manual, que `tools/importar_ambientes.py`
+# copia para `meta.ambientes`. Fechado: estes onze são os que o livro usa, e
+# nada no bot inventa um décimo segundo.
+AMBIENTES = (
+    "arctic", "coastal", "desert", "forest", "grassland", "hill",
+    "mountain", "swamp", "underdark", "underwater", "urban",
+)
+
+
+def ambientes_de(criatura: dict[str, Any]) -> list[str]:
+    """Os ambientes daquela criatura. Lista vazia quer dizer algo.
+
+    Vazia NÃO é dado faltando: o livro não dá bioma a quem não é nativo de
+    bioma nenhum — demônio, golem, celestial. São 70 das 385, e elas formam o
+    balde "de lugar nenhum", que serve a qualquer ambiente escolhido. Um
+    demônio cabe numa cripta tão bem quanto numa floresta.
+
+    Criatura importada antes de `meta.ambientes` existir também cai aqui, e
+    por isso quem filtra precisa tratar a lista vazia como "serve a tudo" e
+    não como "não serve a nada".
+    """
+    return list((criatura.get("meta") or {}).get("ambientes") or [])
+
+
+def de_lugar_nenhum(criatura: dict[str, Any]) -> bool:
+    """A criatura que o livro não prende a bioma nenhum."""
+    return not ambientes_de(criatura)
+
+
 def tier_do_cr(cr: float) -> int:
     """O tier do grupo que encontra uma criatura daquele CR."""
     for tier, (lo, hi) in FAIXAS_DE_CR.items():

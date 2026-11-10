@@ -1,0 +1,882 @@
+<title>Estúdio de Incursões</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Bancada: trilho de salas à esquerda, mesa de edição no meio, veredito à direita.
+   Em telefone os três viram uma coluna, na mesma ordem. */
+:root {
+  --bg: #ecedf0;
+  --surface: #ffffff;
+  --surface-2: #f4f5f8;
+  --fg: #14171c;
+  --fg-dim: #5a616d;
+  --line: #d6dae1;
+  --line-strong: #b9c0ca;
+  --accent: #a3561f;
+  --accent-soft: #f7e9dd;
+  --ok: #1d6b45;
+  --ok-soft: #e2f0e8;
+  --warn: #8a5b00;
+  --warn-soft: #f8eed4;
+  --bad: #a32020;
+  --bad-soft: #f8e3e1;
+  --display: "Fraunces", Georgia, serif;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10131a;
+    --surface: #171b24;
+    --surface-2: #1e232e;
+    --fg: #e8eaee;
+    --fg-dim: #99a1b0;
+    --line: #2a3140;
+    --line-strong: #3b4454;
+    --accent: #e09050;
+    --accent-soft: #2b2018;
+    --ok: #4cb37d;
+    --ok-soft: #152a20;
+    --warn: #d6a43c;
+    --warn-soft: #2b2314;
+    --bad: #e2726b;
+    --bad-soft: #2d1817;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10131a;
+  --surface: #171b24;
+  --surface-2: #1e232e;
+  --fg: #e8eaee;
+  --fg-dim: #99a1b0;
+  --line: #2a3140;
+  --line-strong: #3b4454;
+  --accent: #e09050;
+  --accent-soft: #2b2018;
+  --ok: #4cb37d;
+  --ok-soft: #152a20;
+  --warn: #d6a43c;
+  --warn-soft: #2b2314;
+  --bad: #e2726b;
+  --bad-soft: #2d1817;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+
+/* ---------- cabeçalho ---------- */
+header { padding-block: 28px 20px; border-bottom: 1px solid var(--line); }
+.marca {
+  font-family: var(--display);
+  font-size: clamp(26px, 4.4vw, 38px);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0;
+  text-wrap: balance;
+}
+.sub { color: var(--fg-dim); margin: 6px 0 0; max-width: 62ch; }
+.rascunho {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 14px; padding: 5px 11px;
+  border: 1px solid var(--warn); border-radius: 2px;
+  background: var(--warn-soft); color: var(--warn);
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.rascunho b { font-weight: 500; }
+
+h2 {
+  font-family: var(--display); font-weight: 600;
+  font-size: 21px; letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+h2 .num {
+  font-family: var(--mono); font-size: 12px; font-weight: 400;
+  color: var(--accent); margin-right: 10px; vertical-align: 2px;
+}
+.secao { padding-block: 34px; border-bottom: 1px solid var(--line); }
+.secao > .sub { margin-bottom: 20px; }
+
+/* ---------- bancada ---------- */
+.bancada {
+  display: grid; gap: 16px;
+  grid-template-columns: 215px minmax(0, 1fr) 280px;
+  align-items: start;
+}
+.bancada.duas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 920px) {
+  .bancada, .bancada.duas { grid-template-columns: 1fr; }
+}
+
+.painel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 15px;
+}
+.painel-titulo {
+  font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--fg-dim);
+  margin: 0 0 11px; display: flex; justify-content: space-between; gap: 8px;
+}
+
+/* ---------- trilho de salas ---------- */
+.salas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.salas li { border-top: 1px solid var(--line); }
+.salas li:first-child { border-top: 0; }
+.sala-btn {
+  width: 100%; text-align: left; background: none; border: 0;
+  padding: 7px 4px; cursor: pointer; color: inherit;
+  font: inherit; display: flex; gap: 8px; align-items: baseline;
+  border-left: 2px solid transparent;
+}
+.sala-btn:hover { background: var(--surface-2); }
+.sala-btn[aria-current="true"] { border-left-color: var(--accent); background: var(--accent-soft); }
+.sala-btn .sid {
+  font-family: var(--mono); font-size: 11.5px; color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.sala-btn[aria-current="true"] .sid { color: var(--accent); }
+.sala-btn .snome { font-size: 13.5px; min-width: 0; }
+.morta .snome { text-decoration: line-through; color: var(--fg-dim); }
+.morta { opacity: 0.72; }
+.nota-morta {
+  margin: 10px 0 0; font-size: 11.5px; color: var(--fg-dim);
+  border-top: 1px dashed var(--line-strong); padding-top: 9px;
+}
+
+/* ---------- campos ---------- */
+.campo { margin-bottom: 15px; }
+.campo:last-child { margin-bottom: 0; }
+label, .rotulo {
+  display: block; font-family: var(--mono); font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--fg-dim); margin-bottom: 5px;
+}
+input[type="text"], textarea, select {
+  width: 100%; font-family: var(--sans); font-size: 14px;
+  color: var(--fg); background: var(--surface-2);
+  border: 1px solid var(--line-strong); border-radius: 2px;
+  padding: 8px 10px;
+}
+textarea { resize: vertical; min-height: 78px; line-height: 1.45; }
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+.mono-in { font-family: var(--mono); }
+.dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* fichas de tema */
+.fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+.ficha {
+  font: inherit; font-size: 13px; cursor: pointer;
+  padding: 4px 11px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--surface-2);
+  color: var(--fg-dim);
+}
+.ficha[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ficha[aria-pressed="true"] { color: #14171c; }
+}
+:root[data-theme="dark"] .ficha[aria-pressed="true"] { color: #14171c; }
+
+/* contador */
+.contador {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-family: var(--mono); font-size: 11.5px; margin-top: 5px;
+  font-variant-numeric: tabular-nums; color: var(--fg-dim);
+}
+.contador .v.ok { color: var(--ok); }
+.contador .v.warn { color: var(--warn); }
+.contador .v.bad { color: var(--bad); }
+
+/* ---------- veredito ---------- */
+.veredito { border-left: 3px solid var(--line-strong); padding-left: 12px; }
+.veredito.ok { border-left-color: var(--ok); }
+.veredito.warn { border-left-color: var(--warn); }
+.veredito.bad { border-left-color: var(--bad); }
+.selo {
+  display: inline-block; font-family: var(--mono); font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 2px 7px; border-radius: 2px; margin-bottom: 7px;
+}
+.selo.ok { background: var(--ok-soft); color: var(--ok); }
+.selo.warn { background: var(--warn-soft); color: var(--warn); }
+.selo.bad { background: var(--bad-soft); color: var(--bad); }
+.conta {
+  font-family: var(--mono); font-size: 12px; line-height: 1.75;
+  font-variant-numeric: tabular-nums; margin: 0;
+}
+.conta b { font-weight: 500; color: var(--accent); }
+.conta-linha { display: flex; justify-content: space-between; gap: 12px; }
+.explica { font-size: 13px; color: var(--fg-dim); margin: 10px 0 0; }
+
+/* medidor de pool */
+.medidor { margin: 12px 0 2px; }
+.trilha {
+  position: relative; height: 26px; background: var(--surface-2);
+  border: 1px solid var(--line-strong); border-radius: 2px; overflow: hidden;
+}
+.barra { height: 100%; background: var(--accent); opacity: 0.22; }
+.marca-min {
+  position: absolute; top: -3px; bottom: -3px; width: 2px;
+  background: var(--fg);
+}
+.marca-min.folga { background: var(--line-strong); }
+.legenda {
+  display: flex; justify-content: space-between; gap: 8px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--fg-dim);
+  margin-top: 5px;
+}
+
+/* ---------- sugeridor ---------- */
+.eixos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 720px) { .eixos { grid-template-columns: 1fr; } }
+.sugestoes { display: grid; gap: 12px; margin-top: 16px; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 860px) { .sugestoes { grid-template-columns: 1fr; } }
+.sug { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 13px; }
+.sug h3 { font-size: 14.5px; margin: 0 0 8px; font-weight: 600; }
+.bando { list-style: none; margin: 0 0 11px; padding: 0; font-size: 13px; }
+.bando li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.bando .cr { font-family: var(--mono); font-size: 11.5px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.funcao {
+  font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--accent);
+}
+.taxa { border-top: 1px solid var(--line); padding-top: 9px; }
+.taxa-linha {
+  display: grid; grid-template-columns: 54px 1fr 44px; gap: 8px;
+  align-items: center; font-family: var(--mono); font-size: 11.5px;
+  font-variant-numeric: tabular-nums; margin-bottom: 4px;
+}
+.taxa-linha span:first-child { color: var(--fg-dim); }
+.taxa-linha .fim { text-align: right; }
+.trilha-fina { height: 7px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+.trilha-fina div { height: 100%; background: var(--ok); }
+.trilha-fina div.medio { background: var(--warn); }
+.trilha-fina div.duro { background: var(--bad); }
+
+/* ---------- faixa da dungeon ---------- */
+.faixa-dg { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 16px; }
+.faixa-trilha {
+  position: relative; height: 38px; margin: 18px 0 8px;
+  background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 2px;
+}
+.faixa-corpo {
+  position: absolute; top: 0; bottom: 0;
+  background: var(--accent); opacity: 0.2;
+  border-left: 2px solid var(--accent); border-right: 2px solid var(--accent);
+}
+.escala {
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 10.5px; color: var(--fg-dim);
+  margin-top: 6px;
+}
+
+/* ---------- card do Discord ---------- */
+.discord {
+  background: var(--surface-2); border-radius: 5px;
+  border-left: 4px solid var(--accent);
+  padding: 13px 15px; max-width: 480px;
+}
+.discord-titulo { font-weight: 600; font-size: 15px; margin: 0 0 6px; color: var(--accent); }
+.discord-corpo { font-size: 14px; margin: 0; white-space: pre-wrap; }
+.discord-campos { display: flex; gap: 26px; margin-top: 12px; flex-wrap: wrap; }
+.discord-campo .rotulo { margin-bottom: 2px; }
+.discord-campo p { margin: 0; font-size: 13.5px; }
+
+/* ---------- tabelas ---------- */
+.rolagem { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 7px 11px 7px 0; border-bottom: 1px solid var(--line); }
+th {
+  font-family: var(--mono); font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--fg-dim); font-weight: 400;
+}
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.tema { font-family: var(--mono); font-size: 12.5px; }
+.cabe { font-family: var(--mono); font-size: 11.5px; }
+.cabe.sim { color: var(--ok); }
+.cabe.nao { color: var(--bad); }
+
+.acoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.botao {
+  font: inherit; font-size: 13.5px; cursor: pointer;
+  padding: 8px 15px; border-radius: 2px;
+  border: 1px solid var(--accent); background: none; color: var(--accent);
+}
+.botao.cheio { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .botao.cheio { color: #14171c; }
+}
+:root[data-theme="dark"] .botao.cheio { color: #14171c; }
+.botao:hover { background: var(--accent-soft); }
+.botao.cheio:hover { opacity: 0.9; background: var(--accent); }
+
+footer { padding-block: 26px; color: var(--fg-dim); font-size: 13px; }
+footer p { margin: 0 0 8px; max-width: 70ch; }
+code {
+  font-family: var(--mono); font-size: 0.9em;
+  background: var(--surface-2); padding: 1px 5px; border-radius: 2px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .barra, .faixa-corpo, .trilha-fina div { transition: width 0.18s ease, left 0.18s ease; }
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <h1 class="marca">Estúdio de Incursões</h1>
+  <p class="sub">A bancada do colaborador: escrever sala, montar o filtro da dungeon,
+    sugerir combate e medir se aquilo tem chance de ser vencido — antes de o arquivo
+    chegar perto do bot.</p>
+  <p class="rascunho"><b>Rascunho de desenho</b> · as contas de pool são reais; as taxas de vitória são exemplo</p>
+</header>
+
+<!-- ============ 1. a sala ============ -->
+<section class="secao">
+  <h2><span class="num">01</span>A sala</h2>
+  <p class="sub">Banco do Vórtice Oculto, 14 salas escritas. O tema é etiqueta e não gaveta:
+    a sala carrega todos os temas em que ela cabe, e é isso que mantém o sorteio com opção.</p>
+
+  <div class="bancada">
+    <div class="painel">
+      <p class="painel-titulo"><span>Banco</span><span id="contaSalas">14</span></p>
+      <ul class="salas" id="listaSalas"></ul>
+      <p class="nota-morta">VO05 é Descanso escrito à mão. O descanso virou parada fixa,
+        então ela nunca é sorteada — está no arquivo e não existe no jogo.</p>
+    </div>
+
+    <div class="painel">
+      <p class="painel-titulo"><span>Sala</span><span id="idSala">VO07</span></p>
+
+      <div class="dupla">
+        <div class="campo">
+          <label for="fId">id</label>
+          <input id="fId" class="mono-in" type="text" value="VO07">
+        </div>
+        <div class="campo">
+          <label for="fTipo">tipo</label>
+          <select id="fTipo">
+            <option>Combate</option><option>Armadilha</option>
+            <option>Evento</option><option>Tesouro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="fNome">nome</label>
+        <input id="fNome" type="text" value="Ninho de Aberrações">
+        <p class="contador"><span>vai para o título do embed</span>
+          <span><span class="v" id="cNome">19</span> / 256</span></p>
+      </div>
+
+      <div class="campo">
+        <span class="rotulo">temas</span>
+        <div class="fichas" id="fichasSala"></div>
+      </div>
+
+      <div class="campo">
+        <label for="fDesc">descrição</label>
+        <textarea id="fDesc">O chão cede um palmo a cada passo e a parede responde. Alguma coisa lá dentro conta os passos junto com vocês.</textarea>
+        <p class="contador"><span>aviso em 600 · o Discord recusa acima de 4096</span>
+          <span><span class="v" id="cDesc">0</span> / 4096</span></p>
+      </div>
+
+      <div class="campo">
+        <span class="rotulo">criaturas por tema</span>
+        <div class="rolagem">
+          <table>
+            <thead><tr><th>tema</th><th>tier</th><th>bando</th><th class="n">cr</th></tr></thead>
+            <tbody>
+              <tr><td class="tema">— padrão</td><td class="n">2</td><td>3 × Grick</td><td class="n">2</td></tr>
+              <tr><td class="tema">cripta</td><td class="n">2</td><td>4 × Ghoul</td><td class="n">2</td></tr>
+              <tr><td class="tema">natureza</td><td class="n">2</td><td>3 × Aranha Gigante</td><td class="n">2</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="explica">Sem variante do tema pedido, a sala cai no bando padrão.
+          Variante é opcional: sala sem nenhuma se comporta como hoje.</p>
+      </div>
+    </div>
+
+    <div class="painel">
+      <p class="painel-titulo"><span>Como o jogador vê</span></p>
+      <div class="discord">
+        <p class="discord-titulo" id="dTitulo">⚔️ Ninho de Aberrações</p>
+        <p class="discord-corpo" id="dCorpo"></p>
+        <div class="discord-campos">
+          <div class="discord-campo"><span class="rotulo">Inimigos</span><p>3 × Grick</p></div>
+          <div class="discord-campo"><span class="rotulo">Tipo</span><p id="dTipo">Combate</p></div>
+        </div>
+      </div>
+      <p class="explica">É aqui que texto comprido se revela comprido. Hoje nada valida
+        tamanho, e o Discord recusa a mensagem inteira acima do teto — a sala quebraria
+        na hora em que o grupo abre a porta.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. o filtro ============ -->
+<section class="secao">
+  <h2><span class="num">02</span>O filtro da dungeon</h2>
+  <p class="sub">A dungeon escolhe tema, ou lista as salas que quer, ou as que não quer.
+    O veredito é calculado contra o tamanho: o sorteio nunca repete sala, então uma Longa
+    precisa de 7 salas para poder terminar e de 9 para oferecer 3 portas em toda parada.</p>
+
+  <div class="bancada">
+    <div class="painel">
+      <p class="painel-titulo"><span>Dungeon</span><span>Vórtice Oculto</span></p>
+      <div class="campo">
+        <label for="fTam">tamanho</label>
+        <select id="fTam">
+          <option value="Curta">Curta — 3 salas</option>
+          <option value="Média">Média — 5 salas</option>
+          <option value="Longa" selected>Longa — 7 salas</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="fExcluir">excluir</label>
+        <input id="fExcluir" class="mono-in" type="text" placeholder="VO12, VO04">
+      </div>
+      <p class="explica">Campo de temas vazio quer dizer banco inteiro — é o que toda
+        incursão de hoje faz sem saber.</p>
+    </div>
+
+    <div class="painel">
+      <p class="painel-titulo"><span>Temas pedidos</span><span id="contaTemas"></span></p>
+      <div class="fichas" id="fichasFiltro"></div>
+      <div class="medidor">
+        <div class="trilha" aria-hidden="true">
+          <div class="barra" id="barraPool"></div>
+          <div class="marca-min" id="marcaTerminar"></div>
+          <div class="marca-min folga" id="marcaFolga"></div>
+        </div>
+        <p class="legenda"><span>0</span><span id="legMarcas"></span><span>13 utilizáveis</span></p>
+      </div>
+      <div class="rolagem" style="margin-top:14px">
+        <table>
+          <thead><tr><th>salas que entram</th><th>tipo</th></tr></thead>
+          <tbody id="tabelaPool"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="painel">
+      <p class="painel-titulo"><span>Veredito</span></p>
+      <div class="veredito" id="veredito">
+        <span class="selo" id="selo"></span>
+        <p class="conta" id="conta"></p>
+        <p class="explica" id="vExplica"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. sugerir combate ============ -->
+<section class="secao">
+  <h2><span class="num">03</span>Sugerir combate</h2>
+  <p class="sub">Três eixos: ambiente, tipo de bicho e dificuldade. A dificuldade não é
+    declarada — o estúdio procura uma composição que atinja a taxa alvo e mostra a taxa
+    que mediu, com o motor de combate do bot.</p>
+
+  <div class="eixos">
+    <div class="campo">
+      <label for="fAmb">ambiente</label>
+      <select id="fAmb"></select>
+      <p class="contador"><span id="ambNota">do Monster Manual</span></p>
+    </div>
+    <div class="campo">
+      <label for="fBicho">tipo de bicho</label>
+      <select id="fBicho"></select>
+      <p class="contador"><span>14 tipos nas 385 criaturas</span></p>
+    </div>
+    <div class="campo">
+      <label for="fDif">dificuldade</label>
+      <select id="fDif">
+        <option value="facil">Fácil — alvo 85% a 95%</option>
+        <option value="media" selected>Média — alvo 65% a 80%</option>
+        <option value="dificil">Difícil — alvo 45% a 60%</option>
+      </select>
+      <p class="contador"><span>faixas a calibrar contra BALANCO.md</span></p>
+    </div>
+  </div>
+
+  <div class="sugestoes" id="sugestoes"></div>
+  <p class="explica" style="margin-top:14px">As 70 criaturas sem ambiente nenhum — 29 demônios,
+    13 constructos, 10 dragões — não são dado faltando: o livro não dá bioma a quem não é
+    nativo de bioma. Elas ficam num balde próprio, oferecido em qualquer ambiente, porque um
+    demônio cabe numa cripta tão bem quanto numa floresta.</p>
+</section>
+
+<!-- ============ 4. simular ============ -->
+<section class="secao">
+  <h2><span class="num">04</span>Medir</h2>
+  <p class="sub">Sala por sala a conta é direta. A dungeon inteira não tem número único, e o
+    estúdio não finge que tem.</p>
+
+  <div class="bancada duas">
+    <div class="painel">
+      <p class="painel-titulo"><span>Esta sala</span><span>VO07 · tier 2</span></p>
+      <div class="taxa">
+        <div class="taxa-linha"><span>grupo 5</span><div class="trilha-fina"><div style="width:74%"></div></div><span class="fim">74%</span></div>
+        <div class="taxa-linha"><span>grupo 4</span><div class="trilha-fina"><div class="medio" style="width:61%"></div></div><span class="fim">61%</span></div>
+        <div class="taxa-linha"><span>grupo 3</span><div class="trilha-fina"><div class="duro" style="width:43%"></div></div><span class="fim">43%</span></div>
+        <div class="taxa-linha"><span>grupo 2</span><div class="trilha-fina"><div class="duro" style="width:19%"></div></div><span class="fim">19%</span></div>
+      </div>
+      <p class="conta" style="margin-top:12px">
+        <span class="conta-linha"><span>rodadas, mediana</span><b>4</b></span>
+        <span class="conta-linha"><span>caídos por vitória</span><b>1,2</b></span>
+        <span class="conta-linha"><span>confrontos simulados</span><b>5 000</b></span>
+        <span class="conta-linha"><span>semente</span><b>20261110</b></span>
+      </p>
+      <p class="explica">Semente visível de propósito: dois colaboradores comparando números
+        precisam ver o mesmo número.</p>
+    </div>
+
+    <div class="faixa-dg">
+      <p class="painel-titulo"><span>A dungeon inteira</span><span>Longa · tier 2</span></p>
+      <div class="faixa-trilha">
+        <div class="faixa-corpo" style="left:31%; width:26%"></div>
+      </div>
+      <p class="escala"><span>0%</span><span>50%</span><span>100%</span></p>
+      <p class="conta" style="margin-top:14px">
+        <span class="conta-linha"><span>escolha aleatória, o piso</span><b>31%</b></span>
+        <span class="conta-linha"><span>melhor escolha possível, o teto</span><b>57%</b></span>
+      </p>
+      <p class="explica" style="margin-top:14px">HP, mana e poção atravessam as salas sem
+        resetar, então a ordem importa; e o caminho é sorteado 3 portas por parada, com os
+        jogadores escolhendo. Um número só, sem dizer qual política de escolha foi usada,
+        seria uma mentira com número em cima. Para quem escreve, a tabela sala por sala vale
+        mais que a faixa.</p>
+    </div>
+  </div>
+
+  <div class="acoes">
+    <button class="botao cheio" type="button">Exportar JSON</button>
+    <button class="botao" type="button">Ver o diff do banco</button>
+    <button class="botao" type="button">Conferir tudo</button>
+  </div>
+</section>
+
+<!-- ============ 5. pool por tema ============ -->
+<section class="secao">
+  <h2><span class="num">05</span>Onde escrever a próxima sala</h2>
+  <p class="sub">Tema por tema, quantas salas existem e que tamanhos aquilo aguenta. É o
+    relatório que diz onde falta conteúdo, em vez de a falta aparecer no dia em que uma
+    dungeon é recusada.</p>
+  <div class="rolagem">
+    <table>
+      <thead>
+        <tr><th>tema</th><th class="n">salas</th><th>Curta · 3</th><th>Média · 5</th><th>Longa · 7</th><th>3 portas sempre</th></tr>
+      </thead>
+      <tbody id="tabelaTemas"></tbody>
+    </table>
+  </div>
+  <p class="explica">Vórtice Oculto, com os temas deste rascunho. As outras três Organizações
+    ainda não têm tema escrito em sala nenhuma — o relatório delas nasce vazio, e é esse o
+    primeiro trabalho de conteúdo.</p>
+</section>
+
+<footer>
+  <p><strong>O que este rascunho é:</strong> a interação proposta, para ser corrigida antes de
+    virar código. As contas de pool, os mínimos por tamanho, os 14 nomes de sala e os números do
+    bestiário são reais. As taxas de vitória e a faixa da dungeon são exemplo — no estúdio de
+    verdade elas saem de <code>src.motor</code>, o mesmo que roda no combate.</p>
+  <p><strong>O que ele não resolve:</strong> a entrega. O colaborador ainda exporta um JSON e
+    manda para quem administra o bot. O contrato completo está em
+    <code>docs/temas-e-estudio.md</code>.</p>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* No estúdio de verdade estes dados vêm do servidor local, que lê data/bancos/*.json
+   e data/bestiario.json. Aqui estão embutidos para o rascunho rodar sozinho. */
+const TEMAS = ["urbano", "cripta", "fortaleza", "arcano", "sagrado", "natureza", "agua", "escuridao"];
+
+const BANCO = [
+  { id: "VO01", nome: "Portal Instável",         tipo: "Armadilha", temas: ["arcano", "escuridao"] },
+  { id: "VO02", nome: "Biblioteca Submersa",     tipo: "Evento",    temas: ["arcano", "agua"] },
+  { id: "VO03", nome: "Sentinelas de Pedra",     tipo: "Combate",   temas: ["fortaleza", "arcano"] },
+  { id: "VO04", nome: "Corredor dos Ecos",       tipo: "Armadilha", temas: ["escuridao", "fortaleza"] },
+  { id: "VO05", nome: "Acampamento Abandonado",  tipo: "Descanso",  temas: [], morta: true },
+  { id: "VO06", nome: "Cofre Selado",            tipo: "Tesouro",   temas: ["arcano", "fortaleza"] },
+  { id: "VO07", nome: "Ninho de Aberrações",     tipo: "Combate",   temas: ["arcano", "natureza", "cripta"] },
+  { id: "VO08", nome: "Ritual Interrompido",     tipo: "Evento",    temas: ["arcano", "sagrado"] },
+  { id: "VO09", nome: "Passagem Estreita",       tipo: "Armadilha", temas: ["escuridao", "fortaleza"] },
+  { id: "VO10", nome: "Sala dos Espelhos Tortos",tipo: "Evento",    temas: ["arcano", "escuridao"] },
+  { id: "VO11", nome: "Guardião Adormecido",     tipo: "Combate",   temas: ["fortaleza", "arcano"] },
+  { id: "VO12", nome: "Poço de Oferendas",       tipo: "Tesouro",   temas: ["sagrado", "agua"] },
+  { id: "VO13", nome: "Oficina de Âmbar",        tipo: "Combate",   temas: ["arcano", "urbano"] },
+  { id: "VO14", nome: "Necrotério do Selo",      tipo: "Combate",   temas: ["cripta", "arcano", "sagrado"] }
+];
+
+/* src/incursoes.TAMANHOS e OPCOES_POR_PASSO */
+const TAMANHOS = { "Curta": 3, "Média": 5, "Longa": 7 };
+const OPCOES = 3;
+
+/* environment do 5etools, medido em bestiary-mm.json */
+const AMBIENTES = [
+  ["forest", 135], ["underdark", 124], ["hill", 90], ["urban", 84], ["grassland", 84],
+  ["desert", 79], ["swamp", 55], ["mountain", 53], ["coastal", 48], ["arctic", 39],
+  ["underwater", 23]
+];
+const SEM_AMBIENTE = 70;
+
+/* meta.tipo, medido em data/bestiario.json */
+const BICHOS = [
+  ["humanoid", 72], ["beast", 59], ["monstrosity", 52], ["dragon", 41], ["fiend", 35],
+  ["undead", 30], ["elemental", 22], ["aberration", 19], ["construct", 15], ["giant", 13],
+  ["plant", 11], ["fey", 7], ["celestial", 5], ["ooze", 4]
+];
+
+/* tema -> ambientes prováveis (seção 9 do contrato) */
+const TEMA_AMBIENTE = {
+  urbano: ["urban"], cripta: ["underdark", "urban"],
+  fortaleza: ["hill", "mountain", "urban"], arcano: ["underdark"],
+  sagrado: ["hill", "mountain", "urban"],
+  natureza: ["forest", "grassland", "swamp", "hill"],
+  agua: ["coastal", "underwater", "swamp"], escuridao: ["underdark", "forest"]
+};
+
+const UTEIS = BANCO.filter(s => !s.morta);
+const $ = id => document.getElementById(id);
+
+/* ---------- trilho de salas ---------- */
+let salaAtiva = "VO07";
+function montarLista() {
+  $("listaSalas").innerHTML = BANCO.map(s => `
+    <li class="${s.morta ? "morta" : ""}">
+      <button type="button" class="sala-btn" data-id="${s.id}"
+        aria-current="${s.id === salaAtiva}">
+        <span class="sid">${s.id}</span><span class="snome">${s.nome}</span>
+      </button>
+    </li>`).join("");
+  $("listaSalas").querySelectorAll(".sala-btn").forEach(b => {
+    b.addEventListener("click", () => { trocarSala(b.dataset.id); });
+  });
+}
+function trocarSala(id) {
+  const s = BANCO.find(x => x.id === id);
+  if (!s) return;
+  salaAtiva = id;
+  $("fId").value = s.id;
+  $("fNome").value = s.nome;
+  $("fTipo").value = s.tipo === "Descanso" ? "Evento" : s.tipo;
+  $("idSala").textContent = s.id;
+  temasDaSala = new Set(s.temas);
+  montarLista();
+  montarFichasSala();
+  atualizarTextos();
+}
+
+/* ---------- fichas de tema na sala ---------- */
+let temasDaSala = new Set(["arcano", "natureza", "cripta"]);
+function montarFichasSala() {
+  $("fichasSala").innerHTML = TEMAS.map(t =>
+    `<button type="button" class="ficha" data-t="${t}"
+      aria-pressed="${temasDaSala.has(t)}">${t}</button>`).join("");
+  $("fichasSala").querySelectorAll(".ficha").forEach(b => {
+    b.addEventListener("click", () => {
+      const t = b.dataset.t;
+      temasDaSala.has(t) ? temasDaSala.delete(t) : temasDaSala.add(t);
+      const s = BANCO.find(x => x.id === salaAtiva);
+      if (s) s.temas = [...temasDaSala];
+      montarFichasSala(); avaliar(); montarTabelaTemas();
+    });
+  });
+}
+
+/* ---------- contadores e espelho do Discord ---------- */
+function classeContador(n, aviso, teto) {
+  if (n > teto) return "bad";
+  if (n > aviso) return "warn";
+  return "ok";
+}
+function atualizarTextos() {
+  const nome = $("fNome").value, desc = $("fDesc").value;
+  const cn = $("cNome"), cd = $("cDesc");
+  cn.textContent = nome.length;
+  cn.className = "v " + classeContador(nome.length, 80, 256);
+  cd.textContent = desc.length;
+  cd.className = "v " + classeContador(desc.length, 600, 4096);
+  const icones = { Combate: "⚔️", Armadilha: "🪤", Evento: "🎲", Tesouro: "💰" };
+  $("dTitulo").textContent = `${icones[$("fTipo").value] || "⚔️"} ${nome}`;
+  $("dCorpo").textContent = desc;
+  $("dTipo").textContent = $("fTipo").value;
+}
+
+/* ---------- filtro e veredito (conta de verdade) ---------- */
+let temasDoFiltro = new Set(["cripta", "sagrado"]);
+function montarFichasFiltro() {
+  $("fichasFiltro").innerHTML = TEMAS.map(t =>
+    `<button type="button" class="ficha" data-t="${t}"
+      aria-pressed="${temasDoFiltro.has(t)}">${t}</button>`).join("");
+  $("fichasFiltro").querySelectorAll(".ficha").forEach(b => {
+    b.addEventListener("click", () => {
+      const t = b.dataset.t;
+      temasDoFiltro.has(t) ? temasDoFiltro.delete(t) : temasDoFiltro.add(t);
+      montarFichasFiltro(); avaliar(); montarSugestoes();
+    });
+  });
+}
+
+function poolDe(temas, excluidas) {
+  // Sala sem tema nenhum serve a qualquer tema; o filtro vazio é o banco inteiro.
+  return UTEIS.filter(s => {
+    if (excluidas.includes(s.id)) return false;
+    if (temas.size === 0) return true;
+    if (s.temas.length === 0) return true;
+    return s.temas.some(t => temas.has(t));
+  });
+}
+
+function avaliar() {
+  const tam = $("fTam").value;
+  const passos = TAMANHOS[tam];
+  const folga = passos + OPCOES - 1;
+  const excluidas = $("fExcluir").value.toUpperCase().split(/[,\s]+/).filter(Boolean);
+  const pool = poolDe(temasDoFiltro, excluidas);
+  const n = pool.length;
+
+  $("contaTemas").textContent = temasDoFiltro.size ? `${temasDoFiltro.size} de 8` : "banco inteiro";
+  $("tabelaPool").innerHTML = pool.length
+    ? pool.map(s => `<tr><td><span class="sid" style="font-family:var(--mono);font-size:11.5px">${s.id}</span> ${s.nome}</td><td>${s.tipo}</td></tr>`).join("")
+    : `<tr><td colspan="2" style="color:var(--bad)">nenhuma sala entra neste filtro</td></tr>`;
+
+  const max = UTEIS.length;
+  $("barraPool").style.width = Math.min(100, (n / max) * 100) + "%";
+  $("marcaTerminar").style.left = (passos / max) * 100 + "%";
+  $("marcaFolga").style.left = Math.min(100, (folga / max) * 100) + "%";
+  $("legMarcas").textContent = `${passos} terminar · ${folga} com 3 portas`;
+
+  const selo = $("selo"), conta = $("conta"), vx = $("vExplica"), box = $("veredito");
+  let estado, texto;
+  if (n < passos) {
+    estado = "bad"; texto = "recusado";
+    vx.textContent = `Faltam ${passos - n} sala(s) para a run poder chegar ao objetivo. `
+      + `O arquivo não entra: o sorteio nunca repete sala, então o caminho trava numa parada do meio.`;
+  } else if (n < folga) {
+    estado = "warn"; texto = "passa com aviso";
+    vx.textContent = `A run termina, mas as últimas paradas oferecem menos que 3 portas. `
+      + `Faltam ${folga - n} para ter escolha cheia o caminho todo. Dungeon apertada de propósito é decisão sua.`;
+  } else {
+    estado = "ok"; texto = "liberado";
+    vx.textContent = `Sobram ${n - folga} sala(s) além do necessário para 3 portas em toda parada — `
+      + `é essa sobra que faz duas runs da mesma dungeon percorrerem caminhos diferentes.`;
+  }
+  selo.className = "selo " + estado;
+  selo.textContent = texto;
+  box.className = "veredito " + estado;
+  conta.innerHTML =
+    `<span class="conta-linha"><span>utilizáveis no banco</span><b>${max}</b></span>`
+    + `<span class="conta-linha"><span>o filtro deixa</span><b>${n}</b></span>`
+    + `<span class="conta-linha"><span>${tam} atravessa</span><b>${passos}</b></span>`
+    + `<span class="conta-linha"><span>para 3 portas sempre</span><b>${folga}</b></span>`;
+}
+
+/* ---------- sugeridor ---------- */
+function montarEixos() {
+  const sugeridos = new Set();
+  temasDoFiltro.forEach(t => (TEMA_AMBIENTE[t] || []).forEach(a => sugeridos.add(a)));
+  $("fAmb").innerHTML =
+    `<option value="">qualquer ambiente</option>`
+    + AMBIENTES.map(([a, n]) =>
+        `<option value="${a}"${sugeridos.has(a) ? " selected" : ""}>${a} — ${n}</option>`).join("")
+    + `<option value="_sem">de lugar nenhum — ${SEM_AMBIENTE}</option>`;
+  $("ambNota").textContent = sugeridos.size
+    ? `pré-filtrado por ${[...temasDoFiltro].join(", ")}`
+    : "do Monster Manual";
+  if (!$("fBicho").options.length) {
+    $("fBicho").innerHTML = `<option value="">qualquer tipo</option>`
+      + BICHOS.map(([b, n]) => `<option value="${b}">${b} — ${n}</option>`).join("");
+  }
+}
+
+const EXEMPLOS = {
+  facil:   [{ nome: "Ghoul", q: 2, cr: "1", fn: "Minion" }, { nome: "Esqueleto", q: 3, cr: "1/4", fn: "Minion" }],
+  media:   [{ nome: "Carniçal", q: 1, cr: "2", fn: "Âncora" }, { nome: "Ghoul", q: 3, cr: "1", fn: "Minion" }],
+  dificil: [{ nome: "Múmia", q: 1, cr: "3", fn: "Boss" }, { nome: "Ghast", q: 2, cr: "2", fn: "Âncora" }, { nome: "Esqueleto", q: 4, cr: "1/4", fn: "Minion" }]
+};
+const TAXAS = { facil: [91, 78], media: [74, 43], dificil: [52, 21] };
+
+function montarSugestoes() {
+  montarEixos();
+  const dif = $("fDif").value;
+  const alvo = { facil: "85–95%", media: "65–80%", dificil: "45–60%" }[dif];
+  const base = TAXAS[dif];
+  const variacoes = [0, -6, 5];
+  $("sugestoes").innerHTML = variacoes.map((d, i) => {
+    const c5 = Math.max(5, Math.min(97, base[0] + d));
+    const c3 = Math.max(2, Math.min(95, base[1] + d));
+    const cls = c5 >= 85 ? "" : (c5 >= 65 ? "medio" : "duro");
+    const bando = EXEMPLOS[dif].map(m =>
+      `<li><span>${m.q} × ${m.nome} <span class="funcao">${m.fn}</span></span>
+         <span class="cr">CR ${m.cr}</span></li>`).join("");
+    return `<div class="sug">
+      <h3>Sugestão ${i + 1}</h3>
+      <ul class="bando">${bando}</ul>
+      <div class="taxa">
+        <div class="taxa-linha"><span>grupo 5</span>
+          <div class="trilha-fina"><div class="${cls}" style="width:${c5}%"></div></div>
+          <span class="fim">${c5}%</span></div>
+        <div class="taxa-linha"><span>grupo 3</span>
+          <div class="trilha-fina"><div class="${c3 >= 65 ? "" : (c3 >= 40 ? "medio" : "duro")}" style="width:${c3}%"></div></div>
+          <span class="fim">${c3}%</span></div>
+        <p class="contador"><span>alvo ${alvo}</span><span>medido</span></p>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------- relatório de pool por tema ---------- */
+function montarTabelaTemas() {
+  $("tabelaTemas").innerHTML = TEMAS.map(t => {
+    const n = UTEIS.filter(s => s.temas.includes(t) || s.temas.length === 0).length;
+    const cel = passos => {
+      const ok = n >= passos;
+      return `<td class="cabe ${ok ? "sim" : "nao"}">${ok ? "cabe" : "falta " + (passos - n)}</td>`;
+    };
+    const folgaOk = n >= 7 + OPCOES - 1;
+    return `<tr><td class="tema">${t}</td><td class="n">${n}</td>`
+      + cel(3) + cel(5) + cel(7)
+      + `<td class="cabe ${folgaOk ? "sim" : "nao"}">${folgaOk ? "sim" : "não"}</td></tr>`;
+  }).join("");
+}
+
+/* ---------- ligar ---------- */
+["fNome", "fDesc"].forEach(id => $(id).addEventListener("input", atualizarTextos));
+$("fTipo").addEventListener("change", atualizarTextos);
+$("fTam").addEventListener("change", avaliar);
+$("fExcluir").addEventListener("input", avaliar);
+$("fDif").addEventListener("change", montarSugestoes);
+$("fAmb").addEventListener("change", montarSugestoes);
+$("fBicho").addEventListener("change", montarSugestoes);
+$("contaSalas").textContent = BANCO.length;
+
+montarLista();
+montarFichasSala();
+montarFichasFiltro();
+atualizarTextos();
+avaliar();
+montarSugestoes();
+montarTabelaTemas();
+</script>

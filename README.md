@@ -66,8 +66,14 @@ para dar a quem vai escrever dungeon. Antes de o arquivo entrar em `data/`:
 python tools/validar_conteudo.py minha_dungeon.json
 ```
 
-Não é formalidade: o bot carrega as incursões todas de uma vez, e um arquivo
-inválido faz ele subir **sem nenhuma** — não sem a do autor, sem nenhuma.
+Não é formalidade: o bot pula o arquivo inválido e segue com o resto, então a
+dungeon do autor é a que **não existe** — e o aviso sai no log e na resposta do
+`/incursao recarregar`, longe de quem escreveu.
+
+O desenho do que vem a seguir — tema na sala, filtro na dungeon e o estúdio de
+simulação — está em [docs/temas-e-estudio.md](docs/temas-e-estudio.md), com um
+rascunho navegável da tela em
+[docs/estudio-rascunho.html](docs/estudio-rascunho.html).
 
 ## Comandos
 

@@ -35,8 +35,8 @@ from ..incursoes import (
     Incursao,
     Sala,
     arquivo_da_organizacao,
-    carregar_bancos,
-    carregar_todas,
+    carregar_bancos_tolerante,
+    carregar_todas_tolerante,
     monstros_de_criatura,
 )
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
@@ -627,13 +627,32 @@ class Incursoes(commands.Cog):
         self._carregar_tolerante()
         await self.restaurar_views()
 
-    def recarregar_incursoes(self) -> None:
+    def recarregar_incursoes(self) -> list[str]:
+        """Relê o disco e devolve os problemas dos arquivos que ficaram de fora.
+
+        Tolerante por arquivo de propósito: antes, um JSON quebrado abortava o
+        carregamento inteiro e o bot subia sem NENHUMA incursão. A vírgula
+        errada de um colaborador tirava o catálogo do ar, e não só a dungeon
+        dele. Agora o arquivo ruim fica de fora sozinho — e aparece no log e na
+        resposta do `/incursao recarregar`, para não ficar de fora em silêncio.
+        """
         pasta = config.RAIZ / "data" / "incursoes"
         bancos = config.RAIZ / "data" / "bancos"
         # Sala que chama criatura pelo nome le o bestiario: ele relê junto.
         bestiario.recarregar()
-        self.incursoes = carregar_todas(pasta) if pasta.is_dir() else {}
-        self.bancos = carregar_bancos(bancos) if bancos.is_dir() else {}
+        problemas: list[str] = []
+        if pasta.is_dir():
+            self.incursoes, ruins = carregar_todas_tolerante(pasta)
+            problemas.extend(ruins)
+        else:
+            self.incursoes = {}
+        if bancos.is_dir():
+            self.bancos, ruins = carregar_bancos_tolerante(bancos)
+            problemas.extend(ruins)
+        else:
+            self.bancos = {}
+        for problema in problemas:
+            log.error("arquivo de conteúdo ficou de fora — %s", problema)
         log.info(
             "%d incursão(ões) e %d banco(s) carregados: %s",
             len(self.incursoes),
@@ -649,14 +668,22 @@ class Incursoes(commands.Cog):
                     inc.organizacao,
                     arquivo_da_organizacao(inc.organizacao),
                 )
+        return problemas
 
     def _carregar_tolerante(self) -> None:
-        """No boot, uma incursão inválida não pode impedir o bot de subir."""
+        """No boot, nada do conteúdo pode impedir o bot de subir.
+
+        A tolerância de verdade é por arquivo, dentro de `recarregar_incursoes`.
+        Este `except` é a última rede: ele pega a falha que não é de um arquivo
+        só — bestiário ilegível, pasta sem permissão — e que levaria o bot
+        inteiro junto.
+        """
         try:
             self.recarregar_incursoes()
         except Exception:
             log.exception("falha ao carregar as incursões; subindo sem nenhuma")
             self.incursoes = {}
+            self.bancos = {}
 
     async def restaurar_views(self) -> None:
         """Reativa os botões das runs que ficaram abertas antes de um restart."""
@@ -6644,14 +6671,25 @@ class Incursoes(commands.Cog):
     @app_commands.default_permissions(manage_guild=True)
     async def recarregar(self, interaction: discord.Interaction) -> None:
         try:
-            self.recarregar_incursoes()
+            problemas = self.recarregar_incursoes()
         except Exception as exc:  # JSON invalido nao pode derrubar o bot
             await interaction.response.send_message(f"Falhou: {exc}", ephemeral=True)
             return
-        await interaction.response.send_message(
+        linhas = [
             f"{len(self.incursoes)} incursão(ões) e {len(self.bancos)} banco(s) de salas: "
-            f"{', '.join(self.incursoes) or 'nenhuma'}.",
-            ephemeral=True,
+            f"{', '.join(self.incursoes) or 'nenhuma'}."
+        ]
+        if problemas:
+            # O arquivo ruim nao derruba mais o carregamento, entao ele PRECISA
+            # aparecer aqui: tolerancia silenciosa e conteudo sumindo sem aviso.
+            linhas.append(
+                f"\n**{len(problemas)} arquivo(s) ficaram de fora.** O resto carregou:"
+            )
+            linhas.extend(f"- {p}" for p in problemas[:10])
+            if len(problemas) > 10:
+                linhas.append(f"- …e mais {len(problemas) - 10}.")
+        await interaction.response.send_message(
+            "\n".join(linhas)[:1900], ephemeral=True
         )
 
     config_grupo = app_commands.Group(

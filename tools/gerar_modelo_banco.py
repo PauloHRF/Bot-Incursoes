@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.incursoes import (  # noqa: E402
     OPCOES_POR_PASSO,
     ORGANIZACOES,
+    TEMAS,
     TIPOS_SALA,
     arquivo_da_organizacao,
 )
@@ -44,7 +45,10 @@ CABECALHOS = [
     ("cd", 7, "CALCULADO a partir da dificuldade (aba Dificuldades)."),
     ("alvo_progresso", 15, "CALCULADO: soma de margens que o grupo precisa atingir."),
     ("pericias", 30, "Perícias aceitas, separadas por ';'. Vazio em Descanso e Combate."),
-    ("descricao", 62, "Texto do embed da sala."),
+    ("temas", 26, "Em que lugares esta sala cabe, separados por ';'. Marque TODOS que "
+     "servem: a dungeon filtra por tema, e sala com um tema só quase nunca é sorteada. "
+     "Vazio = cabe em qualquer tema. Valores: " + "; ".join(TEMAS) + "."),
+    ("descricao", 62, "Texto do embed da sala. O Discord recusa acima de 4096 caracteres."),
     ("imagem", 26, "Caminho em assets/ ou URL da imagem da sala."),
     ("monstro_nome", 22, "Só em salas de Combate. Nome do bestiário (ex.: Lobo, Wolf) com as "
      "colunas de número vazias = a criatura do livro. Feita à mão com multiataque, saves ou "
@@ -115,6 +119,24 @@ SALAS = [
 
 # Salas em que a mesma criatura aparece repetida (sala_id -> quantidade).
 QUANTIDADES = {"VO03": 2}
+
+# Os temas das salas de exemplo. Ficam fora da tupla de SALAS para a planilha
+# antiga não precisar ser reescrita, e cada uma leva mais de um de propósito:
+# é assim que o modelo ensina que tema é etiqueta e não gaveta.
+TEMAS_EXEMPLO = {
+    "VO01": "arcano; escuridao",
+    "VO02": "arcano; agua",
+    "VO03": "fortaleza; arcano",
+    "VO04": "escuridao; fortaleza",
+    "VO05": "",
+    "VO06": "arcano; fortaleza",
+    "VO07": "arcano; natureza; cripta",
+    "VO08": "arcano; sagrado",
+    "VO09": "escuridao; fortaleza",
+    "VO10": "arcano; escuridao",
+    "VO11": "fortaleza; arcano",
+    "VO12": "sagrado; agua",
+}
 
 # As criaturas que vao na aba 'Monstros': as de um bando misto e as que
 # mudam por tier. Com o tier preenchido, elas sao a lista DAQUELE tier; sem
@@ -193,7 +215,8 @@ def gerar(organizacao: str, destino: Path) -> Path:
     for i, sala in enumerate(SALAS, start=2):
         (sala_id, nome, tipo, dif, pericias, descricao, imagem,
          m_nome, m_ca, m_atk, m_dano, m_hp, recompensa, pontos) = sala
-        valores = [sala_id, nome, tipo, dif, None, None, pericias, descricao, imagem,
+        valores = [sala_id, nome, tipo, dif, None, None, pericias,
+                   TEMAS_EXEMPLO.get(sala_id, ""), descricao, imagem,
                    m_nome, QUANTIDADES.get(sala_id), m_ca, m_atk, m_dano, m_hp,
                    recompensa, pontos]
         for col, valor in enumerate(valores, start=1):

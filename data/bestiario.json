@@ -37,7 +37,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "mountain"
+    ]
    }
   },
   {
@@ -106,7 +109,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 5900
+    "xp": 5900,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -172,7 +178,12 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "desert",
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -212,7 +223,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "desert",
+     "grassland"
+    ]
    }
   },
   {
@@ -252,7 +267,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -299,7 +317,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -347,7 +370,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -397,7 +426,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "grassland"
+    ]
    }
   },
   {
@@ -466,7 +498,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 18000
+    "xp": 18000,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -515,7 +550,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "grassland"
+    ]
    }
   },
   {
@@ -564,7 +603,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "grassland"
+    ]
    }
   },
   {
@@ -629,7 +671,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -686,7 +731,14 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "desert",
+     "forest",
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -734,7 +786,15 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -781,7 +841,14 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "coastal",
+     "desert",
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -843,7 +910,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 8400
+    "xp": 8400,
+    "ambientes": []
    }
   },
   {
@@ -882,7 +950,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": []
    }
   },
   {
@@ -969,7 +1038,10 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 8400
+    "xp": 8400,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -1027,7 +1099,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -1088,7 +1163,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -1130,7 +1208,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -1198,7 +1277,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 22000
+    "xp": 22000,
+    "ambientes": []
    }
   },
   {
@@ -1244,7 +1324,15 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "hill",
+     "urban"
+    ]
    }
   },
   {
@@ -1298,7 +1386,11 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "coastal",
+     "forest"
+    ]
    }
   },
   {
@@ -1345,7 +1437,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": []
    }
   },
   {
@@ -1392,7 +1485,11 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -1441,7 +1538,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "mountain"
+    ]
    }
   },
   {
@@ -1479,7 +1579,18 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -1551,7 +1662,10 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -1598,7 +1712,15 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -1635,7 +1757,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -1685,7 +1811,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -1746,7 +1875,12 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "forest",
+     "hill",
+     "swamp"
+    ]
    }
   },
   {
@@ -1804,7 +1938,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": []
    }
   },
   {
@@ -1857,7 +1992,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -1907,7 +2046,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "underdark"
+    ]
    }
   },
   {
@@ -1960,7 +2104,12 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -2000,7 +2149,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "swamp"
+    ]
    }
   },
   {
@@ -2046,7 +2198,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -2101,7 +2258,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -2147,7 +2307,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -2194,7 +2357,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -2241,7 +2407,15 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "hill",
+     "urban"
+    ]
    }
   },
   {
@@ -2302,7 +2476,14 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "underdark"
+    ]
    }
   },
   {
@@ -2340,7 +2521,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "coastal"
+    ]
    }
   },
   {
@@ -2398,7 +2582,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -2447,7 +2636,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -2519,7 +2711,8 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": []
    }
   },
   {
@@ -2582,7 +2775,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 18000
+    "xp": 18000,
+    "ambientes": []
    }
   },
   {
@@ -2629,7 +2823,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -2675,7 +2872,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "grassland",
+     "urban"
+    ]
    }
   },
   {
@@ -2722,7 +2923,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -2763,7 +2967,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "grassland"
+    ]
    }
   },
   {
@@ -2808,7 +3016,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -2861,7 +3073,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "desert",
+     "grassland"
+    ]
    }
   },
   {
@@ -2918,7 +3134,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": []
    }
   },
   {
@@ -2959,7 +3176,12 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "underdark"
+    ]
    }
   },
   {
@@ -3013,7 +3235,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill",
+     "underdark"
+    ]
    }
   },
   {
@@ -3062,7 +3290,16 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "arctic",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -3104,7 +3341,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -3151,7 +3391,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -3206,7 +3449,15 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "coastal",
+     "desert",
+     "grassland",
+     "hill",
+     "mountain",
+     "underdark"
+    ]
    }
   },
   {
@@ -3256,7 +3507,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "desert",
+     "forest",
+     "swamp",
+     "underwater"
+    ]
    }
   },
   {
@@ -3306,7 +3563,14 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "desert",
+     "forest",
+     "swamp",
+     "underdark",
+     "underwater"
+    ]
    }
   },
   {
@@ -3360,7 +3624,15 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "coastal",
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "swamp"
+    ]
    }
   },
   {
@@ -3417,7 +3689,15 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -3455,7 +3735,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "urban"
+    ]
    }
   },
   {
@@ -3497,7 +3783,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -3544,7 +3833,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "grassland"
+    ]
    }
   },
   {
@@ -3600,7 +3892,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -3638,7 +3933,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "arctic",
+     "forest",
+     "hill"
+    ]
    }
   },
   {
@@ -3685,7 +3985,13 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "urban"
+    ]
    }
   },
   {
@@ -3741,7 +4047,11 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -3779,7 +4089,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "swamp",
+     "urban"
+    ]
    }
   },
   {
@@ -3843,7 +4157,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "swamp"
+    ]
    }
   },
   {
@@ -3903,7 +4220,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -3956,7 +4276,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -4007,7 +4330,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -4061,7 +4387,11 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "mountain",
+     "underdark"
+    ]
    }
   },
   {
@@ -4100,7 +4430,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -4148,7 +4481,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -4213,7 +4549,10 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -4281,7 +4620,8 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 20000
+    "xp": 20000,
+    "ambientes": []
    }
   },
   {
@@ -4332,7 +4672,8 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": []
    }
   },
   {
@@ -4395,7 +4736,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 5900
+    "xp": 5900,
+    "ambientes": []
    }
   },
   {
@@ -4445,7 +4787,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -4506,7 +4851,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -4567,7 +4915,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -4640,7 +4991,8 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": []
    }
   },
   {
@@ -4689,7 +5041,8 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": []
    }
   },
   {
@@ -4750,7 +5103,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": []
    }
   },
   {
@@ -4799,7 +5153,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -4862,7 +5217,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": []
    }
   },
   {
@@ -4929,7 +5285,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 11500
+    "xp": 11500,
+    "ambientes": []
    }
   },
   {
@@ -4988,7 +5345,8 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": []
    }
   },
   {
@@ -5037,7 +5395,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": []
    }
   },
   {
@@ -5100,7 +5459,10 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": [
+     "coastal"
+    ]
    }
   },
   {
@@ -5138,7 +5500,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -5189,7 +5556,11 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -5265,7 +5636,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 18000
+    "xp": 18000,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -5337,7 +5711,11 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 15000
+    "xp": 15000,
+    "ambientes": [
+     "coastal",
+     "desert"
+    ]
    }
   },
   {
@@ -5393,7 +5771,11 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": [
+     "coastal",
+     "desert"
+    ]
    }
   },
   {
@@ -5466,7 +5848,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -5526,7 +5911,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -5578,7 +5966,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -5630,7 +6021,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -5682,7 +6076,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -5734,7 +6131,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -5786,7 +6186,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -5838,7 +6241,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -5890,7 +6296,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -5963,7 +6372,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 11500
+    "xp": 11500,
+    "ambientes": [
+     "swamp"
+    ]
    }
   },
   {
@@ -6023,7 +6435,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "swamp"
+    ]
    }
   },
   {
@@ -6096,7 +6511,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 13000
+    "xp": 13000,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -6156,7 +6574,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -6229,7 +6650,11 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 18000
+    "xp": 18000,
+    "ambientes": [
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -6292,7 +6717,11 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 5900
+    "xp": 5900,
+    "ambientes": [
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -6355,7 +6784,10 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -6427,7 +6859,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 13000
+    "xp": 13000,
+    "ambientes": [
+     "coastal"
+    ]
    }
   },
   {
@@ -6492,7 +6927,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "coastal"
+    ]
    }
   },
   {
@@ -6565,7 +7003,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 11500
+    "xp": 11500,
+    "ambientes": [
+     "hill"
+    ]
    }
   },
   {
@@ -6624,7 +7065,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "hill"
+    ]
    }
   },
   {
@@ -6697,7 +7141,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -6756,7 +7203,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -6829,7 +7279,11 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 18000
+    "xp": 18000,
+    "ambientes": [
+     "forest",
+     "grassland"
+    ]
    }
   },
   {
@@ -6895,7 +7349,11 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 5900
+    "xp": 5900,
+    "ambientes": [
+     "forest",
+     "grassland"
+    ]
    }
   },
   {
@@ -6968,7 +7426,11 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 15000
+    "xp": 15000,
+    "ambientes": [
+     "mountain",
+     "urban"
+    ]
    }
   },
   {
@@ -7027,7 +7489,11 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": [
+     "mountain",
+     "urban"
+    ]
    }
   },
   {
@@ -7080,7 +7546,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": []
    }
   },
   {
@@ -7142,7 +7609,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -7204,7 +7674,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -7254,7 +7727,18 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -7304,7 +7788,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -7347,7 +7834,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -7395,7 +7885,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": []
    }
   },
   {
@@ -7463,7 +7954,10 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -7510,7 +8004,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "grassland"
+    ]
    }
   },
   {
@@ -7569,7 +8066,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -7627,7 +8127,12 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "coastal",
+     "swamp",
+     "underwater"
+    ]
    }
   },
   {
@@ -7685,7 +8190,11 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "desert",
+     "mountain"
+    ]
    }
   },
   {
@@ -7744,7 +8253,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -7809,7 +8321,10 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -7873,7 +8388,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 8400
+    "xp": 8400,
+    "ambientes": []
    }
   },
   {
@@ -7920,7 +8436,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -7958,7 +8477,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": []
    }
   },
   {
@@ -8008,7 +8528,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "grassland"
+    ]
    }
   },
   {
@@ -8067,7 +8590,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -8117,7 +8643,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -8156,7 +8686,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -8197,7 +8730,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -8260,7 +8796,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -8325,7 +8864,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -8375,7 +8917,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -8414,7 +8959,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": []
    }
   },
   {
@@ -8455,7 +9001,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -8511,7 +9060,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -8558,7 +9110,12 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "hill",
+     "mountain",
+     "underdark"
+    ]
    }
   },
   {
@@ -8609,7 +9166,11 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -8663,7 +9224,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -8711,7 +9275,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -8761,7 +9328,8 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": []
    }
   },
   {
@@ -8814,7 +9382,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -8865,7 +9434,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -8919,7 +9489,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -8970,7 +9541,8 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": []
    }
   },
   {
@@ -9021,7 +9593,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -9071,7 +9644,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": []
    }
   },
   {
@@ -9121,7 +9695,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": []
    }
   },
   {
@@ -9172,7 +9747,8 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": []
    }
   },
   {
@@ -9222,7 +9798,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -9271,7 +9848,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -9310,7 +9890,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "swamp",
+     "urban"
+    ]
    }
   },
   {
@@ -9365,7 +9950,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -9422,7 +10010,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -9469,7 +10060,11 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -9508,7 +10103,15 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -9547,7 +10150,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -9604,7 +10210,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "hill"
+    ]
    }
   },
   {
@@ -9671,7 +10280,12 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "hill",
+     "mountain",
+     "underdark"
+    ]
    }
   },
   {
@@ -9735,7 +10349,11 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -9793,7 +10411,10 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": [
+     "mountain"
+    ]
    }
   },
   {
@@ -9851,7 +10472,11 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": [
+     "mountain",
+     "underdark"
+    ]
    }
   },
   {
@@ -9919,7 +10544,11 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "arctic",
+     "mountain"
+    ]
    }
   },
   {
@@ -9989,7 +10618,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -10047,7 +10679,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": []
    }
   },
   {
@@ -10103,7 +10736,8 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": []
    }
   },
   {
@@ -10165,7 +10799,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -10215,7 +10852,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -10262,7 +10905,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -10316,7 +10962,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill",
+     "underdark"
+    ]
    }
   },
   {
@@ -10380,7 +11032,8 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": []
    }
   },
   {
@@ -10451,7 +11104,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": []
    }
   },
   {
@@ -10517,7 +11171,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 15000
+    "xp": 15000,
+    "ambientes": []
    }
   },
   {
@@ -10606,7 +11261,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 5900
+    "xp": 5900,
+    "ambientes": []
    }
   },
   {
@@ -10675,7 +11331,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 18000
+    "xp": 18000,
+    "ambientes": []
    }
   },
   {
@@ -10721,7 +11378,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -10776,7 +11436,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -10816,7 +11479,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "underdark"
+    ]
    }
   },
   {
@@ -10870,7 +11537,11 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "forest",
+     "underdark"
+    ]
    }
   },
   {
@@ -10911,7 +11582,14 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -10953,7 +11631,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -10999,7 +11680,16 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "coastal",
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "urban"
+    ]
    }
   },
   {
@@ -11061,7 +11751,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -11103,7 +11796,8 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": []
    }
   },
   {
@@ -11142,7 +11836,18 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -11207,7 +11912,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -11250,7 +11958,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -11306,7 +12018,12 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -11355,7 +12072,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "coastal",
+     "forest",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -11412,7 +12135,8 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": []
    }
   },
   {
@@ -11482,7 +12206,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "swamp"
+    ]
    }
   },
   {
@@ -11522,7 +12249,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -11563,7 +12296,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -11612,7 +12350,14 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "underdark"
+    ]
    }
   },
   {
@@ -11665,7 +12410,12 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -11718,7 +12468,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "urban"
+    ]
    }
   },
   {
@@ -11779,7 +12533,12 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland"
+    ]
    }
   },
   {
@@ -11846,7 +12605,12 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "arctic",
+     "forest",
+     "hill"
+    ]
    }
   },
   {
@@ -11885,7 +12649,8 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": []
    }
   },
   {
@@ -11925,7 +12690,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -11964,7 +12732,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -12012,7 +12785,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -12060,7 +12838,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest",
+     "urban"
+    ]
    }
   },
   {
@@ -12102,7 +12884,18 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -12144,7 +12937,18 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -12186,7 +12990,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -12223,7 +13030,14 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "coastal",
+     "desert",
+     "forest",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -12279,7 +13093,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -12327,7 +13144,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "desert",
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -12380,7 +13203,11 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "forest",
+     "hill"
+    ]
    }
   },
   {
@@ -12427,7 +13254,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -12477,7 +13309,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "forest",
+     "hill"
+    ]
    }
   },
   {
@@ -12534,7 +13370,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -12591,7 +13430,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -12650,7 +13492,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -12688,7 +13535,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -12750,7 +13600,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -12791,7 +13644,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": []
    }
   },
   {
@@ -12865,7 +13719,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -12941,7 +13798,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -12995,7 +13855,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -13044,7 +13907,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": []
    }
   },
   {
@@ -13093,7 +13957,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -13141,7 +14008,14 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -13228,7 +14102,11 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -13288,7 +14166,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 15000
+    "xp": 15000,
+    "ambientes": []
    }
   },
   {
@@ -13327,7 +14206,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "forest",
+     "hill",
+     "urban"
+    ]
    }
   },
   {
@@ -13382,7 +14266,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -13424,7 +14311,16 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "arctic",
+     "desert",
+     "forest",
+     "hill",
+     "mountain",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -13467,7 +14363,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -13522,7 +14421,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -13575,7 +14477,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "swamp"
+    ]
    }
   },
   {
@@ -13628,7 +14533,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -13681,7 +14589,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -13734,7 +14645,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "underwater"
+    ]
    }
   },
   {
@@ -13773,7 +14687,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -13820,7 +14738,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": []
    }
   },
   {
@@ -13867,7 +14786,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -13909,7 +14831,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -13959,7 +14882,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -13999,7 +14925,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": []
    }
   },
   {
@@ -14038,7 +14965,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -14109,7 +15039,11 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -14147,7 +15081,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest",
+     "underdark"
+    ]
    }
   },
   {
@@ -14186,7 +15124,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "desert",
+     "hill",
+     "urban"
+    ]
    }
   },
   {
@@ -14238,7 +15181,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -14291,7 +15237,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -14344,7 +15293,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -14401,7 +15354,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -14474,7 +15430,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -14564,7 +15523,11 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 5900
+    "xp": 5900,
+    "ambientes": [
+     "desert",
+     "forest"
+    ]
    }
   },
   {
@@ -14613,7 +15576,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -14654,7 +15620,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -14716,7 +15685,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": []
    }
   },
   {
@@ -14762,7 +15732,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -14813,7 +15786,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -14860,7 +15836,8 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": []
    }
   },
   {
@@ -14933,7 +15910,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -14983,7 +15963,18 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -15034,7 +16025,16 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -15098,7 +16098,11 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": [
+     "forest",
+     "urban"
+    ]
    }
   },
   {
@@ -15146,7 +16150,16 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "arctic",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -15195,7 +16208,15 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "underdark"
+    ]
    }
   },
   {
@@ -15249,7 +16270,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -15295,7 +16319,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -15345,7 +16374,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -15384,7 +16414,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -15425,7 +16458,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -15467,7 +16504,8 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": []
    }
   },
   {
@@ -15517,7 +16555,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -15580,7 +16621,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 15000
+    "xp": 15000,
+    "ambientes": []
    }
   },
   {
@@ -15621,7 +16663,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -15662,7 +16708,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -15710,7 +16760,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -15761,7 +16814,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -15811,7 +16867,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -15854,7 +16913,13 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -15911,7 +16976,15 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "coastal",
+     "desert",
+     "forest",
+     "hill",
+     "mountain",
+     "urban"
+    ]
    }
   },
   {
@@ -15959,7 +17032,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "coastal",
+     "grassland",
+     "mountain"
+    ]
    }
   },
   {
@@ -16007,7 +17085,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -16046,7 +17127,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -16092,7 +17178,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -16133,7 +17222,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": []
    }
   },
   {
@@ -16175,7 +17265,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -16226,7 +17319,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": []
    }
   },
   {
@@ -16290,7 +17384,13 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "grassland",
+     "hill",
+     "mountain",
+     "underdark"
+    ]
    }
   },
   {
@@ -16332,7 +17432,11 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -16393,7 +17497,10 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -16442,7 +17549,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -16481,7 +17591,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "forest",
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -16523,7 +17639,11 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -16590,7 +17710,10 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -16637,7 +17760,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -16692,7 +17818,15 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "arctic",
+     "desert",
+     "forest",
+     "hill",
+     "swamp",
+     "urban"
+    ]
    }
   },
   {
@@ -16739,7 +17873,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "grassland"
+    ]
    }
   },
   {
@@ -16799,7 +17936,14 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 7200
+    "xp": 7200,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "desert",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -16837,7 +17981,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -16886,7 +18034,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -16945,7 +18096,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -16986,7 +18140,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -17026,7 +18184,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -17074,7 +18236,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -17121,7 +18286,14 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "coastal",
+     "desert",
+     "forest",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -17168,7 +18340,14 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "underdark"
+    ]
    }
   },
   {
@@ -17219,7 +18398,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -17288,7 +18473,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 13000
+    "xp": 13000,
+    "ambientes": [
+     "desert"
+    ]
    }
   },
   {
@@ -17342,7 +18530,11 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": [
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -17381,7 +18573,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -17437,7 +18632,8 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 2900
+    "xp": 2900,
+    "ambientes": []
    }
   },
   {
@@ -17494,7 +18690,10 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -17561,7 +18760,8 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": []
    }
   },
   {
@@ -17618,7 +18818,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": []
    }
   },
   {
@@ -17683,7 +18884,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 5900
+    "xp": 5900,
+    "ambientes": []
    }
   },
   {
@@ -17745,7 +18947,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -17801,7 +19007,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -17847,7 +19056,18 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "coastal",
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -17885,7 +19105,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -17938,7 +19161,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -17986,7 +19212,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -18049,7 +19276,11 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 18000
+    "xp": 18000,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -18087,7 +19318,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -18129,7 +19363,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -18178,7 +19415,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "desert",
+     "grassland"
+    ]
    }
   },
   {
@@ -18225,7 +19466,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "forest",
+     "grassland"
+    ]
    }
   },
   {
@@ -18273,7 +19518,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "mountain"
+    ]
    }
   },
   {
@@ -18346,7 +19595,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 11500
+    "xp": 11500,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -18410,7 +19662,10 @@
     ],
     "num_acoes": 2,
     "tier": 4,
-    "xp": 3900
+    "xp": 3900,
+    "ambientes": [
+     "grassland"
+    ]
    }
   },
   {
@@ -18466,7 +19721,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "grassland"
+    ]
    }
   },
   {
@@ -18506,7 +19764,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": []
    }
   },
   {
@@ -18546,7 +19805,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 25
+    "xp": 25,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ]
    }
   },
   {
@@ -18594,7 +19857,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -18657,7 +19923,15 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "arctic",
+     "forest",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark"
+    ]
    }
   },
   {
@@ -18719,7 +19993,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": []
    }
   },
   {
@@ -18771,7 +20046,10 @@
     ],
     "num_acoes": 3,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -18819,7 +20097,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -18865,7 +20146,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -18912,7 +20196,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "arctic",
+     "forest",
+     "hill"
+    ]
    }
   },
   {
@@ -18959,7 +20248,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "arctic",
+     "underdark"
+    ]
    }
   },
   {
@@ -19007,7 +20300,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "underdark"
+    ]
    }
   },
   {
@@ -19086,7 +20383,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 10000
+    "xp": 10000,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -19164,7 +20464,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 13000
+    "xp": 13000,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -19240,7 +20543,10 @@
     ],
     "num_acoes": 4,
     "tier": 5,
-    "xp": 13000
+    "xp": 13000,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -19303,7 +20609,11 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 13000
+    "xp": 13000,
+    "ambientes": [
+     "desert",
+     "underdark"
+    ]
    }
   },
   {
@@ -19348,7 +20658,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "urban"
+    ]
    }
   },
   {
@@ -19388,7 +20703,17 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -19455,7 +20780,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": []
    }
   },
   {
@@ -19514,7 +20840,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": []
    }
   },
   {
@@ -19562,7 +20889,13 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "desert",
+     "swamp",
+     "underdark",
+     "urban"
+    ]
    }
   },
   {
@@ -19603,7 +20936,12 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 100
+    "xp": 100,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill"
+    ]
    }
   },
   {
@@ -19645,7 +20983,11 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -19693,7 +21035,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -19744,7 +21089,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -19805,7 +21153,10 @@
     ],
     "num_acoes": 2,
     "tier": 5,
-    "xp": 5000
+    "xp": 5000,
+    "ambientes": [
+     "arctic"
+    ]
    }
   },
   {
@@ -19872,7 +21223,8 @@
     ],
     "num_acoes": 3,
     "tier": 5,
-    "xp": 5900
+    "xp": 5900,
+    "ambientes": []
    }
   },
   {
@@ -19922,7 +21274,12 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "desert",
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -19972,7 +21329,12 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "desert",
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -20022,7 +21384,12 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 700
+    "xp": 700,
+    "ambientes": [
+     "desert",
+     "forest",
+     "swamp"
+    ]
    }
   },
   {
@@ -20072,7 +21439,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "desert",
+     "forest",
+     "swamp",
+     "urban"
+    ]
    }
   },
   {
@@ -20120,7 +21493,8 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 2300
+    "xp": 2300,
+    "ambientes": []
    }
   },
   {
@@ -20178,7 +21552,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 50
+    "xp": 50,
+    "ambientes": [
+     "urban"
+    ]
    }
   },
   {
@@ -20245,7 +21622,10 @@
     ],
     "num_acoes": 2,
     "tier": 3,
-    "xp": 1800
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ]
    }
   },
   {
@@ -20286,7 +21666,8 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": []
    }
   },
   {
@@ -20325,7 +21706,13 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 200
+    "xp": 200,
+    "ambientes": [
+     "coastal",
+     "grassland",
+     "hill",
+     "mountain"
+    ]
    }
   },
   {
@@ -20367,7 +21754,10 @@
     ],
     "num_acoes": 1,
     "tier": 1,
-    "xp": 450
+    "xp": 450,
+    "ambientes": [
+     "forest"
+    ]
    }
   },
   {
@@ -20420,7 +21810,10 @@
     ],
     "num_acoes": 1,
     "tier": 2,
-    "xp": 1100
+    "xp": 1100,
+    "ambientes": [
+     "urban"
+    ]
    }
   }
  ]

@@ -29,6 +29,11 @@ COLUNAS = (
     "descricao", "imagem", "monstro_nome", "monstro_quantidade", "monstro_ca",
     "monstro_ataque", "monstro_dano", "monstro_hp", "recompensa", "pontos_organizacao",
 )
+
+# Colunas da aba 'Salas' que entraram depois. Opcionais pelo mesmo motivo que
+# 'tier' e as colunas novas de criatura: uma planilha feita antes delas tem que
+# continuar importando, e a sala sai sem o campo.
+COLUNAS_OPCIONAIS = ("temas",)
 COLUNAS_MONSTROS = ("sala_id", "nome", "quantidade", "ca", "ataque", "dano", "hp")
 
 # As colunas novas das criaturas (multiataque, resistencias, acao especial) sao
@@ -95,6 +100,9 @@ def ler_salas(wb, dificuldades) -> list[dict[str, Any]]:
         nome = f"monstro_{extra}"
         if chave_comparacao(nome) in cabecalho:
             col[nome] = cabecalho.index(chave_comparacao(nome))
+    for nome in COLUNAS_OPCIONAIS:
+        if chave_comparacao(nome) in cabecalho:
+            col[nome] = cabecalho.index(chave_comparacao(nome))
 
     salas = []
     for numero, celulas in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
@@ -132,6 +140,14 @@ def ler_salas(wb, dificuldades) -> list[dict[str, Any]]:
                 p.strip()
                 for p in _texto(valor("pericias")).replace(",", ";").split(";")
                 if p.strip()
+            ],
+            # Coluna nova e opcional, como 'tier' na aba Monstros: planilha
+            # feita antes do tema importa igual, e a sala sai sem tema — que
+            # vale como "cabe em qualquer um".
+            "temas": [
+                t.strip()
+                for t in _texto(valor("temas")).replace(",", ";").split(";")
+                if t.strip()
             ],
             "imagem": _texto(valor("imagem")) or None,
             "recompensa": _texto(valor("recompensa")) or None,
