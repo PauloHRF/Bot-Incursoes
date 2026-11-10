@@ -38,6 +38,7 @@ from src.incursoes import (  # noqa: E402
     ErroDeValidacao,
     arquivo_da_organizacao,
     banco_de_dict,
+    conferir_filtro,
     de_dict,
 )
 
@@ -57,8 +58,13 @@ def _tipo_do_arquivo(dados: dict) -> str:
 
     Olha o CONTEÚDO e não a pasta, porque quem escreve conteúdo valida o
     arquivo onde ele está — na área de trabalho, antes de mandar.
+
+    Exige LISTA, e não só a presença da chave: o filtro da incursão já se
+    chamou `salas` e fez toda incursão ser lida como banco. O filtro agora se
+    chama `filtro`, mas a checagem fica estrita — é de graça, e esse tipo de
+    colisão volta.
     """
-    if "salas" in dados:
+    if isinstance(dados.get("salas"), list):
         return "banco"
     return "incursao"
 
@@ -111,17 +117,27 @@ def avisos(caminho: Path, bruto: dict) -> list[str]:
                 sala.get("descricao"), AVISO_DESCRICAO_SALA, LIMITE_DESCRICAO,
                 f"a descrição de {onde}",
             )
+        # A sala de Descanso do banco NAO e sorteada, e nao e por isso que ela
+        # e inutil: a parada fixa de descanso usa a ficcao dela (a Cela do
+        # Coveiro da Guilda, a Adega Falsa das Sombras). Banco sem nenhuma faz
+        # o grupo seguir SEM DESCANSAR, que e a unica cura garantida da Media.
         descansos = [
             s.get("id") for s in bruto.get("salas") or []
             if str(s.get("tipo") or "").strip().lower().startswith("descans")
         ]
-        if descansos:
+        if not descansos:
             saida.append(
-                "sala(s) de Descanso no banco "
-                f"({', '.join(str(d) for d in descansos)}): elas NÃO são "
-                "sorteadas. O descanso virou parada fixa do caminho — a Média "
-                "tem um, a Longa tem dois — e sala de Descanso escrita à mão "
-                "fica no arquivo sem nunca aparecer no jogo."
+                "o banco não tem sala de Descanso. A parada fixa de descanso "
+                "usa a sala de Descanso do banco como cenário — sem nenhuma, o "
+                "grupo chega na parada e SEGUE SEM DESCANSAR, perdendo a única "
+                "cura garantida da Média. Escreva uma."
+            )
+        elif len(descansos) > 1:
+            saida.append(
+                f"o banco tem {len(descansos)} salas de Descanso "
+                f"({', '.join(str(d) for d in descansos)}). Só a primeira é "
+                f"usada — as outras ficam no arquivo sem aparecer no jogo, "
+                f"porque Descanso não entra no sorteio."
             )
         return saida
 
@@ -145,6 +161,31 @@ def avisos(caminho: Path, bruto: dict) -> list[str]:
                 f"caminho não tem de onde sortear sala e a run não começa."
             )
     return saida
+
+
+def cruzar_com_o_banco(bruto: dict) -> tuple[list[str], list[str]]:
+    """O filtro desta incursão contra o banco da Organização dela.
+
+    A única conferência que precisa dos DOIS arquivos: `de_dict` valida a
+    incursão sozinha e `banco_de_dict` valida o banco sozinho, e "este filtro
+    deixa sala suficiente?" não cabe em nenhum dos dois.
+
+    Devolve ([], []) quando não dá para cruzar — incursão inválida, banco
+    ausente ou banco inválido. Nesses casos o problema já é outro, e já foi
+    relatado.
+    """
+    try:
+        incursao = de_dict(bruto)
+    except ErroDeValidacao:
+        return [], []
+    try:
+        caminho = PASTA_BANCOS / f"{arquivo_da_organizacao(incursao.organizacao)}.json"
+        if not caminho.exists():
+            return [], []
+        banco = banco_de_dict(json.loads(caminho.read_text(encoding="utf-8")))
+    except (ErroDeValidacao, OSError, json.JSONDecodeError):
+        return [], []
+    return conferir_filtro(incursao, banco)
 
 
 def main() -> int:
@@ -173,6 +214,10 @@ def main() -> int:
         except Exception:
             bruto = {}
         recados = avisos(caminho, bruto) if isinstance(bruto, dict) else []
+        if isinstance(bruto, dict) and _tipo_do_arquivo(bruto) == "incursao":
+            cruzados, recados_cruzados = cruzar_com_o_banco(bruto)
+            problemas = problemas + cruzados
+            recados = recados + recados_cruzados
         nome = caminho.name
         if problemas:
             com_problema += 1
@@ -190,8 +235,9 @@ def main() -> int:
     if com_problema:
         print(
             f"{com_problema} de {len(alvos)} arquivo(s) com problema. Nenhum "
-            f"deles pode entrar em data/: o bot pula o arquivo invalido, entao "
-            f"a dungeon simplesmente NAO EXISTE para quem for jogar."
+            f"deles pode entrar em data/: o bot pula o arquivo invalido e tira "
+            f"do catalogo a dungeon cujo filtro nao fecha, entao ela "
+            f"simplesmente NAO EXISTE para quem for jogar."
         )
         return 1
     print(f"{len(alvos)} arquivo(s) conferido(s), nenhum problema.")

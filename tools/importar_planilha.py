@@ -32,6 +32,10 @@ from src.rules import chave_comparacao  # noqa: E402
 CAMPOS_META = (
     "id", "nome", "organizacao", "tamanho", "tier", "lore_inicial", "lore_final",
     "imagem_capa", "recompensa_mes", "pontos_conclusao",
+    # O filtro de salas. Linhas novas na aba de chave/valor: a planilha feita
+    # antes delas nao tem as chaves, `_ler_chave_valor` devolve vazio e a
+    # incursao sai sem filtro — que e o banco inteiro, como sempre foi.
+    "filtro_temas", "filtro_incluir", "filtro_excluir",
 )
 CAMPOS_OBJETIVO = (
     "sala_id", "nome", "tipo", "descricao", "imagem", "monstro_nome",
@@ -142,6 +146,14 @@ def importar(planilha: Path, saida: Path) -> Path:
         "pontos_conclusao": meta.get("pontos_conclusao"),
         "objetivo": objetivo,
     }
+    # So escreve o filtro quando ha alguma coisa nele: incursao sem filtro nao
+    # ganha um campo vazio no JSON.
+    filtro = {
+        chave: _texto(meta.get(f"filtro_{chave}"))
+        for chave in ("temas", "incluir", "excluir")
+    }
+    if any(filtro.values()):
+        dados["filtro"] = {k: v for k, v in filtro.items() if v}
 
     incursao = de_dict(dados)  # levanta ErroDeValidacao com a lista de problemas
 

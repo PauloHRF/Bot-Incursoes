@@ -83,6 +83,48 @@ Exemplo mínimo que carrega — tudo que não está aqui é opcional:
 | `lore_final` | não | o epílogo, lido quando o grupo conclui |
 | `pontos_conclusao` | não (`10`) | pontos para a Organização ao concluir |
 | `imagem_capa` | não | URL da imagem do cartão de abertura |
+| `filtro` | não | quais salas do banco esta incursão sorteia (abaixo) |
+
+### `filtro` — escolher as salas do caminho
+
+Sem o campo, a incursão sorteia o banco inteiro. Com ele, três etapas nesta
+ordem:
+
+```json
+"filtro": {
+  "temas": ["cripta", "sagrado"],
+  "excluir": ["VO12"]
+}
+```
+
+| Campo | O que faz |
+| --- | --- |
+| `temas` | a sala entra se tiver **qualquer** um deles. É OU, não E |
+| `incluir` | quando existe, **ele é o pool** — e `temas` não vale junto |
+| `excluir` | tira as listadas, sempre por último, inclusive de `incluir` |
+
+**O filtro precisa deixar sala suficiente, e isso é recusa e não aviso.** O
+sorteio nunca repete sala: uma Longa atravessa 7, então o pool filtrado precisa
+de 7 para a run poder terminar e de 9 para oferecer 3 portas em toda parada.
+Abaixo de 7 o arquivo é recusado — e se entrar em `data/` assim mesmo, o bot
+tira a dungeon do catálogo em vez de deixá-la travar na parada 4 com o grupo
+dentro. Entre 7 e 8 passa com aviso: dungeon apertada de propósito é decisão
+sua.
+
+| tamanho | para terminar | para 3 portas sempre |
+| --- | --- | --- |
+| `Curta` | 3 | 5 |
+| `Média` | 5 | 7 |
+| `Longa` | 7 | 9 |
+
+Essa conta é a **única** que precisa dos dois arquivos ao mesmo tempo, então
+ela só aparece quando o banco da Organização está junto: rodando o validador
+na pasta, ou com o arquivo já em `data/`.
+
+Uma armadilha que o validador avisa: **sala sem tema escrito entra em qualquer
+filtro.** Num banco ainda não etiquetado, `"temas": ["cripta"]` não tira nada —
+o filtro parece funcionar e não filtra. `python tools/relatorio_de_pool.py`
+mostra quantas salas de cada tema existem de verdade.
 
 As quatro Organizações: **Vórtice Oculto**, **Aliança das Sombras**, **Guilda
 dos Mortos**, **Sentinelas do Alvorecer**. Acento e maiúscula não importam na
@@ -165,9 +207,12 @@ bestiário tem 385, de CR 0 a 20) ou escreva `monstros_por_tier`. Já existiu um
 multiplicador aqui, e ele transformava cinco Gárgulas de 52 HP em 416 HP numa
 sala de tier 2.
 
-**Não escreva sala de `Descanso`.** O descanso deixou de ser sorteado e virou
-parada fixa do caminho. Uma sala de Descanso no banco fica no arquivo sem nunca
-aparecer no jogo — o validador avisa quando encontra uma.
+**O banco precisa de exatamente uma sala de `Descanso`, e ela não é
+sorteada.** O descanso virou parada fixa do caminho, mas a ficção dessa parada
+é a sala de Descanso do banco — a Cela do Coveiro da Guilda, a Adega Falsa das
+Sombras. Banco sem nenhuma faz o grupo chegar na parada e **seguir sem
+descansar**, perdendo a única cura garantida da Média. Da segunda em diante só
+a primeira é usada, então escreva uma só. O validador avisa nos dois casos.
 
 ### `temas` — em que lugares a sala cabe
 

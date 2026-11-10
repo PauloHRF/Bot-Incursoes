@@ -21,6 +21,7 @@ from fakes import (  # noqa: E402
     atravessar_o_caminho,
     criar_grupo,
     montar_conteudo,
+    sala,
     salas_sem_combate,
 )
 
@@ -128,6 +129,33 @@ async def caso_sala_visitada_nao_volta():
     print("  sala visitada não volta a ser oferecida: ok")
 
 
+async def caso_o_filtro_da_incursao_limita_o_sorteio():
+    """A incursão com filtro só recebe as salas que o filtro deixa.
+
+    É o único teste que atravessa o caminho de verdade com um filtro: o
+    `conferir_filtro` prova a conta, e este prova que a conta chega no sorteio.
+    """
+    conn, canal, cog = await preparar()
+    do_tema = ["E1", "E2", "E3", "E4", "E5"]
+    salas = [
+        sala(nome, "Evento", temas=["cripta"] if nome in do_tema else ["urbano"])
+        for nome in [f"E{i}" for i in range(1, 9)]
+    ]
+    incursao, _ = montar_conteudo(
+        cog, tamanho="Curta", salas=salas, filtro={"temas": ["cripta"]}
+    )
+    run = await montar_run(conn, canal, cog)
+    escolhidas = await atravessar(conn, canal, cog, run, incursao)
+
+    assert set(escolhidas) <= set(do_tema), (
+        f"o grupo caiu em sala fora do tema pedido: {escolhidas}"
+    )
+    for opcoes in await db.mapa_da_run(conn, run["id"]):
+        fora = set(opcoes) - set(do_tema)
+        assert not fora, f"o sorteio ofereceu sala fora do filtro: {sorted(fora)}"
+    print("  o filtro da incursão limita o que o sorteio oferece: ok")
+
+
 async def caso_tamanhos():
     """Curta, média e longa geram 3, 5 e 7 passos."""
     for tamanho, esperado in TAMANHOS.items():
@@ -223,6 +251,7 @@ async def main():
         await caso_tamanhos()
         await caso_lore_abre_e_fecha()
         await caso_sala_visitada_nao_volta()
+        await caso_o_filtro_da_incursao_limita_o_sorteio()
         await caso_sem_banco_nao_comeca()
     finally:
         for conn in _ABERTAS:

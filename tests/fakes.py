@@ -524,10 +524,12 @@ def montar_conteudo(
     pontos_conclusao=10,
     pontos_objetivo=0,
     lore_final="Epílogo de teste.",
+    filtro=None,
 ):
     """Registra no cog uma incursão e o banco de salas da Organização dela."""
     incursao = de_dict(
         {
+            **({"filtro": filtro} if filtro else {}),
             "id": incursao_id,
             "nome": f"Incursão {incursao_id}",
             "organizacao": organizacao,

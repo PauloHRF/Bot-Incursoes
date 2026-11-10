@@ -488,6 +488,70 @@ def sala_do_descanso_duro() -> Sala:
     )
 
 
+def salas_sorteaveis(banco: BancoDeSalas) -> list[Sala]:
+    """As salas que o sorteio pode oferecer: o banco menos o Descanso.
+
+    A sala de Descanso do banco não é sorteada — ela é o cenário da parada
+    fixa de descanso, que `_sala_de_descanso` vai buscar. Sem esta exclusão o
+    grupo podia tirar um segundo descanso na votação e o caminho fixo deixaria
+    de valer.
+
+    Existe aqui, e não solta dentro do cog, porque a mesma regra decide duas
+    coisas: o que é oferecido na votação e o que conta na conta do pool. As
+    duas têm de usar a mesma lista, senão o validador libera uma dungeon que
+    trava no meio.
+    """
+    return [s for s in banco.salas if s.tipo != "Descanso"]
+
+
+@dataclass
+class FiltroDeSalas:
+    """Quais salas do banco esta incursão pode sortear.
+
+    Três etapas, nesta ordem, e a ordem é a regra:
+
+    1. `temas` — a sala entra se tiver QUALQUER um deles. É OU, e não E:
+       exigir todos esvaziaria o pool (ver o comentário de TEMAS). Sala sem
+       tema escrito entra sempre.
+    2. `incluir` — quando existe, ELE é o pool, e `temas` passa a não valer.
+       "Apenas as salas VO03, VO07 e VO11" quer dizer exatamente isso.
+    3. `excluir` — tira as listadas, sempre por último, inclusive de `incluir`.
+
+    Filtro vazio é o banco inteiro, que é o que toda incursão escrita antes
+    disto faz sem saber.
+    """
+
+    temas: list[str] = field(default_factory=list)
+    incluir: list[str] = field(default_factory=list)
+    excluir: list[str] = field(default_factory=list)
+
+    @property
+    def vazio(self) -> bool:
+        return not (self.temas or self.incluir or self.excluir)
+
+    def aplicar(self, salas: Sequence[Sala]) -> list[Sala]:
+        """O pool que sobra. Recebe as sorteáveis, não o banco cru."""
+        if self.incluir:
+            pedidos = set(self.incluir)
+            pool = [s for s in salas if s.id in pedidos]
+        else:
+            pool = [s for s in salas if s.serve_ao_tema(self.temas)]
+        fora = set(self.excluir)
+        return [s for s in pool if s.id not in fora]
+
+    def para_dict(self) -> dict[str, Any]:
+        """Só as partes que têm conteúdo: lista vazia não vira ruído no JSON."""
+        return {
+            chave: valor
+            for chave, valor in (
+                ("temas", self.temas),
+                ("incluir", self.incluir),
+                ("excluir", self.excluir),
+            )
+            if valor
+        }
+
+
 @dataclass
 class Incursao:
     id: str
@@ -503,6 +567,8 @@ class Incursao:
     imagem_capa: Optional[str] = None
     recompensa_mes: int = 10
     pontos_conclusao: int = 10
+    # Quais salas do banco esta incursão sorteia. Vazio = o banco inteiro.
+    filtro: FiltroDeSalas = field(default_factory=FiltroDeSalas)
 
     @property
     def passos(self) -> int:
@@ -538,6 +604,9 @@ class Incursao:
             "imagem_capa": self.imagem_capa,
             "recompensa_mes": self.recompensa_mes,
             "pontos_conclusao": self.pontos_conclusao,
+            # Só quando há filtro: incursão sem filtro não ganha um campo
+            # vazio no arquivo, que é ruído para quem lê o JSON depois.
+            **({"filtro": self.filtro.para_dict()} if not self.filtro.vazio else {}),
             "objetivo": self.objetivo.para_dict(),
         }
 
@@ -949,6 +1018,145 @@ def _temas_de_dict(bruto: Any, onde: str, problemas: list[str]) -> list[str]:
     return temas
 
 
+def _ids_de_dict(bruto: Any, campo: str, onde: str, problemas: list[str]) -> list[str]:
+    """Uma lista de sala_id, aceitando lista ou texto separado por vírgula."""
+    if bruto is None or bruto == "":
+        return []
+    if isinstance(bruto, str):
+        brutos: list[Any] = bruto.replace(";", ",").split(",")
+    elif isinstance(bruto, (list, tuple)):
+        brutos = list(bruto)
+    else:
+        problemas.append(
+            f"{onde}: '{campo}' precisa ser uma lista de sala_id ou texto "
+            f"separado por vírgula."
+        )
+        return []
+    ids: list[str] = []
+    for item in brutos:
+        sala_id = str(item).strip()
+        if sala_id and sala_id not in ids:
+            ids.append(sala_id)
+    return ids
+
+
+def _filtro_de_dict(bruto: Any, problemas: list[str]) -> FiltroDeSalas:
+    """O campo `salas` da incursão: quais salas do banco ela sorteia."""
+    if bruto is None or bruto == "":
+        return FiltroDeSalas()
+    if not isinstance(bruto, dict):
+        problemas.append(
+            "'filtro' precisa ser um objeto com 'temas', 'incluir' e/ou "
+            "'excluir'. Para usar o banco inteiro, não escreva o campo."
+        )
+        return FiltroDeSalas()
+
+    onde = "o filtro de salas"
+    conhecidos = {"temas", "incluir", "excluir"}
+    for chave in bruto:
+        if chave not in conhecidos:
+            # Campo desconhecido e erro de digitacao, e erro de digitacao aqui
+            # muda silenciosamente o caminho da dungeon inteira.
+            problemas.append(
+                f"{onde}: '{chave}' não é um campo do filtro. "
+                f"Use {', '.join(sorted(conhecidos))}."
+            )
+    filtro = FiltroDeSalas(
+        temas=_temas_de_dict(bruto.get("temas"), onde, problemas),
+        incluir=_ids_de_dict(bruto.get("incluir"), "incluir", onde, problemas),
+        excluir=_ids_de_dict(bruto.get("excluir"), "excluir", onde, problemas),
+    )
+    if filtro.incluir and filtro.temas:
+        problemas.append(
+            f"{onde}: 'incluir' e 'temas' juntos. Quando 'incluir' existe, ele "
+            f"É o pool e o tema não vale — escolha um dos dois."
+        )
+    return filtro
+
+
+def conferir_filtro(
+    incursao: "Incursao", banco: BancoDeSalas
+) -> tuple[list[str], list[str]]:
+    """O filtro desta incursão contra o banco dela: problemas e avisos.
+
+    Esta é a única conferência CRUZADA do bot. `de_dict` valida a incursão e
+    `banco_de_dict` valida o banco, e nenhum dos dois vê o outro — mas "o
+    filtro desta dungeon deixa sala suficiente?" só tem resposta com os dois
+    na mão.
+
+    Dois níveis, porque os dois casos são diferentes de verdade:
+
+    - abaixo das salas que o tamanho atravessa é PROBLEMA: a run não tem como
+      chegar ao objetivo, e o sorteio nunca repete sala, então ela trava numa
+      parada do meio — na frente dos jogadores;
+    - entre isso e ter três portas em toda parada é AVISO: a run termina, mas
+      as últimas paradas oferecem menos escolha. Dungeon apertada de propósito
+      é decisão de quem escreve.
+    """
+    problemas: list[str] = []
+    avisos: list[str] = []
+    sorteaveis = salas_sorteaveis(banco)
+    por_id = {s.id: s for s in sorteaveis}
+    filtro = incursao.filtro
+
+    desconhecidas = [i for i in filtro.incluir if i not in por_id]
+    if desconhecidas:
+        problemas.append(
+            f"'incluir' cita sala que não existe no banco de {banco.organizacao}: "
+            f"{', '.join(desconhecidas)}. Como 'incluir' É o pool, cada id "
+            f"errado é uma sala a menos no caminho."
+        )
+    fantasmas = [i for i in filtro.excluir if i not in por_id]
+    if fantasmas:
+        avisos.append(
+            f"'excluir' cita sala que não existe no banco: {', '.join(fantasmas)}. "
+            f"Não quebra nada, mas provavelmente é engano — a sala que você "
+            f"queria tirar continua no sorteio."
+        )
+    if filtro.temas:
+        # Sala sem tema escrito entra em qualquer filtro — e isso faz um banco
+        # ainda nao etiquetado aceitar qualquer tema sem tirar nada. O filtro
+        # "funciona" e nao filtra, que e pior do que falhar.
+        com_tema = [s for s in sorteaveis if s.temas]
+        if not com_tema:
+            avisos.append(
+                f"o filtro pede {', '.join(filtro.temas)}, mas nenhuma sala do "
+                f"banco de {banco.organizacao} tem tema escrito. Sala sem tema "
+                f"entra em qualquer filtro, então o pool continua sendo o banco "
+                f"inteiro: este filtro não está tirando nada."
+            )
+        fora_do_tema = [
+            i for i in filtro.incluir
+            if i in por_id and not por_id[i].serve_ao_tema(filtro.temas)
+        ]
+        if fora_do_tema:
+            avisos.append(
+                f"'incluir' traz sala fora dos temas pedidos: "
+                f"{', '.join(fora_do_tema)}. Vale assim mesmo — 'incluir' manda."
+            )
+
+    pool = filtro.aplicar(sorteaveis)
+    passos = incursao.passos
+    folga = passos + OPCOES_POR_PASSO - 1
+    conta = (
+        f"o filtro deixa {len(pool)} sala(s) do banco de {banco.organizacao} "
+        f"({len(sorteaveis)} sorteáveis). Uma {incursao.tamanho} atravessa {passos}"
+    )
+    if len(pool) < passos:
+        problemas.append(
+            f"{conta}: faltam {passos - len(pool)} para a run poder terminar, e "
+            f"{folga - len(pool)} para ter {OPCOES_POR_PASSO} portas em toda parada."
+            + (f" Salas que entram: {', '.join(s.id for s in pool)}." if pool else "")
+        )
+    elif len(pool) < folga:
+        avisos.append(
+            f"{conta}: dá para terminar, mas faltam {folga - len(pool)} para "
+            f"oferecer {OPCOES_POR_PASSO} portas em toda parada — as últimas "
+            f"saem com menos escolha."
+        )
+    return problemas, avisos
+
+
 def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Optional[Sala]:
     sala_id = str(dados.get("id") or "").strip()
     if not sala_id:
@@ -1187,6 +1395,11 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
                 f"objetivo: o desafio final é sempre Combate (veio como '{objetivo.tipo}')."
             )
 
+    # Antes do `raise`, e não dentro da chamada do construtor: lá embaixo os
+    # problemas que ele encontrasse chegariam tarde demais para serem
+    # levantados, e um filtro inválido passaria calado.
+    filtro = _filtro_de_dict(dados.get("filtro"), problemas)
+
     if problemas:
         raise ErroDeValidacao(problemas)
 
@@ -1196,6 +1409,7 @@ def de_dict(dados: dict[str, Any]) -> Incursao:
         organizacao=organizacao,
         lore_inicial=lore_inicial,
         lore_final=lore_final,
+        filtro=filtro,
         tamanho=tamanho,
         tier=tier_incursao,
         objetivo=objetivo,

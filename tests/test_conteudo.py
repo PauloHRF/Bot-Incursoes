@@ -283,6 +283,193 @@ def caso_o_conteudo_de_hoje_passa_nos_limites():
     print("  o conteúdo de hoje continua válido: ok")
 
 
+# ------------------------------------- 3a. o filtro e a conferência cruzada
+
+
+def banco_etiquetado():
+    """Oito salas com tema, mais a de Descanso que não é sorteada."""
+    salas = [
+        sala_crua(id="T01", temas=["arcano", "escuridao"]),
+        sala_crua(id="T02", temas=["arcano", "agua"]),
+        sala_crua(id="T03", temas=["fortaleza"]),
+        sala_crua(id="T04", temas=["cripta"]),
+        sala_crua(id="T05", temas=["cripta", "sagrado"]),
+        sala_crua(id="T06", temas=["natureza"]),
+        sala_crua(id="T07", temas=["urbano"]),
+        sala_crua(id="T08", temas=["arcano"]),
+        sala_crua(
+            id="T99", tipo="Descanso", temas=["cripta"], dificuldade=None,
+            cd=None, alvo_progresso=None, pericias=[],
+        ),
+    ]
+    return I.banco_de_dict(banco_cru(salas=salas))
+
+
+def caso_o_descanso_nunca_entra_no_pool():
+    """Nem pelo tema: ele é cenário da parada fixa, não sala do caminho."""
+    banco = banco_etiquetado()
+    assert all(s.tipo != "Descanso" for s in I.salas_sorteaveis(banco))
+    pool = I.FiltroDeSalas(temas=["cripta"]).aplicar(I.salas_sorteaveis(banco))
+    assert [s.id for s in pool] == ["T04", "T05"], [s.id for s in pool]
+    print("  a sala de Descanso não entra no pool nem pelo tema: ok")
+
+
+def caso_o_filtro_segue_as_tres_etapas():
+    salas = I.salas_sorteaveis(banco_etiquetado())
+
+    vazio = I.FiltroDeSalas().aplicar(salas)
+    assert len(vazio) == 8, "filtro vazio é o banco inteiro"
+
+    por_tema = I.FiltroDeSalas(temas=["arcano"]).aplicar(salas)
+    assert [s.id for s in por_tema] == ["T01", "T02", "T08"]
+
+    # `incluir` É o pool, e manda sobre o tema.
+    so_essas = I.FiltroDeSalas(incluir=["T03", "T06"]).aplicar(salas)
+    assert [s.id for s in so_essas] == ["T03", "T06"]
+
+    # `excluir` vem por último, inclusive sobre `incluir`.
+    menos_uma = I.FiltroDeSalas(incluir=["T03", "T06"], excluir=["T06"]).aplicar(salas)
+    assert [s.id for s in menos_uma] == ["T03"]
+    tirando = I.FiltroDeSalas(temas=["arcano"], excluir=["T02"]).aplicar(salas)
+    assert [s.id for s in tirando] == ["T01", "T08"]
+    print("  o filtro segue tema, incluir e excluir nessa ordem: ok")
+
+
+def caso_incluir_e_temas_juntos_sao_recusados():
+    problemas = recusa(incursao_crua(filtro={"temas": ["cripta"], "incluir": ["T01"]}))
+    assert any("É o pool" in p for p in problemas), problemas
+    print("  'incluir' junto com 'temas' é recusado: ok")
+
+
+def caso_campo_desconhecido_no_filtro_e_recusado():
+    """Digitar 'incluem' muda o caminho da dungeon inteira em silêncio."""
+    problemas = recusa(incursao_crua(filtro={"incluem": ["T01"]}))
+    assert any("incluem" in p for p in problemas), problemas
+    print("  campo desconhecido no filtro é recusado: ok")
+
+
+def caso_pool_pequeno_demais_e_problema_e_o_apertado_e_aviso():
+    banco = banco_etiquetado()
+
+    # Longa atravessa 7, e 'cripta' deixa 2: nao tem como terminar.
+    longa = I.de_dict(incursao_crua(tamanho="Longa", filtro={"temas": ["cripta"]}))
+    problemas, _ = I.conferir_filtro(longa, banco)
+    assert problemas and "faltam 5 para a run poder terminar" in problemas[0], problemas
+
+    # Curta atravessa 3 e quer 5 para tres portas: 'arcano' deixa 3.
+    curta = I.de_dict(incursao_crua(tamanho="Curta", filtro={"temas": ["arcano"]}))
+    problemas, avisos = I.conferir_filtro(curta, banco)
+    assert not problemas, problemas
+    assert avisos and "dá para terminar" in avisos[0], avisos
+
+    # Sem filtro, as oito sorteaveis cobrem a Curta com folga.
+    solta = I.de_dict(incursao_crua(tamanho="Curta"))
+    assert I.conferir_filtro(solta, banco) == ([], [])
+    print("  pool curto é problema, pool apertado é aviso: ok")
+
+
+def caso_incluir_com_id_que_nao_existe_e_problema():
+    banco = banco_etiquetado()
+    inc = I.de_dict(
+        incursao_crua(tamanho="Curta", filtro={"incluir": ["T01", "T02", "T77", "T03"]})
+    )
+    problemas, _ = I.conferir_filtro(inc, banco)
+    assert any("T77" in p for p in problemas), problemas
+    assert not any("T01" in p for p in problemas), problemas
+    print("  id inexistente em 'incluir' é problema: ok")
+
+
+def caso_excluir_id_que_nao_existe_e_so_aviso():
+    banco = banco_etiquetado()
+    inc = I.de_dict(incursao_crua(tamanho="Curta", filtro={"excluir": ["T77"]}))
+    problemas, avisos = I.conferir_filtro(inc, banco)
+    assert not problemas, problemas
+    assert any("T77" in a for a in avisos), avisos
+    print("  id inexistente em 'excluir' é só aviso: ok")
+
+
+def caso_filtro_que_nao_filtra_e_avisado():
+    """Banco sem tema escrito: o filtro parece funcionar e não tira nada."""
+    sem_tema = I.banco_de_dict(
+        banco_cru(salas=[sala_crua(id=f"T{n:02d}") for n in range(1, 6)])
+    )
+    inc = I.de_dict(incursao_crua(tamanho="Curta", filtro={"temas": ["cripta"]}))
+    problemas, avisos = I.conferir_filtro(inc, sem_tema)
+    assert not problemas, problemas
+    assert any("não está tirando nada" in a for a in avisos), avisos
+
+    # E com o banco etiquetado o aviso some: senao ele viraria ruido de sempre.
+    _, avisos = I.conferir_filtro(inc, banco_etiquetado())
+    assert not any("não está tirando nada" in a for a in avisos), avisos
+    print("  filtro que não filtra, por falta de etiqueta, é avisado: ok")
+
+
+def caso_o_filtro_sobrevive_ao_para_dict():
+    inc = I.de_dict(
+        incursao_crua(filtro={"temas": ["cripta"], "excluir": ["T02"]})
+    )
+    voltou = I.de_dict(inc.para_dict())
+    assert voltou.filtro.temas == ["cripta"] and voltou.filtro.excluir == ["T02"]
+    # Incursao sem filtro nao ganha o campo: o JSON nao cria ruido sozinho.
+    assert "filtro" not in I.de_dict(incursao_crua()).para_dict()
+    print("  o filtro sobrevive ao para_dict, e o vazio não aparece: ok")
+
+
+# --------------------------------------------- 3b. a sala de Descanso do banco
+
+
+def _avisos_do_banco(salas):
+    sys.path.insert(0, str(RAIZ / "tools"))
+    import validar_conteudo as V
+
+    bruto = banco_cru(salas=salas)
+    return V.avisos(Path("banco.json"), bruto)
+
+
+def caso_banco_sem_descanso_e_avisado():
+    """A sala de Descanso NÃO é sorteada, e nem por isso é dispensável.
+
+    `_sala_de_descanso` lê a sala de Descanso do banco para usar como cenário
+    da parada fixa — a Cela do Coveiro da Guilda, a Adega Falsa das Sombras.
+    Banco sem nenhuma faz o grupo chegar na parada e seguir SEM DESCANSAR,
+    perdendo a única cura garantida da Média.
+
+    Este caso existe porque o aviso já esteve invertido: ele dizia que a sala
+    de Descanso era conteúdo morto e mandava tirar.
+    """
+    recados = _avisos_do_banco([sala_crua(id=f"T{n:02d}") for n in range(1, 4)])
+    assert any("não tem sala de Descanso" in r for r in recados), (
+        f"banco sem Descanso tem que ser avisado: {recados}"
+    )
+
+
+def caso_banco_com_uma_sala_de_descanso_passa_calado():
+    com_descanso = [sala_crua(id=f"T{n:02d}") for n in range(1, 4)] + [
+        sala_crua(
+            id="T04", tipo="Descanso", dificuldade=None, cd=None,
+            alvo_progresso=None, pericias=[],
+        )
+    ]
+    recados = _avisos_do_banco(com_descanso)
+    assert not any("Descanso" in r for r in recados), (
+        f"uma sala de Descanso é exatamente o certo, e não pode virar aviso: {recados}"
+    )
+
+
+def caso_banco_com_duas_salas_de_descanso_e_avisado():
+    """Só a primeira é usada; a segunda fica no arquivo sem aparecer."""
+    descanso = dict(
+        tipo="Descanso", dificuldade=None, cd=None, alvo_progresso=None, pericias=[]
+    )
+    salas = [sala_crua(id=f"T{n:02d}") for n in range(1, 4)] + [
+        sala_crua(id="T04", **descanso),
+        sala_crua(id="T05", **descanso),
+    ]
+    recados = _avisos_do_banco(salas)
+    assert any("2 salas de Descanso" in r for r in recados), recados
+    print("  a sala de Descanso do banco: falta avisa, sobra avisa, uma cala: ok")
+
+
 # --------------------------------------------------------- 4. planilha
 
 
@@ -412,6 +599,18 @@ for caso in (
     caso_nome_acima_do_titulo_e_recusado,
     caso_lore_acima_do_teto_e_recusada,
     caso_o_conteudo_de_hoje_passa_nos_limites,
+    caso_o_descanso_nunca_entra_no_pool,
+    caso_o_filtro_segue_as_tres_etapas,
+    caso_incluir_e_temas_juntos_sao_recusados,
+    caso_campo_desconhecido_no_filtro_e_recusado,
+    caso_pool_pequeno_demais_e_problema_e_o_apertado_e_aviso,
+    caso_incluir_com_id_que_nao_existe_e_problema,
+    caso_excluir_id_que_nao_existe_e_so_aviso,
+    caso_filtro_que_nao_filtra_e_avisado,
+    caso_o_filtro_sobrevive_ao_para_dict,
+    caso_banco_sem_descanso_e_avisado,
+    caso_banco_com_uma_sala_de_descanso_passa_calado,
+    caso_banco_com_duas_salas_de_descanso_e_avisado,
     caso_a_planilha_sem_a_coluna_de_tema_continua_importando,
     caso_a_planilha_com_tema_separa_por_ponto_e_virgula,
     caso_o_bestiario_tem_ambiente,

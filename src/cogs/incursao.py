@@ -37,7 +37,9 @@ from ..incursoes import (
     arquivo_da_organizacao,
     carregar_bancos_tolerante,
     carregar_todas_tolerante,
+    conferir_filtro,
     monstros_de_criatura,
+    salas_sorteaveis,
 )
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
 from ..rules import TIER_MAXIMO, fmt, tier
@@ -653,14 +655,10 @@ class Incursoes(commands.Cog):
             self.bancos = {}
         for problema in problemas:
             log.error("arquivo de conteúdo ficou de fora — %s", problema)
-        log.info(
-            "%d incursão(ões) e %d banco(s) carregados: %s",
-            len(self.incursoes),
-            len(self.bancos),
-            ", ".join(self.incursoes),
-        )
+        sem_caminho: list[str] = []
         for inc in self.incursoes.values():
-            if inc.organizacao not in self.bancos:
+            banco = self.bancos.get(inc.organizacao)
+            if banco is None:
                 log.warning(
                     "a incursão '%s' é de %s, mas não há banco de salas dessa Organização"
                     " (esperado em data/bancos/%s.json)",
@@ -668,6 +666,32 @@ class Incursoes(commands.Cog):
                     inc.organizacao,
                     arquivo_da_organizacao(inc.organizacao),
                 )
+                continue
+            # A conferencia CRUZADA, que nenhum dos dois validadores de arquivo
+            # consegue fazer sozinho. Ela roda aqui porque este e o caminho do
+            # arquivo copiado a mao, que nao passou pelo validar_conteudo.
+            cruzados, avisos = conferir_filtro(inc, banco)
+            for aviso in avisos:
+                log.warning("a incursão '%s' — %s", inc.id, aviso)
+            if cruzados:
+                # Sai do catalogo. Uma dungeon cujo filtro deixa sala de menos
+                # nao falha ao carregar: ela falha na PARADA 4, com o grupo
+                # dentro. Melhor nao aparecer na lista do que prender cinco
+                # pessoas num caminho sem saida.
+                sem_caminho.append(inc.id)
+                for problema in cruzados:
+                    log.error("a incursão '%s' ficou de fora — %s", inc.id, problema)
+                    problemas.append(f"{inc.id}: {problema}")
+        for incursao_id in sem_caminho:
+            self.incursoes.pop(incursao_id, None)
+        # O log do total vem DEPOIS das retiradas, senão ele anuncia uma
+        # incursão que o bot acabou de tirar do catálogo.
+        log.info(
+            "%d incursão(ões) e %d banco(s) carregados: %s",
+            len(self.incursoes),
+            len(self.bancos),
+            ", ".join(self.incursoes),
+        )
         return problemas
 
     def _carregar_tolerante(self) -> None:
@@ -840,10 +864,15 @@ class Incursoes(commands.Cog):
         if not banco:
             return []
         visitadas = await db.salas_visitadas(self.bot.db, run["id"])
-        # O Descanso sai do bolo: ele deixou de ser sorteado e virou parada
-        # fixa do caminho. Sem isto o grupo podia pegar um segundo descanso na
-        # votacao, e o caminho fixo deixaria de valer.
-        sorteaveis = [sala for sala in banco.salas if sala.tipo != "Descanso"]
+        # `salas_sorteaveis` tira o Descanso: ele deixou de ser sorteado e
+        # virou parada fixa. Depois o filtro da incursao corta por tema ou por
+        # lista — vazio, ele devolve o banco inteiro, que e o que toda
+        # incursao escrita antes do filtro faz.
+        #
+        # A conferencia cruzada (`conferir_filtro`) ja barrou, na validacao, o
+        # filtro que deixa sala de menos. Aqui nao ha rede: se o pool acabar,
+        # `sortear_passo` levanta, e e por isso que a conferencia existe.
+        sorteaveis = incursao.filtro.aplicar(salas_sorteaveis(banco))
         opcoes = motor.sortear_passo(sorteaveis, visitadas)
         await db.gravar_opcoes(self.bot.db, run["id"], passo, opcoes)
         return opcoes

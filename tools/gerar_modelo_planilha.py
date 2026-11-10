@@ -58,6 +58,13 @@ META = [
     ("imagem_capa", "", "URL da imagem de capa. Opcional."),
     ("recompensa_mes", 10, "MEs por participante ao completar o objetivo."),
     ("pontos_conclusao", 10, "Pontos de Organização que a conclusão rende ao servidor."),
+    ("filtro_temas", "", "Só salas destes temas entram no sorteio, separados por ';'. "
+     "Vazio = o banco inteiro. A sala entra se tiver QUALQUER um deles, e sala sem tema "
+     "escrito entra sempre."),
+    ("filtro_incluir", "", "Apenas estas salas (sala_id separados por ';'). Quando tem "
+     "valor, ELE é o pool e filtro_temas não vale."),
+    ("filtro_excluir", "", "Todas menos estas (sala_id separados por ';'). Aplicado por "
+     "último, inclusive sobre filtro_incluir."),
 ]
 
 CABECALHO_MONSTROS = (

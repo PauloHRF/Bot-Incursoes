@@ -5,14 +5,19 @@ aqui como decididas: a variação por tema troca **só as criaturas**; o filtro
 que deixa sala insuficiente é **recusado na validação**; e o estúdio roda **na
 máquina do colaborador**.
 
-**O que já está no bot** (passos 1 a 4 da seção 13): o carregamento tolerante
-por arquivo, o bestiário com `meta.ambientes`, o campo `temas` na sala — lido,
-validado e importável da planilha — e os tetos de texto. Nada disso muda o
-jogo: o tema é escrito e conferido, mas ainda não filtra sorteio nenhum. Quem
-descreve o formato em vigor é sempre `docs/formato-das-incursoes.md`.
+**O que já está no bot** (passos 1 a 5 da seção 13): o carregamento tolerante
+por arquivo, o bestiário com `meta.ambientes`, o campo `temas` na sala, os
+tetos de texto, e o **filtro da incursão com a conferência cruzada** — o tema
+agora decide sorteio. Quem descreve o formato em vigor é sempre
+`docs/formato-das-incursoes.md`.
 
-**O que ainda é só contrato**: o filtro na incursão (seção 3), a conferência
-cruzada (6), `monstros_por_tema` (5), o estúdio (11) e o sugeridor (10).
+**O que ainda é só contrato**: `monstros_por_tema` (seção 5), o estúdio (11) e
+o sugeridor (10).
+
+Uma correção de rota que o código impôs: o campo do filtro se chama `filtro`,
+e não `salas` como esta seção 3 dizia. O detector de tipo de arquivo do
+validador separa incursão de banco por `"salas"`, e o nome colidia — toda
+incursão passava a ser lida como banco.
 
 ---
 
@@ -40,9 +45,10 @@ E o estoque de hoje:
 | Guilda dos Mortos | 12 | 11 |
 | Sentinelas do Alvorecer | 12 | 11 |
 
-"Utilizáveis" desconta a sala de Descanso que cada banco tem escrita à mão
-(`AS05`, `GM05`, `SA05`, `VO05`) e que **nunca é sorteada** desde que o
-descanso virou parada fixa.
+"Utilizáveis" desconta a sala de Descanso que cada banco tem (`AS05`, `GM05`,
+`SA05`, `VO05`): ela **não é sorteada** — é o cenário da parada fixa de
+descanso, e por isso tem de continuar existindo. Ela sai desta conta, não do
+arquivo.
 
 Uma Longa com escolha de verdade já come 9 das 11.
 
@@ -76,8 +82,7 @@ Campo novo no banco, lista de strings:
 
 `temas` é **lista fechada no código**, do mesmo jeito que `ORGANIZACOES` e
 `TIPOS_SALA`. Tema livre em texto é um acidente esperando acontecer: digitado
-errado, a sala some do sorteio em silêncio — exatamente o que aconteceu com as
-quatro salas de Descanso, que estão no arquivo e não existem no jogo.
+errado, a sala some do sorteio em silêncio e ninguém é avisado.
 
 Rascunho dos oito, tirado dos nomes das 50 salas que já existem:
 
@@ -444,14 +449,19 @@ dungeon a pedir por `incluir`. É o que permite a sala-assinatura de uma dungeon
 sem vazar para as outras quinze — e é provavelmente o que um colaborador vai
 querer primeiro, porque ele pensa na dungeon dele.
 
-**12.3 — Reaproveitar as quatro salas de Descanso mortas.** `AS05`, `GM05`,
-`SA05` e `VO05` estão escritas e não são sorteadas. Reescrever cada uma como
-outro tipo são **+4 de pool**, de graça, e justamente no lugar onde o pool é
-apertado.
+**12.3 — ~~Reaproveitar as quatro salas de Descanso mortas.~~ Retirada: elas
+não estão mortas.** `AS05`, `GM05`, `SA05` e `VO05` não são sorteadas, mas são
+o **cenário da parada fixa de descanso** — `_sala_de_descanso` lê a sala de
+Descanso do banco, e sem ela o grupo chega na parada e segue sem descansar,
+perdendo a única cura garantida da Média. Eu as tinha chamado de conteúdo
+morto; era erro meu. O validador agora avisa o contrário: banco **sem** sala de
+Descanso é o problema.
 
-**12.4 — Relatório de pool por tema.** Uma tabela Organização × tema dizendo
-quantas salas tem e que tamanhos ela aguenta. É o que diz onde escrever a
-próxima sala, em vez de descobrir no dia em que uma dungeon é recusada.
+**12.4 — Relatório de pool por tema.** *Feito:* `tools/relatorio_de_pool.py`.
+Tabela Organização × tema com quantas salas tem e que tamanhos aguenta, mais
+uma coluna `etiq.` que separa as salas que carregam o tema de verdade das que
+só entram por não ter tema nenhum — sem ela o relatório diria que um banco não
+etiquetado cobre os oito temas.
 
 **12.5 — Semente fixa e visível na simulação.** Dois colaboradores comparando
 números precisam ver o mesmo número. A semente aparece na tela e vai no JSON
@@ -484,8 +494,13 @@ para ser difícil —, mas ninguém exporta uma máquina de TPK sem saber.
 3. ~~`temas` na sala.~~ **Feito.** Lista fechada, validação, coluna opcional na
    planilha. Ainda sem efeito no sorteio: só é escrito e conferido.
 4. ~~Limites de texto (seção 7).~~ **Feito.**
-5. O filtro na incursão + a conferência cruzada + o relatório de pool (seções
-   3, 4, 6 e 12.4). Aqui o tema passa a mudar o jogo.
+5. ~~O filtro na incursão + a conferência cruzada + o relatório de pool.~~
+   **Feito.** `FiltroDeSalas` e `conferir_filtro` em `src/incursoes.py`, a
+   conferência rodando no validador e no carregamento, `salas_sorteaveis`
+   centralizando a exclusão do Descanso, colunas na planilha da incursão e
+   `tools/relatorio_de_pool.py`. Duas decisões que só apareceram no código: a
+   chave do campo é `filtro` (ver o topo), e a incursão cujo filtro não fecha
+   **sai do catálogo** em vez de travar na parada 4 com o grupo dentro.
 6. `monstros_por_tema` + a coluna `tema` em `run_salas` (seção 5).
 7. O estúdio: página + servidor local, reusando `simular_combate` (seção 11).
 8. O sugeridor com busca por taxa alvo (seção 10).

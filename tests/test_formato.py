@@ -75,6 +75,10 @@ SALA_BASE = {
     "id": "B0", "nome": "Base", "tipo": "Combate", "descricao": "x",
     "monstros": [dict(CRIATURA_BASE)],
 }
+INCURSAO_BASE = {
+    "id": "base", "nome": "Base", "organizacao": "Vórtice Oculto",
+    "lore_inicial": "x", "recompensa_mes": 10, "objetivo": dict(SALA_BASE),
+}
 
 
 def caso_os_exemplos_do_documento_sao_validos():
@@ -90,7 +94,19 @@ def caso_os_exemplos_do_documento_sao_validos():
     conferidos = 0
 
     for bloco in blocos:
-        if "objetivo" in bloco:
+        if "filtro" in bloco and "objetivo" not in bloco:
+            # O fragmento do filtro, dentro de uma incursao de verdade. E
+            # cruzado com o banco do Vortice de propósito: um exemplo de filtro
+            # que nao fecha no banco real ensinaria a escrever dungeon travada.
+            incursao = I.de_dict({**INCURSAO_BASE, **bloco})
+            assert incursao.filtro.temas == ["cripta", "sagrado"], incursao.filtro
+            assert incursao.filtro.excluir == ["VO12"], incursao.filtro
+            banco = I.carregar_banco(RAIZ / "data" / "bancos" / "vortice_oculto.json")
+            problemas, _ = I.conferir_filtro(incursao, banco)
+            assert not problemas, (
+                f"o filtro de exemplo do documento não fecha no banco real: {problemas}"
+            )
+        elif "objetivo" in bloco:
             # A incursao inteira: e o exemplo que todo mundo vai copiar.
             incursao = I.de_dict(bloco)
             assert incursao.id == "vortice_agulha", incursao.id
@@ -203,6 +219,23 @@ def caso_os_limites_documentados_sao_os_de_verdade():
     assert I.paradas_do_caminho(3) == 3
     assert I.paradas_do_caminho(5) == 6, "a Média deixou de ter um descanso"
     assert I.paradas_do_caminho(7) == 9, "a Longa deixou de ter dois descansos"
+    # A tabela do filtro: quantas salas o pool precisa ter por tamanho. O
+    # segundo numero e `passos + OPCOES_POR_PASSO - 1`, e o documento o escreve
+    # a mao — se a formula mudar, a tabela mente.
+    for tamanho, (terminar, folga) in {
+        "Curta": (3, 5), "Média": (5, 7), "Longa": (7, 9)
+    }.items():
+        assert I.TAMANHOS[tamanho] == terminar, (
+            f"{tamanho}: o documento diz que atravessa {terminar} salas"
+        )
+        assert terminar + I.OPCOES_POR_PASSO - 1 == folga, (
+            f"{tamanho}: o documento diz {folga} para três portas sempre, "
+            f"e a conta do código dá {terminar + I.OPCOES_POR_PASSO - 1}"
+        )
+        assert f"| `{tamanho}` | {terminar} | {folga} |" in TEXTO, (
+            f"a linha de {tamanho} sumiu ou mudou na tabela do filtro"
+        )
+
     assert "385" in TEXTO, "o documento cita o tamanho do bestiário"
     bestiario = json.loads((RAIZ / "data" / "bestiario.json").read_text(encoding="utf-8"))
     assert len(bestiario["criaturas"]) == 385, (
