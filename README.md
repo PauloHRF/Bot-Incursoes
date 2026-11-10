@@ -78,6 +78,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/incursao atacar` | Ataca o primeiro inimigo de pé, na sua vez da iniciativa (mesmo efeito do botão) |
 | `/incursao habilidade` | Abre o menu das suas habilidades ativas |
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
+| `/incursao substituir <jogador> [acao] [alvo]` | Age no lugar de quem travou o combate, com o acordo da maioria dos outros |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
 | `/incursao recarregar` | (admin) Relê os JSON de incursão do disco |
 | `/mercado vitrine [personagem]` | A prateleira da semana: 6 equipamentos e 3 poções |
@@ -271,6 +272,32 @@ reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinh
 **Para testar à vontade**, rode `/config intervalo 0` uma vez: sem isso, quem entra numa run
 fica bloqueado até a virada da semana assim que ela começa. Para recomeçar, encerre a run
 atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/incursao entrar`.
+
+## Quando alguém trava o combate
+
+O combate anda por iniciativa, e a fila **para** no primeiro jogador que ainda
+não escolheu. Quem fecha o Discord no meio de um combate parava o grupo inteiro,
+sem saída.
+
+Passados **15 minutos** sem ele agir, outro jogador propõe uma ação no lugar
+dele com `/incursao substituir`, e a **maioria dos outros** fecha — o grupo de
+pé menos o ausente, que não vota sobre a própria vez. Com cinco de pé e um
+sumido, são três dos quatro restantes. O comando é o voto: quem chama primeiro
+propõe e já concorda, e os outros chamam de novo, só com o `jogador`, para
+concordar.
+
+Três regras que vale saber de cor:
+
+- **Poção não entra.** O grupo pode atacar e pode usar uma habilidade do
+  ausente. A poção foi comprada com o ouro dele e sai da bolsa para nunca
+  voltar; uso de habilidade volta no descanso.
+- **A espera é por ausência, não por rodada.** Quem sumiu custa 15 minutos ao
+  grupo uma vez. Da segunda rodada em diante, enquanto continuar sumido, a
+  proposta sai na hora. Ele aparecer e agir devolve a espera: a próxima
+  ausência custa os 15 minutos de novo.
+- **O clique dele cancela tudo.** Enquanto a votação corre, o ausente pode agir
+  pelo painel; a ação dele vale e a proposta morre. Quem voltou voltou ao
+  controle.
 
 ## O que a sala deixa no grupo
 

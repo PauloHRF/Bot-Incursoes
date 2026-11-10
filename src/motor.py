@@ -271,6 +271,50 @@ CONSEQUENCIA_FALHA = {
 }
 
 
+# Quanto o grupo espera por quem não age antes de poder agir no lugar dele.
+ESPERA_PARA_SUBSTITUIR = timedelta(minutes=15)
+
+
+def pode_propor_substituicao(
+    vez_desde: datetime, agora: datetime, ja_substituido: bool
+) -> bool:
+    """Se o grupo já pode propor agir no lugar de quem está com a vez.
+
+    A espera é de uma vez só por ausência, e não por rodada. Quem sumiu custa
+    15 minutos ao grupo na primeira vez; da segunda rodada em diante, enquanto
+    continuar sumido, a proposta sai na hora — fazer o grupo esperar 15 minutos
+    a cada rodada seria o travamento de novo, em parcelas.
+
+    `ja_substituido` é "o turno anterior dele neste combate também foi
+    escolhido por outra pessoa". Ele aparecer e agir uma única vez desliga
+    isso, e a próxima ausência volta a custar os 15 minutos: voltar ao controle
+    é voltar ao controle, inclusive ao direito de pensar.
+    """
+    if ja_substituido:
+        return True
+    return agora - vez_desde >= ESPERA_PARA_SUBSTITUIR
+
+
+def falta_para_substituir(vez_desde: datetime, agora: datetime) -> timedelta:
+    """Quanto ainda falta da espera. Zero quando ela já passou."""
+    falta = ESPERA_PARA_SUBSTITUIR - (agora - vez_desde)
+    return falta if falta > timedelta(0) else timedelta(0)
+
+
+def maioria_dos_outros(presentes: int) -> int:
+    """Quantos acordos fecham uma substituição.
+
+    É a maioria de QUEM PODE CONCORDAR, e quem pode concordar é o grupo menos
+    o ausente — ele não vota sobre a própria vez. Com cinco de pé e um sumido,
+    são três dos quatro restantes.
+
+    Grupo de dois (um de pé e o ausente) precisa de 1: quem propôs decide
+    sozinho, porque não há mais ninguém para consultar. É o único caso em que
+    "a maioria dos outros" e "quem propôs" são a mesma pessoa.
+    """
+    return max(1, (presentes - 1) // 2 + 1)
+
+
 @dataclass
 class ResolucaoSala:
     """Estado de uma sala depois que o grupo rolou."""

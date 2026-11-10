@@ -101,6 +101,32 @@ def maioria_de(total: int) -> int:
     return total // 2 + 1
 
 
+def _texto_digitado(interaction: discord.Interaction, campo: str) -> str:
+    """O que já está preenchido em OUTRO campo do comando, no autocomplete.
+
+    O Discord manda, a cada tecla, o que o jogador escolheu até ali. É com
+    isso que a lista de alvos sabe qual ação foi escolhida — sem ler o campo
+    `acao`, ela teria de oferecer inimigos e aliados ao mesmo tempo.
+    """
+    valor = getattr(getattr(interaction, "namespace", None), campo, None)
+    return "" if valor is None else str(valor)
+
+
+def _id_digitado(interaction: discord.Interaction, campo: str) -> Optional[int]:
+    """O id de um campo de jogador já preenchido, no autocomplete.
+
+    Tolerante de propósito: no autocomplete o campo pode chegar como objeto de
+    usuário ou como o id cru, e qualquer um dos dois serve.
+    """
+    valor = getattr(getattr(interaction, "namespace", None), campo, None)
+    if valor is None:
+        return None
+    try:
+        return int(getattr(valor, "id", valor))
+    except (TypeError, ValueError):
+        return None
+
+
 def _resolucao(sala: Sala, registros: list[dict[str, Any]], total: int) -> ResolucaoSala:
     resultados = [
         ResultadoTeste(
@@ -3932,10 +3958,18 @@ class Incursoes(commands.Cog):
                 dono=c.user_id,
             )
 
-    async def _pedir_alvo(
-        self, interaction: discord.Interaction, run, sala_id, habilidade, estado
-    ):
-        """Abre o menu de alvo se a habilidade precisa de um. False = nao precisa."""
+    async def _alvos_possiveis(self, run, habilidade, estado):
+        """As opções de alvo de uma habilidade: `[(valor, nome, detalhe)]`.
+
+        **`None` quer dizer que ela não escolhe alvo**: o buff de grupo, o que
+        vale só em quem usa, a invocação, e a que pega todos. Lista vazia quer
+        dizer que escolhe e não há ninguém — que é outra coisa.
+
+        Vive separada do menu porque DUAS coisas precisam desta lista: o menu
+        de quem clicou, e o autocomplete de `/incursao substituir`. Elas têm de
+        ser a mesma lista, senão o grupo poderia propor para o ausente um alvo
+        que ele mesmo não poderia escolher.
+        """
         acao = habilidade.acao or {}
         # Quem so mexe em si mesmo (Rage, Reckless Attack, Avatar da Luz) ou no
         # grupo inteiro nao tem alvo a escolher — perguntar num combate de
@@ -3947,27 +3981,35 @@ class Incursoes(commands.Cog):
             or (acao.get("tipo") == "forma" and acao.get("alvo") != "aliado")
             or acao.get("alvo") == "proprio"
         ):
-            return False
+            return None
         if acao.get("alvo") in ("aliado", "aliados") or acao.get("tipo") == "cura":
             if acao.get("tipo") == "cura" and acao.get("alvo") != "aliado":
-                return False
-            opcoes = [
+                return None
+            return [
                 (str(p["user_id"]), p["nome"], f"{p['hp_atual']}/{p['hp_max']} HP")
                 for p in await db.personagens_da_run(self.bot.db, run["id"])
             ]
-        else:
-            # Habilidade que pega todos nao tem alvo a escolher (Flame Strike,
-            # Hypnotic Pattern): `alvos` vem como "todos", nao como numero.
-            quantos = acao.get("alvos", 1)
-            if quantos == "todos":
-                return False
-            vivos = estado.inimigos_vivos if estado else []
-            if len(vivos) <= 1 and quantos <= 1:
-                return False
-            opcoes = [
-                (str(i.indice), i.nome, f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca}")
-                for i in vivos
-            ]
+        # Habilidade que pega todos nao tem alvo a escolher (Flame Strike,
+        # Hypnotic Pattern): `alvos` vem como "todos", nao como numero.
+        quantos = acao.get("alvos", 1)
+        if quantos == "todos":
+            return None
+        vivos = estado.inimigos_vivos if estado else []
+        if len(vivos) <= 1 and quantos <= 1:
+            return None
+        return [
+            (str(i.indice), i.nome, f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca}")
+            for i in vivos
+        ]
+
+    async def _pedir_alvo(
+        self, interaction: discord.Interaction, run, sala_id, habilidade, estado
+    ):
+        """Abre o menu de alvo se a habilidade precisa de um. False = nao precisa."""
+        acao = habilidade.acao or {}
+        opcoes = await self._alvos_possiveis(run, habilidade, estado)
+        if opcoes is None:
+            return False
         if not opcoes:
             await self._dizer(interaction, "Nao ha alvo possivel agora.")
             return True
@@ -6146,6 +6188,350 @@ class Incursoes(commands.Cog):
             f"{interaction.user.display_name} quer desistir "
             f"({len(votos)}/{necessarios} necessários). Quem concordar, use `/incursao desistir`."
         )
+
+    # ------------------------------- agir no lugar de quem nao agiu
+
+    async def _de_quem_e_a_vez(self, run, estado) -> Optional[int]:
+        """O jogador que a fila está esperando, ou None.
+
+        É a mesma leitura que `_avancar` faz para parar: `ordem[vez]`, quando o
+        ator é um personagem de pé, não atordoado, não invocado, e sem ação
+        escolhida nesta rodada. Fora disso ninguém está sendo esperado — a
+        criatura age sozinha, e quem está caído perde a vez sozinho.
+        """
+        passo = self._passo(run)
+        ordem = await self._garantir_iniciativa(run, estado)
+        combate = await db.estado_combate(self.bot.db, run["id"], passo)
+        vez = (combate or {}).get("vez", 0)
+        if vez >= len(ordem):
+            return None
+        ator = ordem[vez]
+        if ator["tipo"] != motor.PERSONAGEM:
+            return None
+        user_id = ator["alvo_id"]
+        quem = estado.combatente(user_id)
+        if quem is None or quem.caido or quem.atordoado or quem.e_invocacao:
+            return None
+        if await db.acao_do_turno(
+            self.bot.db, run["id"], passo, estado.rodada, user_id
+        ):
+            return None
+        return user_id
+
+    @staticmethod
+    def _nome_no_combate(estado, user_id: int) -> str:
+        quem = estado.combatente(user_id)
+        return quem.nome if quem is not None else f"<@{user_id}>"
+
+    @staticmethod
+    def _habilidades_substituiveis(personagem) -> list:
+        """As habilidades que o grupo pode usar pelo ausente.
+
+        **Poção não entra**, e é decisão de regra, não de implementação: ela
+        foi comprada com o ouro daquele personagem e sai da bolsa dele para
+        nunca voltar. Uso de habilidade volta no descanso.
+
+        Fora isso, é a lista de sempre: as acionáveis dele. Quem confere se
+        ainda há uso é `gastar_uso`, na hora de resolver — e não aqui, porque
+        entre propor e resolver passa uma votação.
+        """
+        return [
+            habilidade
+            for _tier, habilidade in (personagem or {}).get("habilidades") or []
+            if habilidade.acionavel
+        ]
+
+    async def _contexto_da_substituicao(self, run):
+        """(estado, sala, de quem é a vez) do combate aberto, ou None."""
+        # `_sala_corrente`, e nao `_sala`: ela acha tambem a emboscada de
+        # Mimicos, que nao existe no banco de salas e e combate como qualquer
+        # outro — travar nela travaria igual.
+        sala = await self._sala_corrente(run)
+        if sala is None or not sala.e_combate:
+            return None
+        estado = await self._estado_combate(run, sala)
+        if estado is None or estado.encerrado:
+            return None
+        return estado, sala, await self._de_quem_e_a_vez(run, estado)
+
+    @grupo.command(
+        name="substituir",
+        description="Age no lugar de quem travou o combate (precisa da maioria dos outros)",
+    )
+    @app_commands.describe(
+        jogador="Quem está com a vez e não agiu",
+        acao="O que ele faz: atacar, ou uma habilidade dele. Padrão: atacar",
+        alvo="Em quem. Padrão: o que o combate escolheria sozinho",
+    )
+    async def substituir(
+        self,
+        interaction: discord.Interaction,
+        jogador: discord.Member,
+        acao: Optional[str] = None,
+        alvo: Optional[str] = None,
+    ) -> None:
+        """Propõe — e concorda com — agir no lugar de quem não age.
+
+        **O comando É o voto**, como no `/incursao desistir`: quem chama
+        primeiro abre a proposta e já concorda com ela, e os outros chamam de
+        novo, só com o `jogador`, para concordar. A maioria dos outros fecha.
+
+        "Os outros" é o grupo de pé menos o ausente: ele não vota sobre a
+        própria vez. E ele pode agir pelo painel enquanto a votação corre — o
+        clique dele cancela a proposta, porque quem voltou voltou ao controle.
+        """
+        run = await self._run_do_contexto(interaction)
+        if not run:
+            return
+        contexto = await self._contexto_da_substituicao(run)
+        if contexto is None:
+            await interaction.response.send_message(
+                "Isto só vale num combate aberto.", ephemeral=True
+            )
+            return
+        estado, sala, esperado = contexto
+        passo = self._passo(run)
+        de_pe = await db.participantes_de_pe(self.bot.db, run["id"])
+
+        if interaction.user.id not in de_pe:
+            await interaction.response.send_message(
+                "Só quem está de pé no combate decide isso.", ephemeral=True
+            )
+            return
+        if jogador.id == interaction.user.id:
+            await interaction.response.send_message(
+                "Para agir por você mesmo, use os botões do painel.", ephemeral=True
+            )
+            return
+        if esperado is None or esperado != jogador.id:
+            quem = (
+                f"**{self._nome_no_combate(estado, esperado)}**"
+                if esperado is not None
+                else "ninguém"
+            )
+            await interaction.response.send_message(
+                f"A vez não está travada em {jogador.display_name}: o combate "
+                f"está esperando {quem}.",
+                ephemeral=True,
+            )
+            return
+
+        # O relogio: 15 minutos na primeira ausencia, e nenhum enquanto ela
+        # continuar. Ver `motor.pode_propor_substituicao`.
+        desde = await db.vez_aberta_desde(self.bot.db, run["id"], passo)
+        agora = datetime.now(config.FUSO)
+        ja = await db.turno_foi_substituido(self.bot.db, run["id"], passo, jogador.id)
+        if desde is not None and not motor.pode_propor_substituicao(desde, agora, ja):
+            falta = motor.falta_para_substituir(desde, agora)
+            await interaction.response.send_message(
+                f"A vez de **{jogador.display_name}** abriu agora há pouco. "
+                f"Faltam **{int(falta.total_seconds() // 60) + 1} min** para o "
+                f"grupo poder agir no lugar dele.",
+                ephemeral=True,
+            )
+            return
+
+        aberta = await db.substituicao_aberta(
+            self.bot.db, run["id"], passo, estado.rodada, jogador.id
+        )
+        if aberta is None:
+            escolhido, aviso = await self._acao_proposta(
+                run, estado, jogador.id, acao, alvo
+            )
+            if escolhido is None:
+                await interaction.response.send_message(aviso, ephemeral=True)
+                return
+            if not await db.abrir_substituicao(
+                self.bot.db, run["id"], passo, estado.rodada, jogador.id,
+                escolhido[0], escolhido[1], interaction.user.id,
+            ):
+                await interaction.response.send_message(
+                    "Alguém propôs no mesmo instante. Chame de novo para concordar "
+                    "com a proposta que está na mesa.",
+                    ephemeral=True,
+                )
+                return
+            aberta = await db.substituicao_aberta(
+                self.bot.db, run["id"], passo, estado.rodada, jogador.id
+            )
+
+        await db.apoiar_substituicao(
+            self.bot.db, run["id"], passo, estado.rodada, jogador.id,
+            interaction.user.id, True,
+        )
+        apoios = await db.apoios_da_substituicao(
+            self.bot.db, run["id"], passo, estado.rodada, jogador.id
+        )
+        # So quem esta de pe conta: quem caiu depois de concordar nao decide
+        # mais a vez de ninguem.
+        de_acordo = [u for u, sim in apoios.items() if sim and u in de_pe]
+        necessarios = motor.maioria_dos_outros(len(de_pe))
+        nome = self._nome_no_combate(estado, jogador.id)
+        descricao = await self._texto_da_acao(run, estado, jogador.id, aberta)
+
+        if len(de_acordo) < necessarios:
+            await interaction.response.send_message(
+                f"⏳ O grupo quer agir no lugar de **{nome}**: {descricao}.\n"
+                f"**{len(de_acordo)}/{necessarios}** de acordo. Quem concordar, "
+                f"use `/incursao substituir jogador:{jogador.display_name}`.\n"
+                f"-# {nome} ainda pode agir pelo painel, e o clique dele cancela isto."
+            )
+            return
+
+        # A maioria fechou. A reivindicacao decide quem resolve: dois acordos
+        # no mesmo instante fechariam a mesma proposta duas vezes, e a vez do
+        # ausente seria gasta duas vezes.
+        if not await db.tomar_a_substituicao(
+            self.bot.db, run["id"], passo, estado.rodada, jogador.id
+        ):
+            await interaction.response.send_message(
+                "Esta proposta já foi resolvida.", ephemeral=True
+            )
+            return
+        await interaction.response.send_message(
+            f"✅ O grupo age no lugar de **{nome}** ({len(de_acordo)}/{necessarios}): "
+            f"{descricao}."
+        )
+        await self._resolver_substituicao(run, sala, estado, jogador.id, aberta)
+
+    async def _resolver_substituicao(self, run, sala, estado, alvo_id: int, proposta):
+        """Grava a ação como a vez do ausente e deixa a iniciativa andar."""
+        passo = self._passo(run)
+        if proposta["acao"] != "ataque":
+            personagem = await self._personagem_na_run(run, alvo_id)
+            habilidade = next(
+                (
+                    h for h in self._habilidades_substituiveis(personagem)
+                    if h.id == proposta["acao"]
+                ),
+                None,
+            )
+            # O uso e gasto AQUI, e nao ao propor: entre propor e resolver passa
+            # uma votacao, e proposta recusada nao pode custar o uso de ninguem.
+            # Se ele acabou nesse meio-tempo, o grupo e avisado e a vez continua
+            # aberta — mudar a acao por conta propria seria resolver outra coisa
+            # que ninguem votou.
+            if habilidade is None or not await db.gastar_uso(
+                self.bot.db, run["id"], alvo_id, habilidade.chave_de_uso,
+                self._chave_de_recarga(habilidade, run, passo), habilidade.vezes,
+            ):
+                canal = await self._canal(run)
+                if canal:
+                    await canal.send(
+                        "A habilidade escolhida já não tem uso. A vez continua "
+                        "aberta: o grupo pode propor outra coisa."
+                    )
+                return
+        if not await db.marcar_turno(
+            self.bot.db, run["id"], passo, estado.rodada, alvo_id,
+            proposta["acao"], alvos=proposta["alvos"], resolvida=False,
+            substituto=proposta["proposto_por"],
+        ):
+            # Ele agiu no intervalo: a acao dele vale, e a do grupo nao.
+            return
+        await self._avancar(run, sala)
+
+    async def _acao_proposta(self, run, estado, alvo_id: int, acao, alvo):
+        """Valida o par (ação, alvo) proposto. Devolve ((ação, alvos), aviso)."""
+        personagem = await self._personagem_na_run(run, alvo_id)
+        if acao in (None, "", "ataque"):
+            alvos: list[int] = []
+            if alvo:
+                indices = {str(i.indice) for i in estado.inimigos_vivos}
+                if alvo not in indices:
+                    return None, "Esse alvo não está de pé no combate."
+                alvos = [int(alvo)]
+            return ("ataque", alvos), ""
+        habilidade = next(
+            (h for h in self._habilidades_substituiveis(personagem) if h.id == acao),
+            None,
+        )
+        if habilidade is None:
+            return None, (
+                f"`{acao}` não é uma ação que o grupo possa usar por ele. "
+                f"Poção não entra: ela é do ouro dele."
+            )
+        opcoes = await self._alvos_possiveis(run, habilidade, estado)
+        if opcoes is None:
+            return (habilidade.id, []), ""
+        if not opcoes:
+            return None, "Não há alvo possível para essa habilidade agora."
+        validos = {valor for valor, _n, _d in opcoes}
+        if alvo is None:
+            return None, (
+                f"**{habilidade.nome}** precisa de alvo: escolha um no campo `alvo`."
+            )
+        if alvo not in validos:
+            return None, "Esse alvo não serve para essa habilidade."
+        return (habilidade.id, [int(alvo)]), ""
+
+    async def _texto_da_acao(self, run, estado, alvo_id: int, proposta) -> str:
+        """A proposta em uma linha, para o grupo saber no que está votando."""
+        if proposta["acao"] == "ataque":
+            if proposta["alvos"]:
+                inimigo = estado.inimigo(proposta["alvos"][0])
+                return f"atacar **{inimigo.nome if inimigo else 'o alvo'}**"
+            return "atacar"
+        personagem = await self._personagem_na_run(run, alvo_id)
+        habilidade = next(
+            (
+                h for h in self._habilidades_substituiveis(personagem)
+                if h.id == proposta["acao"]
+            ),
+            None,
+        )
+        return f"usar **{habilidade.nome if habilidade else proposta['acao']}**"
+
+    @substituir.autocomplete("acao")
+    async def _acoes_do_ausente(self, interaction: discord.Interaction, atual: str):
+        """Atacar, mais as habilidades do ausente. Poção não entra."""
+        opcoes = [app_commands.Choice(name="Atacar", value="ataque")]
+        run = await db.run_do_canal(self.bot.db, interaction.channel_id)
+        alvo_id = _id_digitado(interaction, "jogador")
+        if run and alvo_id:
+            personagem = await self._personagem_na_run(run, alvo_id)
+            for habilidade in self._habilidades_substituiveis(personagem):
+                opcoes.append(
+                    app_commands.Choice(name=habilidade.nome, value=habilidade.id)
+                )
+        procura = (atual or "").lower()
+        return [o for o in opcoes if procura in o.name.lower()][:25]
+
+    @substituir.autocomplete("alvo")
+    async def _alvos_do_ausente(self, interaction: discord.Interaction, atual: str):
+        """Os mesmos alvos que o ausente teria para a ação escolhida."""
+        run = await db.run_do_canal(self.bot.db, interaction.channel_id)
+        if not run:
+            return []
+        contexto = await self._contexto_da_substituicao(run)
+        if contexto is None:
+            return []
+        estado, _sala, _esperado = contexto
+        escolhida = _texto_digitado(interaction, "acao") or "ataque"
+        alvo_id = _id_digitado(interaction, "jogador")
+        if escolhida in ("", "ataque"):
+            opcoes = [
+                (str(i.indice), i.nome, f"{i.hp_atual}/{i.hp_max} HP")
+                for i in estado.inimigos_vivos
+            ]
+        else:
+            personagem = await self._personagem_na_run(run, alvo_id) if alvo_id else None
+            habilidade = next(
+                (
+                    h for h in self._habilidades_substituiveis(personagem)
+                    if h.id == escolhida
+                ),
+                None,
+            )
+            if habilidade is None:
+                return []
+            opcoes = await self._alvos_possiveis(run, habilidade, estado) or []
+        procura = (atual or "").lower()
+        return [
+            app_commands.Choice(name=f"{nome} · {detalhe}", value=valor)
+            for valor, nome, detalhe in opcoes
+            if procura in nome.lower()
+        ][:25]
 
     @grupo.command(name="recarregar", description="(admin) Relê as incursões do disco")
     @app_commands.default_permissions(manage_guild=True)

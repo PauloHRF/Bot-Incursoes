@@ -39,6 +39,7 @@ ORDEM_COMANDOS = (
     "ficha voltar",
     "ficha alterar",
     "incursao entrar",
+    "incursao substituir",
     "incursao desistir",
     "incursao listar",
     "incursao status",

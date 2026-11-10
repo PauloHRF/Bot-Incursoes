@@ -144,6 +144,10 @@ CREATE TABLE IF NOT EXISTS run_combate (
     rodada  INTEGER NOT NULL DEFAULT 1,
     -- Posicao na ordem de iniciativa de quem age agora nesta rodada.
     vez     INTEGER NOT NULL DEFAULT 0,
+    -- Desde quando a vez atual esta aberta. E o relogio dos 15 minutos que
+    -- liberam o grupo a agir no lugar de quem nao agiu: ele reinicia a cada
+    -- `definir_vez`, entao conta o tempo DESTA vez, e nao o do combate.
+    vez_desde TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (run_id, passo)
 );
 
@@ -235,7 +239,41 @@ CREATE TABLE IF NOT EXISTS run_turnos (
     acao      TEXT    NOT NULL DEFAULT 'ataque',
     alvos     TEXT    NOT NULL DEFAULT '[]',
     resolvida INTEGER NOT NULL DEFAULT 1,
+    -- Quem escolheu, quando NAO foi o proprio jogador: o id de quem propos a
+    -- substituicao. NULL e a acao dele mesmo.
+    --
+    -- E com esta coluna que a espera de 15 minutos se decide, sem sinalizador
+    -- nenhum para ligar e desligar: a espera e dispensada quando o turno
+    -- ANTERIOR daquele jogador neste combate tambem foi substituido. Ele
+    -- aparecer e agir grava um turno com NULL aqui, e a espera volta a valer
+    -- na proxima ausencia. A regra nasce do que ja esta escrito.
+    substituto INTEGER,
     PRIMARY KEY (run_id, passo, rodada, user_id)
+);
+
+-- A proposta de agir no lugar de quem nao agiu. Uma por ausente e por rodada:
+-- a chave primaria e a regra, e nao codigo conferindo.
+CREATE TABLE IF NOT EXISTS run_substituicao (
+    run_id      INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo       INTEGER NOT NULL,
+    rodada      INTEGER NOT NULL,
+    -- De quem e a vez que esta sendo tomada.
+    alvo_id     INTEGER NOT NULL,
+    acao        TEXT    NOT NULL DEFAULT 'ataque',
+    alvos       TEXT    NOT NULL DEFAULT '[]',
+    proposto_por INTEGER NOT NULL,
+    criado_em   TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (run_id, passo, rodada, alvo_id)
+);
+
+CREATE TABLE IF NOT EXISTS run_substituicao_apoio (
+    run_id   INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    passo    INTEGER NOT NULL,
+    rodada   INTEGER NOT NULL,
+    alvo_id  INTEGER NOT NULL,
+    user_id  INTEGER NOT NULL,
+    concorda INTEGER NOT NULL,
+    PRIMARY KEY (run_id, passo, rodada, alvo_id, user_id)
 );
 
 -- Efeitos com duracao dentro de um combate: Rage, Marca do Cacador e afins.
@@ -527,6 +565,20 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
             " FROM run_ataques_v1"
         )
         await conn.execute("DROP TABLE run_ataques_v1")
+
+    # O grupo pode agir no lugar de quem nao age: o relogio da vez e a marca
+    # de quem escolheu. Combate em andamento continua — a vez em curso passa a
+    # contar os 15 minutos a partir da migracao, que e o unico instante que o
+    # banco antigo sabe.
+    if "vez_desde" not in await _colunas(conn, "run_combate"):
+        await conn.execute(
+            "ALTER TABLE run_combate ADD COLUMN vez_desde TEXT NOT NULL"
+            " DEFAULT (datetime('now'))"
+        )
+    if "substituto" not in await _colunas(conn, "run_turnos"):
+        # Sem default: NULL quer dizer "foi ele mesmo", e todo turno que ja
+        # existia foi escolhido pelo proprio jogador.
+        await conn.execute("ALTER TABLE run_turnos ADD COLUMN substituto INTEGER")
 
     # Criaturas ganharam multiataque, saves e acao especial. Combate em
     # andamento continua: o que falta entra com o valor neutro.
@@ -1486,12 +1538,37 @@ async def estado_combate(
     return dict(row) if row else None
 
 
+async def vez_aberta_desde(
+    conn: aiosqlite.Connection, run_id: int, passo: int
+) -> Optional[datetime]:
+    """Desde quando a vez atual está aberta, no fuso de quem joga.
+
+    O banco grava em UTC; a espera de 15 minutos é contada no mesmo fuso do
+    resto do bot. A conversão fica aqui, com a da semana, para o cog não
+    precisar saber o formato em que o SQLite escreve a data.
+    """
+    async with conn.execute(
+        "SELECT vez_desde FROM run_combate WHERE run_id = ? AND passo = ?",
+        (run_id, passo),
+    ) as cur:
+        row = await cur.fetchone()
+    if not row or not row["vez_desde"]:
+        return None
+    marcado = datetime.strptime(row["vez_desde"], "%Y-%m-%d %H:%M:%S")
+    return marcado.replace(tzinfo=timezone.utc).astimezone(config.FUSO)
+
+
 async def atualizar_rodada(
     conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
 ) -> None:
-    """Vira a rodada: a vez volta para o topo da iniciativa."""
+    """Vira a rodada: a vez volta para o topo da iniciativa.
+
+    O relogio da vez zera aqui tambem: quem recebe a primeira vez da rodada
+    nova recebe com ela os 15 minutos inteiros.
+    """
     await conn.execute(
-        "UPDATE run_combate SET rodada = ?, vez = 0 WHERE run_id = ? AND passo = ?",
+        "UPDATE run_combate SET rodada = ?, vez = 0, vez_desde = datetime('now')"
+        " WHERE run_id = ? AND passo = ?",
         (rodada, run_id, passo),
     )
     await conn.commit()
@@ -1500,8 +1577,15 @@ async def atualizar_rodada(
 async def definir_vez(
     conn: aiosqlite.Connection, run_id: int, passo: int, vez: int
 ) -> None:
+    """Anda a iniciativa, e reinicia o relogio da vez.
+
+    O `vez_desde` e o relogio dos 15 minutos que liberam o grupo a agir no
+    lugar de quem nao agiu, e por isso ele zera AQUI: a espera e desta vez, e
+    nao do combate. Quem recebe a vez recebe os 15 minutos inteiros.
+    """
     await conn.execute(
-        "UPDATE run_combate SET vez = ? WHERE run_id = ? AND passo = ?",
+        "UPDATE run_combate SET vez = ?, vez_desde = datetime('now')"
+        " WHERE run_id = ? AND passo = ?",
         (vez, run_id, passo),
     )
     await conn.commit()
@@ -1581,21 +1665,37 @@ async def marcar_turno(
     acao: str = "ataque",
     alvos: Optional[list[int]] = None,
     resolvida: bool = True,
+    substituto: Optional[int] = None,
 ) -> bool:
     """Gasta o turno do personagem nesta rodada. Repetir não sobrescreve.
 
     Com `resolvida=False` a ação fica guardada até a iniciativa chegar nele.
     False se o turno já estava gasto (dois cliques ao mesmo tempo).
+
+    `substituto` e o id de quem escolheu por ele, quando o grupo agiu no lugar
+    de quem nao agiu. Sem ele — o caso de sempre — a acao e do proprio
+    jogador, e **e esse o momento em que ele volta ao controle**: qualquer
+    proposta aberta sobre a vez dele morre aqui, porque ele apareceu. Fica
+    nesta funcao, e nao nos tres lugares que a chamam, porque e aqui que o
+    "ele agiu" acontece de verdade.
+
+    O `substituto is None` do `if` nao muda comportamento hoje, e esta escrito
+    para dizer a intencao: quando e o GRUPO que age, a proposta ja saiu da mesa
+    em `tomar_a_substituicao`, entao apagar de novo seria no-op. Nao ha caso
+    cobrindo essa condicao, e nao ha como haver enquanto a reivindicacao vier
+    antes — o que ela protege e o dia em que vier depois.
     """
     cur = await conn.execute(
         "INSERT OR IGNORE INTO run_turnos"
-        " (run_id, passo, rodada, user_id, acao, alvos, resolvida)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?)",
+        " (run_id, passo, rodada, user_id, acao, alvos, resolvida, substituto)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             run_id, passo, rodada, user_id, acao,
-            json.dumps(list(alvos or [])), 1 if resolvida else 0,
+            json.dumps(list(alvos or [])), 1 if resolvida else 0, substituto,
         ),
     )
+    if cur.rowcount and substituto is None:
+        await _apagar_substituicoes(conn, run_id, passo, user_id)
     await conn.commit()
     return cur.rowcount > 0
 
@@ -1660,6 +1760,133 @@ async def resolver_turno(
     )
     await conn.commit()
     return cur.rowcount > 0
+
+
+async def _apagar_substituicoes(
+    conn: aiosqlite.Connection, run_id: int, passo: int, alvo_id: int
+) -> None:
+    """Fecha toda proposta aberta sobre a vez daquele jogador, sem commit."""
+    for tabela in ("run_substituicao_apoio", "run_substituicao"):
+        await conn.execute(
+            f"DELETE FROM {tabela}"
+            " WHERE run_id = ? AND passo = ? AND alvo_id = ?",
+            (run_id, passo, alvo_id),
+        )
+
+
+async def abrir_substituicao(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    rodada: int,
+    alvo_id: int,
+    acao: str,
+    alvos: Optional[list[int]],
+    proposto_por: int,
+) -> bool:
+    """Abre a proposta de agir no lugar do ausente. False se já havia uma.
+
+    Uma por ausente e por rodada, e e a chave primaria que garante — nao
+    codigo conferindo antes. Dois jogadores propondo no mesmo instante: o
+    segundo leva False e le que ja existe uma na mesa.
+    """
+    cur = await conn.execute(
+        "INSERT OR IGNORE INTO run_substituicao"
+        " (run_id, passo, rodada, alvo_id, acao, alvos, proposto_por)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            run_id, passo, rodada, alvo_id, acao,
+            json.dumps(list(alvos or [])), proposto_por,
+        ),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
+async def substituicao_aberta(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, alvo_id: int
+) -> Optional[dict[str, Any]]:
+    async with conn.execute(
+        "SELECT * FROM run_substituicao"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND alvo_id = ?",
+        (run_id, passo, rodada, alvo_id),
+    ) as cur:
+        row = await cur.fetchone()
+    if not row:
+        return None
+    proposta = dict(row)
+    proposta["alvos"] = json.loads(proposta["alvos"] or "[]")
+    return proposta
+
+
+async def apoiar_substituicao(
+    conn: aiosqlite.Connection,
+    run_id: int,
+    passo: int,
+    rodada: int,
+    alvo_id: int,
+    user_id: int,
+    concorda: bool,
+) -> None:
+    """Registra o acordo (ou a recusa). Mudar de ideia troca o voto."""
+    await conn.execute(
+        "INSERT INTO run_substituicao_apoio"
+        " (run_id, passo, rodada, alvo_id, user_id, concorda)"
+        " VALUES (?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT (run_id, passo, rodada, alvo_id, user_id)"
+        " DO UPDATE SET concorda = excluded.concorda",
+        (run_id, passo, rodada, alvo_id, user_id, 1 if concorda else 0),
+    )
+    await conn.commit()
+
+
+async def apoios_da_substituicao(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, alvo_id: int
+) -> dict[int, bool]:
+    async with conn.execute(
+        "SELECT user_id, concorda FROM run_substituicao_apoio"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND alvo_id = ?",
+        (run_id, passo, rodada, alvo_id),
+    ) as cur:
+        return {r["user_id"]: bool(r["concorda"]) for r in await cur.fetchall()}
+
+
+async def tomar_a_substituicao(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, alvo_id: int
+) -> bool:
+    """Reivindica a proposta para resolver. True para um chamador só.
+
+    Dois acordos chegando no mesmo instante fecham a mesma proposta, e cada um
+    gastaria a vez do ausente: o `DELETE` que devolve linha e quem decide,
+    como o `tomar_a_sala` faz com a votacao das salas.
+    """
+    cur = await conn.execute(
+        "DELETE FROM run_substituicao"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND alvo_id = ?",
+        (run_id, passo, rodada, alvo_id),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
+
+
+async def turno_foi_substituido(
+    conn: aiosqlite.Connection, run_id: int, passo: int, alvo_id: int
+) -> bool:
+    """Se a ULTIMA acao daquele jogador neste combate foi escolhida por outro.
+
+    E a memoria da ausencia, e ela nao precisa ser gravada nem limpa: sai do
+    turno mais recente dele. Substituido na rodada passada e ainda sumido, a
+    proposta sai sem esperar; apareceu e agiu, o turno mais recente passa a ser
+    dele e a espera de 15 minutos volta a valer.
+    """
+    async with conn.execute(
+        "SELECT substituto FROM run_turnos"
+        " WHERE run_id = ? AND passo = ? AND user_id = ?"
+        " ORDER BY rodada DESC LIMIT 1",
+        (run_id, passo, alvo_id),
+    ) as cur:
+        row = await cur.fetchone()
+    return bool(row and row["substituto"] is not None)
 
 
 async def turnos_pendentes(
