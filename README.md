@@ -56,6 +56,19 @@ enviado (a cópia local segue inteira). Veja [deploy/README.md](deploy/README.md
 
 Não são necessários *privileged intents* (o bot não lê o conteúdo das mensagens).
 
+## Escrever conteúdo
+
+O formato que o bot lê está em
+[docs/formato-das-incursoes.md](docs/formato-das-incursoes.md) — é o documento
+para dar a quem vai escrever dungeon. Antes de o arquivo entrar em `data/`:
+
+```bash
+python tools/validar_conteudo.py minha_dungeon.json
+```
+
+Não é formalidade: o bot carrega as incursões todas de uma vez, e um arquivo
+inválido faz ele subir **sem nenhuma** — não sem a do autor, sem nenhuma.
+
 ## Comandos
 
 | Comando | Função |
