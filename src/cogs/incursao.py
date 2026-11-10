@@ -721,6 +721,10 @@ class Incursoes(commands.Cog):
         Sem isso, uma votação ou um combate abertos no momento do encerramento
         continuariam clicáveis depois que a run acabou.
         """
+        # Desistencia e encerramento manual tambem cancelam acoes guardadas.
+        # A reivindicacao das pendentes torna a devolucao unica, mesmo quando
+        # o fecho do combate ja passou por ela.
+        await self._devolver_pendentes(run)
         await self._limpar_botoes(await db.buscar_run(self.bot.db, run["id"]))
         await db.atualizar_run(self.bot.db, run["id"], status=status, votacao_expira_em=None)
         # O que era de memoria e so desta run sai com ela: um bot que fica
@@ -2580,7 +2584,7 @@ class Incursoes(commands.Cog):
 
         Dois caminhos chamam aqui, e são os dois jeitos de a vez não chegar:
         `_perder_a_vez` (caiu ou foi atordoado) e `_devolver_pendentes` (o
-        combate acabou antes).
+        combate ou a run acabou antes).
         """
         pocao = consumiveis.item(turno["acao"])
         if pocao is not None:
@@ -3214,6 +3218,22 @@ class Incursoes(commands.Cog):
             return f"descanso:{run['descansos']}"
         return "incursao"
 
+    async def _aviso_de_requisito(self, run, estado, user_id: int, habilidade) -> Optional[str]:
+        """O requisito de uma ativa vale no painel e na substituicao."""
+        exigida = (habilidade.acao or {}).get("exige")
+        if not exigida or estado is None:
+            return None
+        ligados = await db.efeitos_ativos(
+            self.bot.db, run["id"], self._passo(run), estado.rodada - 1
+        )
+        if any(
+            e["efeito"] == exigida and e["alvo_id"] == user_id
+            and e["alvo_tipo"] == "personagem"
+            for e in ligados
+        ):
+            return None
+        return f"**{habilidade.nome}** so vale com a outra habilidade ligada."
+
     async def _habilidades_disponiveis(
         self, run: dict[str, Any], personagem: dict[str, Any], passo: int
     ) -> list[tuple]:
@@ -3592,20 +3612,10 @@ class Incursoes(commands.Cog):
                 "Você está atordoado e perde esta rodada.")
             return
 
-        exigida = acao.get("exige")
-        if exigida and estado is not None:
-            ligados = await db.efeitos_ativos(
-                self.bot.db, run["id"], passo, estado.rodada - 1
-            )
-            tem = any(
-                e["efeito"] == exigida and e["alvo_id"] == interaction.user.id
-                for e in ligados
-            )
-            if not tem:
-                await self._dizer(interaction, 
-                    f"**{habilidade.nome}** so vale com a outra habilidade ligada.",
-                )
-                return
+        aviso = await self._aviso_de_requisito(run, estado, interaction.user.id, habilidade)
+        if aviso:
+            await self._dizer(interaction, aviso)
+            return
 
         # So a cura funciona fora do combate: o resto mexe em rodada e inimigo.
         if acao.get("tipo") != "cura" and estado is None:
@@ -6231,14 +6241,14 @@ class Incursoes(commands.Cog):
         foi comprada com o ouro daquele personagem e sai da bolsa dele para
         nunca voltar. Uso de habilidade volta no descanso.
 
-        Fora isso, é a lista de sempre: as acionáveis dele. Quem confere se
-        ainda há uso é `gastar_uso`, na hora de resolver — e não aqui, porque
-        entre propor e resolver passa uma votação.
+        So entram ativas de turno: reacoes disparam pelo proprio gatilho.
+        Quem confere se ainda ha uso e `gastar_uso`, na hora de resolver,
+        porque entre propor e resolver passa uma votacao.
         """
         return [
             habilidade
             for _tier, habilidade in (personagem or {}).get("habilidades") or []
-            if habilidade.acionavel
+            if habilidade.acionavel and (habilidade.acao or {}).get("tipo") != "reacao"
         ]
 
     async def _contexto_da_substituicao(self, run):
@@ -6397,6 +6407,7 @@ class Incursoes(commands.Cog):
     async def _resolver_substituicao(self, run, sala, estado, alvo_id: int, proposta):
         """Grava a ação como a vez do ausente e deixa a iniciativa andar."""
         passo = self._passo(run)
+        habilidade = None
         if proposta["acao"] != "ataque":
             personagem = await self._personagem_na_run(run, alvo_id)
             habilidade = next(
@@ -6406,6 +6417,13 @@ class Incursoes(commands.Cog):
                 ),
                 None,
             )
+            if habilidade is not None:
+                aviso = await self._aviso_de_requisito(run, estado, alvo_id, habilidade)
+                if aviso:
+                    canal = await self._canal(run)
+                    if canal:
+                        await canal.send(aviso + " A vez continua aberta.")
+                    return
             # O uso e gasto AQUI, e nao ao propor: entre propor e resolver passa
             # uma votacao, e proposta recusada nao pode custar o uso de ninguem.
             # Se ele acabou nesse meio-tempo, o grupo e avisado e a vez continua
@@ -6428,6 +6446,11 @@ class Incursoes(commands.Cog):
             substituto=proposta["proposto_por"],
         ):
             # Ele agiu no intervalo: a acao dele vale, e a do grupo nao.
+            if habilidade is not None:
+                await db.devolver_uso(
+                    self.bot.db, run["id"], alvo_id, habilidade.chave_de_uso,
+                    self._chave_de_recarga(habilidade, run, passo),
+                )
             return
         await self._avancar(run, sala)
 
@@ -6451,6 +6474,9 @@ class Incursoes(commands.Cog):
                 f"`{acao}` não é uma ação que o grupo possa usar por ele. "
                 f"Poção não entra: ela é do ouro dele."
             )
+        aviso = await self._aviso_de_requisito(run, estado, alvo_id, habilidade)
+        if aviso:
+            return None, aviso
         opcoes = await self._alvos_possiveis(run, habilidade, estado)
         if opcoes is None:
             return (habilidade.id, []), ""
