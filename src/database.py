@@ -1635,14 +1635,47 @@ async def turnos_da_rodada(
 
 async def resolver_turno(
     conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
-) -> None:
-    """Marca a ação guardada como feita."""
-    await conn.execute(
+) -> bool:
+    """Reivindica a ação guardada, marcando-a feita. False se já estava.
+
+    **Quem chama marca ANTES de a ação valer**, e não depois — e e por isso que
+    ela devolve um booleano em vez de nada. O `resolvida = 0` no `WHERE` faz da
+    marcação uma reivindicação: quem leva o True e o único que executa.
+
+    Antes a ordem era a oposta: resolvia, gravava o dano, e só então marcava.
+    Entre as duas gravações o processo pode morrer — e na volta a ação ainda
+    estava pendente, então a retomada a executava **outra vez**. Um ataque
+    guardado levou o inimigo de 1000 a 942 e a 915 HP sem ninguém escolher
+    nada.
+
+    A troca de ordem escolhe um lado: se a resolução falhar depois da marca, a
+    ação é **perdida** em vez de repetida. Perder um turno é um turno; repetir
+    dano é um combate decidido por um acidente de infraestrutura.
+    """
+    cur = await conn.execute(
         "UPDATE run_turnos SET resolvida = 1"
-        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?",
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?"
+        "   AND resolvida = 0",
         (run_id, passo, rodada, user_id),
     )
     await conn.commit()
+    return cur.rowcount > 0
+
+
+async def turnos_pendentes(
+    conn: aiosqlite.Connection, run_id: int, passo: int
+) -> list[dict[str, Any]]:
+    """As ações guardadas que nunca chegaram a valer, neste combate.
+
+    Sem filtrar a rodada: uma pendente de rodada anterior também teve a
+    reserva cobrada e também nunca aconteceu.
+    """
+    async with conn.execute(
+        "SELECT user_id, acao, alvos, rodada FROM run_turnos"
+        " WHERE run_id = ? AND passo = ? AND resolvida = 0 ORDER BY rodada, rowid",
+        (run_id, passo),
+    ) as cur:
+        return [dict(r) for r in await cur.fetchall()]
 
 
 async def acao_do_turno(
@@ -2444,9 +2477,23 @@ async def tirar_item(
 
 
 async def comprar(
-    conn: aiosqlite.Connection, personagem_id: int, item_id: str, preco: int
+    conn: aiosqlite.Connection,
+    personagem_id: int,
+    item_id: str,
+    preco: int,
+    limite: Optional[int] = None,
 ) -> bool:
     """Debita o preco e poe o item na bolsa. False quando falta ouro.
+
+    `limite` e quantas copias deste item o personagem pode ter no total —
+    bolsa MAIS vestido. A pocao empilha ate `consumiveis.TETO_NA_BOLSA`; o
+    equipamento e unico, entao vale 1; `None` nao limita.
+
+    O teto entra no MESMO `WHERE` do saldo, e nao numa conferencia antes, pela
+    razao de sempre: a de antes le e decide com um `await` no meio. Duas
+    compras no mesmo instante passavam as duas por ela e rendiam 4 pocoes num
+    teto de 3, ou duas copias de um equipamento que e unico — o ouro, que ja
+    tinha sido consertado, era cobrado certo pelas duas.
 
     **O saldo e conferido DENTRO do INSERT**, e e isso que importa aqui: um
     statement so, sem `await` no meio, entao duas compras no mesmo instante
@@ -2466,6 +2513,15 @@ async def comprar(
     """
     if preco < 0:
         return False
+    # **Duas gravacoes, cada uma conferindo a sua propria coisa.** O saldo mora
+    # em `ouro_lancamentos` e o estoque em `personagem_itens`, e nenhum comando
+    # escreve nas duas — entao nao existe o statement unico que garantiria as
+    # duas de uma vez. Cada uma confere a sua no proprio `WHERE`, e a segunda
+    # ve o que a primeira deixou pendente nesta transacao.
+    #
+    # Em troca, estourar o teto depois de debitar pede desfazer o debito. E o
+    # que o `DELETE` abaixo faz, e ele e exato: apaga a linha que ESTA chamada
+    # acabou de inserir, que ninguem fora desta transacao viu ainda.
     cur = await conn.execute(
         "INSERT INTO ouro_lancamentos (personagem_id, motivo, ouro)"
         " SELECT ?, ?, ?"
@@ -2475,7 +2531,34 @@ async def comprar(
     )
     if not cur.rowcount:
         return False
-    await _por_na_bolsa(conn, personagem_id, item_id)
+    lancamento = cur.lastrowid
+    if limite is None:
+        await _por_na_bolsa(conn, personagem_id, item_id)
+        await conn.commit()
+        return True
+    # O teto conta a bolsa E o que esta vestido: equipamento vestido sai de
+    # `personagem_itens`, e sem a segunda soma ele seria comprado outra vez
+    # depois de vestido.
+    posto = await conn.execute(
+        "INSERT INTO personagem_itens (personagem_id, item_id, quantidade)"
+        " SELECT ?, ?, 1"
+        " WHERE ((SELECT COALESCE(SUM(quantidade), 0) FROM personagem_itens"
+        "         WHERE personagem_id = ? AND item_id = ?)"
+        "      + (SELECT COUNT(*) FROM personagem_equipamento"
+        "         WHERE personagem_id = ? AND item_id = ?)) < ?"
+        " ON CONFLICT (personagem_id, item_id)"
+        " DO UPDATE SET quantidade = quantidade + 1",
+        (
+            personagem_id, item_id,
+            personagem_id, item_id, personagem_id, item_id, limite,
+        ),
+    )
+    if not posto.rowcount:
+        await conn.execute(
+            "DELETE FROM ouro_lancamentos WHERE id = ?", (lancamento,)
+        )
+        await conn.commit()
+        return False
     await conn.commit()
     return True
 

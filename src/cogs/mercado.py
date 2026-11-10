@@ -85,25 +85,45 @@ async def tentar_comprar(
             "Esse item não está na vitrine desta semana. "
             "Veja o que tem com `/mercado vitrine`."
         )
+    # Quantas copias deste item o personagem pode ter. A pocao empilha; o
+    # equipamento e unico, porque o slot ja impede o stack e a segunda copia
+    # so queimaria ouro.
     if pocao is not None:
         # O teto por tipo é o que segura a guerra de atrito: sem ele, ouro
         # guardado virava estoque e a incursão longa deixava de cobrar HP.
+        limite = consumiveis.TETO_NA_BOLSA
+        cheio = (
+            f"Você já tem {consumiveis.TETO_NA_BOLSA} **{pocao.nome}**, que é o "
+            f"máximo ({consumiveis.TETO_NA_BOLSA} de cada)."
+        )
         quantos = (await db.itens_na_bolsa(conn, personagem_id)).get(pocao.id, 0)
-        if quantos >= consumiveis.TETO_NA_BOLSA:
+        if quantos >= limite:
             return None, (
                 f"Você já tem {quantos} **{pocao.nome}** na bolsa, que é o "
                 f"máximo ({consumiveis.TETO_NA_BOLSA} de cada)."
             )
-    # Equipamento e unico por personagem: a segunda copia nao faria nada, e so
-    # queimaria ouro.
-    elif peca.slot in itens.SLOTS and await ja_tem(conn, personagem_id, peca.id):
-        return None, f"Você já tem **{peca.nome}**. Uma segunda não faria nada."
-    if not await db.comprar(conn, personagem_id, peca.id, peca.custo):
+    elif peca.slot in itens.SLOTS:
+        limite = 1
+        cheio = f"Você já tem **{peca.nome}**. Uma segunda não faria nada."
+        if await ja_tem(conn, personagem_id, peca.id):
+            return None, cheio
+    else:
+        limite, cheio = None, ""
+    # As duas conferencias acima dao a frase boa no caso comum, mas leem e
+    # decidem com um `await` no meio: dois cliques no mesmo instante passavam
+    # os dois por elas. Quem decide e o `limite` dentro do `comprar`, que o
+    # confere no proprio statement.
+    if not await db.comprar(
+        conn, personagem_id, peca.id, peca.custo, limite=limite
+    ):
         saldo = await db.ouro(conn, personagem_id)
-        return None, (
-            f"**{peca.nome}** custa {peca.custo} e você tem {saldo}. "
-            f"Faltam **{peca.custo - saldo}** de ouro."
-        )
+        if saldo < peca.custo:
+            return None, (
+                f"**{peca.nome}** custa {peca.custo} e você tem {saldo}. "
+                f"Faltam **{peca.custo - saldo}** de ouro."
+            )
+        # Tinha ouro: quem recusou foi o teto, e quem perdeu a corrida le aqui.
+        return None, cheio or "Essa compra não pode ser feita agora."
     saldo = await db.ouro(conn, personagem_id)
     return peca, (
         f"{_icone(peca)} **{peca.nome}** por {peca.custo}. "

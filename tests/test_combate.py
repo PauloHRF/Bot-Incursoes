@@ -531,6 +531,131 @@ async def main():
                 pass
 
 
+async def caso_marcar_o_turno_e_reivindicar():
+    """`resolver_turno` é uma reivindicação: devolve True uma vez só.
+
+    Dois lugares decidem o que fazer com esse retorno — `_perder_a_vez` e
+    `_devolver_pendentes` só devolvem a reserva se tiverem levado a marca,
+    porque devolver duas vezes criaria poção do nada.
+
+    Fica num caso próprio porque o `AND resolvida = 0` do UPDATE é defesa em
+    profundidade: hoje a trava por run já impede dois `_avancar` de resolverem
+    o mesmo turno, então tirar essa condição não muda o combate — só quebra o
+    contrato em que os dois chamadores se apoiam. O que consertou o bug da
+    queda foi a ORDEM (marcar antes de valer), e isso o
+    `caso_uma_queda_do_bot_nao_repete_a_acao_guardada` cobra.
+    """
+    conn, canal, cog = await preparar()
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="marca", monstro_objetivo=DURAO, salas=salas_sem_combate()
+    )
+    run = await montar_run(conn, canal, cog, "marca")
+    run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
+    passo = cog._passo(run)
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    quem = JOGADORES[1]
+
+    assert await db.marcar_turno(
+        conn, run["id"], passo, estado.rodada, quem, "ataque", resolvida=False
+    )
+    assert await db.resolver_turno(
+        conn, run["id"], passo, estado.rodada, quem
+    ) is True, "a primeira marca tinha de pegar"
+    assert await db.resolver_turno(
+        conn, run["id"], passo, estado.rodada, quem
+    ) is False, "a segunda marca pegou o mesmo turno de novo"
+    # Turno que nao existe tambem nao se reivindica.
+    assert await db.resolver_turno(
+        conn, run["id"], passo, estado.rodada + 99, quem
+    ) is False
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  marcar o turno e reivindicar: pega uma vez so: ok")
+
+
+async def caso_uma_queda_do_bot_nao_repete_a_acao_guardada():
+    """Uma ação guardada vale UMA vez, mesmo se o bot cair no meio dela.
+
+    A ordem era: resolver, gravar o dano, e só então marcar a ação como feita.
+    Entre as duas gravações o processo pode morrer — um deploy, uma exceção, a
+    instância reiniciando — e na volta a ação ainda estava pendente, então a
+    retomada a executava **outra vez**. Um ataque guardado levou o inimigo de
+    1000 a 942 e a 915 HP sem ninguém escolher nada.
+
+    `db.resolver_turno` virou uma reivindicação (`... AND resolvida = 0`,
+    devolvendo se pegou), e ela acontece ANTES de a ação valer. É o mesmo
+    padrão de `tomar_a_sala` e de `_tomar_o_fecho_do_combate`.
+
+    O caso NÃO compara HP: "rodou tarde" e "rodou duas vezes" baixam o HP
+    igual, e o dano é aleatório. Ele conta quantas vezes a ação de cada um é
+    executada, que é a pergunta de verdade.
+
+    A troca de ordem escolhe um lado, e vale dizer qual: se a resolução falhar
+    depois da marca, a ação é perdida em vez de repetida. Perder um turno é um
+    turno; repetir dano é um combate decidido por um acidente de servidor.
+    """
+    conn, canal, cog = await preparar()
+    incursao, _ = montar_conteudo(
+        cog, incursao_id="queda", monstro_objetivo=DURAO, salas=salas_sem_combate()
+    )
+    run = await montar_run(conn, canal, cog, "queda")
+    run = await atravessar_ate_objetivo(conn, canal, cog, run, incursao)
+    assert run["status"] == "objetivo"
+    a, b = JOGADORES[0], JOGADORES[1]
+    passo = cog._passo(run)
+    painel = await canal.fetch_message(run["mensagem_id"])
+
+    # B escolhe antes da vez dele: a acao fica guardada.
+    await cog.atacar(FakeInteraction(canal, b, painel), run["id"], "OBJ")
+    assert await db.turnos_pendentes(conn, run["id"], passo), (
+        "a acao de B tinha de estar guardada: sem isso o caso nao prova nada"
+    )
+
+    executadas = []
+    resolver_de_verdade = cog._resolver_turno
+
+    async def contando(*argumentos):
+        executadas.append(argumentos[2])  # user_id
+        return await resolver_de_verdade(*argumentos)
+
+    cog._resolver_turno = contando
+
+    # A QUEDA: o processo morre dentro do `resolver_turno` do turno de B. O
+    # primeiro passa (e o de A, e precisa valer), o segundo estoura.
+    marca_de_verdade = db.resolver_turno
+    chamadas = []
+
+    async def morre(*argumentos, **nomeados):
+        chamadas.append(1)
+        if len(chamadas) == 1:
+            return await marca_de_verdade(*argumentos, **nomeados)
+        raise RuntimeError("o processo caiu aqui")
+
+    db.resolver_turno = morre
+    try:
+        await cog.atacar(FakeInteraction(canal, a, painel), run["id"], "OBJ")
+    except RuntimeError:
+        pass
+    finally:
+        db.resolver_turno = marca_de_verdade
+
+    # O bot volta: a retomada encontra o que estiver pendente.
+    cog._travas.clear()
+    cog._encerrados.clear()
+    await cog._avancar(await db.buscar_run(conn, run["id"]), incursao.objetivo)
+    cog._resolver_turno = resolver_de_verdade
+
+    assert executadas.count(b) == 1, (
+        f"a acao guardada de B foi executada {executadas.count(b)}x: {executadas}"
+    )
+    assert executadas.count(a) == 1, executadas
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  uma queda do bot nao repete a acao guardada: ok")
+
+
 async def caso_o_ataque_adia_antes_de_resolver():
     """O clique de atacar avisa o Discord ANTES de resolver o turno.
 
@@ -598,6 +723,8 @@ async def _casos():
     await caso_derrota_total()
     await caso_descanso_cura()
     await caso_restart_no_combate()
+    await caso_marcar_o_turno_e_reivindicar()
+    await caso_uma_queda_do_bot_nao_repete_a_acao_guardada()
     await caso_o_ataque_adia_antes_de_resolver()
 
 

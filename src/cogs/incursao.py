@@ -2402,10 +2402,12 @@ class Incursoes(commands.Cog):
                 )
                 if not turno or turno["resolvida"]:
                     continue
-                texto = await self._resolver_turno(run, estado, user_id, turno)
-                await db.resolver_turno(
+                # Reivindica ANTES de resolver: ver `db.resolver_turno`.
+                if not await db.resolver_turno(
                     self.bot.db, run["id"], passo, estado.rodada, user_id
-                )
+                ):
+                    continue
+                texto = await self._resolver_turno(run, estado, user_id, turno)
                 if interaction is not None and interaction.user.id == user_id:
                     await responder(texto)
                 return True
@@ -2497,11 +2499,11 @@ class Incursoes(commands.Cog):
                         continue
                     esperando = ator["nome"]
                     break
-                if not turno["resolvida"]:
+                if not turno["resolvida"] and await db.resolver_turno(
+                    # Reivindica ANTES de resolver: ver `db.resolver_turno`.
+                    self.bot.db, run["id"], passo, estado.rodada, user_id
+                ):
                     texto = await self._resolver_turno(run, estado, user_id, turno)
-                    await db.resolver_turno(
-                        self.bot.db, run["id"], passo, estado.rodada, user_id
-                    )
                     if interaction is not None and interaction.user.id == user_id:
                         await responder(texto)
                 await db.definir_vez(self.bot.db, run["id"], passo, vez + 1)
@@ -2532,10 +2534,28 @@ class Incursoes(commands.Cog):
         if not turno or turno["resolvida"]:
             return
         passo = self._passo(run)
-        await db.resolver_turno(self.bot.db, run["id"], passo, estado.rodada, turno["user_id"])
-        # A poção escolhida que não chegou a ser bebida volta para a bolsa:
-        # ela saiu dela na escolha, e quem caiu ou foi atordoado antes da vez
-        # não bebeu nada. Sem isto, perder a vez queimava o item.
+        if not await db.resolver_turno(
+            self.bot.db, run["id"], passo, estado.rodada, turno["user_id"]
+        ):
+            # Alguem ja reivindicou esta acao: devolver aqui tambem devolveria
+            # a reserva duas vezes.
+            return
+        await self._devolver_reservas(run, turno, passo)
+
+    async def _devolver_reservas(
+        self, run: dict[str, Any], turno: dict, passo: int
+    ) -> None:
+        """Devolve o que a ação guardada tinha reservado: o item ou o uso.
+
+        A poção sai da bolsa na **escolha**, e a habilidade gasta o uso na
+        escolha — as duas são reservadas antes de a vez chegar, para dois
+        cliques no mesmo instante não gastarem a mesma coisa. Quando a vez não
+        chega, a reserva tem de voltar.
+
+        Dois caminhos chamam aqui, e são os dois jeitos de a vez não chegar:
+        `_perder_a_vez` (caiu ou foi atordoado) e `_devolver_pendentes` (o
+        combate acabou antes).
+        """
         pocao = consumiveis.item(turno["acao"])
         if pocao is not None:
             personagem = await self._personagem_na_run(run, turno["user_id"])
@@ -2548,6 +2568,23 @@ class Incursoes(commands.Cog):
                 self.bot.db, run["id"], turno["user_id"], habilidade.chave_de_uso,
                 self._chave_de_recarga(habilidade, run, passo),
             )
+
+    async def _devolver_pendentes(self, run: dict[str, Any]) -> None:
+        """O combate acabou antes da vez de alguém: a reserva volta.
+
+        Vencer antes do turno de quem já tinha escolhido queimava a escolha: a
+        Poção de Vida desaparecia da bolsa e a Fireball ficava gasta, sem
+        nenhuma das duas ter acontecido. É a mesma devolução de
+        `_perder_a_vez`, pelo mesmo motivo — a ação não aconteceu —, e o
+        combate que termina é só o terceiro jeito de a vez não chegar.
+        """
+        passo = self._passo(run)
+        for turno in await db.turnos_pendentes(self.bot.db, run["id"], passo):
+            if not await db.resolver_turno(
+                self.bot.db, run["id"], passo, turno["rodada"], turno["user_id"]
+            ):
+                continue
+            await self._devolver_reservas(run, turno, passo)
 
     async def _resolver_turno(
         self, run: dict[str, Any], estado: EstadoCombate, user_id: int, turno: dict
@@ -2975,6 +3012,10 @@ class Incursoes(commands.Cog):
 
     async def _encerrar_combate(self, run: dict[str, Any], sala: Sala, estado) -> None:
         """Um dos lados caiu: fecha o painel e segue a run (ou a encerra)."""
+        # Antes de tudo: quem escolheu e nao chegou a agir recebe de volta o
+        # que a escolha reservou. Vale vencendo e perdendo — a acao nao
+        # aconteceu nos dois casos.
+        await self._devolver_pendentes(run)
         await self._atualizar_painel(run, sala, estado, encerrado=True)
         await self._limpar_efemeras(run["id"])
         await self._apagar_chamada(run["id"])
@@ -3435,7 +3476,15 @@ class Incursoes(commands.Cog):
             )
             await self._dizer_ou_apagar(run, interaction, texto)
             if estado is not None:
-                await self._atualizar_painel(run, sala, estado)
+                # `_avancar`, e nao so redesenhar o painel: a Mana GASTA o
+                # turno, e quem gasta o turno tem de empurrar a fila. Com os
+                # outros jogadores ja tendo escolhido, beber Mana deixava
+                # todos com acao guardada e ninguem para resolve-las: o
+                # combate parava, e nao havia botao que o destravasse.
+                #
+                # Sem a `interaction`: o texto da pocao ja foi dito acima, e
+                # `_avancar` tentaria responder a mesma interacao de novo.
+                await self._avancar(run, sala)
             return
 
         # Fora de combate (e na Aceleração, que não custa a ação) resolve na

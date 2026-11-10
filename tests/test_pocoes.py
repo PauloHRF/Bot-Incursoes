@@ -520,6 +520,118 @@ async def caso_perder_a_vez_devolve_a_pocao():
     print("  perder a vez devolve a poção para a bolsa: ok")
 
 
+async def caso_a_mana_empurra_a_fila():
+    """A Mana resolve na hora e GASTA o turno — então tem de andar a fila.
+
+    Ela retornava depois de redesenhar o painel, sem chamar `_avancar`. Com os
+    outros jogadores já tendo escolhido, beber Mana deixava todo mundo com ação
+    guardada e ninguém para resolvê-las: o combate parava, e não havia botão
+    que o destravasse — nem o da própria pessoa, cujo turno já estava gasto.
+
+    É o mesmo formato do Quickened Spell, e a diferença é o que fazer a
+    respeito: o Quickened **não** gasta o turno, então bastava ele reparar no
+    fim do combate; a Mana gasta, e quem gasta o turno empurra a fila.
+    """
+    conn, canal, cog, incursao, ids = await preparar(classe="guerreiro", nivel=8)
+    run = await abrir_combate(conn, canal, cog, incursao)
+    a, b = JOGADORES[0], JOGADORES[1]
+    passo = cog._passo(run)
+
+    # Gasta o Second Wind, para a Mana ter o que devolver.
+    await guardar(conn, ids[a], "pocao_mana_1")
+    await db.definir_hp(conn, run["id"], a, 10)
+    quem = await cog._personagem_na_run(run, a)
+    hab = next(h for _t, h in quem["habilidades"] if h.id == "second_wind")
+    await db.gastar_uso(
+        conn, run["id"], a, hab.chave_de_uso,
+        cog._chave_de_recarga(hab, run, passo), hab.vezes,
+    )
+
+    # B escolhe antes: a vez e de A, entao a acao de B fica guardada.
+    msg = await canal.fetch_message(run["mensagem_id"])
+    await cog.atacar(FakeInteraction(canal, b, msg), run["id"], "OBJ")
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    hp_antes = estado.inimigos[0].hp_atual
+    assert await db.turnos_pendentes(conn, run["id"], passo), (
+        "a acao de B tinha de estar guardada: sem isso o caso nao prova nada"
+    )
+
+    # A bebe a Mana, que gasta o turno dele.
+    await beber(
+        cog, canal, run, a, "pocao_mana_1", escolhida="second_wind", msg=msg
+    )
+    # O efeito, e nao a frase: com a fila andando, a rodada vira e o texto da
+    # pocao sai no canal em vez da efemera. Quem cobra a frase e o
+    # `caso_a_pocao_de_mana_devolve_um_uso`.
+    assert not await cog._recarregaveis(run, quem, 1), "a Mana nao devolveu o uso"
+
+    pendentes = await db.turnos_pendentes(conn, run["id"], passo)
+    assert not pendentes, f"o combate parou com acao guardada: {pendentes}"
+    estado = await cog._estado_combate(
+        await db.buscar_run(conn, run["id"]), incursao.objetivo
+    )
+    assert estado.inimigos[0].hp_atual < hp_antes, "o ataque guardado de B nao saiu"
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  beber Mana empurra a fila em vez de parar o combate: ok")
+
+
+async def caso_vencer_antes_da_vez_devolve_a_reserva():
+    """Vencer antes do turno de quem já escolheu devolve o que ele reservou.
+
+    A poção sai da bolsa na escolha, e o uso da habilidade é gasto na escolha
+    — as duas são reservadas ali para dois cliques no mesmo instante não
+    gastarem a mesma coisa. Com o combate acabando antes da vez, nenhuma das
+    duas acontecia e nenhuma voltava: a Poção de Vida desaparecia da bolsa e a
+    habilidade ficava gasta sem ter saído.
+
+    É o terceiro jeito de a vez não chegar, e os outros dois já devolviam —
+    ver `caso_perder_a_vez_devolve_a_pocao`.
+    """
+    conn, canal, cog, incursao, ids = await preparar(
+        classe="guerreiro", nivel=8, monstro={**DURADOURO, "hp": 1}
+    )
+    run = await abrir_combate(conn, canal, cog, incursao, quantos=3)
+    a, b, c = JOGADORES[0], JOGADORES[1], JOGADORES[2]
+    passo = cog._passo(run)
+    msg = await canal.fetch_message(run["mensagem_id"])
+
+    # B guarda uma pocao; C guarda uma habilidade.
+    await guardar(conn, ids[b], "pocao_vida")
+    await db.definir_hp(conn, run["id"], b, 10)
+    await db.definir_hp(conn, run["id"], c, 10)
+    await beber(cog, canal, run, b, "pocao_vida", msg=msg)
+    await cog.usar_habilidade(
+        FakeInteraction(canal, c, msg), run["id"], "OBJ", "second_wind"
+    )
+    assert "pocao_vida" not in await db.itens_na_bolsa(conn, ids[b]), (
+        "a pocao tinha de sair da bolsa na escolha"
+    )
+    pessoa_c = await cog._personagem_na_run(run, c)
+    assert await cog._recarregaveis(run, pessoa_c, 1), "o uso de C nao foi gasto"
+    assert len(await db.turnos_pendentes(conn, run["id"], passo)) == 2
+
+    # A mata o inimigo de 1 HP: o combate acaba antes da vez de B e de C.
+    await cog.atacar(FakeInteraction(canal, a, msg), run["id"], "OBJ")
+    assert (await db.buscar_run(conn, run["id"]))["status"] != "objetivo"
+
+    voltaram = (await db.itens_na_bolsa(conn, ids[b])).get("pocao_vida", 0)
+    assert voltaram == 1, (
+        f"a pocao tinha de voltar uma vez, e voltou {voltaram}: devolver duas"
+        " vezes cria pocao do nada, e nenhuma vez queima a do jogador"
+    )
+    assert not await cog._recarregaveis(run, pessoa_c, 1), (
+        "o combate acabou antes da vez e o uso da habilidade nao voltou"
+    )
+    # E o HP de B nao mudou: ela nao foi bebida, so devolvida.
+    assert (await db.hp_dos_participantes(conn, run["id"]))[b] == 10
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  vencer antes da vez devolve a pocao e o uso guardados: ok")
+
+
 async def caso_a_bebida_sai_no_canal_uma_vez_so():
     """O grupo vê quem bebeu o quê — e vê UMA vez.
 
@@ -633,6 +745,8 @@ async def main() -> None:
         await caso_a_pocao_de_buff_empilha_a_condicao()
         await caso_a_pocao_de_mana_devolve_um_uso()
         await caso_perder_a_vez_devolve_a_pocao()
+        await caso_a_mana_empurra_a_fila()
+        await caso_vencer_antes_da_vez_devolve_a_reserva()
         await caso_a_bebida_sai_no_canal_uma_vez_so()
         await caso_sem_pocao_o_botao_avisa()
         await caso_o_menu_lista_o_que_a_bolsa_tem()

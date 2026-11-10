@@ -33,7 +33,10 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db  # noqa: E402
+from src import (  # noqa: E402
+    config, consumiveis as K, database as db, itens, mercado,
+)
+from src.cogs.mercado import tentar_comprar  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
@@ -48,6 +51,7 @@ from fakes import (  # noqa: E402
 )
 
 BANCO = Path(__file__).resolve().parent / "teste_corridas.db"
+SEMANA = "2026-W45"
 _ABERTAS = []
 
 
@@ -151,6 +155,95 @@ async def caso_comprar_sozinho_continua_igual():
 
     await _fechar(conn)
     print("  a compra de um so: passa, recusa e zera como antes: ok")
+
+
+async def caso_duas_compras_nao_passam_do_teto_de_estoque():
+    """O ouro foi consertado antes do estoque, e eram dois tetos diferentes.
+
+    Com duas poções na bolsa e teto de três, duas compras no mesmo instante
+    rendiam **quatro** — e o ouro era cobrado certo pelas duas, o que fazia o
+    problema parecer resolvido. A conferência de quantidade ficava no cog,
+    lendo a bolsa com um `await` no meio, e as duas passavam por ela.
+
+    O equipamento tem o mesmo buraco com teto 1: duas cópias de uma peça que
+    é única por personagem, sendo que a segunda não faria efeito nenhum — só
+    queimaria ouro.
+
+    São duas gravações em tabelas diferentes (o saldo e a bolsa), e por isso
+    não há um statement que garanta as duas: cada uma confere a sua no próprio
+    `WHERE`, e estourar o teto depois de debitar desfaz o débito.
+    """
+    conn, _canal, _cog, users = await preparar(quantos=1)
+    pid = await _pid(conn, users[0])
+    await db.lancar_ouro(conn, pid, 100000, "semente")
+
+    pocao = K.FIXAS[0]
+    for _ in range(K.TETO_NA_BOLSA - 1):
+        assert (await tentar_comprar(conn, pid, SEMANA, pocao.id))[0] is not None
+    saldo_antes = await db.ouro(conn, pid)
+
+    respostas = await asyncio.gather(
+        tentar_comprar(conn, pid, SEMANA, pocao.id),
+        tentar_comprar(conn, pid, SEMANA, pocao.id),
+    )
+    quantas = (await db.itens_na_bolsa(conn, pid)).get(pocao.id, 0)
+    assert quantas == K.TETO_NA_BOLSA, (
+        f"a bolsa passou do teto: {quantas} em {K.TETO_NA_BOLSA}"
+    )
+    # Uma passou, a outra leu o porque — e nao foi cobrada por isso.
+    assert sum(1 for peca, _t in respostas if peca is not None) == 1, respostas
+    recusada = next(t for peca, t in respostas if peca is None)
+    assert "máximo" in recusada, recusada
+    assert await db.ouro(conn, pid) == saldo_antes - pocao.custo, (
+        "cobrou as duas compras, e so uma entrou na bolsa"
+    )
+
+    # O equipamento: unico por personagem, teto de 1.
+    peca = next(p for p in mercado.vitrine(pid, SEMANA) if p.slot in itens.SLOTS)
+    saldo_antes = await db.ouro(conn, pid)
+    respostas = await asyncio.gather(
+        tentar_comprar(conn, pid, SEMANA, peca.id),
+        tentar_comprar(conn, pid, SEMANA, peca.id),
+    )
+    copias = (await db.itens_na_bolsa(conn, pid)).get(peca.id, 0)
+    assert copias == 1, f"comprou {copias} copias de uma peca unica"
+    assert await db.ouro(conn, pid) == saldo_antes - peca.custo, "cobrou as duas"
+
+    await _fechar(conn)
+    print("  duas compras simultaneas nao passam do teto de estoque: ok")
+
+
+async def caso_o_teto_conta_o_que_esta_vestido():
+    """Vestir a peça não libera comprá-la de novo.
+
+    Vestido, o item sai de `personagem_itens` — então um teto que olhasse só a
+    bolsa veria zero e venderia a segunda cópia, que é exatamente o que a
+    regra do item único existe para impedir.
+    """
+    conn, _canal, _cog, users = await preparar(quantos=1)
+    pid = await _pid(conn, users[0])
+    await db.lancar_ouro(conn, pid, 100000, "semente")
+
+    peca = next(p for p in mercado.vitrine(pid, SEMANA) if p.slot in itens.SLOTS)
+    assert (await tentar_comprar(conn, pid, SEMANA, peca.id))[0] is not None
+    assert await db.equipar(conn, pid, peca.id, peca.slot) == (True, None)
+    assert not (await db.itens_na_bolsa(conn, pid)).get(peca.id), "ainda na bolsa"
+
+    saldo = await db.ouro(conn, pid)
+    comprada, texto = await tentar_comprar(conn, pid, SEMANA, peca.id)
+    assert comprada is None, "vendeu a segunda copia de uma peca vestida"
+    assert await db.ouro(conn, pid) == saldo, "cobrou sem vender"
+
+    # E direto no `comprar`, sem passar pelo cog: a conferencia de lá tambem
+    # olha o que esta vestido, e por isso ela MASCARA a do statement. Quem
+    # decide numa corrida e a do statement, e e ela que este trecho cobra.
+    assert await db.comprar(conn, pid, peca.id, peca.custo, limite=1) is False, (
+        "o teto do statement nao contou a peca vestida"
+    )
+    assert await db.ouro(conn, pid) == saldo, "debitou e nao desfez"
+
+    await _fechar(conn)
+    print("  o teto conta o que esta vestido, nao so a bolsa: ok")
 
 
 # -------------------------------------------------------- equipamento
@@ -444,6 +537,8 @@ async def main():
     try:
         await caso_duas_compras_nao_gastam_o_mesmo_ouro()
         await caso_comprar_sozinho_continua_igual()
+        await caso_duas_compras_nao_passam_do_teto_de_estoque()
+        await caso_o_teto_conta_o_que_esta_vestido()
         caso_a_fila_e_por_personagem()
         await caso_duas_trocas_no_mesmo_slot_nao_duplicam_nem_perdem()
         await caso_equipar_sozinho_continua_trocando()
