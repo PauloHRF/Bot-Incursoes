@@ -285,6 +285,25 @@ CREATE TABLE IF NOT EXISTS run_substituicao_apoio (
     PRIMARY KEY (run_id, passo, rodada, alvo_id, user_id)
 );
 
+-- Os apoios pertencem a uma proposta. A limpeza no mesmo statement impede
+-- que outra corrotina abra uma proposta nova entre apagar a antiga e os votos.
+CREATE TRIGGER IF NOT EXISTS limpar_apoios_ao_tomar_substituicao
+AFTER DELETE ON run_substituicao
+BEGIN
+    DELETE FROM run_substituicao_apoio
+    WHERE run_id = OLD.run_id AND passo = OLD.passo
+      AND rodada = OLD.rodada AND alvo_id = OLD.alvo_id;
+END;
+
+-- Tambem descarta apoios orfaos deixados por versoes anteriores do bot.
+CREATE TRIGGER IF NOT EXISTS limpar_apoios_ao_abrir_substituicao
+AFTER INSERT ON run_substituicao
+BEGIN
+    DELETE FROM run_substituicao_apoio
+    WHERE run_id = NEW.run_id AND passo = NEW.passo
+      AND rodada = NEW.rodada AND alvo_id = NEW.alvo_id;
+END;
+
 -- Efeitos com duracao dentro de um combate: Rage, Marca do Cacador e afins.
 -- alvo_tipo diz se cai num personagem ("personagem", alvo_id = user_id) ou numa
 -- criatura ("inimigo", alvo_id = indice). `dono` e quem ganha o beneficio de um
