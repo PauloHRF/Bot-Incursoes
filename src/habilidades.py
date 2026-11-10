@@ -1434,7 +1434,17 @@ NEUTRO: dict = {
     "totem": {},
     "acerto": 0,
     "ca": 0,
+    # DUAS chaves, e a diferenca e de quem le cada uma:
+    #   `thp_na_cura` sai de QUEM CURA — e o Cantico Benevolente do xama,
+    #     "curar da +4 de THP ao alvo";
+    #   `thp_ao_ser_curado` sai de QUEM RECEBE — e a armadura do mercado,
+    #     "+2 de vida temporaria AO SER CURADO".
+    # Eram a mesma chave, lida so do lado de quem cura, e por isso a
+    # Tunica Acolchoada nao fazia nada em quem a vestia: ela dava THP ao
+    # aliado de quem estivesse com ela. O texto dos dois e oposto, e um
+    # nome so para os dois esconde isso.
     "thp_na_cura": 0,
+    "thp_ao_ser_curado": 0,
     "expertise": [],
     "sequencia": {},
     "bonus_teste": 0,

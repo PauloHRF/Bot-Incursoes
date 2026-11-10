@@ -37,7 +37,7 @@ NOME_DO_SLOT = {
 # altas, escolhido para não invadir o slot do vizinho.
 DOMINIO: dict[str, tuple[str, ...]] = {
     # Proteção: a CA, e o corpo que a cura encontra.
-    "armadura": ("ca", "thp_na_cura"),
+    "armadura": ("ca", "thp_ao_ser_curado"),
     # Ofensa: acertar e doer. O crítico é tempero porque é raro de sair.
     "arma": ("acerto", "dano_extra", "dano_bonus", "critico_em"),
     # Prontidão: chegar antes e saber das coisas.
@@ -116,22 +116,22 @@ CATALOGO: tuple[Item, ...] = (
        "Couro curtido duas vezes. +1 de CA.", {"ca": 1}),
     _i("tunica_acolchoada", "Túnica acolchoada", "armadura", "comum",
        "Pouca proteção, muita gentileza: +2 de vida temporária ao ser curado.",
-       {"thp_na_cura": 2}),
+       {"thp_ao_ser_curado": 2}),
     _i("cota_de_malha_ana", "Cota de malha anã", "armadura", "incomum",
        "+1 de CA, e +3 de vida temporária ao ser curado.",
-       {"ca": 1, "thp_na_cura": 3}),
+       {"ca": 1, "thp_ao_ser_curado": 3}),
     _i("brunea_do_vigia", "Brunea do vigia", "armadura", "incomum",
        "Feita para turno de guarda. +1 de CA e +4 de vida temporária ao ser curado.",
-       {"ca": 1, "thp_na_cura": 4}),
+       {"ca": 1, "thp_ao_ser_curado": 4}),
     _i("peitoral_de_serpe", "Peitoral de escamas de serpe", "armadura", "raro",
        "+2 de CA.", {"ca": 2}),
     _i("couraca_do_fosso", "Couraça do fosso", "armadura", "raro",
        "+2 de CA, e +3 de vida temporária ao ser curado.",
-       {"ca": 2, "thp_na_cura": 3}),
+       {"ca": 2, "thp_ao_ser_curado": 3}),
     _i("egide_do_portao", "Égide do Portão", "armadura", "lendario",
        "A placa que ficou de pé quando o portão caiu. +2 de CA e +6 de vida "
        "temporária ao ser curado.",
-       {"ca": 2, "thp_na_cura": 6}),
+       {"ca": 2, "thp_ao_ser_curado": 6}),
 
     # ----------------------------------------------------------------- arma
     _i("lamina_afiada", "Lâmina bem afiada", "arma", "comum",
@@ -304,7 +304,7 @@ ROTULO_DO_EFEITO = {
     "bonus_save_atributo": lambda v: " · ".join(
         f"{n:+d} em resistência de {a}" for a, n in sorted(v.items())
     ),
-    "thp_na_cura": lambda v: f"{v:+d} de vida temporária ao ser curado",
+    "thp_ao_ser_curado": lambda v: f"{v:+d} de vida temporária ao ser curado",
     "thp_ao_derrubar": lambda v: f"{v:+d} de vida temporária ao derrubar",
     "bonus_cura_pct": lambda v: f"+{v:.0%} de cura",
     "ameaca": lambda v: f"{v:+d} de ameaça",

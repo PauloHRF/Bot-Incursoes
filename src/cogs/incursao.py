@@ -1138,6 +1138,27 @@ class Incursoes(commands.Cog):
                 "Esse personagem não é seu.", ephemeral=True
             )
             return
+        if await db.esta_na_run(self.bot.db, run_id, interaction.user.id):
+            await interaction.response.send_message(
+                "Você já está no grupo.", ephemeral=True
+            )
+            return
+        # O MESMO bloqueio que o `recrutar` confere antes de abrir o menu, e
+        # nao uma formalidade: o menu de escolher personagem fica no canal
+        # depois de aberto, e o botao dele chama esta funcao direto. Quem
+        # abrisse o menu aqui, entrasse em outra incursao e depois voltasse
+        # para clicar neste botao entrava nas duas — o mesmo personagem em
+        # duas runs vivas. Qualquer cheque que abre um menu precisa valer de
+        # novo no clique: entre uma coisa e outra nao existe prazo.
+        #
+        # Vem DEPOIS do `esta_na_run` desta run, senao ele mesmo responderia
+        # "voce ja esta na run #N" apontando para esta, que nao e o aviso.
+        bloqueio = await self._motivo_de_bloqueio(
+            run["guild_id"], interaction.user.id
+        )
+        if bloqueio:
+            await interaction.response.send_message(bloqueio, ephemeral=True)
+            return
         if len(await db.participantes(self.bot.db, run_id)) >= config.TAMANHO_GRUPO:
             await interaction.response.send_message("O grupo já está cheio.", ephemeral=True)
             return
@@ -2892,7 +2913,7 @@ class Incursoes(commands.Cog):
         ja_agiram = {a["alvo_id"] for a in antes if a["tipo"] == motor.PERSONAGEM}
         await self._guardar_atordoamentos(run, estado, feito.investidas, ja_agiram)
         pegaram = await self._guardar_debuffs(run, feito.investidas)
-        await self._reacoes_do_revide(run, estado, feito.golpes)
+        await self._reacoes_do_revide(run, estado, feito.golpes, feito.investidas)
         linhas = []
         if feito.regenerou:
             linhas.append(f"🩹 **{inimigo.nome}** regenera **{feito.regenerou}** HP")
@@ -4072,9 +4093,29 @@ class Incursoes(commands.Cog):
                     self.bot.db, run["id"], proprio.user_id, proprio.thp
                 )
         # Cantico Benevolente: a escolha do Xama soma THP em cima da cura.
+        # Sai de QUEM CURA, e so quando cura OUTRO: e o que o texto promete.
         extra_cantico = dele.get("thp_na_cura", 0)
         if extra_cantico and alvo.user_id != user_id:
             quanto_thp += extra_cantico
+        # A armadura: "+N de vida temporaria AO SER CURADO". Sai de quem
+        # RECEBE, e e o oposto do de cima. As duas coisas dividiam a chave
+        # `thp_na_cura`, lida so do lado de quem cura — entao a Tunica
+        # Acolchoada nao fazia nada em quem a vestia, e dava o THP ao aliado
+        # de quem estivesse com ela. Cinco armaduras tinham a linha de stat
+        # inteira sem efeito.
+        #
+        # Duas diferencas em relacao ao Cantico, e as duas vem do texto:
+        #   sem o `!= user_id`, porque ser curado e ser curado — curar a si
+        #     mesmo tambem conta;
+        #   dentro do `if curado`, porque "ao ser curado" exige ter sido
+        #     curado. Sem isso, curar um aliado de HP cheio renderia THP de
+        #     graca. O Cantico fica fora deste `if` como sempre esteve: o
+        #     texto dele cobra CURAR, e nao curar alguma coisa.
+        if curado:
+            quem_recebeu = await self._personagem_na_run(run, alvo.user_id)
+            quanto_thp += ((quem_recebeu or {}).get("efeitos") or {}).get(
+                "thp_ao_ser_curado", 0
+            )
         if quanto_thp:
             temporario = motor.ganhar_thp(alvo, quanto_thp)
             await db.definir_thp(self.bot.db, run["id"], alvo.user_id, alvo.thp)
@@ -4109,13 +4150,15 @@ class Incursoes(commands.Cog):
         # com o resto — a habilidade cai no grupo, e depois de cair o grupo
         # ja inclui quem voltou.
         texto_da_cura = None
+        # Fora do `if` para o THP da armadura poder consultar quem foi curado
+        # sem depender de a habilidade ter cura.
+        curados: dict[int, int] = {}
         if acao.get("cura_fracao"):
             # O bonus de quem cura (Curandeiro, Especialista em cura, o anel
             # do santuario) vale aqui como na cura de um so.
             quem_curou = await self._personagem_na_run(run, user_id)
             bonus = ((quem_curou or {}).get("efeitos") or {}).get("bonus_cura_pct")
             como = {"fracao": acao["cura_fracao"]}
-            curados = {}
             levantados = []
             # `combatentes` e nao `vivos`: a cura em grupo levanta os caidos,
             # como a cura de alvo escolhido.
@@ -4135,13 +4178,33 @@ class Incursoes(commands.Cog):
             texto_da_cura = f"**{round(total * 100)}%** do HP maximo de volta"
 
         quanto = motor.rolar_dano(acao["thp"]) if acao.get("thp") else 0
+        # A armadura de quem FOI curado ("+N de vida temporaria ao ser
+        # curado") vale aqui como na cura de um alvo so: a cura em grupo e
+        # cura. Uma leitura so para todos, em vez de uma por cabeca.
+        da_armadura: dict[int, int] = {}
+        if curados:
+            for p in await db.personagens_da_run(self.bot.db, run["id"]):
+                extra = (p.get("efeitos") or {}).get("thp_ao_ser_curado", 0)
+                if extra and p["user_id"] in curados:
+                    da_armadura[p["user_id"]] = extra
         novos: dict[int, int] = {}
         for c in estado.vivos:
-            if quanto:
-                motor.ganhar_thp(c, quanto)
+            ganho = quanto + da_armadura.get(c.user_id, 0)
+            if ganho:
+                motor.ganhar_thp(c, ganho)
             novos[c.user_id] = c.thp
         if quanto:
             linhas.append(f"**{quanto}** de vida temporaria para o grupo")
+        if da_armadura:
+            linhas.append(
+                "e a armadura de "
+                + ", ".join(
+                    f"**{c.nome}**"
+                    for c in estado.vivos
+                    if c.user_id in da_armadura
+                )
+                + " rende THP em cima da cura"
+            )
         if texto_da_cura:
             linhas.append(texto_da_cura)
 
@@ -4735,14 +4798,49 @@ class Incursoes(commands.Cog):
                 return habilidade, acao
         return None, None
 
-    async def _reacoes_do_revide(self, run: dict[str, Any], estado, revides) -> None:
-        """As reacoes que o golpe do inimigo dispara, na ordem em que importam.
+    async def _reacoes_do_revide(
+        self, run: dict[str, Any], estado, golpes, investidas=()
+    ) -> None:
+        """As reacoes que o turno do inimigo dispara, na ordem em que importam.
 
         A esquiva vem antes da queda: cortar o golpe pela metade pode evitar
         que a segunda reacao precise acontecer.
+
+        **A esquiva vale so contra GOLPE**, e isso e de propósito: Uncanny
+        Dodge corta um ataque que o ladino ve vir, nao uma explosao em que ele
+        falhou a resistencia.
+
+        **A queda vale contra tudo.** Relentless dispara por chegar a zero, e
+        nao importa o que levou ate lá. Aqui so os golpes chegavam, entao o
+        barbaro se recusava a cair quando a criatura BATIA nele e ficava no
+        chao quando ela o matava com a habilidade — que e justamente o golpe
+        mais pesado que ela tem.
+
+        As investidas `do_golpe` ficam de fora porque o dano delas ja veio no
+        golpe que as disparou: elas estao representadas em `golpes`. Hoje esse
+        filtro nao MUDA nada — a deduplicacao abaixo ja descartaria essas
+        entradas, porque o golpe que as trouxe vem antes na lista —, e esta
+        aqui para dizer a intencao e para o dia em que uma das duas coisas sair
+        de cena. Nao ha caso cobrindo ele: cobrir pediria uma reacao de queda
+        com mais de um uso, e nenhuma existe.
         """
-        await self._esquivas(run, revides)
-        await self._reacoes_ao_cair(run, revides)
+        await self._esquivas(run, golpes)
+        # Um alvo por reacao, mesmo aparecendo duas vezes: criatura com dois
+        # ataques entrega dois golpes no mesmo personagem, e uma reacao de
+        # varios usos dispararia duas vezes por uma unica queda.
+        caiu = []
+        vistos: set[int] = set()
+        candidatos = list(golpes) + [
+            (investida, investida.alvo)
+            for investida in investidas
+            if investida.dano and not investida.do_golpe
+        ]
+        for origem, atingido in candidatos:
+            if atingido.user_id in vistos:
+                continue
+            vistos.add(atingido.user_id)
+            caiu.append((origem, atingido))
+        await self._reacoes_ao_cair(run, caiu)
 
     async def _esquivas(self, run: dict[str, Any], revides) -> None:
         """Uncanny Dodge: corta o golpe pesado pela metade, devolvendo o HP."""

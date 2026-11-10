@@ -49,7 +49,7 @@ O peso é a fatia do sorteio de **uma** vaga. A prateleira é sorteada sem repet
 
 | Slot | Domina | Itens no catálogo |
 |---|---|---|
-| Armadura | `ca`, `thp_na_cura` | 7 |
+| Armadura | `ca`, `thp_ao_ser_curado` | 7 |
 | Arma | `acerto`, `dano_extra`, `dano_bonus`, `critico_em` | 7 |
 | Botas | `bonus_iniciativa`, `bonus_teste` | 7 |
 | Capacete/capa | `bonus_save`, `bonus_save_atributo` | 7 |

@@ -19,6 +19,10 @@ perde a corrida leva `False` do próprio banco.
 Os casos aqui usam `asyncio.gather` porque chamadas sequenciais NÃO provam
 nada: a segunda já encontraria a primeira gravada e seria recusada de todo
 jeito, mesmo com o bug no lugar.
+
+O último caso é o mesmo buraco esticado: um **menu** que fica no canal. Entre
+conferir e agir ali não cabe um `await`, cabem minutos — e um cheque feito
+antes de abrir o menu não vale mais quando o botão é clicado.
 """
 from __future__ import annotations
 
@@ -47,7 +51,18 @@ BANCO = Path(__file__).resolve().parent / "teste_corridas.db"
 _ABERTAS = []
 
 
-async def preparar(quantos=6):
+class BotDeVariosCanais(FakeBot):
+    """O `FakeBot` só conhece um canal, e duas runs vivas pedem dois."""
+
+    def __init__(self, conn, canais):
+        super().__init__(conn, canais[0])
+        self.canais = {c.id: c for c in canais}
+
+    def get_channel(self, canal_id):
+        return self.canais.get(canal_id)
+
+
+async def preparar(quantos=6, canais=1):
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -66,10 +81,10 @@ async def preparar(quantos=6):
             conn, GUILD, user_id, f"Heroi{user_id}", CLASSE_PADRAO,
             list(TREINADAS), nivel=8,
         )
-    canal = FakeCanal(CANAL)
-    cog = Incursoes(FakeBot(conn, canal))
+    lista = [FakeCanal(CANAL + i) for i in range(canais)]
+    cog = Incursoes(BotDeVariosCanais(conn, lista))
     montar_conteudo(cog, tier=4)
-    return conn, canal, cog, users
+    return conn, (lista[0] if canais == 1 else lista), cog, users
 
 
 async def _pid(conn, user_id):
@@ -359,6 +374,72 @@ async def caso_entrar_duas_vezes_na_mesma_run_nao_duplica():
     print("  clicar duas vezes entra uma vez, e a frase e a certa: ok")
 
 
+# ------------------------------------------------------- o menu velho
+
+
+async def caso_menu_velho_nao_deixa_entrar_em_duas_runs():
+    """O menu de escolher personagem fica no canal, e o cheque tem de valer de novo.
+
+    `recrutar` confere o bloqueio — *"você já está na run #N"* — ANTES de
+    abrir o menu de personagens. Mas o menu fica no canal depois de aberto, e
+    o botão dele chama `efetivar_entrada` direto. Quem abrisse o menu aqui,
+    entrasse em outra incursão e voltasse para clicar neste botão entrava nas
+    duas: o mesmo jogador em duas runs vivas ao mesmo tempo.
+
+    É o mesmo buraco dos outros casos, com outro tamanho. Lá entre conferir e
+    gravar cabia um `await`; aqui cabem minutos. **Todo cheque que abre um
+    menu precisa valer outra vez no clique** — entre uma coisa e outra não
+    existe prazo.
+    """
+    conn, (canal_a, canal_b), cog, users = await preparar(canais=2)
+    for canal, dono in ((canal_a, users[0]), (canal_b, users[1])):
+        await cog.entrar.callback(
+            cog, FakeInteraction(canal, dono), cog.incursoes["t"].tier, "t"
+        )
+    run_a = await db.run_do_canal(conn, canal_a.id)
+    run_b = await db.run_do_canal(conn, canal_b.id)
+    assert run_a["id"] != run_b["id"]
+
+    intruso = users[2]
+    pid = await _pid(conn, intruso)
+    msg_a = await canal_a.fetch_message(run_a["mensagem_id"])
+    await cog.recrutar(FakeInteraction(canal_a, intruso, msg_a), run_a["id"], "entrar")
+    assert await db.esta_na_run(conn, run_a["id"], intruso), "nao entrou na run A"
+
+    # O menu da run B estava aberto de antes: o botao vai direto ao efetivar.
+    msg_b = await canal_b.fetch_message(run_b["mensagem_id"])
+    tarde = FakeInteraction(canal_b, intruso, msg_b)
+    await cog.efetivar_entrada(tarde, run_b["id"], pid)
+
+    assert not await db.esta_na_run(conn, run_b["id"], intruso), (
+        "o menu velho colocou o mesmo jogador em duas runs vivas"
+    )
+    assert f"run #{run_a['id']}" in (leu(tarde) or ""), leu(tarde)
+    # E a run em que ele ESTAVA nao foi mexida.
+    assert await db.esta_na_run(conn, run_a["id"], intruso)
+
+    await _fechar(conn)
+    print("  o menu velho nao deixa entrar em duas runs: ok")
+
+
+async def caso_quem_esta_livre_continua_entrando():
+    """O cheque novo não podia barrar quem está liberado — é o caso comum."""
+    conn, (canal_a, canal_b), cog, users = await preparar(canais=2)
+    await cog.entrar.callback(
+        cog, FakeInteraction(canal_a, users[0]), cog.incursoes["t"].tier, "t"
+    )
+    run = await db.run_do_canal(conn, canal_a.id)
+    msg = await canal_a.fetch_message(run["mensagem_id"])
+
+    livre = FakeInteraction(canal_a, users[1], msg)
+    await cog.efetivar_entrada(livre, run["id"], await _pid(conn, users[1]))
+    assert await db.esta_na_run(conn, run["id"], users[1]), leu(livre)
+    assert "entrou" in (leu(livre) or "").lower(), leu(livre)
+
+    await _fechar(conn)
+    print("  quem esta liberado entra pelo menu como antes: ok")
+
+
 async def main():
     try:
         await caso_duas_compras_nao_gastam_o_mesmo_ouro()
@@ -369,6 +450,8 @@ async def main():
         await caso_o_grupo_nao_passa_do_teto()
         await caso_quem_perde_a_vaga_nao_ganha_o_ouro()
         await caso_entrar_duas_vezes_na_mesma_run_nao_duplica()
+        await caso_menu_velho_nao_deixa_entrar_em_duas_runs()
+        await caso_quem_esta_livre_continua_entrando()
     finally:
         for conn in _ABERTAS:
             try:

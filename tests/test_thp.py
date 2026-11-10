@@ -9,7 +9,9 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes as cl, config, database as db, embeds as E, motor  # noqa: E402
+from src import (  # noqa: E402
+    classes as cl, config, database as db, embeds as E, itens, motor,
+)
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     leu,
@@ -30,9 +32,21 @@ _ABERTAS = []
 DURADOURO = {**INDEFESO, "hp": 4000}
 # Bate uma vez por rodada, forte o bastante para derrubar quem tem pouco HP.
 CERTEIRO = {"nome": "Martelo", "ca": 1, "ataque": 40, "dano": "1d1+29", "hp": 4000}
+# Nao acerta um GOLPE nem por sorte (`ataque: -20` contra qualquer CA), e mata
+# pela HABILIDADE, com save que ninguem passa. E esse `ataque: -20` que faz o
+# caso provar o que diz: o unico dano possivel aqui vem da habilidade.
+FULMINADOR = {
+    "nome": "Fulminador", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 4000,
+    "habilidade": {
+        "nome": "Palavra Final", "save": "CON", "cd": 99,
+        "dano": "1d1+998", "alvos": 1, "cada": 1,
+    },
+}
 
 
-async def preparar(classe="xama", nivel=8, monstro=DURADOURO, quantos=2):
+async def preparar(
+    classe="xama", nivel=8, monstro=DURADOURO, quantos=2, escolhas=None
+):
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -54,6 +68,8 @@ async def preparar(classe="xama", nivel=8, monstro=DURADOURO, quantos=2):
     for user_id in JOGADORES[:quantos]:
         personagem = await db.personagem_por_nome(conn, GUILD, user_id, f"Heroi{user_id}")
         await db.adicionar_participante(conn, run_id, user_id, personagem["id"])
+        for chave, opcao in (escolhas or {}).items():
+            await db.definir_escolha(conn, personagem["id"], chave, opcao)
     await db.inicializar_hp(conn, run_id)
     await db.atualizar_run(
         conn, run_id, status="objetivo", sala_atual="OBJ", linha_atual=incursao.passos + 1
@@ -229,6 +245,143 @@ async def caso_relentless_segura_a_queda():
     print("  Relentless segura a queda uma vez por combate: ok")
 
 
+async def caso_relentless_segura_a_queda_de_habilidade_tambem():
+    """Relentless dispara por chegar a zero — não importa o que levou até lá.
+
+    As reações do turno da criatura recebiam só `feito.golpes`. As habilidades
+    dela viram `feito.investidas`, e nunca chegavam lá: o bárbaro se recusava a
+    cair quando a criatura **batia** nele e ficava no chão quando ela o matava
+    com a habilidade — que é justamente o golpe mais pesado que ela tem.
+
+    O `caso_relentless_segura_a_queda` cobre o golpe comum, e é por isso que o
+    bug passou: aquele monstro não tem habilidade nenhuma. Aqui o `ataque: -20`
+    do Fulminador garante que nenhum golpe dele acerta, então a única coisa
+    capaz de derrubar alguém é a habilidade.
+
+    A esquiva (Uncanny Dodge) continua só contra golpe de propósito: ela corta
+    um ataque que se vê vir, não uma explosão em que se falhou a resistência.
+    """
+    conn, canal, cog, incursao, run = await preparar(
+        classe="barbaro", nivel=8, monstro=FULMINADOR
+    )
+    passo = cog._passo(run)
+    for user_id in JOGADORES[:2]:
+        await db.definir_hp(conn, run["id"], user_id, 1)
+
+    msg = await canal.fetch_message(run["mensagem_id"])
+    estado = await cog._estado_combate(
+        await db.buscar_run(conn, run["id"]), incursao.objetivo
+    )
+    for c in list(estado.vivos):
+        await cog.atacar(FakeInteraction(canal, c.user_id, msg), run["id"], "OBJ")
+
+    def no_painel(texto: str) -> bool:
+        """O log das rodadas vive nos CAMPOS do painel, nao no conteudo."""
+        return any(
+            texto in (campo.value or "")
+            for mensagem in canal.mensagens
+            for embed in (getattr(mensagem, "embeds", []) or [])
+            for campo in embed.fields
+        )
+
+    # A habilidade saiu, e e dela que o dano veio. Sem esta linha o caso
+    # passaria vazio no dia em que a criatura parasse de usar a habilidade.
+    assert no_painel("Palavra Final"), (
+        "a habilidade da criatura nao resolveu: o caso nao prova nada"
+    )
+    assert any("Relentless" in (m.content or "") for m in canal.enviadas), (
+        "a habilidade derrubou e Relentless nao disparou"
+    )
+    async with conn.execute(
+        "SELECT user_id, hp_atual, thp FROM run_participantes"
+        " WHERE run_id = ? AND thp > 0",
+        (run["id"],),
+    ) as cur:
+        salvos = [dict(r) for r in await cur.fetchall()]
+    assert len(salvos) == 1, f"esperava um salvo com THP, e vieram {salvos}"
+    assert salvos[0]["hp_atual"] >= 1, salvos
+    # E gastou o uso: continua sendo 1x por combate.
+    gastos = await db.usos_da_run(conn, run["id"], salvos[0]["user_id"])
+    assert gastos.get(("relentless", f"combate:{passo}")) == 1, gastos
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  Relentless segura a queda vinda de habilidade tambem: ok")
+
+
+async def caso_a_armadura_da_thp_a_quem_recebe_a_cura():
+    """A Túnica Acolchoada rende THP em QUEM A VESTE, ao ser curado.
+
+    Ela prometia *"+2 de vida temporária ao ser curado"* e não fazia nada em
+    quem a vestia: o bônus era lido dos efeitos de **quem curava**. Com a
+    túnica no clérigo, o aliado curado é que ganhava os 2.
+
+    E não era alvo trocado, era uma chave com dois significados. O
+    `thp_na_cura` é o **Cântico Benevolente** do xamã — *"curar dá +4 de THP
+    ao alvo"* —, que sai de quem cura e está certo assim. As armaduras querem
+    o oposto, e passaram a ter chave própria, `thp_ao_ser_curado`, lida de
+    quem recebe. Cinco armaduras tinham a linha de stat inteira sem efeito.
+    """
+    conn, canal, cog, incursao, run = await preparar(
+        classe="clerigo", nivel=8, escolhas={"magia_t1": "cure_wounds"}
+    )
+    curador, ferido = JOGADORES[0], JOGADORES[1]
+    pids = {
+        u: (await db.personagem_por_nome(conn, GUILD, u, f"Heroi{u}"))["id"]
+        for u in (curador, ferido)
+    }
+
+    async def vestir(user_id, item_id):
+        """Veste, e com isso TIRA o que estava no slot: armadura e um slot só."""
+        await db.dar_item(conn, pids[user_id], item_id)
+        await db.equipar(conn, pids[user_id], item_id, itens.item(item_id).slot)
+
+    async def thp_de(user_id):
+        async with conn.execute(
+            "SELECT thp FROM run_participantes WHERE run_id = ? AND user_id = ?",
+            (run["id"], user_id),
+        ) as cur:
+            return (await cur.fetchone())["thp"]
+
+    async def curar(alvo, hp_antes=5):
+        # O HP entra ANTES de montar o estado: o combatente e lido do banco, e
+        # com ele cheio a cura seria zero e o caso nao provaria nada.
+        await db.definir_hp(conn, run["id"], alvo, hp_antes)
+        await db.definir_thp(conn, run["id"], alvo, 0)
+        atual = await db.buscar_run(conn, run["id"])
+        estado = await cog._estado_combate(atual, incursao.objetivo)
+        quem = await cog._personagem_na_run(atual, curador)
+        hab = next(h for _t, h in quem["habilidades"] if h.id == "cure_wounds")
+        await cog._resolver_cura(atual, curador, hab, hab.acao, [alvo], estado)
+        return await thp_de(alvo)
+
+    # 1) A tunica em QUEM RECEBE: e ela que rende.
+    await vestir(ferido, "tunica_acolchoada")
+    assert await curar(ferido) == 2, "a tunica nao rendeu em quem a veste"
+
+    # 2) A tunica so em QUEM CURA nao rende nada ao aliado: trocar o gibao
+    #    pelo peito do ferido tira a tunica dele (um slot, uma peca).
+    await vestir(ferido, "gibao_de_couro")
+    await vestir(curador, "tunica_acolchoada")
+    assert await curar(ferido) == 0, (
+        "a tunica de quem cura voltou a dar THP ao aliado"
+    )
+
+    # 3) Curar a si mesmo tambem e ser curado: nao tem o `!= user_id` que o
+    #    Cantico tem, porque o texto da armadura nao fala de quem curou.
+    assert await curar(curador) == 2, "a tunica nao rendeu na cura em si mesmo"
+
+    # 4) Mas so quando a cura ACONTECE: de HP cheio nao sai THP de graca.
+    cheio = (await cog._personagem_na_run(run, curador))["numeros"].hp
+    assert await curar(curador, hp_antes=cheio) == 0, (
+        "rendeu THP numa cura que nao curou ninguem"
+    )
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  a armadura rende THP em quem RECEBE a cura: ok")
+
+
 async def caso_thp_some_no_proximo_combate():
     conn, canal, cog, incursao, run = await preparar(classe="xama", nivel=8)
     dono = JOGADORES[0]
@@ -263,6 +416,8 @@ async def main():
         caso_a_porcentagem_de_cura_arredonda_certo()
         await caso_aura_totemica_depende_do_thp()
         await caso_relentless_segura_a_queda()
+        await caso_relentless_segura_a_queda_de_habilidade_tambem()
+        await caso_a_armadura_da_thp_a_quem_recebe_a_cura()
         await caso_thp_some_no_proximo_combate()
     finally:
         for conn in _ABERTAS:
