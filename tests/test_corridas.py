@@ -138,6 +138,111 @@ async def caso_comprar_sozinho_continua_igual():
     print("  a compra de um so: passa, recusa e zera como antes: ok")
 
 
+# -------------------------------------------------------- equipamento
+
+
+def _tudo_que_ele_tem(bolsa, equipado):
+    """O inventário inteiro: a bolsa mais o que está vestido, item por item."""
+    tudo = dict(bolsa)
+    for item_id in equipado.values():
+        tudo[item_id] = tudo.get(item_id, 0) + 1
+    return tudo
+
+
+def caso_a_fila_e_por_personagem():
+    """Cada personagem tem a sua fila, e sempre a mesma.
+
+    Uma fila por personagem, e não uma global: o que disputa é o slot de UM
+    personagem, e uma fila só para todos poria na fila gente que não disputa
+    nada — correto, mas serializando o servidor inteiro por uma troca de
+    armadura.
+
+    E tem de ser sempre a **mesma** fila. Devolver uma nova a cada chamada é o
+    jeito mais fácil de parecer que isto foi consertado sem consertar nada:
+    uma fila que ninguém mais usa não enfileira ninguém.
+
+    O caso é de identidade, e não de tempo, de propósito: medir "um esperou
+    pelo outro" com relógio dá teste que falha sozinho em máquina carregada.
+    """
+    primeira = db._fila_do_personagem(999001)
+    assert db._fila_do_personagem(999001) is primeira, "a fila do mesmo mudou"
+    assert db._fila_do_personagem(999002) is not primeira, (
+        "dois personagens dividindo a mesma fila"
+    )
+    print("  a fila e por personagem, e e sempre a mesma: ok")
+
+
+async def caso_duas_trocas_no_mesmo_slot_nao_duplicam_nem_perdem():
+    """Duas trocas de armadura no mesmo instante: nada duplica, nada se perde.
+
+    As duas liam o MESMO item anterior no slot: as duas o devolviam para a
+    bolsa — duas cópias da armadura velha — e o segundo UPSERT sobrescrevia o
+    primeiro, de modo que uma das peças novas saía da bolsa e não chegava ao
+    slot. Ela desaparecia da ficha.
+
+    Aqui a condição não cabe num `WHERE` como na compra e na lotação: o valor
+    lido de uma tabela vira escrita em **outra**, e SQL não diz isso num
+    comando só. Por isso este é o único caso do arquivo que se resolve com
+    fila, e não com um statement.
+
+    A asserção que importa é de **conservação**: o inventário inteiro — bolsa
+    mais vestido — tem de ser o mesmo antes e depois. Vestir é mover de lugar,
+    e mover não cria nem destrói. As duas metades do bug quebram essa
+    igualdade, uma somando e a outra subtraindo, e nenhuma versão dele a
+    satisfaz por acaso.
+    """
+    conn, _canal, _cog, users = await preparar(quantos=1)
+    pid = await _pid(conn, users[0])
+    for item_id in ("couro", "malha", "placas"):
+        await db.dar_item(conn, pid, item_id)
+    assert await db.equipar(conn, pid, "couro", "armadura") == (True, None)
+
+    antes = _tudo_que_ele_tem(
+        await db.itens_na_bolsa(conn, pid), await db.equipamento(conn, pid)
+    )
+    await asyncio.gather(
+        db.equipar(conn, pid, "malha", "armadura"),
+        db.equipar(conn, pid, "placas", "armadura"),
+    )
+    equipado = await db.equipamento(conn, pid)
+    bolsa = await db.itens_na_bolsa(conn, pid)
+    depois = _tudo_que_ele_tem(bolsa, equipado)
+
+    assert depois == antes, f"o inventario mudou: antes={antes} depois={depois}"
+    # O slot continua com UMA peca, que e o que o dominio promete.
+    assert equipado.get("armadura") in ("malha", "placas"), equipado
+    assert bolsa.get("couro") == 1, f"a armadura velha voltou {bolsa.get('couro')}x"
+
+    await _fechar(conn)
+    print("  duas trocas no mesmo slot nao duplicam nem perdem item: ok")
+
+
+async def caso_equipar_sozinho_continua_trocando():
+    """A troca normal, que é o caso de todo dia, não podia mudar."""
+    conn, _canal, _cog, users = await preparar(quantos=1)
+    pid = await _pid(conn, users[0])
+    await db.dar_item(conn, pid, "couro")
+    await db.dar_item(conn, pid, "malha")
+
+    # Slot vazio: veste, e nao havia nada para devolver.
+    assert await db.equipar(conn, pid, "couro", "armadura") == (True, None)
+    assert (await db.equipamento(conn, pid)).get("armadura") == "couro"
+    assert "couro" not in await db.itens_na_bolsa(conn, pid)
+
+    # A troca devolve a antiga, e diz qual era — e e esse `anterior` que o
+    # mercado usa para escrever "X volta para a bolsa".
+    assert await db.equipar(conn, pid, "malha", "armadura") == (True, "couro")
+    assert (await db.equipamento(conn, pid)).get("armadura") == "malha"
+    assert (await db.itens_na_bolsa(conn, pid)).get("couro") == 1
+
+    # O que nao esta na bolsa nao se veste, e nada muda.
+    assert await db.equipar(conn, pid, "placas", "armadura") == (False, None)
+    assert (await db.equipamento(conn, pid)).get("armadura") == "malha"
+
+    await _fechar(conn)
+    print("  a troca de um so: veste, devolve a antiga e recusa o que falta: ok")
+
+
 # ------------------------------------------------------------ lotacao
 
 
@@ -258,6 +363,9 @@ async def main():
     try:
         await caso_duas_compras_nao_gastam_o_mesmo_ouro()
         await caso_comprar_sozinho_continua_igual()
+        caso_a_fila_e_por_personagem()
+        await caso_duas_trocas_no_mesmo_slot_nao_duplicam_nem_perdem()
+        await caso_equipar_sozinho_continua_trocando()
         await caso_o_grupo_nao_passa_do_teto()
         await caso_quem_perde_a_vaga_nao_ganha_o_ouro()
         await caso_entrar_duas_vezes_na_mesma_run_nao_duplica()

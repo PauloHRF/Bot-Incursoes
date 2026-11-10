@@ -1,6 +1,7 @@
 """Camada de persistencia (SQLite via aiosqlite)."""
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -2479,6 +2480,29 @@ async def comprar(
     return True
 
 
+# Uma fila por personagem, para o que LE e depois ESCREVE. Hoje so `equipar`
+# precisa: ela le o que esta no slot e devolve AQUILO para a bolsa, e isso sao
+# duas idas separadas ao banco.
+#
+# **Nao e sobre o SQLite, e sobre o loop de eventos.** Todo `await` devolve o
+# controle, e a outra interacao roda ali, entre a leitura e a escrita.
+#
+# Nao da para resolver com um `WHERE` como em `comprar` e
+# `adicionar_participante`: ali a condicao e sobre a propria tabela do INSERT,
+# e aqui o valor LIDO de uma tabela vira escrita em OUTRA — SQL nao diz isso
+# num comando so.
+#
+# E transacao nao serve: o bot usa UMA conexao, entao um `BEGIN` aberto
+# durante um `await` nao isola nada. Os statements da outra corrotina entram na
+# MESMA transacao, e um `commit` dela levaria junto o trabalho pela metade
+# desta. A fila e em memoria porque e no processo que esta a corrida.
+_FILAS_POR_PERSONAGEM: dict[int, asyncio.Lock] = {}
+
+
+def _fila_do_personagem(personagem_id: int) -> asyncio.Lock:
+    return _FILAS_POR_PERSONAGEM.setdefault(personagem_id, asyncio.Lock())
+
+
 async def equipar(
     conn: aiosqlite.Connection, personagem_id: int, item_id: str, slot: str
 ) -> tuple[bool, Optional[str]]:
@@ -2491,21 +2515,28 @@ async def equipar(
     O que estava no slot volta para a bolsa: trocar de armadura nunca perde a
     antiga. O slot vem do item, nao de quem chamou — aceitar slot digitado
     seria aceitar burlar o dominio que impede o stack.
+
+    **Roda na fila do personagem**, e e esta funcao que a justifica. Duas
+    trocas no mesmo slot ao mesmo tempo liam as duas o MESMO item anterior:
+    as duas devolviam ele para a bolsa (duas copias da armadura velha) e o
+    segundo UPSERT sobrescrevia o primeiro — de forma que uma das pecas novas
+    saia da bolsa e nao chegava ao slot. Ela desaparecia.
     """
-    if not await _tirar_da_bolsa(conn, personagem_id, item_id):
+    async with _fila_do_personagem(personagem_id):
+        if not await _tirar_da_bolsa(conn, personagem_id, item_id):
+            await conn.commit()
+            return False, None
+        anterior = (await equipamento(conn, personagem_id)).get(slot)
+        if anterior:
+            await _por_na_bolsa(conn, personagem_id, anterior)
+        await conn.execute(
+            "INSERT INTO personagem_equipamento (personagem_id, slot, item_id)"
+            " VALUES (?, ?, ?) ON CONFLICT (personagem_id, slot)"
+            " DO UPDATE SET item_id = excluded.item_id",
+            (personagem_id, slot, item_id),
+        )
         await conn.commit()
-        return False, None
-    anterior = (await equipamento(conn, personagem_id)).get(slot)
-    if anterior:
-        await _por_na_bolsa(conn, personagem_id, anterior)
-    await conn.execute(
-        "INSERT INTO personagem_equipamento (personagem_id, slot, item_id)"
-        " VALUES (?, ?, ?) ON CONFLICT (personagem_id, slot)"
-        " DO UPDATE SET item_id = excluded.item_id",
-        (personagem_id, slot, item_id),
-    )
-    await conn.commit()
-    return True, anterior
+        return True, anterior
 
 
 async def ouro_da_run(
