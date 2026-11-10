@@ -80,6 +80,7 @@ Não são necessários *privileged intents* (o bot não lê o conteúdo das mens
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
 | `/incursao substituir <jogador> [acao] [alvo]` | Age no lugar de quem travou o combate, com o acordo da maioria dos outros |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
+| `/incursao encerrar <pagar> <devolver_vaga>` | (admin) Encerra a run do canal, pagando ou não as salas vencidas |
 | `/incursao recarregar` | (admin) Relê os JSON de incursão do disco |
 | `/mercado vitrine [personagem]` | A prateleira da semana: 6 equipamentos e 3 poções |
 | `/mercado bolsa [personagem]` | Ouro, o que está vestido e o que está guardado |
@@ -298,6 +299,24 @@ Três regras que vale saber de cor:
 - **O clique dele cancela tudo.** Enquanto a votação corre, o ausente pode agir
   pelo painel; a ação dele vale e a proposta morre. Quem voltou voltou ao
   controle.
+
+## Encerrar uma incursão na mão
+
+O `/incursao desistir` é do grupo e precisa de maioria. Quando não há grupo para
+votar — a sessão morreu, a run ficou presa, ela foi aberta por engano — quem
+administra usa `/incursao encerrar`, e responde duas perguntas obrigatórias:
+
+- **`pagar`** — `sim` deixa o ouro das salas vencidas e os pontos de
+  participação; `não` encerra sem nada, e a run sai como se não tivesse
+  acontecido.
+- **`devolver_vaga`** — `sim` devolve a semana ao grupo, que pode entrar em
+  outra incursão hoje; `não` mantém a semana gasta, porque valeu como incursão
+  jogada.
+
+As duas não andam juntas de propósito: pagar o que o grupo jogou e ainda assim
+não cobrar a semana é o caso de uma run que travou por culpa do bot. Nenhuma
+tem padrão — a ação não tem volta, e cada uma move ouro ou a semana de cinco
+pessoas.
 
 ## O que a sala deixa no grupo
 

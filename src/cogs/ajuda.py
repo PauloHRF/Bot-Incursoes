@@ -53,6 +53,7 @@ ORDEM_COMANDOS = (
     "ficha conferir",
     "ficha personagens",
     "ficha remover",
+    "incursao encerrar",
     "incursao recarregar",
     "mercado anel_do_mestre",
     "organizacao ajustar",

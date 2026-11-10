@@ -1407,6 +1407,32 @@ async def definir_intervalo(conn: aiosqlite.Connection, guild_id: int, semanas: 
     await conn.commit()
 
 
+async def devolver_a_vaga(
+    conn: aiosqlite.Connection, guild_id: int, user_ids: list[int]
+) -> int:
+    """Apaga a marca da semana daqueles jogadores. Devolve quantos voltaram.
+
+    E o contrario do `marcar_ultima_incursao`, para quando a run e encerrada
+    na mao e quem administra decide nao cobrar a semana do grupo.
+
+    Apagar basta, em vez de restaurar a marca anterior: o intervalo semanal
+    impede entrar em duas incursoes na mesma janela, entao a incursao marcada
+    SO pode ser esta. Com `INTERVALO_SEMANAS=0` da para ter jogado antes na
+    mesma semana — mas ali a marca nao gateia nada, e apagar nao tira direito
+    de ninguem.
+    """
+    if not user_ids:
+        return 0
+    marcadores = ", ".join("?" * len(user_ids))
+    cur = await conn.execute(
+        f"UPDATE jogadores SET ultima_incursao = NULL"
+        f" WHERE guild_id = ? AND user_id IN ({marcadores})",
+        (guild_id, *user_ids),
+    )
+    await conn.commit()
+    return cur.rowcount
+
+
 async def marcar_ultima_incursao(
     conn: aiosqlite.Connection, guild_id: int, user_ids: list[int]
 ) -> None:

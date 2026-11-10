@@ -640,6 +640,7 @@ def status(
         "sucesso": "concluída",
         "desistiu": "abandonada",
         "fracasso": "fracassada",
+        "encerrada": "encerrada por quem administra",
     }
     e = discord.Embed(
         title=f"Run #{run['id']} — {titulo_da_incursao(incursao)}",
@@ -1284,6 +1285,53 @@ def run_desistida(
     return _rodape(
         e, f"A notícia chega até {com_artigo(incursao.organizacao)}."
     )
+
+
+def run_encerrada(
+    incursao: Incursao,
+    onde: Optional[Sala] = None,
+    passo: int = 0,
+    lancamentos: Optional[list[dict]] = None,
+    total_org: int = 0,
+    caminho: Optional[list[tuple[Sala, bool]]] = None,
+    ouro: Optional[list[tuple[str, int]]] = None,
+    pagou: bool = False,
+    vaga_devolvida: bool = False,
+) -> discord.Embed:
+    """O desfecho de uma run encerrada na mão por quem administra.
+
+    Irmão do `run_desistida`, e separado dele de propósito: ali o grupo
+    decidiu, aqui alguém decidiu PELO grupo. O cartão tem de dizer as duas
+    coisas que o grupo não escolheu — se o que as salas pagaram ficou, e se a
+    vaga da semana voltou —, senão a pergunta sobra para o canal.
+
+    Sem citar quem encerrou: o `/help` marca o comando como de admin, e quem
+    usou aparece na mensagem do comando. O cartão é o desfecho da run.
+    """
+    lugar = f" em **{onde.nome}**" if onde else ""
+    quanto = f", na parada {passo} de {incursao.paradas}" if passo else ""
+    e = discord.Embed(
+        title=f"🛑 {titulo_da_incursao(incursao)} — encerrada",
+        description=(
+            f"A incursão foi encerrada por quem administra{lugar}{quanto}. "
+            + (
+                "O que as salas pagaram, o grupo leva."
+                if pagou
+                else "Nada foi pago: a run sai como se não tivesse acontecido."
+            )
+            + (
+                " A vaga da semana voltou, e o grupo pode entrar em outra."
+                if vaga_devolvida
+                else " A vaga da semana segue gasta."
+            )
+        ),
+        color=COR_FALHA,
+    )
+    campo_caminho(e, caminho)
+    if pagou:
+        campo_ouro(e, ouro)
+        _campo_pontos(e, lancamentos or [], total_org, incursao.organizacao)
+    return e
 
 
 def run_concluida(

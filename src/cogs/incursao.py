@@ -6533,6 +6533,87 @@ class Incursoes(commands.Cog):
             if procura in nome.lower()
         ][:25]
 
+    @grupo.command(
+        name="encerrar",
+        description="(admin) Encerra a incursão deste canal, pagando ou não as salas",
+    )
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.describe(
+        pagar="Sim: o grupo leva o ouro das salas vencidas e os pontos de participação",
+        devolver_vaga="Sim: a semana não é cobrada, e o grupo pode entrar em outra",
+    )
+    async def encerrar(
+        self, interaction: discord.Interaction, pagar: bool, devolver_vaga: bool
+    ) -> None:
+        """Encerra a run do canal sem votação, e decide o que ela deixa.
+
+        O `/incursao desistir` é do grupo e precisa de maioria. Este é para
+        quando não há grupo para votar: a sessão morreu, a run ficou presa, ou
+        ela foi aberta por engano.
+
+        **Os dois parâmetros são obrigatórios de propósito.** A ação não tem
+        volta, e cada um deles move ouro ou a semana de cinco pessoas: um
+        padrão silencioso decidiria isso no lugar de quem administra. É a
+        mesma razão por que o comando não aceita id de run — ele age no canal
+        onde a run está, que é onde o grupo vai ler o desfecho.
+        """
+        # Sem exigir participante: quem administra encerra a run do canal mesmo
+        # sem estar nela, que e justamente o caso de limpar uma run presa.
+        run = await self._run_do_contexto(interaction, exigir_participante=False)
+        if not run:
+            return
+
+        # Lidos ANTES de encerrar: o encerramento tira os botoes e muda o
+        # status, e o cartao fala de onde o grupo PAROU.
+        onde = await self._sala_corrente(run)
+        passo = self._passo(run)
+        incursao = self._incursao_da_run(run)
+        caminho = await self._caminho(run)
+        quem_passou = [
+            p["user_id"] for p in await db.quem_recebe_da_run(self.bot.db, run["id"])
+        ]
+
+        await self._encerrar_run(run, "encerrada")
+        if pagar:
+            await self._pagar_as_salas(run)
+            await self._creditar(
+                run, config.PONTOS_PARTICIPACAO,
+                "Participação na incursão", "participacao",
+            )
+        devolvidas = 0
+        if devolver_vaga:
+            devolvidas = await db.devolver_a_vaga(
+                self.bot.db, run["guild_id"], quem_passou
+            )
+
+        await interaction.response.send_message(
+            f"Run #{run['id']} encerrada. "
+            + ("As salas vencidas pagaram. " if pagar else "Nada foi pago. ")
+            + (
+                f"A vaga da semana voltou para {devolvidas} jogador(es)."
+                if devolver_vaga
+                else "A vaga da semana segue gasta."
+            ),
+            ephemeral=True,
+        )
+        canal = await self._canal(run)
+        if not (canal and incursao):
+            return
+        lancamentos, total_org = await self._balanco(run)
+        await canal.send(
+            embed=E.run_encerrada(
+                incursao,
+                onde=onde,
+                passo=passo,
+                lancamentos=lancamentos,
+                total_org=total_org,
+                caminho=caminho,
+                ouro=await db.ouro_da_run(self.bot.db, run["id"]),
+                pagou=pagar,
+                vaga_devolvida=devolver_vaga,
+            )
+        )
+
     @grupo.command(name="recarregar", description="(admin) Relê as incursões do disco")
     @app_commands.default_permissions(manage_guild=True)
     async def recarregar(self, interaction: discord.Interaction) -> None:
