@@ -147,7 +147,16 @@ CREATE TABLE IF NOT EXISTS run_combate (
     -- Desde quando a vez atual esta aberta. E o relogio dos 15 minutos que
     -- liberam o grupo a agir no lugar de quem nao agiu: ele reinicia a cada
     -- `definir_vez`, entao conta o tempo DESTA vez, e nao o do combate.
-    vez_desde TEXT NOT NULL DEFAULT (datetime('now')),
+    --
+    -- Anulavel e SEM default de proposito, mesmo sendo sempre preenchida. O
+    -- `ALTER TABLE ... ADD COLUMN` do SQLite nao aceita default nao-constante
+    -- (`datetime('now')` nao vale), e um banco que ja existia so pode receber
+    -- a coluna anulavel. Declarar aqui com NOT NULL e default faria o banco
+    -- novo e o migrado terem formas diferentes — e foi assim que a primeira
+    -- versao desta coluna derrubou o bot na subida, num erro que nenhum teste
+    -- viu porque todos nascem de um banco vazio. Quem grava a data e
+    -- `iniciar_combate`, `definir_vez` e `atualizar_rodada`.
+    vez_desde TEXT,
     PRIMARY KEY (run_id, passo)
 );
 
@@ -571,9 +580,13 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
     # contar os 15 minutos a partir da migracao, que e o unico instante que o
     # banco antigo sabe.
     if "vez_desde" not in await _colunas(conn, "run_combate"):
+        # Sem NOT NULL e sem default: o SQLite recusa `ADD COLUMN` com default
+        # nao-constante ("Cannot add a column with non-constant default"), e e
+        # o UPDATE seguinte que enche as linhas que ja existiam.
+        await conn.execute("ALTER TABLE run_combate ADD COLUMN vez_desde TEXT")
         await conn.execute(
-            "ALTER TABLE run_combate ADD COLUMN vez_desde TEXT NOT NULL"
-            " DEFAULT (datetime('now'))"
+            "UPDATE run_combate SET vez_desde = datetime('now')"
+            " WHERE vez_desde IS NULL"
         )
     if "substituto" not in await _colunas(conn, "run_turnos"):
         # Sem default: NULL quer dizer "foi ele mesmo", e todo turno que ja
@@ -1477,7 +1490,8 @@ async def iniciar_combate(
 ) -> None:
     """Cria o estado do combate daquele passo. Reabrir a mensagem não reinicia."""
     novo = await conn.execute(
-        "INSERT OR IGNORE INTO run_combate (run_id, passo, sala_id) VALUES (?, ?, ?)",
+        "INSERT OR IGNORE INTO run_combate (run_id, passo, sala_id, vez_desde)"
+        " VALUES (?, ?, ?, datetime('now'))",
         (run_id, passo, sala_id),
     )
     if novo.rowcount:
