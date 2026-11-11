@@ -61,12 +61,23 @@ GRUPOS_PADRAO = (5, 4, 3, 2)
 def _bancos() -> dict[str, Any]:
     """Os bancos do disco, tolerando o arquivo quebrado como o bot faz."""
     bancos, problemas = I.carregar_bancos_tolerante(PASTA_BANCOS)
+    originais = {}
+    for arquivo in sorted(PASTA_BANCOS.glob("*.json")):
+        try:
+            dados = json.loads(arquivo.read_text(encoding="utf-8"))
+            validado = I.banco_de_dict(dados)
+        except (OSError, ValueError, I.ErroDeValidacao):
+            continue
+        originais[validado.organizacao] = (arquivo.name, dados)
     return {
         "bancos": {
             nome: {
                 "organizacao": nome,
-                "arquivo": f"{I.arquivo_da_organizacao(nome)}.json",
+                "arquivo": originais.get(nome, (f"{I.arquivo_da_organizacao(nome)}.json",))[0],
                 "salas": [s.para_dict() for s in banco.salas],
+                # O editor preserva referencias ao bestiario, campos extras e
+                # escolhas do autor; para_dict expandiria cada criatura.
+                "original": originais[nome][1] if nome in originais else banco.para_dict(),
             }
             for nome, banco in sorted(bancos.items())
         },
@@ -381,13 +392,18 @@ class Bancada(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         caminho = self.path.split("?")[0]
-        if caminho in ("/", "/index.html"):
+        estaticos = {
+            "/": (PAGINA, "text/html; charset=utf-8"),
+            "/index.html": (PAGINA, "text/html; charset=utf-8"),
+            "/estudio.css": (PAGINA.with_name("estudio.css"), "text/css; charset=utf-8"),
+            "/estudio.js": (PAGINA.with_name("estudio.js"), "text/javascript; charset=utf-8"),
+        }
+        if caminho in estaticos:
+            arquivo, tipo = estaticos[caminho]
             try:
-                self._responder(
-                    200, PAGINA.read_bytes(), "text/html; charset=utf-8"
-                )
+                self._responder(200, arquivo.read_bytes(), tipo)
             except OSError:
-                self._json(500, {"erro": f"não achei a página em {PAGINA}."})
+                self._json(500, {"erro": f"não achei o arquivo {arquivo.name}."})
             return
         if caminho == "/api/conteudo":
             self._json(200, conteudo())
