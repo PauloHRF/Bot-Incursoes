@@ -90,8 +90,8 @@
     "save": "SAB",
     "cd": 17,
     "debuff": [
-     "tolice",
-     "debilidade"
+     "perturbacao",
+     "deterioracao"
     ],
     "recarga": 5
    },
@@ -972,7 +972,7 @@
       "save": "SAB",
       "cd": 16,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     },
@@ -986,7 +986,7 @@
       "save": "SAB",
       "cd": 16,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     },
@@ -1000,7 +1000,7 @@
       "save": "SAB",
       "cd": 16,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     }
@@ -1611,7 +1611,7 @@
       "save": "SAB",
       "cd": 16,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     },
@@ -1835,7 +1835,7 @@
       "save": "SAB",
       "cd": 13,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     }
@@ -2436,7 +2436,7 @@
       "save": "SAB",
       "cd": 13,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     }
@@ -2660,7 +2660,7 @@
       "save": "SAB",
       "cd": 15,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     },
@@ -2674,7 +2674,7 @@
       "save": "SAB",
       "cd": 15,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     }
@@ -3874,7 +3874,7 @@
     "save": "SAB",
     "cd": 16,
     "debuff": [
-     "insensatez"
+     "perturbacao"
     ],
     "recarga": 5
    },
@@ -4114,7 +4114,7 @@
       "save": "CON",
       "cd": 14,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     },
@@ -4181,7 +4181,7 @@
       "save": "CON",
       "cd": 13,
       "debuff": [
-       "fraqueza"
+       "perturbacao"
       ]
      }
     }
@@ -4257,7 +4257,7 @@
     "dano": "4d6",
     "tipo": "ácido",
     "debuff": [
-     "moleza"
+     "perturbacao"
     ],
     "atordoa": 3,
     "recarga": 5
@@ -4454,7 +4454,7 @@
       "save": "CON",
       "cd": 12,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     }
@@ -4769,7 +4769,7 @@
     "save": "INT",
     "cd": 12,
     "debuff": [
-     "tolice"
+     "perturbacao"
     ],
     "recarga": 5
    },
@@ -4830,7 +4830,7 @@
     "dano": "4d8+4",
     "tipo": "psíquico",
     "debuff": [
-     "tolice"
+     "perturbacao"
     ],
     "save_repete": true,
     "recarga": 5
@@ -4894,7 +4894,7 @@
     "dano": "4d8+4",
     "tipo": "psíquico",
     "debuff": [
-     "tolice"
+     "perturbacao"
     ],
     "save_repete": true,
     "recarga": 5
@@ -4939,7 +4939,7 @@
       "save": "CON",
       "cd": 15,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     },
@@ -4953,7 +4953,7 @@
       "save": "CON",
       "cd": 15,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     }
@@ -5013,7 +5013,7 @@
       "save": "CON",
       "cd": 13,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     }
@@ -5063,7 +5063,7 @@
       "save": "CON",
       "cd": 16,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     },
@@ -5125,7 +5125,7 @@
       "save": "CON",
       "cd": 12,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     }
@@ -5175,7 +5175,7 @@
       "save": "CON",
       "cd": 14,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     },
@@ -6883,7 +6883,7 @@
       "save": "CON",
       "cd": 15,
       "debuff": [
-       "fraqueza"
+       "perturbacao"
       ]
      }
     },
@@ -7259,7 +7259,7 @@
     "tipo": "fogo",
     "debuff": [
      "medo",
-     "fraqueza"
+     "perturbacao"
     ],
     "metade": true,
     "recarga": 5
@@ -7329,7 +7329,7 @@
     "dano": "10d10",
     "tipo": "fogo",
     "debuff": [
-     "fraqueza"
+     "perturbacao"
     ],
     "metade": true,
     "recarga": 5
@@ -8277,7 +8277,7 @@
       "save": "DES",
       "cd": 16,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     },
@@ -8552,7 +8552,7 @@
       "save": "INT",
       "cd": 13,
       "debuff": [
-       "tolice"
+       "perturbacao"
       ]
      }
     }
@@ -8754,7 +8754,7 @@
       "save": "SAB",
       "cd": 14,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     },
@@ -8768,7 +8768,7 @@
       "save": "SAB",
       "cd": 14,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     }
@@ -8820,7 +8820,7 @@
       "save": "SAB",
       "cd": 15,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     },
@@ -9084,7 +9084,7 @@
       "save": "DES",
       "cd": 13,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     }
@@ -9248,7 +9248,7 @@
       "save": "SAB",
       "cd": 13,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     }
@@ -10234,7 +10234,7 @@
       "save": "DES",
       "cd": 15,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     },
@@ -10642,7 +10642,7 @@
       "save": "INT",
       "cd": 12,
       "debuff": [
-       "tolice"
+       "perturbacao"
       ]
      }
     }
@@ -10758,7 +10758,7 @@
       "save": "SAB",
       "cd": 14,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     },
@@ -11054,7 +11054,7 @@
       "save": "DES",
       "cd": 14,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     },
@@ -11068,7 +11068,7 @@
       "save": "DES",
       "cd": 14,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     }
@@ -11193,7 +11193,7 @@
       "save": "DES",
       "cd": 16,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     },
@@ -11207,7 +11207,7 @@
       "save": "DES",
       "cd": 16,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     },
@@ -11221,7 +11221,7 @@
       "save": "DES",
       "cd": 16,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     }
@@ -11283,7 +11283,7 @@
       "save": "SAB",
       "cd": 16,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     },
@@ -12157,7 +12157,7 @@
       "save": "SAB",
       "cd": 15,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     },
@@ -12171,7 +12171,7 @@
       "save": "SAB",
       "cd": 15,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     }
@@ -12811,7 +12811,7 @@
       "save": "SAB",
       "cd": 12,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     }
@@ -13074,7 +13074,7 @@
     "save": "FOR",
     "cd": 15,
     "debuff": [
-     "fraqueza"
+     "perturbacao"
     ],
     "atordoa": 3,
     "recarga": 5
@@ -13559,7 +13559,7 @@
       "save": "CON",
       "cd": 15,
       "debuff": [
-       "fraqueza"
+       "perturbacao"
       ]
      }
     },
@@ -13666,7 +13666,7 @@
       "save": "INT",
       "cd": 14,
       "debuff": [
-       "tolice"
+       "perturbacao"
       ]
      }
     },
@@ -13680,7 +13680,7 @@
       "save": "INT",
       "cd": 14,
       "debuff": [
-       "tolice"
+       "perturbacao"
       ]
      }
     }
@@ -13743,7 +13743,7 @@
       "save": "SAB",
       "cd": 15,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     },
@@ -13757,7 +13757,7 @@
       "save": "SAB",
       "cd": 15,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     }
@@ -13940,7 +13940,7 @@
     "save": "DES",
     "cd": 13,
     "debuff": [
-     "insensatez"
+     "perturbacao"
     ],
     "recarga": 5
    },
@@ -14036,7 +14036,7 @@
       "save": "SAB",
       "cd": 16,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     },
@@ -14050,7 +14050,7 @@
       "save": "SAB",
       "cd": 16,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     },
@@ -14064,7 +14064,7 @@
       "save": "SAB",
       "cd": 16,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     }
@@ -14456,7 +14456,7 @@
     "save": "DES",
     "cd": 11,
     "debuff": [
-     "moleza"
+     "perturbacao"
     ],
     "recarga": 5
    },
@@ -14568,7 +14568,7 @@
     "save": "DES",
     "cd": 10,
     "debuff": [
-     "insensatez"
+     "perturbacao"
     ],
     "recarga": 5
    },
@@ -14853,7 +14853,7 @@
       "save": "INT",
       "cd": 13,
       "debuff": [
-       "tolice"
+       "perturbacao"
       ]
      }
     }
@@ -14989,7 +14989,7 @@
       "save": "DES",
       "cd": 14,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     },
@@ -15003,7 +15003,7 @@
       "save": "DES",
       "cd": 14,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     }
@@ -15272,7 +15272,7 @@
     "save": "FOR",
     "cd": 13,
     "debuff": [
-     "moleza"
+     "perturbacao"
     ],
     "atordoa": 3,
     "recarga": 5
@@ -15318,7 +15318,7 @@
       "save": "CON",
       "cd": 13,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     }
@@ -15548,7 +15548,7 @@
       "save": "CON",
       "cd": 13,
       "debuff": [
-       "fraqueza"
+       "perturbacao"
       ]
      }
     }
@@ -15707,7 +15707,7 @@
       "save": "SAB",
       "cd": 12,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     }
@@ -16055,7 +16055,7 @@
       "save": "DES",
       "cd": 15,
       "debuff": [
-       "moleza"
+       "perturbacao"
       ]
      }
     },
@@ -16849,7 +16849,7 @@
     "save": "FOR",
     "cd": 12,
     "debuff": [
-     "moleza"
+     "perturbacao"
     ],
     "recarga": 5
    },
@@ -17059,7 +17059,7 @@
       "cd": 13,
       "debuff": [
        "deterioracao",
-       "moleza"
+       "perturbacao"
       ]
      }
     }
@@ -18454,7 +18454,7 @@
     "save": "SAB",
     "cd": 17,
     "debuff": [
-     "debilidade",
+     "deterioracao",
      "medo"
     ],
     "recarga": 5
@@ -18654,7 +18654,7 @@
       "save": "INT",
       "cd": 16,
       "debuff": [
-       "tolice"
+       "perturbacao"
       ]
      }
     },
@@ -18783,7 +18783,7 @@
       "cd": 14,
       "debuff": [
        "deterioracao",
-       "tolice"
+       "perturbacao"
       ]
      }
     },
@@ -18906,7 +18906,7 @@
       "save": "CON",
       "cd": 12,
       "debuff": [
-       "fraqueza",
+       "perturbacao",
        "exaustao"
       ]
      }
@@ -18928,7 +18928,7 @@
     "dano": "4d6",
     "tipo": "necrótico",
     "debuff": [
-     "fraqueza",
+     "perturbacao",
      "exaustao"
     ],
     "recarga": 5
@@ -19619,7 +19619,7 @@
       "save": "CON",
       "cd": 15,
       "debuff": [
-       "debilidade"
+       "deterioracao"
       ]
      }
     },
@@ -20070,7 +20070,7 @@
       "save": "SAB",
       "cd": 13,
       "debuff": [
-       "insensatez"
+       "perturbacao"
       ]
      }
     }
@@ -20734,7 +20734,7 @@
       "save": "SAB",
       "cd": 14,
       "debuff": [
-       "introversao"
+       "perturbacao"
       ]
      }
     },
@@ -21515,7 +21515,7 @@
       "save": "CON",
       "cd": 12,
       "debuff": [
-       "fraqueza"
+       "perturbacao"
       ]
      }
     }
@@ -21577,7 +21577,7 @@
       "cd": 14,
       "debuff": [
        "medo",
-       "fraqueza"
+       "perturbacao"
       ]
      }
     },
@@ -21592,7 +21592,7 @@
       "cd": 14,
       "debuff": [
        "medo",
-       "fraqueza"
+       "perturbacao"
       ]
      }
     }

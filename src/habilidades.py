@@ -179,7 +179,12 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "1x por combate: os ataques do proximo turno tem vantagem, "
                        "e voce ganha ameaca 3 — atacar descuidado chama atencao.",
                        usos=_usos("combate"),
+                       # `acoes: 1`: ativar nao custa o ataque do turno, como
+                       # ja era na Rage e na Marca do Cacador. Sem isso, pedir
+                       # vantagem para o PROXIMO turno custava o turno de
+                       # agora, e usar era pior que nao usar.
                        acao={"tipo": "duracao", "turnos": 1, "alvo": "proprio",
+                             "acoes": 1,
                              "efeitos": {"vantagem": True, "ameaca": 3}})],
         4: [Habilidade("relentless", "Relentless", ATIVA,
                        "1x por combate: ao cair a 0 HP fica com 1 HP e ganha 1d12+7 de THP.",
@@ -240,9 +245,14 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
         # imediatamente" — ou seja, dois no turno. Com "quantidade: 1" dava UM,
         # que e o turno comum do monge no tier 1: a habilidade nao fazia nada.
         1: [Habilidade("flurry_of_blows", "Flurry of Blows", ATIVA,
-                       "1x por descanso: golpeia duas vezes no mesmo turno.",
+                       "1x por descanso: ataca normalmente e ainda golpeia "
+                       "mais duas vezes.",
                        usos=_usos("descanso"),
-                       acao={"tipo": "golpes", "acoes": 2})],
+                       # `acoes: 1` e o ataque do turno, que nao se perde; os
+                       # dois golpes vem POR CIMA dele, como no livro. Era
+                       # `acoes: 2` sem o ataque normal — o monge trocava o
+                       # turno por duas acoes em vez de ganhar algo a mais.
+                       acao={"tipo": "golpes", "acoes": 1, "golpes_extras": 2})],
         2: [Habilidade("martial_arts", "Martial Arts", PASSIVA,
                        "Ao acertar, o proximo ataque ganha +1 acerto, ate +2; errar zera.",
                        {"sequencia": {"por_acerto": 1, "teto": 2}})],
@@ -789,7 +799,11 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "1x por incursao: marca um inimigo por 3 rodadas; todo "
                        "golpe nele causa +1d6 de dano.",
                        usos=_usos("incursao"),
+                       # `acoes: 1` pelo mesmo motivo da Marca do Cacador, que
+                       # e a mesma habilidade com outro nome: marcar o alvo e
+                       # bater nele no mesmo turno.
                        acao={"tipo": "duracao", "turnos": 3, "alvo": "inimigo",
+                             "acoes": 1,
                              "efeitos": {"dano_bonus": "1d6"}},
                        exige_escolha=("pacto_t1", "hex")),
             Habilidade("arms_of_hadar", "Arms of Hadar", ATIVA,

@@ -4616,9 +4616,16 @@ class Incursoes(commands.Cog):
         # Action Surge com "quantidade: 1" trocava os dois golpes do turno por
         # um — usar era pior que nao usar. Com `acoes` a conta sai certa
         # sozinha, e continua certa quando o Multiattack mudar.
+        # `golpes_extras` sao golpes POR CIMA da acao, e nao no lugar dela: e
+        # o Flurry of Blows, que no livro sao dois desarmados de bonus somados
+        # a acao de ataque. Sem isso ele so sabia dizer "duas acoes EM VEZ do
+        # turno", que para quem tem Multiattack chegava a ser menos golpes.
         por_alvo = acao.get("quantidade")
         if por_alvo is None:
-            por_alvo = max(1, acao.get("acoes", 1)) * max(1, atacante.ataques)
+            por_alvo = (
+                max(1, acao.get("acoes", 1)) * max(1, atacante.ataques)
+                + max(0, acao.get("golpes_extras", 0))
+            )
         # Alvo unico: se ele cair no meio, os golpes que faltam vao para o
         # proximo de pe, como o ataque comum do turno ja faz. Com varios alvos
         # escolhidos (a Rajada do Cacador) cada um leva o seu, e trocar seria
@@ -5989,6 +5996,14 @@ class Incursoes(commands.Cog):
             elif resolucao.quem_falhou:
                 await self._castigo_de_evento(run, resolucao, desfecho)
         elif sala.tipo == "Tesouro" and not resolucao.superada:
+            # `acordou_mimico` hoje responde SEMPRE que sim, e a chamada fica
+            # para a decisao continuar num lugar so: voltar a sortear e mexer
+            # na CHANCE_DE_MIMICO, e nao reescrever esta sala.
+            #
+            # O sorteio saiu porque falhar num Tesouro era a unica falha do
+            # caminho que podia nao custar nada: em dois terços das vezes o
+            # grupo "saia sem nada, mas inteiro" — e sair sem nada nao e
+            # castigo quando o tesouro so existia se voce passasse.
             if consequencias.acordou_mimico():
                 desfecho.mimicos = True
                 desfecho.linhas.append(
@@ -6131,10 +6146,11 @@ class Incursoes(commands.Cog):
         if not encararam:
             return
         castigo = consequencias.castigo_do_evento()
+        unidades = consequencias.unidades_do_castigo(castigo)
         caiu = consequencias.CondicaoAplicada(castigo)
         for quem in encararam:
             caiu.stacks[quem.personagem] = await db.aplicar_condicao(
-                self.bot.db, run["id"], quem.user_id, castigo
+                self.bot.db, run["id"], quem.user_id, castigo, unidades
             )
         desfecho.linhas.append("O evento sai pela culatra para o grupo.")
         desfecho.condicao = caiu

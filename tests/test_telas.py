@@ -59,10 +59,14 @@ def caso_efeito_somado_faz_a_conta():
     assert C.efeito_somado("perdicao", 2) == "-2 em ataques · -2 em saves"
     # Porcentagem também é número: a Deterioração é -10% por stack.
     assert C.efeito_somado("deterioracao", 3) == "-30% de HP máximo"
-    # E a de grupo de perícia nomeia as perícias.
-    somado = C.efeito_somado("fraqueza", 2)
-    assert somado.startswith("-4 em "), somado
-    assert "Atletismo" in somado, somado
+    # A de perícia vale em TODAS, então ela não nomeia nenhuma. Já nomeou:
+    # enquanto existiam os cinco debuffs de grupo, a tela listava "Atletismo"
+    # ou "Arcanismo, História, …". Saindo eles, sobrou só o par geral.
+    somado = C.efeito_somado("perturbacao", 2)
+    assert somado == "-4 nos testes de perícia", somado
+    assert not [c.id for c in C.CATALOGO if c.pericias], (
+        "voltou condição que nomeia perícias: a tela precisa listá-las de novo"
+    )
     print("  efeito_somado multiplica os números do catálogo: ok")
 
 

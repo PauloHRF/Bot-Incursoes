@@ -6,6 +6,7 @@ metade é a sala de verdade, com os dublês do Discord.
 from __future__ import annotations
 
 import asyncio
+import random
 import sys
 from pathlib import Path
 
@@ -52,9 +53,23 @@ TRIVIAL = 1
 
 
 def caso_catalogo_bate_com_a_planilha():
-    """Os 25 pares da planilha, com os números dela e nada mais."""
-    assert len(C.CATALOGO) == 25, len(C.CATALOGO)
-    assert len(C.DEBUFFS) == 12 and len(C.BUFFS) == 12
+    """Os seis pares que sobraram, com os números deles e nada mais.
+
+    Eram doze pares. Saíram os cinco que mexiam num grupo de perícias de cada
+    lado (Fraqueza/Potência e companhia) e o par de cura (Debilidade/Vigor):
+    um debuff que só pesava em Atletismo quase nunca mudava uma rolagem, e
+    lembrar de doze pares era mais trabalho do que o efeito deles valia.
+
+    No lugar, o par que já cobria TODO teste de perícia — Perturbação e
+    Orientação — dobrou para ∓2, que é a força que cada um dos removidos
+    tinha. O jogo não perdeu peso; perdeu lista para decorar.
+    """
+    assert len(C.CATALOGO) == 13, len(C.CATALOGO)
+    assert len(C.DEBUFFS) == 6 and len(C.BUFFS) == 6
+    # Nenhum sobrevivente mexe em grupo de pericia: era essa a familia que saiu.
+    assert not [c.id for c in C.CATALOGO if c.pericias], (
+        "sobrou condicao de grupo de pericia no catalogo"
+    )
     # A Exaustao e a unica que nao e par de ninguem, e a unica permanente.
     assert C.PERMANENTES == ("exaustao",)
 
@@ -62,17 +77,15 @@ def caso_catalogo_bate_com_a_planilha():
     esperado = {
         "deterioracao": {"hp_maximo_pct": -10},
         "perdicao": {"ataque": -1, "saves": -1},
-        "perturbacao": {"testes": -1},
+        "perturbacao": {"testes": -2},
         "medo": {"saves": -2},
         "envenenado": {"ataque": -1, "testes": -1},
-        "debilidade": {"cura_recebida_pct": -10},
         "letargia": {"iniciativa": -2},
         "sustento": {"hp_maximo_pct": 10},
         "bencao": {"ataque": 1, "saves": 1},
-        "orientacao": {"testes": 1},
+        "orientacao": {"testes": 2},
         "coragem": {"saves": 2},
         "purificado": {"ataque": 1, "testes": 1},
-        "vigor": {"cura_recebida_pct": 10},
         "rapidez": {"iniciativa": 2},
     }
     for cid, campos in esperado.items():
@@ -84,25 +97,26 @@ def caso_catalogo_bate_com_a_planilha():
     print("  o catálogo é a planilha: 25 condições com os valores dela: ok")
 
 
-def caso_grupos_de_pericia_sao_espelhados():
-    """Cada grupo de perícia tem um buff e um debuff, de ±2, nas mesmas perícias."""
-    pares = (
-        ("potencia", "fraqueza", C.G_ATLETISMO),
-        ("esperteza", "tolice", C.G_SABER),
-        ("pressa", "moleza", C.G_AGILIDADE),
-        ("sociavel", "introversao", C.G_SOCIAL),
-        ("prudencia", "insensatez", C.G_ATENCAO),
-    )
-    cobertas = set()
-    for bom, ruim, grupo in pares:
-        assert C.POR_ID[bom].pericias == grupo == C.POR_ID[ruim].pericias
-        assert C.POR_ID[bom].por_pericia == 2
-        assert C.POR_ID[ruim].por_pericia == -2
-        cobertas |= set(grupo)
-    # Os cinco grupos cobrem tudo menos Adestrar Animais.
-    assert set(PERICIAS) - cobertas == {"Adestrar Animais"}, set(PERICIAS) - cobertas
-    print("  os cinco grupos de perícia são espelhados e cobrem 17 de 18: ok")
+def caso_nenhuma_condicao_mexe_em_grupo_de_pericia():
+    """A família inteira saiu do catálogo, e o que a substituiu cobre mais.
 
+    Eram dez condições — cinco buffs e cinco debuffs — que davam ±2 num grupo
+    de perícias cada. Um debuff que só pesava em Atletismo quase nunca mudava
+    uma rolagem, e eram dez nomes para decorar.
+
+    No lugar ficou o par que já valia para TODO teste, com a força que cada
+    um dos removidos tinha: Perturbação −2 e Orientação +2. Este caso guarda
+    a troca pelos dois lados — ninguém mexe em grupo, e o par geral dobrou.
+    """
+    assert not [c.id for c in C.CATALOGO if c.pericias or c.por_pericia], (
+        "voltou condição de grupo de perícia ao catálogo"
+    )
+    assert C.POR_ID["perturbacao"].testes == -2
+    assert C.POR_ID["orientacao"].testes == 2
+    # E elas valem em TODA perícia, que e a diferenca para o que saiu.
+    saldo = C.penalidades({"perturbacao": 1})
+    assert saldo.testes == -2 and not saldo.pericias
+    print("  nenhuma condição mexe em grupo de perícia, e o par geral dobrou: ok")
 
 def caso_nao_escala_por_tier():
     """O valor é o da planilha em toda a faixa: não há mais tabela por tier."""
@@ -153,16 +167,21 @@ def caso_deterioracao_a_dez_e_cem_por_cento():
     print("  Deterioração ×10 é -100% do HP máximo: ok")
 
 
-def caso_sustento_e_vigor_somam_para_cima():
-    """Os buffs de percentual aumentam HP máximo e cura, não só reduzem."""
+def caso_sustento_soma_para_cima():
+    """O buff de percentual aumenta o HP máximo, e o par oposto se cancela.
+
+    Era "Sustento e Vigor". O Vigor (+10% de cura) e a Debilidade (-10%)
+    saíram do catálogo, e com eles o único uso de `cura_recebida_pct` — a
+    conta continua no código, sem ninguém para chamá-la.
+    """
     assert C.hp_maximo(100, C.penalidades({"sustento": 3})) == 130
-    assert C.cura_recebida(100, C.penalidades({"vigor": 2})) == 120
-    # Par oposto no mesmo personagem se cancela.
     assert C.hp_maximo(100, C.penalidades({"sustento": 2, "deterioracao": 2})) == 100
-    assert C.cura_recebida(100, C.penalidades({"vigor": 1, "debilidade": 1})) == 100
-    # Debilidade pesada nao faz a cura virar negativa.
-    assert C.cura_recebida(50, C.penalidades({"debilidade": 20})) == 0
-    print("  Sustento e Vigor somam para cima, e o par se cancela: ok")
+    # Nenhuma condicao viva mexe na cura recebida: o saldo fica neutro.
+    assert not [c.id for c in C.CATALOGO if c.cura_recebida_pct], (
+        "voltou condição de cura recebida ao catálogo"
+    )
+    assert C.cura_recebida(100, C.penalidades({"sustento": 3})) == 100
+    print("  Sustento soma para cima, e nada mexe mais na cura recebida: ok")
 
 
 def caso_exaustao_tem_numeros_proprios():
@@ -206,24 +225,35 @@ def caso_letargia_e_rapidez_na_iniciativa():
     print("  Letargia atrasa e Rapidez adianta a iniciativa: ok")
 
 
-def caso_debuff_de_pericia_muda_a_pericia_escolhida():
-    """Com a perícia amaldiçoada, a sala passa a sair pela outra."""
+def caso_debuff_de_teste_nao_muda_qual_pericia_a_sala_usa():
+    """Com os debuffs gerais, a penalidade cai igual em toda perícia.
+
+    Este caso já provou o contrário. Enquanto existia Tolice (-2 num grupo de
+    perícias), a maldição mudava QUAL perícia a sala usava: o personagem
+    fugia de Arcanismo para Percepção. Saindo os cinco grupos, o que restou
+    pesa em tudo por igual — a Perturbação tira 2 de Arcanismo e 2 de
+    Percepção —, e a escolha volta a ser só quem tem o melhor modificador.
+
+    Fica travado porque é uma mudança de comportamento e não um detalhe: a
+    decisão de qual perícia rolar deixou de depender de condição.
+    """
     numeros = classes.classe(CLASSE_PADRAO).numeros(8)
     opcoes = ["Arcanismo", "Percepção"]
     treinadas = ["Arcanismo", "Percepção"]
 
-    saldo = C.penalidades({"tolice": 2})  # -4 em Arcanismo
+    limpo, _ = melhor_pericia(opcoes, numeros, treinadas)
+    saldo = C.penalidades({"perturbacao": 2})  # -4 em TODA pericia
     ajuste = {p: saldo.no_teste(p) for p in opcoes}
+    assert len(set(ajuste.values())) == 1, (
+        f"a penalidade nao caiu igual em todas: {ajuste}"
+    )
     escolhida, mod = melhor_pericia(opcoes, numeros, treinadas, None, None, ajuste)
-    assert escolhida == "Percepção", f"com Tolice deveria sair Percepção, veio {escolhida}"
-    assert mod == melhor_pericia(["Percepção"], numeros, treinadas)[1]
+    assert escolhida == limpo, "a condição mudou a perícia escolhida"
 
-    # E o buff do grupo oposto reverte a escolha.
-    saldo2 = C.penalidades({"tolice": 2, "esperteza": 3})  # +2 liquido em Arcanismo
-    ajuste2 = {p: saldo2.no_teste(p) for p in opcoes}
-    escolhida2, _ = melhor_pericia(opcoes, numeros, treinadas, None, None, ajuste2)
-    assert escolhida2 == "Arcanismo", escolhida2
-    print("  debuff de perícia muda qual perícia a sala usa, e o buff reverte: ok")
+    # Mas ela PESA: o modificador cai pelo tamanho do saldo.
+    _, sem = melhor_pericia(opcoes, numeros, treinadas)
+    assert mod == sem - 4, (mod, sem)
+    print("  debuff de teste pesa igual em tudo e não muda a perícia escolhida: ok")
 
 
 def caso_armadilha_tem_cd_mais_facil():
@@ -246,29 +276,40 @@ def caso_armadilha_tem_cd_mais_facil():
     print(f"  armadilha sai {DESCONTO_CD_ARMADILHA} mais fácil, em todo tier: ok")
 
 
-def caso_dano_e_cura_sao_vinte_por_cento():
-    """As duas linhas de HP da planilha: Dano -20%, Cura +20%."""
-    assert X.dano_da_armadilha(100) == 20
+def caso_dano_doi_mais_que_a_cura_cura():
+    """As duas linhas de HP da planilha, e elas deixaram de ser simétricas.
+
+    Eram as duas 20%. O Dano foi a 35% porque a Armadilha é a sala com a CD
+    mais fácil do caminho (ver DESCONTO_CD_ARMADILHA): se falhar nela também
+    custasse pouco, passar deixaria de importar e ela viraria o atalho barato
+    da votação.
+    """
+    assert X.DANO_PCT == 35 and X.CURA_PCT == 20
+    assert X.dano_da_armadilha(100) == 35
     assert X.cura_do_evento(100) == 20
+    assert X.dano_da_armadilha(100) > X.cura_do_evento(100), (
+        "falhar numa Armadilha tem de doer mais do que vencer um Evento cura"
+    )
     # Nunca zero, mesmo com HP minusculo.
     assert X.dano_da_armadilha(3) == 1 and X.cura_do_evento(3) == 1
-    print("  Dano e Cura são 20% do HP máximo: ok")
+    print("  Dano é 35% e Cura é 20% do HP máximo: ok")
 
 
-def caso_pools_por_sala():
-    """A falha de cada sala sorteia só no grupo dela."""
-    assert set(C.DEBUFFS_DE_ARMADILHA) == {
-        "deterioracao", "perdicao", "perturbacao", "medo",
-        "envenenado", "debilidade", "letargia",
-    }
-    assert set(C.DEBUFFS_DE_EVENTO) == {
-        "fraqueza", "tolice", "moleza", "introversao", "insensatez", "exaustao",
-    }
-    # Os dois grupos nao se cruzam, e cobrem todo debuff mais a Exaustao.
-    assert not set(C.DEBUFFS_DE_ARMADILHA) & set(C.DEBUFFS_DE_EVENTO)
-    assert set(C.DEBUFFS_DE_ARMADILHA) | set(C.DEBUFFS_DE_EVENTO) == set(
-        C.DEBUFFS
-    ) | {"exaustao"}
+def caso_o_evento_sorteia_dos_mesmos_debuffs_da_armadilha():
+    """As duas listas viraram uma, e isso foi forçado pelo corte.
+
+    O Evento tinha cinco debuffs próprios — os de grupo de perícia —, e todos
+    os cinco saíram do catálogo. Mantida a lista separada, ela ficaria só com
+    a Exaustão, e TODO Evento perdido daria a condição mais pesada do jogo: a
+    única que não passa com o combate e que expulsa da incursão com cinco
+    pontos.
+    """
+    assert set(C.DEBUFFS_DE_ARMADILHA) == set(C.DEBUFFS), (
+        "a Armadilha deixou de sortear entre todos os debuffs"
+    )
+    assert set(C.DEBUFFS_DE_EVENTO) == set(C.DEBUFFS) | {"exaustao"}
+    # E a Exaustao e exclusiva do Evento: Armadilha nao cansa ninguem.
+    assert "exaustao" not in C.DEBUFFS_DE_ARMADILHA
 
     vistos_a = {X.debuff_da_armadilha() for _ in range(400)}
     assert vistos_a == set(C.DEBUFFS_DE_ARMADILHA), vistos_a
@@ -294,11 +335,11 @@ def caso_premio_do_evento_so_oferece_o_que_serve():
 
 def caso_graca_sorteia_sem_reposicao():
     """A Graça pode tirar de mais de um personagem ou mais de um debuff."""
-    grupo = {10: {"medo": 1, "tolice": 1}, 20: {"envenenado": 1}}
+    grupo = {10: {"medo": 1, "letargia": 1}, 20: {"envenenado": 1}}
     assert X.sortear_para_limpar(grupo, (C.DEBUFF,)) == [(10, "medo")] or True
     tres = X.sortear_para_limpar(grupo, (C.DEBUFF,), quantas=3)
     assert len(tres) == 3 and len(set(tres)) == 3, tres
-    assert set(tres) == {(10, "medo"), (10, "tolice"), (20, "envenenado")}
+    assert set(tres) == {(10, "medo"), (10, "letargia"), (20, "envenenado")}
     # Pedir mais do que existe devolve o que existe.
     assert len(X.sortear_para_limpar(grupo, (C.DEBUFF,), quantas=9)) == 3
     # A Exaustao nao e debuff: nao entra na Graca.
@@ -941,23 +982,36 @@ async def caso_tesouro_falho_acorda_mimicos():
     print("  tesouro perdido acorda Mímicos e a emboscada sobrevive: ok")
 
 
-async def caso_tesouro_falho_sem_mimico_segue():
-    """Sem Mímico acordado, o tesouro perdido só devolve o grupo à votação."""
+async def caso_tesouro_falho_sempre_acorda_mimico():
+    """Falhar num Tesouro vira combate SEMPRE — não há mais caminho sem ele.
+
+    Este caso já provou o contrário: com o sorteio de 35%, dois terços das
+    falhas devolviam o grupo à votação sem custo nenhum. Era a única falha do
+    caminho que podia não cobrar nada, e "sair sem o tesouro" não é castigo
+    quando o tesouro só existia se você passasse.
+
+    Duas pontas, porque uma só não bastaria. A decisão é cobrada com um dado
+    de verdade, dezenas de vezes — um teste de uma chamada passaria mesmo com
+    o sorteio de volta, só por sorte. E a sala é atravessada de ponta a ponta,
+    porque a decisão valer não garante que o cog a use.
+    """
+    sorteio = random.Random(20261111)
+    assert all(X.acordou_mimico(sorteio) for _ in range(200)), (
+        "voltou a existir falha de Tesouro que não acorda Mímico"
+    )
+    assert X.CHANCE_DE_MIMICO == 1.0, X.CHANCE_DE_MIMICO
+
     conn, canal, cog, incursao = await preparar(salas_de("Tesouro", IMPOSSIVEL))
     run = await montar_run(conn, canal, cog)
-    original = X.acordou_mimico
-    X.acordou_mimico = lambda rng=None: False
-    try:
-        _, run = await entrar_e_rolar(conn, canal, cog, run)
-    finally:
-        X.acordou_mimico = original
+    _, run = await entrar_e_rolar(conn, canal, cog, run)
 
-    assert run["linha_atual"] == 2, run["linha_atual"]
-    assert not await db.inimigos_do_combate(conn, run["id"], 1)
-
+    assert run["linha_atual"] == 1, "o grupo seguiu sem enfrentar os Mímicos"
+    assert await db.inimigos_do_combate(conn, run["id"], 1), (
+        "o Tesouro falhou e não abriu combate"
+    )
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)
-    print("  tesouro perdido sem Mímico devolve à votação: ok")
+    print("  tesouro perdido acorda Mímico sempre, e o cog obedece: ok")
 
 
 async def caso_descanso_limpa_um_por_personagem():
@@ -1291,19 +1345,19 @@ async def caso_efemera_do_combate_sai_na_virada():
 
 async def main():
     caso_catalogo_bate_com_a_planilha()
-    caso_grupos_de_pericia_sao_espelhados()
+    caso_nenhuma_condicao_mexe_em_grupo_de_pericia()
     caso_nao_escala_por_tier()
     caso_stacks_somam()
     caso_teto_por_condicao()
     caso_deterioracao_a_dez_e_cem_por_cento()
-    caso_sustento_e_vigor_somam_para_cima()
+    caso_sustento_soma_para_cima()
     caso_exaustao_tem_numeros_proprios()
     caso_cura_em_combate_respeita_debilidade()
     caso_letargia_e_rapidez_na_iniciativa()
-    caso_debuff_de_pericia_muda_a_pericia_escolhida()
+    caso_debuff_de_teste_nao_muda_qual_pericia_a_sala_usa()
     caso_armadilha_tem_cd_mais_facil()
-    caso_dano_e_cura_sao_vinte_por_cento()
-    caso_pools_por_sala()
+    caso_dano_doi_mais_que_a_cura_cura()
+    caso_o_evento_sorteia_dos_mesmos_debuffs_da_armadilha()
     caso_premio_do_evento_so_oferece_o_que_serve()
     caso_graca_sorteia_sem_reposicao()
 
@@ -1323,7 +1377,7 @@ async def main():
     await caso_grupo_inteiro_fora_encerra_a_run()
     await caso_emboscada_do_mimico_nao_deixa_avancar()
     await caso_tesouro_falho_acorda_mimicos()
-    await caso_tesouro_falho_sem_mimico_segue()
+    await caso_tesouro_falho_sempre_acorda_mimico()
     await caso_descanso_limpa_um_por_personagem()
     await caso_o_descanso_deixa_o_desfecho_no_canal()
     await caso_cartao_do_descanso_mostra_o_grupo_inteiro()

@@ -7,14 +7,14 @@ O desenho por tipo de sala:
 
   Armadilha  passou: atravessa e pronto (a CD dela já vem com desconto, em
              `incursoes.DESCONTO_CD_ARMADILHA`).
-             falhou: **Dano** (-20% do HP) mais um debuff de Armadilha
+             falhou: **Dano** (-35% do HP) mais um debuff de Armadilha
              sorteado — é o "Dano e Debuffs" da regra.
   Evento     passou: um **prêmio** sorteado entre os 12 buffs do catálogo, a
              Cura e a Graça. Sorteia só entre os que fazem diferença agora.
              falhou: um debuff de Evento ou um ponto de Exaustão.
   Tesouro    passou: o texto de recompensa da sala (os itens vivem na planilha
              do grupo, não no bot).
-             falhou: nada, e uma chance de acordar Mímicos.
+             falhou: os Mímicos acordam, e a sala vira combate.
   Descanso   cura uma fatia e cada um limpa uma condição sua (ver o cog).
 
 Cura, Dano e Graça não viram condição: não têm stack nem prazo, acontecem na
@@ -28,12 +28,19 @@ from typing import Iterable, Optional
 
 from . import aleatorio, condicoes
 
-# As duas linhas de HP da planilha: Cura (+20%) e Dano (-20%), do HP máximo.
+# As duas linhas de HP da planilha: Cura (+20%) e Dano (-35%), do HP máximo.
+# A Cura e o Dano deixaram de ser simétricos de propósito: falhar numa
+# Armadilha custava um quinto do HP e isso fazia a sala ser votada como
+# atalho barato. A Armadilha já é a sala com a CD mais fácil do caminho
+# (ver DESCONTO_CD_ARMADILHA) — se ela também doer pouco ao falhar, passar
+# nela deixa de importar.
 CURA_PCT = 20
-DANO_PCT = 20
+DANO_PCT = 35
 
-# Chance de falhar num Tesouro acordar Mímicos.
-CHANCE_DE_MIMICO = 0.35
+# Falhar num Tesouro acorda Mímicos SEMPRE. A constante fica em 1.0 e não
+# some para o número continuar num lugar só — e porque voltar a sortear é
+# mudar este 1.0, e não reescrever a sala.
+CHANCE_DE_MIMICO = 1.0
 
 # Quem aparece quando os Mímicos acordam, tier por tier.
 #
@@ -200,7 +207,7 @@ def _rng(rng: Optional[random.Random]) -> random.Random:
 
 
 def dano_da_armadilha(hp_max: int) -> int:
-    """O Dano da planilha: -20% do HP máximo. Nunca menos de 1."""
+    """O Dano da planilha: -35% do HP máximo. Nunca menos de 1."""
     return max(1, (hp_max * DANO_PCT) // 100)
 
 
@@ -214,9 +221,30 @@ def debuff_da_armadilha(rng: Optional[random.Random] = None) -> str:
     return _rng(rng).choice(condicoes.DEBUFFS_DE_ARMADILHA)
 
 
+# Quantas unidades do debuff um Evento perdido deixa. Duas, e não uma: o
+# Evento perdeu os cinco debuffs próprios dele — os de grupo de perícia — e
+# passou a sortear da mesma lista da Armadilha. Sem o dobro de stacks, falhar
+# um Evento passaria a doer menos do que caiu numa Armadilha, que ainda cobra
+# o Dano por cima.
+UNIDADES_DO_CASTIGO = 2
+
+
 def castigo_do_evento(rng: Optional[random.Random] = None) -> str:
-    """O que um Evento perdido deixa: um debuff de Evento ou Exaustão."""
+    """O que um Evento perdido deixa: um debuff ou Exaustão."""
     return _rng(rng).choice(condicoes.DEBUFFS_DE_EVENTO)
+
+
+def unidades_do_castigo(castigo: str) -> int:
+    """Quantas unidades daquele castigo caem de uma vez.
+
+    A Exaustão é a exceção, e fica em UMA. Ela não é um debuff como os
+    outros: vale -2 nos ataques, -2 nos testes e -5 de iniciativa POR PONTO,
+    não passa com o combate e com cinco pontos tira o personagem da incursão.
+    Dois pontos por Evento perdido expulsariam alguém em três falhas.
+    """
+    if castigo == condicoes.EXAUSTAO:
+        return 1
+    return UNIDADES_DO_CASTIGO
 
 
 def premio_do_evento(
@@ -272,5 +300,12 @@ def sortear_para_limpar(
 
 
 def acordou_mimico(rng: Optional[random.Random] = None) -> bool:
-    """A falha no Tesouro acordou o que estava fingindo ser um baú?"""
-    return _rng(rng).random() < CHANCE_DE_MIMICO
+    """Falhar num Tesouro acorda o que fingia ser um baú. SEMPRE.
+
+    Já foi um sorteio de 35%, e por isso a função continua existindo e
+    recebendo um `rng` que não usa mais: quem chama não precisou mudar de
+    forma. O sorteio saiu porque ele deixava a sala sem castigo em dois
+    terços das falhas — e "sair sem o tesouro" não é castigo quando o tesouro
+    só existia se você passasse.
+    """
+    return True

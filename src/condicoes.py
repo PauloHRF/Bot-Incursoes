@@ -101,8 +101,8 @@ CATALOGO: tuple[Condicao, ...] = (
     ),
     Condicao(
         "perturbacao", "Perturbação", DEBUFF, "\N{DIZZY SYMBOL}",
-        "-1 nos testes de perícia.",
-        testes=-1, fonte=ARMADILHA,
+        "-2 nos testes de perícia.",
+        testes=-2, fonte=ARMADILHA,
     ),
     Condicao(
         "medo", "Medo", DEBUFF, "\N{FEARFUL FACE}",
@@ -115,41 +115,11 @@ CATALOGO: tuple[Condicao, ...] = (
         ataque=-1, testes=-1, fonte=ARMADILHA,
     ),
     Condicao(
-        "debilidade", "Debilidade", DEBUFF, "\N{BROKEN HEART}",
-        "-10% de tudo que recebe de cura.",
-        cura_recebida_pct=-10, fonte=ARMADILHA,
-    ),
-    Condicao(
         "letargia", "Letargia", DEBUFF, "\N{SNAIL}",
         "-2 de iniciativa.",
         iniciativa=-2, fonte=ARMADILHA,
     ),
     # ------------------------------------------------------ vindos do Evento
-    Condicao(
-        "fraqueza", "Fraqueza", DEBUFF, "\N{WILTED FLOWER}",
-        "-2 em Atletismo.",
-        pericias=G_ATLETISMO, por_pericia=-2, fonte=EVENTO,
-    ),
-    Condicao(
-        "tolice", "Tolice", DEBUFF, "\N{CLOWN FACE}",
-        "-2 em Arcanismo, História, Investigação, Natureza e Religião.",
-        pericias=G_SABER, por_pericia=-2, fonte=EVENTO,
-    ),
-    Condicao(
-        "moleza", "Moleza", DEBUFF, "\N{SLOTH}",
-        "-2 em Acrobacia, Prestidigitação e Furtividade.",
-        pericias=G_AGILIDADE, por_pericia=-2, fonte=EVENTO,
-    ),
-    Condicao(
-        "introversao", "Introversão", DEBUFF, "\N{UPSIDE-DOWN FACE}",
-        "-2 em Enganação, Intimidação, Atuação e Persuasão.",
-        pericias=G_SOCIAL, por_pericia=-2, fonte=EVENTO,
-    ),
-    Condicao(
-        "insensatez", "Insensatez", DEBUFF, "\N{FOG}",
-        "-2 em Intuição, Medicina, Percepção e Sobrevivência.",
-        pericias=G_ATENCAO, por_pericia=-2, fonte=EVENTO,
-    ),
     # ----------------------------------------------------------- a Exaustão
     Condicao(
         "exaustao", "Exaustão", EXAUSTAO, "\U0001FAE9",  # rosto abatido: o nome unicode e novo demais para o escape N{}
@@ -177,8 +147,8 @@ CATALOGO: tuple[Condicao, ...] = (
     ),
     Condicao(
         "orientacao", "Orientação", BUFF, "\N{COMPASS}",
-        "+1 nos testes de perícia.",
-        testes=1,
+        "+2 nos testes de perícia.",
+        testes=2,
     ),
     Condicao(
         "coragem", "Coragem", BUFF, "\N{LION FACE}",
@@ -191,39 +161,9 @@ CATALOGO: tuple[Condicao, ...] = (
         ataque=1, testes=1,
     ),
     Condicao(
-        "vigor", "Vigor", BUFF, "\N{HERB}",
-        "+10% de tudo que recebe de cura.",
-        cura_recebida_pct=10,
-    ),
-    Condicao(
         "rapidez", "Rapidez", BUFF, "\N{HIGH VOLTAGE SIGN}",
         "+2 de iniciativa.",
         iniciativa=2,
-    ),
-    Condicao(
-        "potencia", "Potência", BUFF, "\N{FLEXED BICEPS}",
-        "+2 em Atletismo.",
-        pericias=G_ATLETISMO, por_pericia=2,
-    ),
-    Condicao(
-        "esperteza", "Esperteza", BUFF, "\N{OPEN BOOK}",
-        "+2 em Arcanismo, História, Investigação, Natureza e Religião.",
-        pericias=G_SABER, por_pericia=2,
-    ),
-    Condicao(
-        "pressa", "Pressa", BUFF, "\N{DASH SYMBOL}",
-        "+2 em Acrobacia, Prestidigitação e Furtividade.",
-        pericias=G_AGILIDADE, por_pericia=2,
-    ),
-    Condicao(
-        "sociavel", "Sociável", BUFF, "\N{SPEECH BALLOON}",
-        "+2 em Enganação, Intimidação, Atuação e Persuasão.",
-        pericias=G_SOCIAL, por_pericia=2,
-    ),
-    Condicao(
-        "prudencia", "Prudência", BUFF, "\N{EYES}",
-        "+2 em Intuição, Medicina, Percepção e Sobrevivência.",
-        pericias=G_ATENCAO, por_pericia=2,
     ),
 )
 
@@ -239,7 +179,13 @@ BUFFS = tuple(c.id for c in CATALOGO if c.tipo == BUFF)
 DEBUFFS_DE_ARMADILHA = tuple(
     c.id for c in CATALOGO if c.tipo == DEBUFF and c.fonte == ARMADILHA
 )
-DEBUFFS_DE_EVENTO = tuple(
+# O Evento perdido sorteia entre os MESMOS debuffs da Armadilha, mais a
+# Exaustão. Eram listas separadas enquanto existiam cinco debuffs só dele —
+# os de grupo de perícia (Fraqueza, Tolice, Moleza, Introversão, Insensatez).
+# Com eles fora, a lista própria do Evento ficaria só com a Exaustão, e todo
+# Evento perdido daria Exaustão: a condição mais pesada do jogo, a única que
+# não passa com o combate e que expulsa da incursão com cinco pontos.
+DEBUFFS_DE_EVENTO = DEBUFFS_DE_ARMADILHA + tuple(
     c.id for c in CATALOGO if c.ruim and c.fonte == EVENTO
 )
 # As que não passam sozinhas: só saem no descanso ou por habilidade.

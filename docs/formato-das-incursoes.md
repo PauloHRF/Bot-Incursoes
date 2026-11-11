@@ -367,9 +367,14 @@ que não rola nada, e a CD não vale. É a pancada física que a armadura apara 
 vez de a Constituição aguentar. Com `ATK`, `dano` passa a ser obrigatório.
 
 Debuffs que uma criatura pode deixar: `deterioracao`, `perdicao`,
-`perturbacao`, `medo`, `envenenado`, `debilidade`, `letargia`, `fraqueza`,
-`tolice`, `moleza`, `introversao`, `insensatez`, `exaustao`. Criatura **não dá
+`perturbacao`, `medo`, `envenenado`, `letargia`, `exaustao`. Criatura **não dá
 buff** — pedir um é erro de validação, e não silêncio.
+
+A lista já foi o dobro disto. Saíram os cinco que mexiam num grupo de perícias
+(Fraqueza, Tolice, Moleza, Introversão, Insensatez) e a Debilidade: a
+`perturbacao` passou a valer **−2 em todos os testes**, que é a mesma força
+que cada um deles tinha e alcance maior. Conteúdo escrito antes disto foi
+migrado — os cinco viraram `perturbacao` e a Debilidade virou `deterioracao`.
 
 ---
 

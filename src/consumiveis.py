@@ -119,8 +119,7 @@ ICONE = "\N{ALEMBIC}\N{VARIATION SELECTOR-16}"
 # cartaz com o artigo errado.
 ARTIGO_DO_BUFF = {
     "sustento": "do", "bencao": "da", "orientacao": "da", "coragem": "da",
-    "purificado": "do", "vigor": "do", "rapidez": "da", "potencia": "da",
-    "esperteza": "da", "pressa": "da", "sociavel": "do", "prudencia": "da",
+    "purificado": "do", "rapidez": "da",
 }
 
 
