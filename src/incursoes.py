@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Sequence
 
-from . import condicoes
+from . import aleatorio, condicoes
 from .rules import (
     ATRIBUTOS,
     TIER_MAXIMO,
@@ -232,9 +232,7 @@ class HabilidadeDoMonstro:
         """Rola o d6 da recarga. Sem recarga declarada, está sempre pronta."""
         if not self.recarga:
             return True
-        import random as _random
-
-        gerador = rng or _random.SystemRandom()
+        gerador = aleatorio.gerador(rng)
         return gerador.randint(1, 6) >= self.recarga
 
     def para_dict(self) -> dict[str, Any]:

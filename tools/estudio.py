@@ -48,9 +48,8 @@ PAGINA = Path(__file__).resolve().parent / "estudio" / "index.html"
 PASTA_BANCOS = RAIZ / "data" / "bancos"
 PASTA_INCURSOES = RAIZ / "data" / "incursoes"
 
-# Quantos confrontos por tamanho de grupo. 2000 leva ~1,8s por tamanho nesta
-# maquina; o padrao e menor para o botao responder rapido, e a pagina pede
-# mais quando o autor quer confirmar um numero.
+# Confrontos por tamanho de grupo. O custo depende da duracao e das regras
+# acionadas na luta; o autor pode reduzir a amostra ou aumentar para confirmar.
 REPETICOES_PADRAO = 800
 REPETICOES_MAXIMO = 20000
 GRUPOS_PADRAO = (5, 4, 3, 2)
@@ -301,7 +300,7 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
     if not grupos:
         grupos = list(GRUPOS_PADRAO)
 
-    args = SimpleNamespace(classe=classe, nivel=nivel, repeticoes=repeticoes)
+    args = SimpleNamespace(classe=classe, nivel=nivel, repeticoes=repeticoes, tier=tier, coletar_detalhes=False)
     medidas = []
     for tamanho in grupos:
         # Um rng por tamanho, derivado da mesma semente: assim mudar a lista

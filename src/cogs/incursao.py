@@ -2130,10 +2130,8 @@ class Incursoes(commands.Cog):
             combatentes=combatentes,
         )
 
-    async def _abrir_combate(self, run: dict[str, Any], sala: Sala) -> None:
-        canal = await self._canal(run)
-        if not canal:
-            return
+    async def _preparar_combate(self, run: dict[str, Any], sala: Sala):
+        """Inicializa estado, passivas de abertura e iniciativa sem renderizar."""
         # A sala diz QUEM mora nela em cada tier, e a ficha de cada criatura
         # vale como esta escrita. Nada e esticado por multiplicador: se a
         # criatura nao serve ao tier, o conteudo usa outra.
@@ -2161,10 +2159,17 @@ class Incursoes(commands.Cog):
         # empilhava, porque `ganhar_thp` SOMA em vez de substituir.
         await self._aplicar_aberturas(run)
 
-        incursao = self._incursao_da_run(run)
-        e_objetivo = bool(incursao and sala.id == incursao.objetivo.id)
         estado = await self._estado_combate(run, sala)
         ordem = await self._garantir_iniciativa(run, estado) if estado else []
+        return estado, ordem
+
+    async def _abrir_combate(self, run: dict[str, Any], sala: Sala) -> None:
+        canal = await self._canal(run)
+        if not canal:
+            return
+        estado, ordem = await self._preparar_combate(run, sala)
+        incursao = self._incursao_da_run(run)
+        e_objetivo = bool(incursao and sala.id == incursao.objetivo.id)
         embed, arquivo = E.combate(
             sala,
             estado,

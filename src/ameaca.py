@@ -37,6 +37,8 @@ from __future__ import annotations
 import random
 from typing import Any, Iterable, Optional, Sequence, TypeVar
 
+from . import aleatorio
+
 T = TypeVar("T")
 
 # O expoente da curva. Ver o cabeçalho: menor achata, 1 é o stack simples.
@@ -145,7 +147,7 @@ def porcentagens(
 
 
 def _rng(rng: Optional[random.Random]) -> Any:
-    return rng or random.SystemRandom()
+    return aleatorio.gerador(rng)
 
 
 def sortear(
