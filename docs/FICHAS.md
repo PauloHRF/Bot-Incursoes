@@ -687,7 +687,7 @@ Escolhe entre atacar 2x por rodada ou dar 4 THP extra ao curar.
 
 **1x por descanso.**
 
-O grupo cura 1% da vida, ganha 4d6 de THP e +1d6+4 no próximo ataque.
+O grupo cura 10% da vida, ganha 4d6 de THP e +1d6+4 no próximo ataque.
 
 ---
 
@@ -857,7 +857,7 @@ Escolhe uma: Cure Wounds, Thunderwave ou Faerie Fire.
 
 * **Cure Wounds** (1x por descanso) — cura um aliado em 30% do HP máximo dele.
 * **Thunderwave** (1x por descanso) — todos os inimigos fazem save de CON; quem falha leva 2d8, quem passa leva metade.
-* **Faerie Fire** (1x por descanso) — um inimigo fica delineado; o grupo ataca ele com vantagem na próxima rodada.
+* **Faerie Fire** (1x por descanso) — um inimigo fica delineado; o grupo ataca ele com vantagem nas 3 rodadas seguintes.
 
 ---
 
@@ -1172,9 +1172,9 @@ Escolhe uma: Hold Monster, Synaptic Static ou Summon Greater Demon.
 
 A forma que ele veste. Escolhe uma: Urso, Lobo ou Aranha.
 
-* **Wild Shape — Urso** (1x por descanso) — vira urso por 3 rodadas. +3 de CA, vida temporária igual a 3x o tier, e o dado da forma.
-* **Wild Shape — Lobo** (1x por descanso) — vira lobo por 3 rodadas. Dois golpes por rodada e vida temporária igual a 2x o tier.
-* **Wild Shape — Aranha** (1x por descanso) — vira aranha por 3 rodadas. Cada golpe que acerta tira 2 do ataque do alvo por 2 rodadas.
+* **Wild Shape — Urso** (1x por descanso) — vira urso e ataca na hora. Por 3 rodadas, +3 de CA, +4 de ameaça, vida temporária igual a 3x o tier e o dado da forma.
+* **Wild Shape — Lobo** (1x por descanso) — vira lobo e ataca na hora. Por 3 rodadas, dois golpes por rodada e vida temporária igual a 2x o tier.
+* **Wild Shape — Aranha** (1x por descanso) — vira aranha e ataca na hora. Por 3 rodadas, cada golpe que acerta tira 2 do ataque do alvo por 2 rodadas.
 
 ---
 

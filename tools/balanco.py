@@ -323,8 +323,12 @@ def valor_da_ativa(classe_id: str, tier: int, h, ataques: int) -> tuple[float, s
         proprio = H.media_do_dado(cl.numeros(classe_id, rules.nivel_do_tier(tier)).dano)
         da_fera = media_do_valor(a.get("dano"), tier) * max(1, a.get("ataques", 1))
         bruto = max(0, da_fera - proprio) * 0.6 * turnos + a.get("thp_por_tier", 0) * tier
+        if a.get("ataca_ao_transformar"):
+            bruto += da_fera * 0.6
         v += bruto
         partes.append(f"{bruto:.0f} da forma em {turnos} rodadas")
+        if a.get("ataca_ao_transformar"):
+            partes.append("inclui ataque ao transformar")
 
     if a.get("tipo") == "duracao":
         ef = a.get("efeitos") or {}

@@ -360,7 +360,7 @@ def sala_aberta(
                 else f"{len(criaturas)} criaturas"
             ),
             value="\n".join(
-                f"**{m.nome}** — CA **{m.ca}** · {golpes_da_criatura(m)} · HP **{m.hp}**"
+                f"**{m.nome}** {barra(m.hp, m.hp, 8)} — CA **{m.ca}** · {golpes_da_criatura(m)}"
                 for m in criaturas
             ) or "*sem criatura*",
             inline=False,
@@ -807,7 +807,7 @@ def _linha_inimigo(i, marcado: bool = False) -> str:
     alvo = f"{MARCA_ALVO} " if marcado else ""
     return (
         f"👹 {alvo}**{i.nome}** {barra(i.hp_atual, i.hp_max, 8)} "
-        f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca} · "
+        f"· CA {i.ca} · "
         + (
             f"{len(i.golpes)} golpes"
             if getattr(i, "golpes", None)

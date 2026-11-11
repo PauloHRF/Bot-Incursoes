@@ -533,13 +533,19 @@ def _executar_ativa(personagem, grupo, estado, habilidade, rng, rodada,
         tier_atual = rules.tier(getattr(personagem, "_nivel_simulador", 1))
         tier_dano = min(tier_atual, max(tabela)) if tabela else None
         dano = tabela.get(tier_dano) if tier_dano is not None else None
-        efeitos_forma = {"ca": acao.get("ca", 0), "ataques": acao.get("ataques", 1)}
+        efeitos_forma = {
+            "ca": acao.get("ca", 0), "ataques": acao.get("ataques", 1),
+            "ameaca": acao.get("ameaca", 0),
+            "veneno_no_golpe": acao.get("veneno_no_golpe", 0),
+        }
         if dano:
             efeitos_forma["dano_arma"] = dano
         _aplicar_efeitos(alvo, efeitos_forma, acao.get("turnos", 3), rodada)
         alvo.forma = acao.get("nome", "Forma")
         if acao.get("thp_por_tier"):
             motor.ganhar_thp(alvo, acao["thp_por_tier"] * tier_atual)
+        if acao.get("ataca_ao_transformar"):
+            _atacar_com_acao(alvo, estado, {}, rng, dano_total)
     elif tipo == "invocar":
         invocado = motor.Combatente(
             user_id=100000 + personagem.user_id,
