@@ -70,6 +70,17 @@ Não é formalidade: o bot pula o arquivo inválido e segue com o resto, então 
 dungeon do autor é a que **não existe** — e o aviso sai no log e na resposta do
 `/incursao recarregar`, longe de quem escreveu.
 
+Para escrever com a bancada aberta — sala, filtro da dungeon, medição e
+exportação na mesma tela:
+
+```bash
+python tools/estudio.py
+```
+
+Ele sobe em `127.0.0.1` e usa o validador e o motor de combate do próprio bot,
+então passar ali é passar no bot. Não escreve em `data/`: devolve o arquivo
+para você mandar.
+
 A incursão pode escolher quais salas do banco ela sorteia, por tema ou por
 lista. Para ver onde falta conteúdo antes de escrever a próxima sala:
 
@@ -77,10 +88,8 @@ lista. Para ver onde falta conteúdo antes de escrever a próxima sala:
 python tools/relatorio_de_pool.py
 ```
 
-O desenho do que ainda falta — combate variando por tema e o estúdio de
-simulação — está em [docs/temas-e-estudio.md](docs/temas-e-estudio.md), com um
-rascunho navegável da tela em
-[docs/estudio-rascunho.html](docs/estudio-rascunho.html).
+O desenho de tudo isso, e do que ainda falta, está em
+[docs/temas-e-estudio.md](docs/temas-e-estudio.md).
 
 ## Comandos
 

@@ -27,7 +27,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
@@ -92,6 +92,41 @@ def conferir(caminho: Path) -> list[str]:
     return []
 
 
+def comprido(texto: Any, aviso: int, teto: int, rotulo: str) -> Optional[str]:
+    """O aviso de texto longo, ou None quando ele cabe bem.
+
+    Separado do teto duro de propósito: acima de `teto` o Discord recusa a
+    mensagem e isso é recusa de validação; entre `aviso` e `teto` o texto
+    passa e ainda assim vira parede na tela de um celular.
+    """
+    tamanho = len(str(texto or ""))
+    if aviso < tamanho <= teto:
+        return (
+            f"{rotulo} tem {tamanho} caracteres. Cabe (o Discord recusa só "
+            f"acima de {teto}), mas acima de {aviso} vira parede de texto "
+            f"na tela de um celular."
+        )
+    return None
+
+
+def avisos_da_sala(sala: dict) -> list[str]:
+    """Os avisos que são da SALA, e não do banco em volta dela.
+
+    Existe separado porque o estúdio confere uma sala sozinha, antes de ela
+    ter banco: cobrar ali a sala de Descanso ou o mínimo de salas seria
+    reprovar uma sala correta por causa das vizinhas que não existem ainda.
+    """
+    onde = f"da sala {sala.get('id') or '?'}"
+    candidatos = [
+        comprido(sala.get("nome"), AVISO_TITULO, LIMITE_TITULO, f"o nome {onde}"),
+        comprido(
+            sala.get("descricao"), AVISO_DESCRICAO_SALA, LIMITE_DESCRICAO,
+            f"a descrição {onde}",
+        ),
+    ]
+    return [c for c in candidatos if c]
+
+
 def avisos(caminho: Path, bruto: dict) -> list[str]:
     """O que não impede de carregar, mas o autor quer saber.
 
@@ -100,23 +135,14 @@ def avisos(caminho: Path, bruto: dict) -> list[str]:
     """
     saida: list[str] = []
 
-    def comprido(texto: Any, aviso: int, teto: int, rotulo: str) -> None:
-        tamanho = len(str(texto or ""))
-        if aviso < tamanho <= teto:
-            saida.append(
-                f"{rotulo} tem {tamanho} caracteres. Cabe (o Discord recusa só "
-                f"acima de {teto}), mas acima de {aviso} vira parede de texto "
-                f"na tela de um celular."
-            )
+    def anotar(texto, aviso, teto, rotulo) -> None:
+        recado = comprido(texto, aviso, teto, rotulo)
+        if recado:
+            saida.append(recado)
 
     if _tipo_do_arquivo(bruto) == "banco":
         for sala in bruto.get("salas") or []:
-            onde = f"a sala {sala.get('id') or '?'}"
-            comprido(sala.get("nome"), AVISO_TITULO, LIMITE_TITULO, f"o nome de {onde}")
-            comprido(
-                sala.get("descricao"), AVISO_DESCRICAO_SALA, LIMITE_DESCRICAO,
-                f"a descrição de {onde}",
-            )
+            saida.extend(avisos_da_sala(sala))
         # A sala de Descanso do banco NAO e sorteada, e nao e por isso que ela
         # e inutil: a parada fixa de descanso usa a ficcao dela (a Cela do
         # Coveiro da Guilda, a Adega Falsa das Sombras). Banco sem nenhuma faz
@@ -141,12 +167,12 @@ def avisos(caminho: Path, bruto: dict) -> list[str]:
             )
         return saida
 
-    comprido(bruto.get("nome"), AVISO_TITULO, LIMITE_TITULO, "o nome da incursão")
-    comprido(
+    anotar(bruto.get("nome"), AVISO_TITULO, LIMITE_TITULO, "o nome da incursão")
+    anotar(
         bruto.get("lore_inicial") or bruto.get("descricao"),
         AVISO_LORE, LIMITE_DESCRICAO, "a lore de abertura",
     )
-    comprido(bruto.get("lore_final"), AVISO_LORE, LIMITE_DESCRICAO, "a lore de fecho")
+    anotar(bruto.get("lore_final"), AVISO_LORE, LIMITE_DESCRICAO, "a lore de fecho")
 
     organizacao = str(bruto.get("organizacao") or "").strip()
     if organizacao:

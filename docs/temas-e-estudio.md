@@ -16,7 +16,11 @@ entre temas **não** virou coluna em `run_salas`. Ela é semeada por `run:sala`,
 como `_trocas_da_parada` já fazia com as trocas do descanso duro — mesma
 estabilidade, zero migração.
 
-**O que ainda é só contrato**: o estúdio (seção 11) e o sugeridor (10).
+E o **estúdio** (seção 11), em `tools/estudio.py` com a página em
+`tools/estudio/index.html`.
+
+**O que ainda é só contrato**: o sugeridor de combate (seção 10), e a parte do
+estúdio que depende dele.
 
 Uma correção de rota que o código impôs: o campo do filtro se chama `filtro`,
 e não `salas` como esta seção 3 dizia. O detector de tipo de arquivo do
@@ -401,6 +405,11 @@ por isso que ele vive neste repositório e não em outro. Código separado seria
 uma segunda cópia das regras, e uma segunda régua sempre acaba discordando da
 primeira.
 
+*Construído.* O que ficou de fora desta primeira versão, e está dito na própria
+página: a sugestão de combate (seção 10) e a faixa da dungeon inteira — essa
+segunda porque ela precisa de uma política de escolha declarada, e um número
+sem dizer qual política foi usada seria mentira com número em cima.
+
 O que a página faz:
 
 - **Escrever sala**: campos do tipo certo (CD, perícia e alvo para sala de
@@ -514,7 +523,13 @@ para ser difícil —, mas ninguém exporta uma máquina de TPK sem saber.
    — senão o combate escrito morre calado —, e a escolha entre temas é semeada
    por `run:sala` em vez de gravada. O cartão da sala e a abertura do combate
    leem o mesmo tema, pela mesma razão que já liam o mesmo tier.
-7. O estúdio: página + servidor local, reusando `simular_combate` (seção 11).
+7. ~~O estúdio: página + servidor local, reusando `simular_combate`.~~
+   **Feito.** `python tools/estudio.py` sobe em `127.0.0.1` e serve
+   `tools/estudio/index.html`. Faz: escrever sala com contador de texto ao
+   vivo, montar o filtro vendo o pool contra o mínimo, prever o cartão do
+   Discord, medir a sala de combate com o motor do bot e exportar o JSON. Não
+   escreve em `data/` — quem decide o que entra é uma pessoa. O que ele **não**
+   faz está na seção 11 e é dito na própria página.
 8. O sugeridor com busca por taxa alvo (seção 10).
 
 Os passos 1 a 4 não mudam nada para quem joga hoje — e é por isso que eles

@@ -389,20 +389,35 @@ def caso_excluir_id_que_nao_existe_e_so_aviso():
     print("  id inexistente em 'excluir' é só aviso: ok")
 
 
-def caso_filtro_que_nao_filtra_e_avisado():
-    """Banco sem tema escrito: o filtro parece funcionar e não tira nada."""
+def caso_sala_sem_etiqueta_inflando_o_pool_e_avisada():
+    """Sala sem tema entra em qualquer filtro, e isso tem que aparecer.
+
+    Senão o filtro "funciona" sem tirar nada — pior do que falhar, porque
+    parece que funcionou. O aviso conta quantas entraram por omissão, então
+    ele continua valendo enquanto o banco estiver só meio etiquetado.
+    """
     sem_tema = I.banco_de_dict(
         banco_cru(salas=[sala_crua(id=f"T{n:02d}") for n in range(1, 6)])
     )
     inc = I.de_dict(incursao_crua(tamanho="Curta", filtro={"temas": ["cripta"]}))
     problemas, avisos = I.conferir_filtro(inc, sem_tema)
     assert not problemas, problemas
-    assert any("não está tirando nada" in a for a in avisos), avisos
+    assert any("NÃO TER tema escrito" in a for a in avisos), avisos
 
-    # E com o banco etiquetado o aviso some: senao ele viraria ruido de sempre.
+    # Meio etiquetado ainda avisa: uma sala com tema nao limpa as outras.
+    meio = I.banco_de_dict(
+        banco_cru(
+            salas=[sala_crua(id="T01", temas=["cripta"])]
+            + [sala_crua(id=f"T{n:02d}") for n in range(2, 6)]
+        )
+    )
+    _, avisos = I.conferir_filtro(inc, meio)
+    assert any("4 das 5" in a for a in avisos), avisos
+
+    # E com o banco inteiro etiquetado o aviso some: senao vira ruido de sempre.
     _, avisos = I.conferir_filtro(inc, banco_etiquetado())
-    assert not any("não está tirando nada" in a for a in avisos), avisos
-    print("  filtro que não filtra, por falta de etiqueta, é avisado: ok")
+    assert not any("NÃO TER tema escrito" in a for a in avisos), avisos
+    print("  sala sem etiqueta inflando o pool é avisada, e some quando acaba: ok")
 
 
 def caso_o_filtro_sobrevive_ao_para_dict():
@@ -774,7 +789,7 @@ for caso in (
     caso_pool_pequeno_demais_e_problema_e_o_apertado_e_aviso,
     caso_incluir_com_id_que_nao_existe_e_problema,
     caso_excluir_id_que_nao_existe_e_so_aviso,
-    caso_filtro_que_nao_filtra_e_avisado,
+    caso_sala_sem_etiqueta_inflando_o_pool_e_avisada,
     caso_o_filtro_sobrevive_ao_para_dict,
     caso_a_variante_do_tema_troca_o_bando,
     caso_a_variante_do_tema_tem_a_mesma_queda_por_tier,

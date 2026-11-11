@@ -1231,17 +1231,6 @@ def conferir_filtro(
             f"queria tirar continua no sorteio."
         )
     if filtro.temas:
-        # Sala sem tema escrito entra em qualquer filtro — e isso faz um banco
-        # ainda nao etiquetado aceitar qualquer tema sem tirar nada. O filtro
-        # "funciona" e nao filtra, que e pior do que falhar.
-        com_tema = [s for s in sorteaveis if s.temas]
-        if not com_tema:
-            avisos.append(
-                f"o filtro pede {', '.join(filtro.temas)}, mas nenhuma sala do "
-                f"banco de {banco.organizacao} tem tema escrito. Sala sem tema "
-                f"entra em qualquer filtro, então o pool continua sendo o banco "
-                f"inteiro: este filtro não está tirando nada."
-            )
         fora_do_tema = [
             i for i in filtro.incluir
             if i in por_id and not por_id[i].serve_ao_tema(filtro.temas)
@@ -1253,6 +1242,21 @@ def conferir_filtro(
             )
 
     pool = filtro.aplicar(sorteaveis)
+    if filtro.temas:
+        # Sala sem tema escrito entra em QUALQUER filtro. Enquanto o banco nao
+        # estiver etiquetado, o filtro "funciona" e nao tira nada — o que e
+        # pior do que falhar, porque parece que funcionou. O aviso conta
+        # quantas entraram por omissao, e so se cala quando nenhuma entrou
+        # assim.
+        sem_tema = [s for s in pool if not s.temas]
+        if sem_tema:
+            avisos.append(
+                f"{len(sem_tema)} das {len(pool)} sala(s) do pool entram por NÃO "
+                f"TER tema escrito, e não por combinarem com o pedido "
+                f"({', '.join(filtro.temas)}): sala sem tema entra em qualquer "
+                f"filtro. Enquanto o banco de {banco.organizacao} não estiver "
+                f"etiquetado, este filtro tira menos do que parece."
+            )
     passos = incursao.passos
     folga = passos + OPCOES_POR_PASSO - 1
     conta = (
@@ -1408,6 +1412,22 @@ def _sala_de_dict(dados: dict[str, Any], onde: str, problemas: list[str]) -> Opt
         recompensa=(str(dados.get("recompensa")).strip() or None) if dados.get("recompensa") else None,
         pontos_organizacao=pontos_sala,
     )
+
+
+def sala_de_dict(dados: dict[str, Any]) -> Sala:
+    """Valida e converte UMA sala, fora de um banco. Levanta ErroDeValidacao.
+
+    O banco tem regras que são dele e não da sala — o mínimo de salas para o
+    sorteio montar um passo, o id único, a sala de Descanso. Quem está
+    escrevendo uma sala sozinha, no estúdio, precisa das regras DELA: cobrar
+    as do banco ali seria reprovar uma sala correta por causa das vizinhas que
+    ainda não existem.
+    """
+    problemas: list[str] = []
+    sala = _sala_de_dict(dados, "a sala", problemas)
+    if problemas or sala is None:
+        raise ErroDeValidacao(problemas or ["a sala não pôde ser lida."])
+    return sala
 
 
 def banco_de_dict(dados: dict[str, Any]) -> BancoDeSalas:
