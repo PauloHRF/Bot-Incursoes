@@ -52,17 +52,30 @@ CHANCE_DE_MIMICO = 1.0
 # Pedra é guardião de câmara. A ficção é a mesma — o tesouro era isca.
 #
 # Medido com a mesa de cinco no nível do tier, 300 combates por linha, mirando
-# o que uma sala do caminho deve cobrar (vitória ≥ 95%, HP restante 55–75%):
-#   T1 3 Mímicos (65% do HP sobra)   T2 5 Mímicos (70%)
-#   T3 2 Mímicos + 2 Xorn (60%)      T4 1 Mímico + 2 Nagas Guardiãs (60%)
-#   T5 1 Mímico + 2 Golens de Pedra (67%)
+# o que uma sala do caminho deve cobrar: vitória ≥ 95% e HP restante 55–75%.
+#
+# Os números ANTERIORES nunca foram conferidos contra esse alvo, e estavam
+# muito longe dele: o grupo saía da emboscada com 87% do HP no tier 1 e com
+# 99% no tier 5 — um por cento de custo. A sala acontecia e não cobrava nada.
+#
+# O que medimos agora, e que fica aqui para o próximo que mexer:
+#   T1 4 Mímicos .................. 66% do HP sobra, vitória 97%
+#   T2 6 Mímicos .................. 83%, vitória 100%  (ver abaixo)
+#   T3 1 Mímico + 5 Xorn .......... 69%, vitória 100%
+#   T4 1 Mímico + 4 Nagas Guardiãs  64%, vitória 100%
+#   T5 1 Mímico + 5 Golens de Pedra 75%, vitória 100%
+#
+# O T2 é o único fora da faixa, e não por falta de tentativa: seis é o teto de
+# MAX_INIMIGOS, e o Mímico satura — é CR 2 e não acompanha o grupo que sobe.
+# Tirá-lo da faixa exigiria dar companhia ao baú já no tier 2, e aí a regra
+# "do tier 3 para cima o baú tem companhia" deixa de valer.
 NOME_DO_MIMICO = "Mímico"
 A_EMBOSCADA: dict[int, tuple[tuple[str, int], ...]] = {
-    1: ((NOME_DO_MIMICO, 3),),
-    2: ((NOME_DO_MIMICO, 5),),
-    3: ((NOME_DO_MIMICO, 2), ("Xorn", 2)),
-    4: ((NOME_DO_MIMICO, 1), ("Naga Guardiã", 2)),
-    5: ((NOME_DO_MIMICO, 1), ("Golem de Pedra", 2)),
+    1: ((NOME_DO_MIMICO, 4),),
+    2: ((NOME_DO_MIMICO, 6),),
+    3: ((NOME_DO_MIMICO, 1), ("Xorn", 5)),
+    4: ((NOME_DO_MIMICO, 1), ("Naga Guardiã", 4)),
+    5: ((NOME_DO_MIMICO, 1), ("Golem de Pedra", 5)),
 }
 
 
