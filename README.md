@@ -81,6 +81,13 @@ Ele sobe em `127.0.0.1` e usa o validador e o motor de combate do próprio bot,
 então passar ali é passar no bot. Não escreve em `data/`: devolve o arquivo
 para você mandar.
 
+Para um bando de criaturas numa dificuldade dada — a dificuldade é **medida**
+por simulação, não declarada:
+
+```bash
+python tools/sugestor.py --tier 3 --ambiente forest --dificuldade media
+```
+
 A incursão pode escolher quais salas do banco ela sorteia, por tema ou por
 lista. Para ver onde falta conteúdo antes de escrever a próxima sala:
 

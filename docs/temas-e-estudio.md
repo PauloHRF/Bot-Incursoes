@@ -19,8 +19,11 @@ estabilidade, zero migração.
 E o **estúdio** (seção 11), em `tools/estudio.py` com a página em
 `tools/estudio/index.html`.
 
-**O que ainda é só contrato**: o sugeridor de combate (seção 10), e a parte do
-estúdio que depende dele.
+E o **sugeridor de combate** (seção 10), em `tools/sugestor.py`, com painel no
+estúdio.
+
+**Nada mais é só contrato.** O que sobrou está na seção 14: a entrega do
+arquivo e quem pode escrever.
 
 Uma correção de rota que o código impôs: o campo do filtro se chama `filtro`,
 e não `salas` como esta seção 3 dizia. O detector de tipo de arquivo do
@@ -383,12 +386,35 @@ etiqueta passa a ser ganha:
 | Média | 65% a 80% |
 | Difícil | 45% a 60% |
 
-Essas três faixas são **proposta minha e precisam ser calibradas** contra
-`docs/BALANCO.md` antes de virarem número oficial. O que não é proposta é o
-método: a sugestão se verifica simulando a si mesma, com o motor de verdade.
+Essas três faixas continuam sendo **proposta minha e esperando calibração**
+contra `docs/BALANCO.md`. O que não é proposta é o método: a sugestão se
+verifica simulando a si mesma, com o motor de verdade.
 
 E mostra o grupo de 3 junto, não só o de 5: três é o tamanho de mesa comum, e o
 `tools/simular_combate.py` já reporta 5, 4, 3 e 2.
+
+### O que a medição disse sobre as faixas
+
+Construído o sugeridor, dá para perguntar se as faixas são alcançáveis. Rodando
+as quinze combinações de tier × dificuldade, com grupo de guerreiros no nível
+do tier, **quatorze acharam composição dentro da faixa pedida**. A que faltou
+foi tier 2 Média.
+
+Então as faixas servem — nenhum tier é incapaz de produzir Fácil, Média e
+Difícil, e os números não precisam ser mexidos para o sugeridor funcionar. O
+que a calibração ainda decide é outra coisa: se "Média" **deve** mesmo ser 65%
+a 80% de vitória para este grupo, ou se o jogo quer outra coisa. Isso é escolha
+de design e não sai de medição nenhuma.
+
+Duas observações que a medição entregou de graça, e que valem para quem
+escreve:
+
+- **o grupo de 3 cai muito mais do que proporcionalmente.** Um bando medido em
+  54% para cinco jogadores deu 0% para três. A mesa de três não está jogando o
+  mesmo combate um pouco mais difícil: está jogando outro combate;
+- **a escala de uma criatura só é grossa.** Entre quatro e cinco cópias a taxa
+  pula faixa inteira, e por isso o sugeridor tenta âncora mais lacaios: é o que
+  dá passo pequeno o bastante para cair numa faixa de quinze pontos.
 
 ---
 
@@ -530,7 +556,11 @@ para ser difícil —, mas ninguém exporta uma máquina de TPK sem saber.
    Discord, medir a sala de combate com o motor do bot e exportar o JSON. Não
    escreve em `data/` — quem decide o que entra é uma pessoa. O que ele **não**
    faz está na seção 11 e é dito na própria página.
-8. O sugeridor com busca por taxa alvo (seção 10).
+8. ~~O sugeridor com busca por taxa alvo.~~ **Feito.** `tools/sugestor.py`,
+   com CLI e painel no estúdio. A busca é por bisseção nos dois eixos — qual
+   criatura e quantas —, e o veredito de cada medição aponta a direção. As
+   faixas de taxa de vitória continuam sendo **proposta minha** e esperando
+   calibração; o que foi medido está na seção 10.
 
 Os passos 1 a 4 não mudam nada para quem joga hoje — e é por isso que eles
 puderam ir primeiro. Do 5 em diante o tema começa a decidir sorteio.

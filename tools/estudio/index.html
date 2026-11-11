@@ -340,6 +340,16 @@ code {
 @media (prefers-reduced-motion: no-preference) {
   .barra, .faixa-corpo, .trilha-fina div { transition: width 0.18s ease, left 0.18s ease; }
 }
+.eixos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 720px) { .eixos { grid-template-columns: 1fr; } }
+.sugestoes { display: grid; gap: 12px; margin-top: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.sug { background: var(--surface); border: 1px solid var(--line); border-radius: 3px; padding: 13px; }
+.sug.fora { border-left: 3px solid var(--warn); }
+.sug.dentro { border-left: 3px solid var(--ok); }
+.sug h3 { font-size: 14.5px; margin: 0 0 8px; font-weight: 600; }
+.bando { list-style: none; margin: 0 0 11px; padding: 0; font-size: 13px; }
+.bando li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.bando .cr { font-family: var(--mono); font-size: 11.5px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
 </style>
 
 </head>
@@ -606,9 +616,47 @@ textarea.json {
   </div>
 </section>
 
-<!-- ============ 4. exportar ============ -->
+<!-- ============ 4. sugerir ============ -->
 <section class="secao">
-  <h2><span class="num">04</span>Levar daqui</h2>
+  <h2><span class="num">04</span>Sugerir um bando</h2>
+  <p class="sub">Ambiente, tipo de bicho e dificuldade. A dificuldade não é um rótulo que
+    o estúdio escreve: é uma faixa de taxa de vitória que ele <strong>procura</strong>,
+    simulando — e o número ao lado de cada sugestão é o que ele mediu.</p>
+
+  <div class="eixos">
+    <div class="campo">
+      <label for="fAmb">ambiente</label>
+      <select id="fAmb"></select>
+      <p class="contador"><span id="ambNota">do Monster Manual</span></p>
+    </div>
+    <div class="campo">
+      <label for="fBicho">tipo de bicho</label>
+      <select id="fBicho"></select>
+      <p class="contador"><span>o meta.tipo do bestiário</span></p>
+    </div>
+    <div class="campo">
+      <label for="fDifCombate">dificuldade</label>
+      <select id="fDifCombate"></select>
+      <p class="contador"><span>faixas a calibrar contra BALANCO.md</span></p>
+    </div>
+  </div>
+
+  <div class="linha-botoes" style="margin-top:4px">
+    <button class="botao cheio" type="button" id="btSugerir">Sugerir</button>
+    <span class="sumico" id="recadoSugerir"></span>
+  </div>
+
+  <div class="sugestoes" id="sugestoes"></div>
+  <div id="saidaSugerir"></div>
+  <p class="explica" style="margin-top:14px;max-width:72ch">As 70 criaturas sem ambiente
+    nenhum — 29 demônios, 13 constructos, 10 dragões — não são dado faltando: o livro não
+    dá bioma a quem não é nativo de bioma. Elas entram em qualquer ambiente escolhido,
+    porque um demônio cabe numa cripta tão bem quanto numa floresta.</p>
+</section>
+
+<!-- ============ 5. exportar ============ -->
+<section class="secao">
+  <h2><span class="num">05</span>Levar daqui</h2>
   <p class="sub">O banco com as suas mudanças, pronto para conferir e mandar.</p>
   <div class="campo">
     <label for="fJson">o banco inteiro, em JSON</label>
@@ -713,6 +761,7 @@ async function comecar() {
     + `${Object.keys(C.incursoes).length} incursão(ões) em data/${ruins}`;
 
   montarFichasFiltro();
+  montarEixosDaSugestao();
   abrirBanco(nomes[0]);
 }
 
@@ -857,6 +906,7 @@ function aoMexerNaSala() {
   atualizarJson();
   avaliarFiltro();
   montarTemasDaMedida();
+  atualizarDicaDoAmbiente();
 }
 
 function marcarContador(id, quantos, aviso, teto) {
@@ -1075,6 +1125,93 @@ $("btRecarregar").addEventListener("click", () => {
   caixa("saidaBanco", {});
   comecar();
 });
+
+/* ---------- sugerir ---------- */
+function montarEixosDaSugestao() {
+  $("fAmb").innerHTML = `<option value="">qualquer ambiente</option>`
+    + C.ambientes.map((a) => `<option value="${texto(a)}">${texto(a)}</option>`).join("");
+  $("fBicho").innerHTML = `<option value="">qualquer tipo</option>`
+    + C.tipos_de_bicho.map((b) =>
+        `<option value="${texto(b.id)}">${texto(b.id)} — ${b.quantas}</option>`).join("");
+  $("fDifCombate").innerHTML = Object.entries(C.dificuldades_de_combate)
+    .map(([nome, [lo, hi]]) =>
+      `<option value="${nome}"${nome === "media" ? " selected" : ""}>`
+      + `${nome} — alvo ${Math.round(lo * 100)}% a ${Math.round(hi * 100)}%</option>`)
+    .join("");
+  atualizarDicaDoAmbiente();
+}
+
+function atualizarDicaDoAmbiente() {
+  const s = salaAberta();
+  const temas = (s && s.temas) || [];
+  $("ambNota").textContent = temas.length
+    ? `a sala é ${temas.join(", ")} — escolha o bioma que combina`
+    : "do Monster Manual";
+}
+
+async function pedirSugestao() {
+  $("btSugerir").disabled = true;
+  $("recadoSugerir").textContent = "procurando — cada sugestão é uma busca medida…";
+  try {
+    const r = await api("/api/sugerir", {
+      tier: Number($("fTierSim").value),
+      ambiente: $("fAmb").value || null,
+      tipo: $("fBicho").value || null,
+      dificuldade: $("fDifCombate").value,
+      classe: $("fClasse").value,
+      quantas: 2,
+    });
+    if (r.erro) {
+      $("sugestoes").innerHTML = "";
+      caixa("saidaSugerir", { problemas: [r.erro, ...(r.dica ? [r.dica] : [])] });
+      return;
+    }
+    desenharSugestoes(r);
+  } catch (erro) {
+    caixa("saidaSugerir", { problemas: [erro.message] });
+  } finally {
+    $("btSugerir").disabled = false;
+    $("recadoSugerir").textContent = "";
+  }
+}
+
+function desenharSugestoes(r) {
+  const [lo, hi] = r.faixa;
+  $("sugestoes").innerHTML = r.sugestoes.map((s, i) => {
+    const partes = s.bando.map((p) =>
+      `<li><span>${p.quantidade} × ${texto(p.nome)}</span>`
+      + `<span class="cr">CR ${texto(p.cr ?? "?")}</span></li>`).join("");
+    const linhas = Object.entries(s.por_grupo).map(([g, taxa]) => {
+      const pc = Math.round(taxa * 100);
+      const classe = pc >= 85 ? "" : pc >= 65 ? "medio" : "duro";
+      return `<div class="taxa-linha"><span>grupo ${g}</span>`
+        + `<div class="trilha-fina"><div class="${classe}" style="width:${pc}%"></div></div>`
+        + `<span class="fim">${pc}%</span></div>`;
+    }).join("");
+    return `<div class="sug ${s.na_faixa ? "dentro" : "fora"}">
+      <h3>${s.na_faixa ? "Na faixa" : "Fora da faixa"}</h3>
+      <ul class="bando">${partes}</ul>
+      <div class="taxa">${linhas}
+        <p class="contador"><span>alvo ${Math.round(lo * 100)}–${Math.round(hi * 100)}%</span>
+          <span>${s.confrontos} confrontos</span></p>
+      </div>
+    </div>`;
+  }).join("");
+  const recados = [];
+  if (r.nenhuma_na_faixa) {
+    recados.push(
+      `Nenhuma caiu dentro de ${Math.round(lo * 100)}–${Math.round(hi * 100)}%. `
+      + "As de cima são o que a busca mediu de mais próximo — com filtros apertados "
+      + "pode não existir composição nessa dificuldade neste tier.");
+  }
+  caixa("saidaSugerir", {
+    avisos: recados,
+    ok: `${r.candidatas_no_bestiario} criatura(s) passaram nos filtros. `
+      + `Grupo simulado: ${r.classe} nível ${r.nivel}. Semente ${r.semente}.`,
+  });
+}
+
+$("btSugerir").addEventListener("click", pedirSugestao);
 
 comecar();
 </script>

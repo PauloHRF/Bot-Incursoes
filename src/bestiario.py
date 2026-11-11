@@ -73,6 +73,49 @@ def de_lugar_nenhum(criatura: dict[str, Any]) -> bool:
     return not ambientes_de(criatura)
 
 
+def candidatas(
+    ambiente: Optional[str] = None,
+    tipo: Optional[str] = None,
+    tier: Optional[int] = None,
+    faixa_cr: Optional[tuple[float, float]] = None,
+) -> list[dict[str, Any]]:
+    """As criaturas que servem a um ambiente, a um tipo e a um tier.
+
+    Os três filtros são independentes e cada um vazio quer dizer "qualquer":
+    é o autor que decide o quanto apertar.
+
+    O AMBIENTE tem uma regra que não é óbvia. Criatura sem ambiente nenhum
+    entra em TODO ambiente pedido, porque a lista vazia não é dado faltando —
+    o livro não prende a bioma quem não é nativo de bioma: demônio, golem,
+    celestial. São 70 das 385, e sem essa regra uma cripta ou um templo não
+    acharia quase nada.
+
+    O TIER vira faixa de CR por `FAIXAS_DE_CR`, que é a mesma tabela que
+    `tools/balanco.py` usa para medir as classes. Quem decide a dificuldade
+    depois é a QUANTIDADE, e ela é medida por simulação, não escolhida aqui.
+
+    `faixa_cr` substitui a do tier quando quem chama quer uma janela própria —
+    um chefe legitimamente vem de cima da criatura típica do tier.
+    """
+    faixa = faixa_cr or FAIXAS_DE_CR.get(tier or 0)
+    alvo_tipo = (tipo or "").strip().lower()
+    saida = []
+    for criatura in carregar():
+        meta = criatura.get("meta") or {}
+        if alvo_tipo and str(meta.get("tipo") or "").lower() != alvo_tipo:
+            continue
+        if faixa:
+            cr = cr_de(criatura)
+            if not faixa[0] <= cr <= faixa[1]:
+                continue
+        if ambiente:
+            seus = ambientes_de(criatura)
+            if seus and ambiente not in seus:
+                continue
+        saida.append(criatura)
+    return saida
+
+
 def tier_do_cr(cr: float) -> int:
     """O tier do grupo que encontra uma criatura daquele CR."""
     for tier, (lo, hi) in FAIXAS_DE_CR.items():

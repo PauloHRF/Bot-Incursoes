@@ -75,6 +75,26 @@ def _bancos() -> dict[str, Any]:
     }
 
 
+def _tipos_de_bicho() -> list[dict[str, Any]]:
+    """Os `meta.tipo` do bestiário, com quantas criaturas cada um tem."""
+    contagem: dict[str, int] = {}
+    for criatura in bestiario.carregar():
+        tipo = (criatura.get("meta") or {}).get("tipo")
+        if tipo:
+            contagem[tipo] = contagem.get(tipo, 0) + 1
+    return [
+        {"id": tipo, "quantas": quantas}
+        for tipo, quantas in sorted(contagem.items(), key=lambda p: -p[1])
+    ]
+
+
+def _faixas_de_combate() -> dict[str, list[float]]:
+    """As faixas de taxa de vitória que o sugeridor procura."""
+    import sugestor
+
+    return {nome: list(faixa) for nome, faixa in sugestor.FAIXAS_DE_VITORIA.items()}
+
+
 def conteudo() -> dict[str, Any]:
     """Tudo que a página precisa saber para desenhar os campos.
 
@@ -110,6 +130,10 @@ def conteudo() -> dict[str, Any]:
             "desconto_armadilha": I.DESCONTO_CD_ARMADILHA,
         },
         "ambientes": list(bestiario.AMBIENTES),
+        # Os tipos de bicho com quantas criaturas cada um tem: sem o número, o
+        # autor não sabe que 'ooze' corta o bestiário para quatro.
+        "tipos_de_bicho": _tipos_de_bicho(),
+        "dificuldades_de_combate": _faixas_de_combate(),
         "bancos": do_disco["bancos"],
         "incursoes": {i.id: i.para_dict() for i in sorted(
             incursoes.values(), key=lambda x: x.id
@@ -302,11 +326,34 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def sugerir(payload: dict[str, Any]) -> dict[str, Any]:
+    """Procura um bando que caia na faixa daquela dificuldade.
+
+    A dificuldade aqui não é um rótulo que o estúdio escreve: é uma faixa de
+    taxa de vitória que ele PROCURA, simulando. O número que volta é o que ele
+    mediu, e `na_faixa` diz se caiu dentro — inclusive quando não caiu.
+    """
+    import sugestor
+
+    return sugestor.sugerir(
+        tier=_inteiro(payload.get("tier"), 2, 1, TIER_MAXIMO),
+        ambiente=(payload.get("ambiente") or None),
+        tipo=(payload.get("tipo") or None),
+        dificuldade=str(payload.get("dificuldade") or "media"),
+        classe=str(payload.get("classe") or "guerreiro"),
+        nivel=payload.get("nivel") if isinstance(payload.get("nivel"), int) else None,
+        # Cada sugestão custa uma busca inteira, e a página espera por ela.
+        quantas=_inteiro(payload.get("quantas"), 2, 1, 4),
+        semente=payload.get("semente") if isinstance(payload.get("semente"), int) else None,
+    )
+
+
 ROTAS = {
     "/api/conteudo": lambda _: conteudo(),
     "/api/conferir": conferir,
     "/api/pool": pool,
     "/api/simular": simular,
+    "/api/sugerir": sugerir,
 }
 
 
