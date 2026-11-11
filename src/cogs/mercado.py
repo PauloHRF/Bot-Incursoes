@@ -595,38 +595,36 @@ class Mercado(commands.Cog):
     async def _sugerir_bolsa(
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
-        personagens = await self._para_listar(interaction)
+        nome = getattr(getattr(interaction, "namespace", None), "personagem", None)
+        if not nome:
+            return []
+        personagem = await db.personagem_por_nome(
+            self.bot.db, interaction.guild_id, interaction.user.id, nome
+        )
+        if personagem is None:
+            return []
         termo = atual.lower()
-        # Com mais de um personagem em jogo, o nome dele entra no rótulo: o
-        # item é o mesmo id para os dois, e sem isso o jogador veria a mesma
-        # peça duas vezes sem saber de quem é qual.
-        de_varios = len(personagens) > 1
-        saida, vistos = [], set()
-        for quem in personagens:
-            for item_id in await db.itens_na_bolsa(self.bot.db, quem["id"]):
-                peca = itens.item(item_id)
-                if peca is None or termo not in peca.nome.lower():
-                    continue
-                rotulo = f"{peca.nome} — {itens.NOME_DO_SLOT[peca.slot]}"
-                if de_varios:
-                    rotulo = f"{rotulo} ({quem['nome']})"
-                if rotulo in vistos:
-                    continue
-                vistos.add(rotulo)
-                saida.append(app_commands.Choice(name=rotulo, value=peca.id))
+        saida = []
+        for item_id in await db.itens_na_bolsa(self.bot.db, personagem["id"]):
+            peca = itens.item(item_id)
+            if peca is None or termo not in peca.nome.lower():
+                continue
+            saida.append(app_commands.Choice(
+                name=f"{peca.nome} — {itens.NOME_DO_SLOT[peca.slot]}", value=peca.id
+            ))
         return saida[:25]
 
     @grupo.command(name="equipar", description="Veste um item da sua bolsa")
     @app_commands.describe(
         item="O que vestir (tem de estar na bolsa)",
-        personagem="Qual personagem (opcional se você só tem um)",
+        personagem="Qual personagem vai vestir o item",
     )
     @app_commands.autocomplete(item=_sugerir_bolsa, personagem=_sugerir_personagens)
     async def equipar(
         self,
         interaction: discord.Interaction,
+        personagem: str,
         item: str,
-        personagem: Optional[str] = None,
     ) -> None:
         if not await self._fora_de_incursao(interaction):
             return

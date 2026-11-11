@@ -87,9 +87,9 @@ Espalhamento por tier:
 | Classe | HP por masmorra |
 |---|---|
 | Clérigo | 67 |
+| Xamã | 51 |
 | Bardo | 45 |
 | Guerreiro | 42 |
-| Xamã | 22 |
 | Paladino | 19 |
 | Artífice | 19 |
 | Druida | 19 |
@@ -102,7 +102,7 @@ Espalhamento por tier:
 | Bardo | 254 |
 | Druida | 213 |
 | Clérigo | 213 |
-| Xamã | 73 |
+| Xamã | 119 |
 | Guerreiro | 67 |
 | Artífice | 65 |
 | Paladino | 42 |
@@ -159,7 +159,7 @@ cura e área geram o dobro.
 Uso × frequência de recarga. `>>` marca o que está acima de 2,5× a
 mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 
-### Tier 1 — mediana 15 HP-eq, 28 ativas
+### Tier 1 — mediana 17 HP-eq, 28 ativas
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
@@ -167,6 +167,7 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Patrulheiro | Marca do Cacador | 32 | 10 × 3.08 | 10 de dado extra enquanto dura |
 |  | Feiticeiro | Chromatic Orb | 26 | 18 × 1.42 | 18 de dano |
 |  | Feiticeiro | Burning Hands | 23 | 16 × 1.42 | 16 de dano |
+|  | Druida | Wild Shape — Lobo | 22 | 16 × 1.42 | 16 da forma em 3 rodadas; inclui ataque ao transformar |
 |  | Clérigo | Guiding Bolt | 20 | 14 × 1.42 | 14 de dano |
 |  | Mago | Thunderwave | 20 | 14 × 1.42 | 14 de dano |
 |  | Artífice | Thunderwave | 20 | 14 × 1.42 | 14 de dano |
@@ -177,17 +178,16 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Feiticeiro | Dissonant Whispers | 17 | 12 × 1.42 | 6 de dano; 6 de dano negado (1 turno(s) de criatura) |
 |  | Bardo | Dissonant Whispers | 17 | 12 × 1.42 | 6 de dano; 6 de dano negado (1 turno(s) de criatura) |
 |  | Mago | Magic Missile | 15 | 10 × 1.42 | 10 de dano |
-|  | Druida | Wild Shape — Lobo | 14 | 10 × 1.42 | 10 da forma em 3 rodadas |
+|  | Druida | Wild Shape — Urso | 15 | 10 × 1.42 | 10 da forma em 3 rodadas; inclui ataque ao transformar |
+|  | Druida | Wild Shape — Aranha | 13 | 10 × 1.42 | 10 da forma em 3 rodadas; inclui ataque ao transformar |
 |  | Bruxo | Arms of Hadar | 11 | 11 × 1.00 | 11 de dano |
 |  | Bruxo | Hex | 10 | 10 × 1.00 | 10 de dado extra enquanto dura |
 |  | Xamã | Tradicao xamanica — marcial | 10 | 7 × 1.42 | 4 de golpe a mais; 4 de THP |
-|  | Druida | Wild Shape — Urso | 9 | 7 × 1.42 | 7 da forma em 3 rodadas |
 |  | Clérigo | Command | 9 | 6 × 1.42 | 6 de dano negado (1 turno(s) de criatura) |
 |  | Paladino | Cura pelas Maos | 8 | 6 × 1.42 | 6 de cura |
 |  | Clérigo | Cure Wounds | 8 | 6 × 1.42 | 6 de cura |
 |  | Artífice | Cure Wounds | 8 | 6 × 1.42 | 6 de cura |
-|  | Druida | Wild Shape — Aranha | 8 | 6 × 1.42 | 6 da forma em 3 rodadas |
-|  | Bruxo | Charm Person | 6 | 6 × 1.00 | 6 de dano negado (1 turno(s) de criatura) |
+| << | Bruxo | Charm Person | 6 | 6 × 1.00 | 6 de dano negado (1 turno(s) de criatura) |
 | << | Monge | Flurry of Blows | 6 | 4 × 1.42 | 4 de golpe a mais |
 | << | Bardo | Healing Word | 5 | 4 × 1.42 | 4 de cura |
 | << | Artífice | Faerie Fire | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
@@ -205,8 +205,8 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
+| >> | Xamã | Danca totemica | 131 | 92 × 1.42 | 22 de cura no grupo; 70 de THP |
 | >> | Druida | Call Lightning | 109 | 77 × 1.42 | 77 de dano |
-| >> | Xamã | Danca totemica | 103 | 72 × 1.42 | 2 de cura no grupo; 70 de THP |
 |  | Bardo | Aid | 96 | 68 × 1.42 | 22 de cura no grupo; 45 de THP |
 |  | Mago | Fireball | 92 | 65 × 1.42 | 65 de dano |
 |  | Feiticeiro | Lightning Bolt | 92 | 65 × 1.42 | 65 de dano |
@@ -281,7 +281,7 @@ frequência, os três escopos encostam. Isto é desenho funcionando.
 | Escopo | Ativas | Mediana por uso | Usos/masmorra | Mediana por masmorra |
 |---|---|---|---|---|
 | combate | 9 | 11 | 3.08 | 34 |
-| descanso | 48 | 16 | 1.42 | 22 |
+| descanso | 48 | 16 | 1.42 | 23 |
 | incursao | 17 | 36 | 1.00 | 36 |
 
 ### A mesma magia com disponibilidade diferente

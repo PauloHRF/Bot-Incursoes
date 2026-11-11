@@ -872,18 +872,8 @@ def caso_sem_ouro_o_campo_nao_aparece():
     print("  sem ouro, o campo nao entra no embed: ok")
 
 
-async def caso_a_lista_de_equipar_nao_vem_vazia_com_dois_personagens():
-    """Quem tem dois personagens vê o que vestir, e vê de quem é.
-
-    Era o relato da mesa: o jogador comprou — pelo BOTÃO da vitrine, que
-    não passa por autocomplete — e o item apareceu na bolsa, mas não na
-    lista do `/mercado equipar`. A lista vinha vazia porque o autocomplete
-    desistia quando havia mais de um personagem, e nem lia o `personagem`
-    que o jogador já tinha digitado.
-
-    Lista vazia é a pior resposta possível num autocomplete: ela não
-    explica nada, e o jogador conclui que o item sumiu.
-    """
+async def caso_a_lista_de_equipar_respeita_o_personagem_escolhido():
+    """Equipar pede personagem primeiro e oferece somente a bolsa dele."""
     conn, canal, cog, ids = await preparar()
     dono = JOGADORES[0]
     primeiro = ids[dono]
@@ -896,19 +886,26 @@ async def caso_a_lista_de_equipar_nao_vem_vazia_com_dois_personagens():
     assert await db.comprar(conn, segundo, peca.id, peca.custo)
     assert await db.itens_na_bolsa(conn, segundo) == {peca.id: 1}
 
-    # Sem dizer o personagem: a lista traz os itens dos dois, com o nome
-    # de quem é cada um — e não vem vazia.
+    # O personagem vem primeiro e e obrigatorio. Antes da escolha, a lista
+    # nao mistura bolsas nem sugere equipamento de outro personagem.
+    assert [p.name for p in Mercado.equipar.parameters] == ["personagem", "item"]
+    assert all(p.required for p in Mercado.equipar.parameters)
     aberto = FakeInteraction(canal, dono)
     opcoes = await cog.loja._sugerir_bolsa(aberto, "")
-    assert opcoes, "a lista de equipar veio vazia com dois personagens"
-    assert any(peca.nome in o.name and "Cupcake" in o.name for o in opcoes), (
-        [o.name for o in opcoes]
-    )
+    assert opcoes == [], opcoes
 
     # Dizendo o personagem, a lista é só dele.
     dito = FakeInteraction(canal, dono, personagem="Cupcake")
     so_dele = await cog.loja._sugerir_bolsa(dito, "")
     assert [o.value for o in so_dele] == [peca.id], [o.name for o in so_dele]
+    assert await cog.loja._sugerir_bolsa(dito, "nao existe") == []
+    primeiro_nome = (await db.buscar_personagem(conn, primeiro))["nome"]
+    sem_itens = FakeInteraction(canal, dono, personagem=primeiro_nome)
+    assert await cog.loja._sugerir_bolsa(sem_itens, "") == []
+    invalido = FakeInteraction(canal, dono, personagem="Nao existe")
+    assert await cog.loja._sugerir_bolsa(invalido, "") == []
+    estrangeiro = FakeInteraction(canal, JOGADORES[1], personagem="Cupcake")
+    assert await cog.loja._sugerir_bolsa(estrangeiro, "") == []
 
     # E a vitrine, que é POR personagem, tem o mesmo conserto. Ela tem duas
     # prateleiras: o equipamento e as poções, que se compram pelo mesmo
@@ -929,11 +926,12 @@ async def caso_a_lista_de_equipar_nao_vem_vazia_com_dois_personagens():
     outro = JOGADORES[1]
     await db.lancar_ouro(conn, ids[outro], 500, "teste")
     assert await db.comprar(conn, ids[outro], peca.id, peca.custo)
-    sozinho = FakeInteraction(canal, outro)
+    outro_nome = (await db.buscar_personagem(conn, ids[outro]))["nome"]
+    sozinho = FakeInteraction(canal, outro, personagem=outro_nome)
     uma = await cog.loja._sugerir_bolsa(sozinho, "")
     assert len(uma) == 1 and "(" not in uma[0].name.split("—")[-1], uma[0].name
 
-    print("  a lista de equipar nao vem vazia com dois personagens: ok")
+    print("  equipar pede personagem primeiro e lista somente a bolsa dele: ok")
 
 
 async def main():
@@ -955,7 +953,7 @@ async def main():
         await caso_a_run_concluida_paga_todos_que_passaram()
         await caso_comprar_debita_e_guarda()
         await caso_equipar_tira_da_bolsa_e_troca_sem_perder()
-        await caso_a_lista_de_equipar_nao_vem_vazia_com_dois_personagens()
+        await caso_a_lista_de_equipar_respeita_o_personagem_escolhido()
         await caso_o_comando_do_mestre_da_e_tira_o_anel()
         await caso_so_cabe_um_por_slot()
         await caso_o_equipamento_entra_na_ca_e_no_acerto()

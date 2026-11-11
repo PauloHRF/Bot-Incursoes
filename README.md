@@ -127,7 +127,7 @@ O desenho de tudo isso, e do que ainda falta, está em
 | `/mercado vitrine [personagem]` | A prateleira da semana: 6 equipamentos e 3 poções |
 | `/mercado bolsa [personagem]` | Ouro, o que está vestido e o que está guardado |
 | `/mercado comprar <item> [personagem]` | Leva um item da sua vitrine da semana |
-| `/mercado equipar <item> [personagem]` | Veste um item da bolsa (o slot sai do item) |
+| `/mercado equipar <personagem> <item>` | Escolha o personagem e depois um item da bolsa dele |
 | `/mercado anel_do_mestre [personagem] [tirar]` | (admin) Põe ou tira o **Anel do Mestre**, para atravessar uma incursão sozinho |
 | `/organizacao placar` | Pontos das quatro Organizações no servidor |
 | `/organizacao extrato [org]` | Últimos lançamentos, com o motivo de cada um |

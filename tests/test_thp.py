@@ -134,18 +134,18 @@ async def caso_tradicao_marcial_da_thp():
 async def caso_danca_totemica_cobre_o_grupo():
     conn, canal, cog, incursao, run = await preparar(classe="xama", nivel=8)
     dono = JOGADORES[0]
-    # Alguem ferido, para a cura de 1% ter onde entrar.
+    # Alguem ferido, para a cura de 10% ter onde entrar.
     ferido = JOGADORES[1]
     await db.definir_hp(conn, run["id"], ferido, 10)
 
     inter = FakeInteraction(canal, dono)
     await cog.usar_habilidade(inter, run["id"], "OBJ", "danca_totemica")
     assert "vida temporaria para o grupo" in leu(inter), leu(inter)
-    # A cura e simbolica, mas sai no texto e entra no HP: 1% com piso de 1 da
-    # exatamente 1 de vida em qualquer tier do jogo.
-    assert "1%" in leu(inter), leu(inter)
+    assert "10%" in leu(inter), leu(inter)
     hp = (await db.hp_dos_participantes(conn, run["id"]))[ferido]
-    assert hp == 11, hp
+    personagens = await db.personagens_da_run(conn, run["id"])
+    maximo = next(p["hp_max"] for p in personagens if p["user_id"] == ferido)
+    assert hp == 10 + int(maximo * 0.1), (hp, maximo)
 
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
     assert all(c.tem_thp for c in estado.vivos), [c.thp for c in estado.vivos]
@@ -160,7 +160,7 @@ async def caso_danca_totemica_cobre_o_grupo():
         if l["efeito"] == "danca_totemica"
     ]
     assert len(ligados) == len(estado.vivos), ligados
-    print("  Danca totemica cura 1%, da THP e bonus de dano ao grupo: ok")
+    print("  Danca totemica cura 10%, da THP e bonus de dano ao grupo: ok")
 
 
 def caso_a_porcentagem_de_cura_arredonda_certo():

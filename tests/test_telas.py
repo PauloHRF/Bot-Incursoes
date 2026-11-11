@@ -25,9 +25,9 @@ from src import (  # noqa: E402
     itens,
     motor,
 )
-from src.incursoes import Sala  # noqa: E402
+from src.incursoes import Monstro, Sala  # noqa: E402
 from src.cogs.ficha import Ficha, embed_ficha  # noqa: E402
-from src.cogs.incursao import Incursoes  # noqa: E402
+from src.cogs.incursao import Incursoes, ViewCombate, ViewMarcaOrfa  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     JOGADORES,
@@ -721,6 +721,32 @@ async def caso_ver_e_do_dono_e_conferir_e_de_admin():
     print("  /ficha ver é do dono; /ficha conferir é de admin: ok")
 
 
+async def caso_inimigos_mostram_barra_sem_valor_de_hp():
+    inimigo = motor.Inimigo(0, "Vigia", 17, 5, "1d6", 397, 193)
+    outro = motor.Inimigo(1, "Guardiao", 17, 5, "1d6", 251, 113)
+    aliado = motor.Combatente(1, "Aliado", 17, 5, "1d6", 211, 107)
+    estado = motor.EstadoCombate([inimigo, outro], 1, [aliado])
+    barra = motor.barra(193, 397, 8)
+    linha = E._linha_inimigo(inimigo)
+    assert barra in linha and "193" not in linha and "397" not in linha, linha
+    assert "107/211" in E._linha_hp(aliado), "o HP do jogador continua visivel"
+    sala = Sala("S", "Sala", "Combate", "Uma sala.", monstros=[
+        Monstro("Vigia", 17, 5, "1d6", 397)
+    ])
+    cartao, _ = E.sala_aberta(sala, 1)
+    corpo = str(cartao.to_dict())
+    assert "397" not in corpo and motor.barra(397, 397, 8) in corpo, corpo
+    view = ViewCombate(None, 1, "S", estado.inimigos)
+    assert view.menu.options[0].description == f"{barra} · CA 17"
+    marcas = ViewMarcaOrfa(None, 1, 1, 2, 4, estado.inimigos)
+    assert marcas.children[0].label == f"Vigia {barra}"
+    alvos = await Incursoes(None)._alvos_possiveis({}, cl.POR_ID["faerie_fire"], estado)
+    assert alvos[0][2] == f"{barra} · CA 17", alvos
+    inimigo.hp_atual = 0
+    assert "abatido" in E._linha_inimigo(inimigo)
+    print("  vida dos inimigos aparece so na barra, inclusive nos seletores: ok")
+
+
 async def main():
     caso_efeito_somado_faz_a_conta()
     caso_painel_diz_quem_ficou_com_quanto()
@@ -730,6 +756,7 @@ async def main():
     caso_o_caminho_diz_passou_ou_falhou()
     caso_quem_falhou_e_so_o_nome()
     caso_o_critico_nao_explica_a_regra()
+    await caso_inimigos_mostram_barra_sem_valor_de_hp()
 
     await caso_o_cartao_vai_marcando_quem_rolou()
     await caso_quem_esta_caido_nao_entra_na_conta()

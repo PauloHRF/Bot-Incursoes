@@ -294,7 +294,7 @@ class ViewMarcaOrfa(discord.ui.View):
         self.dono = dono
         for inimigo in inimigos[:5]:
             botao = discord.ui.Button(
-                label=f"{inimigo.nome} ({inimigo.hp_atual}/{inimigo.hp_max})",
+                label=f"{inimigo.nome[:80]} {motor.barra(inimigo.hp_atual, inimigo.hp_max, 8)}",
                 emoji="🎯",
                 style=discord.ButtonStyle.primary,
                 custom_id=f"inc:marca:{run_id}:{dono}:{inimigo.indice}",
@@ -334,7 +334,7 @@ class ViewCombate(discord.ui.View):
                     discord.SelectOption(
                         label=i.nome[:100],
                         value=str(i.indice),
-                        description=f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca}",
+                        description=f"{motor.barra(i.hp_atual, i.hp_max, 8)} · CA {i.ca}",
                     )
                     for i in vivos[:25]
                 ],
@@ -3809,6 +3809,8 @@ class Incursoes(commands.Cog):
             efeitos["ataques"] = acao["ataques"]
         if acao.get("veneno_no_golpe"):
             efeitos["veneno_no_golpe"] = acao["veneno_no_golpe"]
+        if acao.get("ameaca"):
+            efeitos["ameaca"] = acao["ameaca"]
         await db.aplicar_efeito(
             self.bot.db, run["id"], passo, "personagem", quem.user_id,
             habilidade.id, efeitos, estado.rodada + acao.get("turnos", 3),
@@ -3827,6 +3829,8 @@ class Incursoes(commands.Cog):
             pedacos.append(f"{acao['ataques']} golpes por rodada")
         if acao.get("ca"):
             pedacos.append(f"+{acao['ca']} de CA")
+        if acao.get("ameaca"):
+            pedacos.append(f"+{acao['ameaca']} de ameaca")
         if temporaria:
             pedacos.append(f"{temporaria} de vida temporaria")
         texto = (
@@ -3835,6 +3839,15 @@ class Incursoes(commands.Cog):
             f"Por {acao.get('turnos', 3)} rodadas."
         )
         await self._anunciar_habilidade(run, texto)
+        if acao.get("ataca_ao_transformar"):
+            # O ataque usa o corpo que acabou de entrar, com todos os seus
+            # efeitos. Reutiliza o ataque normal, incluindo o veneno da aranha.
+            self._aplicar_ligado(estado.combatentes, {
+                "alvo_tipo": "personagem", "alvo_id": quem.user_id,
+                "efeito": habilidade.id, "valor": efeitos,
+            })
+            ataque = await self._resolver_ataque(run, estado, quem.user_id, [])
+            texto += "\n" + ataque
         return texto
 
     async def _resolver_invocar(
@@ -4067,7 +4080,7 @@ class Incursoes(commands.Cog):
         if len(vivos) <= 1 and quantos <= 1:
             return None
         return [
-            (str(i.indice), i.nome, f"{i.hp_atual}/{i.hp_max} HP · CA {i.ca}")
+            (str(i.indice), i.nome, f"{motor.barra(i.hp_atual, i.hp_max, 8)} · CA {i.ca}")
             for i in vivos
         ]
 
@@ -6617,7 +6630,7 @@ class Incursoes(commands.Cog):
         alvo_id = _id_digitado(interaction, "jogador")
         if escolhida in ("", "ataque"):
             opcoes = [
-                (str(i.indice), i.nome, f"{i.hp_atual}/{i.hp_max} HP")
+                (str(i.indice), i.nome, motor.barra(i.hp_atual, i.hp_max, 8))
                 for i in estado.inimigos_vivos
             ]
         else:

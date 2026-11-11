@@ -6,6 +6,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
@@ -121,6 +122,28 @@ def caso_magia_de_ferramenta_destrava_uma():
 
 
 # ------------------------------------------------------------------ a infusao
+
+
+async def caso_faerie_fire_dura_tres_rodadas():
+    conn, canal, cog, incursao, run_id = await preparar(
+        escolhas={"ferramenta_t1": "faerie_fire"}, monstros=1
+    )
+    run = await em_combate(conn, cog, incursao, run_id)
+    with patch.object(motor, "rolar_d20", return_value=1):
+        await cog.usar_habilidade(
+            FakeInteraction(canal, JOGADORES[0]), run_id, "OBJ", "faerie_fire"
+        )
+    passo = cog._passo(run)
+    # O efeito ja aparece no uso e cobre as tres rodadas seguintes, como os
+    # demais efeitos com prazo do bot (o estado le a rodada anterior).
+    for rodada in (1, 2, 3, 4):
+        await db.atualizar_rodada(conn, run_id, passo, rodada)
+        estado = await cog._estado_combate(await db.buscar_run(conn, run_id), incursao.objetivo)
+        assert all(0 in c.vantagem_contra for c in estado.vivos), rodada
+    await db.atualizar_rodada(conn, run_id, passo, 5)
+    estado = await cog._estado_combate(await db.buscar_run(conn, run_id), incursao.objetivo)
+    assert all(0 not in c.vantagem_contra for c in estado.vivos)
+    print("  Faerie Fire da vantagem ao grupo por 3 rodadas e depois expira: ok")
 
 
 async def caso_infusao_pega_o_grupo_inteiro():
@@ -295,6 +318,7 @@ async def main():
         caso_tabela_e_identidade()
         caso_as_cinco_camadas_de_escolha()
         caso_magia_de_ferramenta_destrava_uma()
+        await caso_faerie_fire_dura_tres_rodadas()
         await caso_infusao_pega_o_grupo_inteiro()
         await caso_infusao_nao_soma_entre_dois_artifices()
         caso_engenho_usa_as_chaves_que_existem()

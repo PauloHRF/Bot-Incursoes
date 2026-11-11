@@ -244,8 +244,9 @@ async def caso_pocao_nao_se_veste():
     await guardar(conn, heroi, "pocao_vida")
 
     loja = Mercado(FakeBot(conn, canal))
-    inter = FakeInteraction(canal, JOGADORES[0])
-    await loja.equipar.callback(loja, inter, "pocao_vida")
+    nome = (await db.buscar_personagem(conn, heroi))["nome"]
+    inter = FakeInteraction(canal, JOGADORES[0], personagem=nome)
+    await loja.equipar.callback(loja, inter, nome, "pocao_vida")
     assert "não se veste" in leu(inter), leu(inter)
     assert not await db.equipamento(conn, heroi)
     # E o autocomplete de vestir não oferece poção.

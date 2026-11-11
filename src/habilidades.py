@@ -359,15 +359,12 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "Curar da +4 de THP ao alvo",
                             "efeito": {"thp_na_cura": 4}},
                        ]}),
-            # A cura de 1% e simbolica de proposito: com o piso de 1 em
-            # `motor.curar`, ela sai como 1 de vida em qualquer tier. O que a
-            # habilidade entrega e o THP e o bonus de ataque.
             Habilidade("danca_totemica", "Danca totemica", ATIVA,
-                       "1x por descanso: o grupo cura 1% da vida, ganha 4d6 de "
+                       "1x por descanso: o grupo cura 10% da vida, ganha 4d6 de "
                        "THP e +1d6+4 no proximo ataque.",
                        usos=_usos("descanso"),
                        acao={"tipo": "grupo", "thp": "4d6", "turnos": 1,
-                             "cura_fracao": 0.01,
+                             "cura_fracao": 0.1,
                              "efeitos": {"dano_bonus": "1d6+4"}})],
         # O gatilho do Espirito Guardiao cai de 19 para 15: a Sintonizacao
         # substitui o totem inteiro, porque `juntar_efeito` guarda o de maior
@@ -564,10 +561,10 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        exige_escolha=("ferramenta_t1", "thunderwave")),
             Habilidade("faerie_fire", "Faerie Fire", ATIVA,
                        "1x por descanso: um inimigo fica delineado; o grupo "
-                       "ataca ele com vantagem na proxima rodada.",
+                       "ataca ele com vantagem nas 3 rodadas seguintes.",
                        usos=_usos("descanso"),
                        acao={"tipo": "save", "save": "DES", "alvos": 1,
-                             "turnos": 1, "vantagem_do_grupo": True},
+                             "turnos": 3, "vantagem_do_grupo": True},
                        exige_escolha=("ferramenta_t1", "faerie_fire"))],
         # Replicate Magic Item: no livro ele faz itens e distribui. Aqui o item
         # mora na planilha do grupo, entao entra o que o item faz — o +1 que
@@ -933,27 +930,30 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "A forma que ele veste. Escolhe uma: Urso, Lobo ou Aranha.",
                        escolha={"tipo": "opcao", "opcoes": [
                            {"id": "urso", "nome": "Urso",
-                            "texto": "Aguenta: +3 de CA e muita vida temporaria"},
+                            "texto": "Aguenta: +3 de CA, +4 de ameaca e vida temporaria"},
                            {"id": "lobo", "nome": "Lobo",
                             "texto": "Morde duas vezes por rodada"},
                            {"id": "aranha", "nome": "Aranha",
                             "texto": "Cada mordida atrapalha o ataque do alvo"},
                        ]}),
             Habilidade("forma_urso", "Wild Shape — Urso", ATIVA,
-                       "1x por descanso: vira urso por 3 rodadas. +3 de CA, "
-                       "vida temporaria igual a 3x o tier, e o dado da forma.",
+                       "1x por descanso: vira urso e ataca na hora. Por 3 rodadas, "
+                       "+3 de CA, +4 de ameaca, vida temporaria igual a 3x o tier "
+                       "e o dado da forma.",
                        usos=_usos("descanso"),
                        acao={"tipo": "forma", "nome": "Urso", "turnos": 3,
                              "ca": 3, "ataques": 1, "thp_por_tier": 3,
+                             "ameaca": 4, "ataca_ao_transformar": True,
                              "dano": {1: "1d8+2", 2: "1d10+2", 3: "2d8+3",
                                       4: "2d10+3", 5: "2d10+5"}},
                        exige_escolha=("forma_t1", "urso")),
             Habilidade("forma_lobo", "Wild Shape — Lobo", ATIVA,
-                       "1x por descanso: vira lobo por 3 rodadas. Dois golpes "
-                       "por rodada e vida temporaria igual a 2x o tier.",
+                       "1x por descanso: vira lobo e ataca na hora. Por 3 rodadas, "
+                       "dois golpes por rodada e vida temporaria igual a 2x o tier.",
                        usos=_usos("descanso"),
                        acao={"tipo": "forma", "nome": "Lobo", "turnos": 3,
                              "ataques": 2, "thp_por_tier": 2,
+                             "ataca_ao_transformar": True,
                              "dano": {1: "1d4+2", 2: "1d6+2", 3: "1d8+3",
                                       4: "1d8+4", 5: "1d10+4"}},
                        exige_escolha=("forma_t1", "lobo")),
@@ -961,11 +961,12 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
             # user_id); do lado do inimigo o equivalente de Envenenado e o
             # ataque dele piorar, que e o `penalidade_ataque`.
             Habilidade("forma_aranha", "Wild Shape — Aranha", ATIVA,
-                       "1x por descanso: vira aranha por 3 rodadas. Cada golpe "
-                       "que acerta tira 2 do ataque do alvo por 2 rodadas.",
+                       "1x por descanso: vira aranha e ataca na hora. Por 3 rodadas, "
+                       "cada golpe que acerta tira 2 do ataque do alvo por 2 rodadas.",
                        usos=_usos("descanso"),
                        acao={"tipo": "forma", "nome": "Aranha", "turnos": 3,
                              "ataques": 1, "thp_por_tier": 2,
+                             "ataca_ao_transformar": True,
                              "veneno_no_golpe": 2,
                              "dano": {1: "1d8+2", 2: "1d10+2", 3: "2d8+3",
                                       4: "2d8+5", 5: "2d10+4"}},

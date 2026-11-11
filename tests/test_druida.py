@@ -8,6 +8,7 @@ import collections
 import random
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
@@ -15,6 +16,7 @@ sys.path.insert(0, str(RAIZ))
 from src import ameaca, classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.habilidades import media_do_dado  # noqa: E402
+from tools import simular_balanceamento as sb  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     GUILD,
@@ -150,7 +152,8 @@ async def caso_urso_troca_o_corpo():
     assert not antes.forma
 
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.usar_habilidade(inter, run["id"], "OBJ", "forma_urso")
+    with patch.object(motor, "rolar_d20", return_value=10):
+        await cog.usar_habilidade(inter, run["id"], "OBJ", "forma_urso")
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
                                        incursao.objetivo)
     urso = estado.combatente(JOGADORES[0])
@@ -160,7 +163,14 @@ async def caso_urso_troca_o_corpo():
     assert urso.ca_extra == 3, urso.ca_extra
     # e a vida temporaria e o corpo da besta: 3 por tier, no tier 5
     assert urso.thp == 15, urso.thp
-    print("  o urso troca o dado de arma, soma CA e empresta 15 de THP: ok")
+    assert urso.ameaca_extra == 4, urso.ameaca_extra
+    ataques = await db.ataques_da_rodada(conn, run["id"], cog._passo(run), 1)
+    assert len(ataques) == 1 and ataques[0]["dano"] >= 7, ataques
+    await db.atualizar_rodada(conn, run["id"], cog._passo(run), 5)
+    expirado = await cog._estado_combate(await db.buscar_run(conn, run["id"]), incursao.objetivo)
+    assert expirado.combatente(JOGADORES[0]).ameaca_extra == 0
+    assert not expirado.combatente(JOGADORES[0]).forma
+    print("  o urso ataca ao entrar e ganha CA, THP e +4 de ameaca por 3 rodadas: ok")
 
 
 async def caso_lobo_morde_duas_vezes():
@@ -173,6 +183,8 @@ async def caso_lobo_morde_duas_vezes():
     assert lobo.ataques == 2, lobo.ataques
     assert lobo.dano_arma == "1d10+4" and lobo.ca_extra == 0
     assert lobo.thp == 10, lobo.thp  # 2 por tier
+    ataques = await db.ataques_da_rodada(conn, run["id"], cog._passo(run), 1)
+    assert len(ataques) == 2, ataques
     print("  o lobo morde duas vezes, sem CA extra e com menos THP: ok")
 
 
@@ -193,13 +205,15 @@ async def caso_aranha_envenena_quem_acerta():
         escolhas={"forma_t1": "aranha"}, monstros=1
     )
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.usar_habilidade(inter, run["id"], "OBJ", "forma_aranha")
+    with patch.object(motor, "rolar_d20", return_value=10):
+        await cog.usar_habilidade(inter, run["id"], "OBJ", "forma_aranha")
     run = await db.buscar_run(conn, run["id"])
     estado = await cog._estado_combate(run, incursao.objetivo)
     aranha = estado.combatente(JOGADORES[0])
     assert aranha.veneno_no_golpe == 2, aranha.veneno_no_golpe
+    assert estado.inimigos[0].penalidade_ataque == 2, "a primeira mordida ja envenena"
 
-    # transformar gastou o turno: a mordida vem na rodada seguinte
+    # A forma continua valendo para os ataques da rodada seguinte.
     await db.atualizar_rodada(conn, run["id"], cog._passo(run), estado.rodada + 1)
     run = await db.buscar_run(conn, run["id"])
     estado = await cog._estado_combate(run, incursao.objetivo)
@@ -403,15 +417,53 @@ def caso_a_esfera_dura_duas_rodadas():
     print("  a esfera e de 2 rodadas e 2 alvos, nenhum de brinde: ok")
 
 
+async def caso_ataque_da_forma_pode_encerrar_o_combate():
+    conn, canal, cog, incursao, run = await preparar(
+        escolhas={"forma_t1": "urso"}, monstros=1
+    )
+    await db.definir_hp_inimigos(conn, run["id"], cog._passo(run), {0: 1})
+    with patch.object(motor, "rolar_d20", return_value=10):
+        await cog.usar_habilidade(
+            FakeInteraction(canal, JOGADORES[0]), run["id"], "OBJ", "forma_urso"
+        )
+    run = await db.buscar_run(conn, run["id"])
+    assert run["status"] == "sucesso", run["status"]
+    print("  o ataque ao transformar pode vencer sem travar a fila: ok")
+
+
+def caso_simulador_ataca_com_a_forma_nova():
+    for forma in ("urso", "lobo", "aranha"):
+        grupo = sb.montar_grupo("druida", 5)
+        druida = grupo[0]
+        druida._nivel_simulador = 10
+        inimigo = motor.Inimigo(0, "Alvo", 1, 1, "1d1", 500, 500)
+        estado = motor.EstadoCombate([inimigo], 1, grupo)
+        dano, recursos = [0], [0]
+        with patch.object(motor, "rolar_d20", return_value=10):
+            assert sb._executar_ativa(
+                druida, grupo, estado, cl.POR_ID[f"forma_{forma}"], random.Random(7),
+                1, dano, [0], recursos, [0],
+            )
+        assert dano[0] == 500 - inimigo.hp_atual and dano[0] > 0, forma
+        assert recursos == [1], "transformar e atacar consome uma unica acao"
+        if forma == "urso":
+            assert druida.ameaca_extra == 4
+        elif forma == "aranha":
+            assert inimigo.penalidade_ataque == 2, "a primeira mordida ja envenena"
+    print("  simulador: Wild Shape ataca ao entrar com a ficha e efeitos da forma: ok")
+
+
 async def main():
     try:
         caso_tabela_e_o_trade()
         caso_a_forma_dobra_o_dano_e_escala()
         caso_forma_das_classes()
+        caso_simulador_ataca_com_a_forma_nova()
         await caso_urso_troca_o_corpo()
         await caso_lobo_morde_duas_vezes()
         await caso_forma_lunar_dobra_o_thp()
         await caso_aranha_envenena_quem_acerta()
+        await caso_ataque_da_forma_pode_encerrar_o_combate()
         await caso_bichinho_cura_o_grupo_uma_vez_ao_abrir()
         caso_as_outras_duas_opcoes_do_bichinho()
         await caso_aura_of_vitality_regenera_o_grupo()
