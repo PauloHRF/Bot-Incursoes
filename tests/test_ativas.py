@@ -109,6 +109,56 @@ def caso_catalogo_das_ativas():
     print(f"  {len(prontas)} ativas prontas, {len(futuras)} declaradas para depois: ok")
 
 
+def caso_quem_marca_ou_se_prepara_bate_no_mesmo_turno():
+    """Nenhuma ativa de preparo custa o ataque do turno. É a regra, não o nome.
+
+    Marcar um alvo, entrar em fúria ou vestir uma forma e NÃO bater no mesmo
+    turno fazia usar a habilidade valer menos que não usar: o personagem
+    trocava o dano de agora por um bônus que talvez chegasse. Rage, Marca do
+    Caçador e Caçador Supremo já batiam; Reckless Attack, Hex e Flurry of
+    Blows entraram depois.
+
+    O catálogo diz isso de DUAS formas — `acoes` nas ativas e
+    `ataca_ao_transformar` no Wild Shape, que ataca pelo corpo recém-vestido e
+    por isso passa por outro resolvedor. Este caso cobra a REGRA e não o
+    vocabulário: unificar os dois nomes mexeria no núcleo do combate por
+    ganho cosmético, e no dia em que alguém unificar, isto continua valendo.
+    """
+    def bate_ao_usar(acao: dict) -> bool:
+        return bool(acao.get("acoes") or acao.get("ataca_ao_transformar"))
+
+    esperadas = {
+        "rage", "marca_do_cacador", "cacador_supremo",
+        "reckless_attack", "hex", "flurry_of_blows",
+        "forma_urso", "forma_lobo", "forma_aranha",
+    }
+    # As escolhas destravam Hex e as tres formas: sem passar `escolhas`,
+    # `habilidades_ate` devolve a ESCOLHA e nao o premio dela.
+    escolhas = {"pacto_t1": "hex", "forma_t1": "urso"}
+    vistas = set()
+    for classe in cl.CLASSES.values():
+        por_escolha = [escolhas, {"forma_t1": "lobo"}, {"forma_t1": "aranha"}]
+        for feitas in por_escolha:
+            for _t, h in classe.habilidades_ate(10, feitas):
+                if h.id not in esperadas or not h.acionavel:
+                    continue
+                vistas.add(h.id)
+                assert bate_ao_usar(h.acao or {}), (
+                    f"{h.nome} prepara e não bate no mesmo turno: {h.acao}"
+                )
+    assert vistas == esperadas, f"não achei no catálogo: {esperadas - vistas}"
+
+    # E o Flurry bate POR CIMA do ataque normal, e nao no lugar dele: com
+    # `acoes: 2` e sem o ataque, quem tem Multiattack chegava a dar menos
+    # golpes usando a habilidade do que sem usar.
+    flurry = next(
+        h for classe in cl.CLASSES.values()
+        for _t, h in classe.habilidades_ate(10) if h.id == "flurry_of_blows"
+    )  # o monge nao depende de escolha
+    assert flurry.acao["acoes"] == 1 and flurry.acao["golpes_extras"] == 2, flurry.acao
+    print(f"  as {len(vistas)} ativas de preparo batem no mesmo turno: ok")
+
+
 async def caso_cura_em_si_mesmo():
     conn, canal, cog, incursao = await preparar(classe="guerreiro", nivel=8)
     run = await abrir_combate(conn, canal, cog, incursao)
@@ -517,6 +567,7 @@ async def caso_brutal_strike_soma_ao_ataque_em_vez_de_substituir():
 async def main():
     try:
         caso_catalogo_das_ativas()
+        caso_quem_marca_ou_se_prepara_bate_no_mesmo_turno()
         await caso_cura_em_si_mesmo()
         await caso_a_habilidade_aparece_uma_vez_so()
         await caso_as_habilidades_somem_quando_o_combate_acaba()
