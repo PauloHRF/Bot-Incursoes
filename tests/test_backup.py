@@ -7,6 +7,8 @@ impressão de que o problema está resolvido.
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import io
 import gzip
 import importlib.util
 import shutil
@@ -362,6 +364,89 @@ async def caso_a_fatia_leva_so_uma_guilda_e_sem_rastro():
     print("  a fatia leva so uma guilda, sem orfao e sem rastro: ok")
 
 
+async def caso_a_fatia_vazia_grita_em_vez_de_passar_batido():
+    """Fatia vazia é a pior forma de este backup falhar, e ela ACONTECEU.
+
+    Em produção o `BACKUP_GUILDA` apontava para a guilda certa — e essa guilda
+    ainda não tinha ninguém. O backup rodava todo dia, não dava erro, chegava
+    no canal com 4,6 KB e não protegia nada. Quem olhasse o canal veria um
+    arquivo chegando e dormiria tranquilo.
+
+    Então o aviso tem de sair nos DOIS lugares: no log, que é onde o systemd
+    guarda, e na mensagem do canal, que é onde alguém realmente olha.
+    """
+    conn = await preparar()
+    await _povoar_duas_guildas(conn)
+    pasta = BANCO.parent / "fatia_vazia"
+    shutil.rmtree(pasta, ignore_errors=True)
+    BACKUP.PASTA = pasta
+    BACKUP.os.environ["BACKUP_WEBHOOK"] = "https://discord.com/api/webhooks/1/abc"
+    # Uma guilda que existe no .env e nao existe no banco: o caso real.
+    vazia = 999999999999999999
+    BACKUP.os.environ["BACKUP_GUILDA"] = str(vazia)
+    BACKUP.sys.argv = ["backup.py"]
+
+    pedidos = []
+
+    class RespostaFalsa:
+        def read(self):
+            return b""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+    original = BACKUP.urllib.request.urlopen
+    BACKUP.urllib.request.urlopen = lambda p, timeout=None: (
+        pedidos.append(p) or RespostaFalsa()
+    )
+    saida = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(saida):
+            assert BACKUP.main() == 0
+    finally:
+        BACKUP.urllib.request.urlopen = original
+        BACKUP.os.environ.pop("BACKUP_GUILDA", None)
+        BACKUP.os.environ.pop("BACKUP_WEBHOOK", None)
+
+    impresso = saida.getvalue()
+    assert "VAZIA" in impresso, f"o log nao avisou: {impresso}"
+    assert str(vazia) in impresso, "o aviso nao diz qual guilda"
+
+    corpo = pedidos[0].data
+    # S\u00f3 peda\u00e7os ASCII: o `json.dumps` do payload escapa o acento, ent\u00e3o
+    # procurar "est\u00e1 vazio" com acento nunca casaria com o corpo.
+    assert b"anexo" in corpo and b"vazio" in corpo, (
+        "a mensagem do canal nao avisou que o anexo esta vazio"
+    )
+
+    # E o alarme NAO toca quando a fatia tem dado: aviso que grita sempre
+    # vira ruido, e ruido e ignorado.
+    pedidos.clear()
+    BACKUP.os.environ["BACKUP_WEBHOOK"] = "https://discord.com/api/webhooks/1/abc"
+    BACKUP.os.environ["BACKUP_GUILDA"] = str(GUILD)
+    BACKUP.urllib.request.urlopen = lambda p, timeout=None: (
+        pedidos.append(p) or RespostaFalsa()
+    )
+    saida = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(saida):
+            assert BACKUP.main() == 0
+    finally:
+        BACKUP.urllib.request.urlopen = original
+        BACKUP.os.environ.pop("BACKUP_GUILDA", None)
+        BACKUP.os.environ.pop("BACKUP_WEBHOOK", None)
+    assert "VAZIA" not in saida.getvalue(), "o alarme tocou com a fatia cheia"
+    assert b"vazio" not in pedidos[0].data, "a mensagem avisou vazio sem estar"
+
+    await conn.close()
+    shutil.rmtree(pasta, ignore_errors=True)
+    BANCO.unlink(missing_ok=True)
+    print("  a fatia vazia grita no log e no canal, e so quando e vazia: ok")
+
+
 async def caso_main_envia_a_fatia_e_guarda_o_inteiro():
     """Com `--guilda`, o que SAI é a fatia e o que FICA é o banco inteiro.
 
@@ -538,6 +623,7 @@ async def main():
         await caso_a_fatia_leva_so_uma_guilda_e_sem_rastro()
         await caso_main_envia_a_fatia_e_guarda_o_inteiro()
         await caso_backup_guilda_invalido_nao_envia_nada()
+        await caso_a_fatia_vazia_grita_em_vez_de_passar_batido()
         await caso_sem_webhook_guarda_local_e_sai_bem()
     finally:
         for conn in _ABERTAS:

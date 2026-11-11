@@ -278,6 +278,20 @@ def main() -> int:
             tamanho = enviado.stat().st_size
             print(f"  fatia da guilda {guilda}: {resumo or 'nada'} "
                   f"({tamanho / 1024:.1f} KB)")
+            # Fatia vazia e a pior forma de este backup falhar: ele roda, nao
+            # da erro, aparece no canal e nao leva dado nenhum. Quem olha o
+            # canal ve um arquivo todo dia e dorme tranquilo. Entao grita —
+            # e o grito vai tambem na mensagem do Discord, que e onde alguem
+            # vai estar olhando.
+            # `contagens` vem com as chaves e zeros dentro, e nao vazio:
+            # `{'personagens': 0, ...}` e verdadeiro. Quem decide e a SOMA.
+            vazia = not any(contagens.values())
+            if vazia:
+                print(
+                    f"  ATENCAO: a fatia saiu VAZIA. O anexo nao protege nada.\n"
+                    f"  Ou BACKUP_GUILDA={guilda} nao e a guilda onde se joga,\n"
+                    f"  ou ela ainda nao tem dado. A copia local continua inteira."
+                )
 
         texto = (
             f"🗄️ Backup de **{agora:%d/%m/%Y %H:%M}** — "
@@ -285,6 +299,13 @@ def main() -> int:
             # Dito na mensagem porque um dia alguem vai baixar este arquivo com
             # pressa, e tem de saber na hora que ele NAO e o banco inteiro.
             + (f"\n-# só os dados da guilda {guilda}" if guilda else "")
+            # E se a fatia saiu vazia, o canal e o unico lugar onde alguem vai
+            # reparar. Um arquivo chegando todo dia parece backup funcionando.
+            + (
+                f"\n⚠️ **Este anexo está vazio** — a guilda {guilda} não tem "
+                f"dado nenhum. Ele não protege nada."
+                if guilda and vazia else ""
+            )
         )
         return _enviar_e_contar(webhook, enviado, texto, comprimido)
     finally:
