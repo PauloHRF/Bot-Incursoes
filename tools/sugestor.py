@@ -110,7 +110,7 @@ def medir_bando(
 
     if not monstros:
         return None
-    args = SimpleNamespace(classe=classe, nivel=nivel, repeticoes=confrontos)
+    args = SimpleNamespace(classe=classe, nivel=nivel, repeticoes=confrontos, coletar_detalhes=False)
     bruto = sc.simular(
         monstros, tamanho, args, random.Random(f"{semente}:{chave}:{tamanho}")
     )

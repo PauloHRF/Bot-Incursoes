@@ -28,45 +28,12 @@ sys.path.insert(0, str(RAIZ / "tools"))
 
 from src import bestiario, classes as cl, itens, motor, rules  # noqa: E402
 from src.incursoes import Monstro, carregar  # noqa: E402
-import simular_combate  # noqa: E402
+from tools.simulacao.execucao import Ficha, simular  # noqa: E402
 
 REPETICOES = 400
 LIMITE_RODADAS = 60
 RNG = random.Random(20261104)
 CLASSE = "guerreiro"
-
-
-def combatente_com_anel(tier: int, com_anel: bool = True) -> motor.Combatente:
-    """O personagem solo do tier, vestindo (ou não) o anel.
-
-    Passa pelo mesmo caminho da ficha: `classes.efeitos` mais
-    `itens.juntar_equipamento`, que consolida por `max()` como as passivas.
-    """
-    nivel = rules.nivel_do_tier(tier)
-    numeros = cl.numeros(CLASSE, nivel)
-    efeitos = cl.efeitos(CLASSE, nivel, {})
-    if com_anel:
-        itens.juntar_equipamento(efeitos, [itens.ID_DO_ANEL_DO_GM])
-    quem = motor.Combatente(
-        user_id=1,
-        nome="Mestre",
-        ca=numeros.ca + efeitos.get("ca", 0),
-        bonus_ataque=numeros.acerto + efeitos.get("acerto", 0),
-        dano_arma=numeros.dano,
-        hp_max=numeros.hp,
-        hp_atual=numeros.hp,
-        ataques=efeitos.get("ataques", 1),
-        critico_em=efeitos.get("critico_em", 20),
-        dano_extra=efeitos.get("dano_extra", 0),
-        dano_ferido=efeitos.get("dano_ferido", 0),
-        saves=cl.saves(CLASSE, nivel, efeitos),
-    )
-    # O Escudo Arcano abre o combate com vida temporária, multiplicada pelo
-    # tier — é o cog que faz isso, e aqui a conta é a mesma.
-    escudo = efeitos.get("escudo_arcano", 0)
-    if escudo:
-        motor.ganhar_thp(quem, escudo * max(1, tier))
-    return quem
 
 
 # ------------------------------------------------------------- as salas
@@ -113,27 +80,16 @@ def passa_sozinho(tier: int, com_anel: bool) -> tuple[float, int, int]:
 
 # ---------------------------------------------------------- os combates
 #
-# O combate NAO e reimplementado aqui: e o mesmo `um_combate` de
-# `tools/simular_combate.py`, com iniciativa, atordoamento e habilidade de
-# criatura. O grupo e de um.
-#
-# Ele nao conhece o `thp_ao_derrubar` (quem aplica e o cog, ao fechar o
-# turno), entao a medida sai CONSERVADORA: na mesa o anel sustenta um pouco
-# mais que isto. Para a pergunta "basta?", errar para o lado pessimista e o
-# lado certo.
+# O anel entra pelo equipamento real e suas passivas sao aplicadas pelo cog.
 def medir_combates(monstros, tier, com_anel) -> dict:
-    vitorias, rodadas, hp = 0, [], []
-    for _ in range(REPETICOES):
-        quem = combatente_com_anel(tier, com_anel)
-        estado = simular_combate.um_combate(monstros, [quem], RNG)
-        if estado.inimigos_derrotados:
-            vitorias += 1
-            rodadas.append(estado.rodada)
-            hp.append(max(0, quem.hp_atual) / quem.hp_max)
+    ficha = Ficha(CLASSE, rules.nivel_do_tier(tier),
+                  equipamento=(itens.ID_DO_ANEL_DO_GM,) if com_anel else ())
+    resultados = simular(monstros, [ficha], REPETICOES, RNG, limite=LIMITE_RODADAS, tier=tier)
+    vitorias = [r for r in resultados if r["inimigos_derrotados"]]
     return {
-        "taxa": vitorias / REPETICOES,
-        "rodadas": st.mean(rodadas) if rodadas else float("nan"),
-        "hp": st.mean(hp) if hp else 0.0,
+        "taxa": len(vitorias) / REPETICOES,
+        "rodadas": st.mean(r["rodadas"] for r in vitorias) if vitorias else float("nan"),
+        "hp": st.mean(r["hp_restante"] / r["hp_inicial"] for r in vitorias) if vitorias else 0.0,
     }
 
 

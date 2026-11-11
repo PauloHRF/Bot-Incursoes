@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Iterable, Optional, Sequence
 
-from . import ameaca
+from . import aleatorio, ameaca
 from .incursoes import OPCOES_POR_PASSO, Monstro, Sala
 from .rules import PESO_TIER, melhor_pericia, tier
 
@@ -24,7 +24,7 @@ EXPR_DANO = re.compile(
 
 
 def _rng(rng: Optional[random.Random]) -> random.Random:
-    return rng or random.SystemRandom()
+    return aleatorio.gerador(rng)
 
 
 def rolar_d20(

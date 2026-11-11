@@ -88,6 +88,17 @@ por simulação, não declarada:
 python tools/sugestor.py --tier 3 --ambiente forest --dificuldade media
 ```
 
+Para comparar classes trocando somente a última vaga de grupos mistos:
+
+```bash
+python tools/simular_balanceamento.py --comparar --simulacoes 10 --relatorio resultados
+```
+
+O [guia de simulação](docs/simulacao.md) explica grupos de três ou cinco,
+builds alternativas, encontros personalizados, sementes e relatórios com
+intervalos de incerteza. O medidor de sala, o sugeridor e o Estúdio usam a
+mesma execução das regras de combate do bot.
+
 A incursão pode escolher quais salas do banco ela sorteia, por tema ou por
 lista. Para ver onde falta conteúdo antes de escrever a próxima sala:
 
@@ -260,8 +271,9 @@ para abrir cada combate e repor a cada inimigo derrubado.
 
 `tools/medir_anel_do_gm.py` mede se isso basta, com o motor de verdade e o grupo de um:
 **100% das salas de teste** em todo tier (com +13 de folga no 1 natural) e **100% de vitória
-em todos os nove chefes escritos**, em 1,5 a 5,9 rodadas. A medida é conservadora: o
-simulador não conta a vida temporária por inimigo derrubado.
+em todos os nove chefes escritos**, em 1,5 a 5,9 rodadas, na medição anterior.
+O comando atual usa os resolvedores do cog, incluindo a vida temporária por
+inimigo derrubado; execute-o novamente para medir a versão atual.
 Quem está caído ou atordoado quando a vez chega perde a vez; se tinha guardado uma
 habilidade, ela não sai e **o uso volta**.
 
@@ -949,8 +961,8 @@ contagem (`vitória ≥ 95%`, `55–75% do HP restante`) e o objetivo por forma�
 
 *O Posto de Vigia Calado* é o único abaixo da faixa, e de propósito: a descrição dele fixa
 o elenco em três — o lorde e "os dois menores" —, e no nível 1 um terceiro atacante custa
-15 pontos de vitória. O conserto não é tirar a cria da ficha: é a cura da mesa, que a
-simulação não conta.
+15 pontos de vitória naquela medição. Esses números históricos devem ser refeitos
+com o simulador atual, que também aplica a cura e as passivas do grupo.
 
 As incursões tiram **todas** as criaturas do bestiário — nas planilhas delas só o nome
 está preenchido. Entre elas, cada mecânica que o importador do Monster Manual gera
@@ -1111,6 +1123,8 @@ tools/
   gerar_modelo_planilha.py   cria a planilha modelo da incursão
   importar_planilha.py       incursão -> JSON, com validação
   simular_combate.py         calibra os números de um combate fora do Discord
+  simular_balanceamento.py   compara classes e builds em grupos mistos
+  simulacao/                execucao compartilhada dos resolvedores do bot
   importar_bestiario.py      bestiário do 5etools -> data/bestiario.json
   bestiario_traducao.py      os nomes das criaturas e dos golpes em português
   gerar_mecanicas_md.py      docs/mecanicas/ — as regras, uma por arquivo

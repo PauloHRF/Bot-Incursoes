@@ -1,0 +1,192 @@
+{
+  "1": [
+    {
+      "id": "bando",
+      "monstros": [
+        {
+          "nome": "Bandido",
+          "quantidade": 6
+        }
+      ]
+    },
+    {
+      "id": "fisico",
+      "monstros": [
+        {
+          "nome": "Bugbear",
+          "quantidade": 4
+        }
+      ]
+    },
+    {
+      "id": "controle",
+      "monstros": [
+        {
+          "nome": "Carniçal",
+          "quantidade": 4
+        }
+      ]
+    },
+    {
+      "id": "chefe",
+      "monstros": [
+        {
+          "nome": "Ogro",
+          "quantidade": 2
+        }
+      ]
+    }
+  ],
+  "2": [
+    {
+      "id": "bando",
+      "monstros": [
+        {
+          "nome": "Doppelganger",
+          "quantidade": 4
+        }
+      ]
+    },
+    {
+      "id": "fisico",
+      "monstros": [
+        {
+          "nome": "Urso-Coruja",
+          "quantidade": 3
+        }
+      ]
+    },
+    {
+      "id": "controle",
+      "monstros": [
+        {
+          "nome": "Múmia",
+          "quantidade": 2
+        }
+      ]
+    },
+    {
+      "id": "area",
+      "monstros": [
+        {
+          "nome": "Crânio Flamejante",
+          "quantidade": 2
+        }
+      ]
+    }
+  ],
+  "3": [
+    {
+      "id": "bando",
+      "monstros": [
+        {
+          "nome": "Ogro",
+          "quantidade": 6
+        }
+      ]
+    },
+    {
+      "id": "fisico",
+      "monstros": [
+        {
+          "nome": "Gigante da Pedra",
+          "quantidade": 2
+        }
+      ]
+    },
+    {
+      "id": "controle",
+      "monstros": [
+        {
+          "nome": "Devorador de Mentes",
+          "quantidade": 2
+        }
+      ]
+    },
+    {
+      "id": "area",
+      "monstros": [
+        {
+          "nome": "Dragão Verde Jovem",
+          "quantidade": 1
+        }
+      ]
+    }
+  ],
+  "4": [
+    {
+      "id": "bando",
+      "monstros": [
+        {
+          "nome": "Troll",
+          "quantidade": 4
+        }
+      ]
+    },
+    {
+      "id": "fisico",
+      "monstros": [
+        {
+          "nome": "Gigante da Tempestade",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "id": "controle",
+      "monstros": [
+        {
+          "nome": "Observador",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "id": "area",
+      "monstros": [
+        {
+          "nome": "Dragão Branco Adulto",
+          "quantidade": 1
+        }
+      ]
+    }
+  ],
+  "5": [
+    {
+      "id": "bando",
+      "monstros": [
+        {
+          "nome": "Gigante do Gelo",
+          "quantidade": 3
+        }
+      ]
+    },
+    {
+      "id": "fisico",
+      "monstros": [
+        {
+          "nome": "Balor",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "id": "controle",
+      "monstros": [
+        {
+          "nome": "Cavaleiro da Morte",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "id": "area",
+      "monstros": [
+        {
+          "nome": "Dragão Vermelho Adulto",
+          "quantidade": 1
+        }
+      ]
+    }
+  ]
+}

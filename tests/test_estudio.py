@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
@@ -234,12 +235,18 @@ def caso_simular_recusa_o_que_nao_dá_para_medir():
 
 def caso_as_repeticoes_tem_teto():
     """A bancada é local, mas um número enorme trava a página do autor."""
-    r = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
-                   "repeticoes": 10**9, "grupos": [2]})
-    assert r["repeticoes"] == E.REPETICOES_MAXIMO, r["repeticoes"]
-    r = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
-                   "repeticoes": "muitas", "grupos": [2]})
-    assert r["repeticoes"] == E.REPETICOES_PADRAO
+    import simular_combate as sc
+    # Este caso confere os limites da API; os outros casos medem lutas reais.
+    def medir(monstros, tamanho, args, rng):
+        return {"taxa": 1.0, "rodadas": 1.0, "caidos": 0.0}
+    with patch.object(sc, "simular", side_effect=medir) as chamada:
+        r = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
+                       "repeticoes": 10**9, "grupos": [2]})
+        assert r["repeticoes"] == E.REPETICOES_MAXIMO, r["repeticoes"]
+        r = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
+                       "repeticoes": "muitas", "grupos": [2]})
+        assert r["repeticoes"] == E.REPETICOES_PADRAO
+        assert chamada.call_args.args[2].repeticoes == E.REPETICOES_PADRAO
     print("  as repetições têm teto e padrão: ok")
 
 

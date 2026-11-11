@@ -26,7 +26,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
-from . import condicoes
+from . import aleatorio, condicoes
 
 # As duas linhas de HP da planilha: Cura (+20%) e Dano (-20%), do HP máximo.
 CURA_PCT = 20
@@ -196,7 +196,7 @@ class Desfecho:
 
 
 def _rng(rng: Optional[random.Random]) -> random.Random:
-    return rng or random
+    return aleatorio.gerador(rng, padrao=random)
 
 
 def dano_da_armadilha(hp_max: int) -> int:

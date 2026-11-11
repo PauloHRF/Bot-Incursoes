@@ -16,7 +16,8 @@ sys.path.insert(0, str(RAIZ))
 from src import ameaca, classes as cl, config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.habilidades import media_do_dado  # noqa: E402
-from tools import simular_balanceamento as sb  # noqa: E402
+from tools.simulacao.execucao import Bancada, Ficha  # noqa: E402
+from src.incursoes import Monstro  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     GUILD,
@@ -431,26 +432,26 @@ async def caso_ataque_da_forma_pode_encerrar_o_combate():
     print("  o ataque ao transformar pode vencer sem travar a fila: ok")
 
 
-def caso_simulador_ataca_com_a_forma_nova():
+async def caso_simulador_ataca_com_a_forma_nova():
     for forma in ("urso", "lobo", "aranha"):
-        grupo = sb.montar_grupo("druida", 5)
-        druida = grupo[0]
-        druida._nivel_simulador = 10
-        inimigo = motor.Inimigo(0, "Alvo", 1, 1, "1d1", 500, 500)
-        estado = motor.EstadoCombate([inimigo], 1, grupo)
-        dano, recursos = [0], [0]
-        with patch.object(motor, "rolar_d20", return_value=10):
-            assert sb._executar_ativa(
-                druida, grupo, estado, cl.POR_ID[f"forma_{forma}"], random.Random(7),
-                1, dano, [0], recursos, [0],
-            )
-        assert dano[0] == 500 - inimigo.hp_atual and dano[0] > 0, forma
-        assert recursos == [1], "transformar e atacar consome uma unica acao"
-        if forma == "urso":
-            assert druida.ameaca_extra == 4
-        elif forma == "aranha":
-            assert inimigo.penalidade_ataque == 2, "a primeira mordida ja envenena"
-    print("  simulador: Wild Shape ataca ao entrar com a ficha e efeitos da forma: ok")
+        fichas = [Ficha("druida", 10, {"forma_t1": forma}) for _ in range(3)]
+        async with Bancada(fichas, [Monstro("Alvo", 1, 1, "1d1", 500)]) as bancada:
+            await bancada.iniciar()
+            with patch.object(motor, "rolar_d20", return_value=10):
+                await bancada.agir(1, f"forma_{forma}")
+            estado = await bancada.cog._estado(bancada.run)
+            druida = estado.combatente(1)
+            assert estado.inimigos[0].hp_atual < 500, forma
+            golpes = await db.ataques_da_rodada(bancada.conn, bancada.run_id, bancada.cog._passo(bancada.run), 1)
+            assert len(golpes) == (2 if forma == "lobo" else 1), golpes
+            usos = await db.usos_da_run(bancada.conn, bancada.run_id, 1)
+            assert sum(usos.values()) == 1, usos
+            if forma == "urso":
+                assert druida.ameaca_extra == 4
+                assert druida.thp == 30, "Forma Lunar tambem vale no simulador"
+            elif forma == "aranha":
+                assert estado.inimigos[0].penalidade_ataque == 2
+    print("  simulador: Wild Shape usa os mesmos ataques, passivas e recursos do bot: ok")
 
 
 async def main():
@@ -458,7 +459,7 @@ async def main():
         caso_tabela_e_o_trade()
         caso_a_forma_dobra_o_dano_e_escala()
         caso_forma_das_classes()
-        caso_simulador_ataca_com_a_forma_nova()
+        await caso_simulador_ataca_com_a_forma_nova()
         await caso_urso_troca_o_corpo()
         await caso_lobo_morde_duas_vezes()
         await caso_forma_lunar_dobra_o_thp()

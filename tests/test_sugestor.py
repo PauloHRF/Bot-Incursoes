@@ -334,9 +334,9 @@ def caso_sugerir_recusa_pedido_torto():
 
 
 def caso_sugerir_mede_de_verdade():
-    """Um caso curto com o motor real: a forma da resposta e o rótulo honesto."""
+    """Amostra curta com o motor real: contrato e rotulo, sem calibrar balanceamento."""
     anterior = S.CONFRONTOS_DA_BUSCA, S.CONFRONTOS_DA_CONFIRMACAO
-    S.CONFRONTOS_DA_BUSCA, S.CONFRONTOS_DA_CONFIRMACAO = 40, 60
+    S.CONFRONTOS_DA_BUSCA, S.CONFRONTOS_DA_CONFIRMACAO = 5, 10
     try:
         r = S.sugerir(tier=2, dificuldade="media", semente=7, quantas=1)
     finally:
@@ -356,7 +356,7 @@ def caso_sugerir_mede_de_verdade():
 
 def caso_a_mesma_semente_da_a_mesma_sugestao():
     anterior = S.CONFRONTOS_DA_BUSCA, S.CONFRONTOS_DA_CONFIRMACAO
-    S.CONFRONTOS_DA_BUSCA, S.CONFRONTOS_DA_CONFIRMACAO = 40, 60
+    S.CONFRONTOS_DA_BUSCA, S.CONFRONTOS_DA_CONFIRMACAO = 5, 10
     try:
         a = S.sugerir(tier=2, dificuldade="media", semente=99, quantas=1)
         b = S.sugerir(tier=2, dificuldade="media", semente=99, quantas=1)
