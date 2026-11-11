@@ -99,7 +99,7 @@ def caso_os_exemplos_do_documento_sao_validos():
             # cruzado com o banco do Vortice de propósito: um exemplo de filtro
             # que nao fecha no banco real ensinaria a escrever dungeon travada.
             incursao = I.de_dict({**INCURSAO_BASE, **bloco})
-            assert incursao.filtro.temas == ["cripta", "sagrado"], incursao.filtro
+            assert incursao.filtro.temas == ["cripta", "arcano"], incursao.filtro
             assert incursao.filtro.excluir == ["VO12"], incursao.filtro
             banco = I.carregar_banco(RAIZ / "data" / "bancos" / "vortice_oculto.json")
             problemas, _ = I.conferir_filtro(incursao, banco)

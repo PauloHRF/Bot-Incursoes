@@ -10,6 +10,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "fortaleza",
+    "sagrado"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -73,6 +77,10 @@
     "Acrobacia",
     "Atletismo"
    ],
+   "temas": [
+    "fortaleza",
+    "arcano"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -87,6 +95,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "natureza",
+    "fortaleza"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -193,6 +205,10 @@
     "Religião",
     "Arcanismo"
    ],
+   "temas": [
+    "sagrado",
+    "arcano"
+   ],
    "imagem": null,
    "recompensa": "O que espera adiante começa o confronto enfraquecido.",
    "pontos_organizacao": 2,
@@ -221,6 +237,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "fortaleza",
+    "arcano"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -307,6 +327,10 @@
     "Religião",
     "Investigação"
    ],
+   "temas": [
+    "cripta",
+    "sagrado"
+   ],
    "imagem": null,
    "recompensa": "A arma de um mártir, emprestada pela Ordem.",
    "pontos_organizacao": 3,
@@ -321,6 +345,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "natureza",
+    "fortaleza"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -402,6 +430,10 @@
     "Percepção",
     "Religião"
    ],
+   "temas": [
+    "sagrado",
+    "escuridao"
+   ],
    "imagem": null,
    "recompensa": "Revela o que guarda o selo.",
    "pontos_organizacao": 2,
@@ -416,6 +448,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "fortaleza",
+    "natureza"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 3,
@@ -513,6 +549,9 @@
     "Acrobacia",
     "Percepção"
    ],
+   "temas": [
+    "fortaleza"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 1,
@@ -529,6 +568,11 @@
    "pericias": [
     "Arcanismo",
     "História"
+   ],
+   "temas": [
+    "fortaleza",
+    "sagrado",
+    "arcano"
    ],
    "imagem": null,
    "recompensa": "Um item da reserva do Alvorecer.",

@@ -1122,6 +1122,12 @@ tools/
   importar_banco.py          banco -> JSON, com validação
   gerar_modelo_planilha.py   cria a planilha modelo da incursão
   importar_planilha.py       incursão -> JSON, com validação
+  validar_conteudo.py        confere incursão e banco com o validador do bot
+  estudio.py                 a bancada local de quem escreve: sala, filtro e medição
+  estudio/index.html         a página do estúdio
+  sugestor.py                sugere um bando medindo a dificuldade, em vez de declará-la
+  relatorio_de_pool.py       quantas salas cada tema tem, e que tamanhos aguenta
+  importar_ambientes.py      acrescenta meta.ambientes ao bestiário, do 5etools
   simular_combate.py         calibra os números de um combate fora do Discord
   simular_balanceamento.py   compara classes e builds em grupos mistos
   simulacao/                execucao compartilhada dos resolvedores do bot
@@ -1132,6 +1138,9 @@ tools/
   gerar_criaturas_md.py      docs/CRIATURAS.md — as fichas do bestiário
   balanco.py                 docs/BALANCO.md — mede o jogo e aponta desequilíbrio
 docs/
+  formato-das-incursoes.md  o formato que quem escreve dungeon precisa saber
+  temas-e-estudio.md        o desenho do tema, do filtro, do estúdio e do sugeridor
+  simulacao.md              como os simuladores compartilham o combate do bot
   mecanicas/    as regras do jogo, um arquivo por mecânica
   FICHAS.md     os números e as habilidades de cada classe, tier por tier
   CRIATURAS.md  as fichas das 385 criaturas, agrupadas por faixa de CR
@@ -1143,6 +1152,7 @@ data/
   bancos/       bancos de salas por Organização — o que alimenta o sorteio
   bestiario.json  as criaturas prontas do Monster Manual, já no formato do bot
 deploy/         as unidades do systemd do backup, e o passo a passo da Oracle
+docs-design.md  o desenho original do bot, de antes da primeira linha de código
 assets/         imagens das salas
 tests/
   todos.py      roda todas as suítes

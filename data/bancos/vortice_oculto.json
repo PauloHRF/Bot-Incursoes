@@ -13,6 +13,9 @@
     "Acrobacia",
     "Arcanismo"
    ],
+   "temas": [
+    "arcano"
+   ],
    "imagem": null,
    "recompensa": "Um fragmento de selo para quem passa ileso.",
    "pontos_organizacao": 1,
@@ -31,6 +34,10 @@
     "Arcanismo",
     "História"
    ],
+   "temas": [
+    "arcano",
+    "agua"
+   ],
    "imagem": null,
    "recompensa": "Revela a CA do próximo inimigo.",
    "pontos_organizacao": 2,
@@ -45,6 +52,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "arcano",
+    "fortaleza"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 1,
@@ -100,6 +111,10 @@
     "Acrobacia",
     "Furtividade"
    ],
+   "temas": [
+    "arcano",
+    "escuridao"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 1,
@@ -131,6 +146,10 @@
     "Prestidigitação",
     "Arcanismo"
    ],
+   "temas": [
+    "arcano",
+    "fortaleza"
+   ],
    "imagem": null,
    "recompensa": "Materiais raros para quem passar no teste.",
    "pontos_organizacao": 3,
@@ -145,6 +164,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "arcano",
+    "natureza"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -192,6 +215,10 @@
     "Arcanismo",
     "Intuição"
    ],
+   "temas": [
+    "arcano",
+    "sagrado"
+   ],
    "imagem": null,
    "recompensa": "O chefe começa o confronto final com 10 de HP a menos.",
    "pontos_organizacao": 2,
@@ -209,6 +236,10 @@
     "Acrobacia",
     "Atletismo",
     "Furtividade"
+   ],
+   "temas": [
+    "escuridao",
+    "arcano"
    ],
    "imagem": null,
    "recompensa": null,
@@ -228,6 +259,10 @@
     "Percepção",
     "Enganação"
    ],
+   "temas": [
+    "arcano",
+    "escuridao"
+   ],
    "imagem": null,
    "recompensa": "Atalho: a próxima sala começa com metade do progresso feito.",
    "pontos_organizacao": 2,
@@ -242,6 +277,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "arcano",
+    "escuridao"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -283,6 +322,11 @@
     "Religião",
     "Investigação"
    ],
+   "temas": [
+    "sagrado",
+    "agua",
+    "arcano"
+   ],
    "imagem": null,
    "recompensa": "Um item mágico menor, a critério do GM.",
    "pontos_organizacao": 3,
@@ -297,6 +341,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "arcano",
+    "natureza"
+   ],
    "imagem": null,
    "recompensa": "Um naco de âmbar ainda morno, que guarda alguma coisa dentro.",
    "pontos_organizacao": 2,
@@ -339,6 +387,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "cripta",
+    "arcano"
+   ],
    "imagem": null,
    "recompensa": "As anotações do necromante sobre o selo.",
    "pontos_organizacao": 3,

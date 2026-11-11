@@ -13,6 +13,10 @@
     "Acrobacia",
     "Furtividade"
    ],
+   "temas": [
+    "urbano",
+    "escuridao"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 1,
@@ -27,6 +31,9 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "urbano"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 1,
@@ -74,6 +81,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "urbano",
+    "natureza"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 1,
@@ -125,6 +136,9 @@
     "Prestidigitação",
     "Investigação"
    ],
+   "temas": [
+    "urbano"
+   ],
    "imagem": null,
    "recompensa": "Um item empenhado e nunca resgatado.",
    "pontos_organizacao": 2,
@@ -153,6 +167,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "urbano",
+    "escuridao"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 1,
@@ -204,6 +222,10 @@
     "Intuição",
     "Persuasão"
    ],
+   "temas": [
+    "urbano",
+    "fortaleza"
+   ],
    "imagem": null,
    "recompensa": "Passagem livre: a próxima sala começa com metade do progresso feito.",
    "pontos_organizacao": 2,
@@ -218,6 +240,10 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "urbano",
+    "escuridao"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -290,6 +316,10 @@
     "Acrobacia",
     "Atletismo"
    ],
+   "temas": [
+    "urbano",
+    "agua"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 1,
@@ -307,6 +337,10 @@
     "Percepção",
     "Intuição"
    ],
+   "temas": [
+    "urbano",
+    "escuridao"
+   ],
    "imagem": null,
    "recompensa": "Revela a CA do próximo inimigo.",
    "pontos_organizacao": 2,
@@ -321,6 +355,9 @@
    "cd": null,
    "alvo_progresso": null,
    "pericias": [],
+   "temas": [
+    "urbano"
+   ],
    "imagem": null,
    "recompensa": null,
    "pontos_organizacao": 2,
@@ -400,6 +437,10 @@
    "pericias": [
     "Prestidigitação",
     "Arcanismo"
+   ],
+   "temas": [
+    "urbano",
+    "fortaleza"
    ],
    "imagem": null,
    "recompensa": "Moeda antiga e um favor escrito da Aliança.",

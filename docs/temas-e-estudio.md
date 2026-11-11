@@ -360,11 +360,11 @@ Pré-filtro, não trava: o colaborador pode abrir para os 11 sempre.
 
 Três eixos, como você pediu — e os três têm de onde sair:
 
-| eixo | de onde vem | estado |
-|---|---|---|
-| **ambiente** | `environment` do 5etools, 11 valores + o balde | falta o re-import |
-| **tipo de bicho** | `meta.tipo`, 14 valores nas 385 | pronto |
-| **dificuldade** | CR + `meta.funcao` + `rules.FAIXAS_DE_CR` | pronto, mas ver abaixo |
+| eixo | de onde vem |
+|---|---|
+| **ambiente** | `meta.ambientes`, 11 valores nas 385, mais o balde "de lugar nenhum" |
+| **tipo de bicho** | `meta.tipo`, 14 valores |
+| **dificuldade** | não é um eixo de dado: é a faixa de vitória que a busca persegue |
 
 `FAIXAS_DE_CR` já liga o tier do grupo à faixa de CR que ele encontra: tier 1 →
 CR 0 a 1, tier 2 → 2 a 4, tier 3 → 5 a 8, tier 4 → 9 a 13, tier 5 → 14 pra

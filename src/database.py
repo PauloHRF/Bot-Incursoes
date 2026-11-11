@@ -603,6 +603,12 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
         # nao-constante ("Cannot add a column with non-constant default"), e e
         # o UPDATE seguinte que enche as linhas que ja existiam.
         await conn.execute("ALTER TABLE run_combate ADD COLUMN vez_desde TEXT")
+        # O `WHERE` e cinto sobre suspensorio, e nenhum teste o pega: o `if`
+        # la em cima so deixa este bloco rodar quando a coluna NAO EXISTE, e
+        # nesse caso toda linha e NULL. Nao ha estado alcancavel em que ele
+        # decida alguma coisa. Fica porque o dia em que alguem relaxar o
+        # guarda — rodar isto numa coluna que ja existe — e o dia em que o
+        # relogio da substituicao de todo mundo seria zerado junto.
         await conn.execute(
             "UPDATE run_combate SET vez_desde = datetime('now')"
             " WHERE vez_desde IS NULL"

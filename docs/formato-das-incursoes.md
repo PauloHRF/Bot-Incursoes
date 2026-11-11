@@ -92,7 +92,7 @@ ordem:
 
 ```json
 "filtro": {
-  "temas": ["cripta", "sagrado"],
+  "temas": ["cripta", "arcano"],
   "excluir": ["VO12"]
 }
 ```
