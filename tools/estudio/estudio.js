@@ -351,6 +351,9 @@ function lerCampo(id, aplicar) {
 
 function pronto() { return !!banco; }
 
+// O texto que o HTML traz, guardado antes de `controles` escrever por cima.
+const SEM_COMBATE = $("avisoCombate").textContent;
+
 function controles() {
   const temSala = !!sala(), pode = !!banco;
   ["btBaixar", "btConferirBanco", "btNova", "btCopiarFiltro"].forEach(id => { $(id).disabled = !pode; });
@@ -358,9 +361,14 @@ function controles() {
   $("btRecarregar").disabled = !banco;
   $("btVirar").textContent = bancadaEm === "Combate" ? "Virar sala de teste" : "Virar combate";
   const combate = temSala && familia(sala().tipo) === "combate";
-  $("avisoCombate").hidden = combate || lugar !== "Combate";
-  $("btMedir").disabled = !pode || !combate || medindo;
-  $("btSugerir").disabled = !pode || !combate || sugerindo;
+  /* Falta de dependência ganha a frente do aviso de sala: sem o motor, não
+     adianta o autor abrir um combate — os dois botões continuam parados, e
+     ele tem de saber por quê antes de clicar. */
+  const falta = C?.falta_para_simular || "";
+  $("avisoCombate").textContent = falta || SEM_COMBATE;
+  $("avisoCombate").hidden = lugar !== "Combate" || (!falta && combate);
+  $("btMedir").disabled = !pode || !combate || medindo || !!falta;
+  $("btSugerir").disabled = !pode || !combate || sugerindo || !!falta;
   document.querySelectorAll(".usar-sugestao").forEach(n => { n.disabled = !pode || sugestaoContexto !== contexto(); });
 }
 

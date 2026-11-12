@@ -271,6 +271,34 @@ def caso_mudar_a_lista_de_grupos_nao_mexe_nos_outros():
     print("  tirar um tamanho da lista não move o número dos outros: ok")
 
 
+def caso_a_bancada_abre_sem_o_motor_e_diz_o_que_falta():
+    """Escrever não pode exigir o que só medir precisa.
+
+    O estúdio sobe com a biblioteca padrão: ler banco, validar sala e montar
+    filtro não tocam no motor. Medir toca — e o motor guarda o estado da run
+    em SQLite, por `aiosqlite`. Quem abre o estúdio fora do ambiente do bot vê
+    tudo funcionar, escreve a sala inteira, e só no clique de "Medir combate"
+    recebe um `ModuleNotFoundError` cru, que não diz a ninguém o que fazer.
+
+    A regressão que isto tranca: a falta tem de chegar na página pelo
+    `conteudo`, e as duas rotas que dependem do motor têm de recusar com o
+    mesmo recado em vez de estourar.
+    """
+    recado = "falta a dependência da medição"
+    with patch.object(E, "_falta_para_simular", return_value=recado):
+        c = E.conteudo()
+        assert c["falta_para_simular"] == recado
+        assert c["bancos"] and c["temas"], "o resto da página parou de vir junto"
+        assert E.simular({"sala": sala_de_combate(), "tier": 1})["erro"] == recado
+        assert E.sugerir({"tier": 1, "dificuldade": "media"})["erro"] == recado
+
+    assert E._falta_para_simular() == "", (
+        "o motor não importa neste Python — rode os testes pelo ambiente do bot"
+    )
+    assert E.conteudo()["falta_para_simular"] == ""
+    print("  a bancada abre sem o motor e diz o que falta: ok")
+
+
 def caso_sala_de_teste_nao_e_medida_por_simulacao():
     """Armadilha, Evento e Tesouro são conta fechada: d20 + perícia vs CD."""
     r = E.simular({"sala": sala_de_teste(), "tier": 2})
@@ -394,6 +422,7 @@ for caso in (
     caso_simular_mede_a_sala_de_combate,
     caso_a_mesma_semente_da_o_mesmo_numero,
     caso_mudar_a_lista_de_grupos_nao_mexe_nos_outros,
+    caso_a_bancada_abre_sem_o_motor_e_diz_o_que_falta,
     caso_sala_de_teste_nao_e_medida_por_simulacao,
     caso_simular_recusa_o_que_nao_dá_para_medir,
     caso_as_repeticoes_tem_teto,

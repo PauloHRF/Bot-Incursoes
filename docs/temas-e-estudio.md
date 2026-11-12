@@ -431,6 +431,13 @@ por isso que ele vive neste repositório e não em outro. Código separado seria
 uma segunda cópia das regras, e uma segunda régua sempre acaba discordando da
 primeira.
 
+Use **o mesmo Python do bot** — o do `requirements.txt`. Escrever, conferir e
+exportar rodam só com a biblioteca padrão, mas **medir e sugerir rodam o
+motor**, e o motor guarda o estado da run em SQLite, por `aiosqlite`. Num
+Python sem ele, tudo funciona menos os dois botões que custam mais caro para
+alcançar — então o estúdio avisa no terminal ao subir e no painel de Combate,
+antes do clique, em vez de deixar o erro aparecer no fim.
+
 A página é dividida em **quatro lugares**, e não em abas de uma sala só:
 escrever um Evento, montar um combate, montar a dungeon e olhar o que já
 existe são quatro trabalhos, com listas, campos e ferramentas diferentes.

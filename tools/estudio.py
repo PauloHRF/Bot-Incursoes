@@ -7,6 +7,12 @@ Sobe um servidor em 127.0.0.1 e abre a página. Ali dá para escrever sala,
 montar o filtro da dungeon vendo o pool que ele deixa, medir a sala contra o
 grupo e exportar o JSON pronto para mandar.
 
+RODE PELO MESMO PYTHON DO BOT. Escrever, conferir e exportar só usam a
+biblioteca padrão; medir e sugerir rodam o motor, que guarda o estado da run
+em SQLite por `aiosqlite`. Num Python sem ele tudo funciona menos esses dois
+botões — e eles são os que custam mais caro para alcançar, então o estúdio
+avisa ao subir e na própria página (ver `_falta_para_simular`).
+
 POR QUE ISTO VIVE NESTE REPOSITÓRIO: a página chama `src.incursoes` e
 `src.motor` — a validação e o combate aqui são os MESMOS do bot. Um estúdio em
 outro projeto seria uma segunda cópia das regras, e duas réguas sempre acabam
@@ -172,6 +178,32 @@ def _faixas_de_combate() -> dict[str, list[float]]:
     return {nome: list(faixa) for nome, faixa in sugestor.FAIXAS_DE_VITORIA.items()}
 
 
+def _falta_para_simular() -> str:
+    """O que impede a medição de rodar, ou "" quando ela roda.
+
+    O estúdio abre, lê os bancos, valida sala e monta o filtro só com a
+    biblioteca padrão — é a bancada de quem escreve conteúdo, não de quem
+    hospeda o bot. MEDIR é a exceção: ela roda o motor, e o motor guarda o
+    estado da run no mesmo SQLite do bot, por `aiosqlite`.
+
+    Descobrir isso ao clicar em "Medir combate", depois de escrever a sala
+    inteira, é tarde — e o que chegava na tela era o ModuleNotFoundError cru,
+    que não diz a ninguém o que fazer. Acontece com quem roda
+    `python tools/estudio.py` fora do ambiente do bot: tudo funciona, menos
+    o único botão que custa caro para alcançar.
+    """
+    try:
+        import simular_combate  # noqa: F401
+    except ImportError as erro:
+        falta = getattr(erro, "name", None) or "uma dependência do bot"
+        return (
+            f"Medir e sugerir precisam de '{falta}', que não existe neste "
+            f"Python ({sys.executable}). Abra o estúdio pelo ambiente do bot, "
+            f"ou instale com: pip install -r requirements.txt"
+        )
+    return ""
+
+
 def conteudo() -> dict[str, Any]:
     """Tudo que a página precisa saber para desenhar os campos.
 
@@ -222,6 +254,9 @@ def conteudo() -> dict[str, Any]:
             c["nome"] for c in bestiario.carregar() if c.get("nome")
         ),
         "dificuldades_de_combate": _faixas_de_combate(),
+        # Vazio quando a medição roda. Cheio, a página avisa no painel de
+        # Combate em vez de deixar o autor descobrir no clique.
+        "falta_para_simular": _falta_para_simular(),
         "bancos": do_disco["bancos"],
         "incursoes": {i.id: i.para_dict() for i in sorted(
             incursoes.values(), key=lambda x: x.id
@@ -352,6 +387,8 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
     grupo. A semente vai na resposta para dois autores comparando números
     verem o mesmo número.
     """
+    if falta := _falta_para_simular():
+        return {"erro": falta}
     import simular_combate as sc
 
     bruta = payload.get("sala")
@@ -421,6 +458,8 @@ def sugerir(payload: dict[str, Any]) -> dict[str, Any]:
     taxa de vitória que ele PROCURA, simulando. O número que volta é o que ele
     mediu, e `na_faixa` diz se caiu dentro — inclusive quando não caiu.
     """
+    if falta := _falta_para_simular():
+        return {"erro": falta}
     import sugestor
 
     return sugestor.sugerir(
@@ -531,6 +570,11 @@ def main() -> int:
     servidor = ThreadingHTTPServer(("127.0.0.1", args.porta), Bancada)
     endereco = f"http://127.0.0.1:{servidor.server_port}/"
     print(f"Estúdio de Incursões em {endereco}")
+    # O aviso sai ANTES do navegador abrir: quem roda fora do ambiente do bot
+    # escreve a sala inteira e só descobre no clique de "Medir combate".
+    if falta := _falta_para_simular():
+        print(f"\nATENÇÃO: {falta}")
+        print("O resto da bancada — escrever, conferir e exportar — funciona.\n")
     print("Ctrl+C para parar.")
     if not args.sem_navegador:
         threading.Timer(0.4, lambda: webbrowser.open(endereco)).start()

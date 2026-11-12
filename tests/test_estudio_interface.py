@@ -493,6 +493,32 @@ class Interface(unittest.TestCase):
             self.page.locator("#lugar" + lugar).click()
             self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
 
+    def test_sem_o_motor_a_bancada_diz_em_vez_de_esperar_o_clique(self):
+        """Quem abre o estúdio fora do ambiente do bot escreve tudo e só
+
+        descobre no clique de "Medir combate" — e o que chegava era o
+        ModuleNotFoundError cru. O resto da bancada funciona sem o motor, e é
+        por isso que o aviso tem de estar na tela ANTES: nada mais quebra
+        para avisar por ele.
+        """
+        recado = "Medir e sugerir precisam de 'aiosqlite'"
+
+        def responder(rota):
+            dados = rota.fetch().json()
+            dados["falta_para_simular"] = recado
+            rota.fulfill(json=dados)
+
+        self.page.route("**/api/conteudo", responder)
+        self.page.reload()
+        # A bancada abre inteira: escrever e exportar não dependem do motor.
+        expect(self.page.locator(".sala-btn").first).to_be_visible()
+        expect(self.page.locator("#btBaixar")).to_be_enabled()
+
+        self.page.locator("#lugarCombate").click()
+        expect(self.page.locator("#avisoCombate")).to_contain_text(recado)
+        expect(self.page.locator("#btMedir")).to_be_disabled()
+        expect(self.page.locator("#btSugerir")).to_be_disabled()
+
     def test_sem_armazenamento_local_ainda_e_possivel_baixar(self):
         self.page.add_init_script("Storage.prototype.setItem = () => { throw new Error('indisponível'); };")
         self.page.reload()
