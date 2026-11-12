@@ -280,11 +280,29 @@ def caso_as_repeticoes_tem_teto():
 # --------------------------------------------------------------- página
 
 
+def _fonte_da_interface() -> str:
+    """Todo arquivo que o navegador carrega, junto num texto só.
+
+    Varre a PASTA e não um arquivo escolhido a dedo. A interface já foi um
+    HTML único e hoje são três; os guardas abaixo valiam para o arquivo que
+    por acaso guardava o JavaScript, e um `fetch` colado de volta no HTML
+    passaria por eles. Varrendo a pasta, o guarda sobrevive à próxima divisão.
+    """
+    partes = [
+        caminho.read_text(encoding="utf-8")
+        for caminho in sorted(E.PAGINA.parent.iterdir())
+        if caminho.suffix in (".html", ".js")
+    ]
+    assert len(partes) >= 2, f"só achei {len(partes)} arquivo(s) de interface"
+    return chr(10).join(partes)
+
+
 def caso_a_pagina_so_chama_rota_que_existe():
     """Anti-deriva: a página e o servidor são escritos em arquivos diferentes."""
     assert E.PAGINA.exists(), f"a página não está em {E.PAGINA}"
-    codigo = E.PAGINA.with_name("estudio.js").read_text(encoding="utf-8")
+    codigo = _fonte_da_interface()
     chamadas = set(re.findall(r'api\("(/api/[a-z]+)"', codigo))
+    chamadas |= set(re.findall(r'fetch\("(/api/[a-z]+)"', codigo))
     assert chamadas, "a página não chama o servidor: ela ficaria sem dado nenhum"
     fora = chamadas - set(E.ROTAS)
     assert not fora, f"a página chama rota que não existe: {sorted(fora)}"
@@ -293,7 +311,7 @@ def caso_a_pagina_so_chama_rota_que_existe():
 
 def caso_a_pagina_nao_copia_as_listas_do_codigo():
     """Se a página listasse os temas, eles envelheceriam calados."""
-    codigo = E.PAGINA.with_name("estudio.js").read_text(encoding="utf-8")
+    codigo = _fonte_da_interface()
     copiados = [t for t in I.TEMAS if f'"{t}"' in codigo]
     assert not copiados, (
         f"a página tem tema escrito no JavaScript: {copiados}. "
