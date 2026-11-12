@@ -23,8 +23,9 @@ from src import (  # noqa: E402
     motor,
 )
 from src.cogs.incursao import Incursoes  # noqa: E402
+from src import incursoes as I  # noqa: E402
 from src.incursoes import DESCONTO_CD_ARMADILHA, Sala  # noqa: E402
-from src.rules import PERICIAS, melhor_pericia  # noqa: E402
+from src.rules import PERICIAS, TIER_MAXIMO, melhor_pericia  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     CLASSE_PADRAO,
@@ -954,6 +955,41 @@ async def caso_emboscada_do_mimico_nao_deixa_avancar():
     print("  a emboscada do Mimico nao deixa avancar: ok")
 
 
+def caso_toda_emboscada_escrita_vira_criatura_de_verdade():
+    """Cada linha de `A_EMBOSCADA` tem de montar na mesa.
+
+    Os nomes ali são do bestiário, e um erro de digitação não aparece em
+    lugar nenhum até alguém falhar num Tesouro daquele tier — e então a
+    emboscada chega VAZIA, a sala "acontece" sem ninguém dentro, e o castigo
+    por falhar some. É conteúdo escrito à mão em cinco linhas; isto é o que
+    impede uma delas de ser mentira.
+
+    Também cobra o teto por tier: `monstros_do_tier` corta no `MAX_INIMIGOS`,
+    então uma emboscada escrita acima do teto não é a emboscada que vai à
+    mesa — e o número medido na calibração seria de outro combate.
+    """
+    for tier in range(1, TIER_MAXIMO + 1):
+        elenco = X.emboscada_do_tier(tier)
+        assert elenco, f"tier {tier} ficou sem emboscada"
+        bando = [
+            m
+            for nome, quantas in elenco
+            for m in I.monstros_de_criatura(
+                {"nome": nome, "quantidade": quantas}, f"emboscada do tier {tier}"
+            )
+        ]
+        assert len(bando) == sum(q for _n, q in elenco), (tier, elenco, len(bando))
+        assert len(bando) <= I.MAX_INIMIGOS, (
+            f"tier {tier}: {len(bando)} criaturas, e o teto é {I.MAX_INIMIGOS} — "
+            f"o excedente nunca chega à mesa"
+        )
+        assert all(m.hp > 0 and m.ca > 0 for m in bando), bando
+        assert any(X.NOME_DO_MIMICO in m.nome for m in bando), (
+            f"tier {tier}: a emboscada do baú perdeu o Mímico"
+        )
+    print("  toda emboscada escrita vira criatura de verdade: ok")
+
+
 async def caso_tesouro_falho_acorda_mimicos():
     """Falhar no tesouro pode virar combate com Mímicos, no mesmo passo."""
     conn, canal, cog, incursao = await preparar(salas_de("Tesouro", IMPOSSIVEL))
@@ -1375,6 +1411,7 @@ async def main():
     await caso_teto_tira_da_incursao()
     await caso_aplicar_respeita_o_teto()
     await caso_grupo_inteiro_fora_encerra_a_run()
+    caso_toda_emboscada_escrita_vira_criatura_de_verdade()
     await caso_emboscada_do_mimico_nao_deixa_avancar()
     await caso_tesouro_falho_acorda_mimicos()
     await caso_tesouro_falho_sempre_acorda_mimico()

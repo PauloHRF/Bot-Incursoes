@@ -36,7 +36,10 @@ from src import bestiario, classes, incursoes as I  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
 
 # A faixa de taxa de vitória de cada dificuldade, para um grupo de 5 no tier
-# da sala.
+# da sala — hoje MESAS SORTEADAS, e não cinco cópias de uma classe. A faixa
+# não mudou com isso (ela é alvo, não medida), mas o que ela significa sim:
+# "média" passou a querer dizer 65–80% contra a mesa que vai aparecer, e não
+# contra a mesa mais forte que dava para montar.
 #
 # ESTES NÚMEROS SÃO PROPOSTA E PRECISAM DE CALIBRAÇÃO contra docs/BALANCO.md.
 # O método é que não é proposta: a sugestão se verifica simulando a si mesma,

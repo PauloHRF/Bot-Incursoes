@@ -400,6 +400,14 @@ as quinze combinações de tier × dificuldade, com grupo de guerreiros no níve
 do tier, **quatorze acharam composição dentro da faixa pedida**. A que faltou
 foi tier 2 Média.
 
+> **Esta medição é da régua antiga.** Ela foi feita contra cinco cópias da
+> mesma classe, que é o que o estúdio media na época; hoje a medida é contra
+> mesas sorteadas, e cinco guerreiros são um grupo bem mais forte que a mesa
+> média. A conclusão qualitativa ("as faixas são alcançáveis") sobreviveu ao
+> aperto, mas os números de cada combinação não foram refeitos. Para ter ideia
+> do tamanho do aperto: a emboscada do Mímico, calibrada contra a régua antiga,
+> passou a matar o grupo nos cinco tiers quando medida contra a nova.
+
 Então as faixas servem — nenhum tier é incapaz de produzir Fácil, Média e
 Difícil, e os números não precisam ser mexidos para o sugeridor funcionar. O
 que a calibração ainda decide é outra coisa: se "Média" **deve** mesmo ser 65%

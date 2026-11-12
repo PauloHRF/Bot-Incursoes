@@ -17,11 +17,26 @@ estatísticas detalhadas, mantendo os mesmos combates e resultados de vitória.
 ## Medir uma sala
 
 ```bash
-python tools/simular_combate.py data/incursoes/vortice_cripta.json --classe druida --nivel 6 --escolha forma_t1=lobo --repeticoes 100 --semente 42
+python tools/simular_combate.py data/incursoes/vortice_cripta.json --nivel 6 --repeticoes 240 --semente 42
+```
+
+**O grupo é sorteado.** As repetições são divididas entre doze mesas tiradas
+entre as catorze classes, e a saída traz a média com a pior e a melhor mesa ao
+lado. Medir com cinco cópias da mesma classe dava um número que nunca vai
+acontecer — e que dependia de qual classe, então quem escolhia a classe
+escolhia a resposta. O detalhe está em `tools/simulacao/grupos.py`.
+
+`--classe` ainda existe, como **diagnóstico**: ele responde "esta sala é dura
+*para quem*?", que é outra pergunta e continua valendo. É o único modo em que
+`--escolha` faz sentido, porque só ali existe uma ficha só.
+
+```bash
+python tools/simular_combate.py ... --classe druida --escolha forma_t1=lobo
 ```
 
 O comando e a função `simular(monstros, tamanho, args, rng)` conservam a
-interface usada pelo Estúdio e pelo sugeridor. As medidas agora incluem as
+interface usada pelo Estúdio e pelo sugeridor; a resposta ganhou
+`composicoes`, com a taxa de cada mesa. As medidas agora incluem as
 passivas antes ausentes da execução independente. Resultados antigos podem
 mudar mesmo sem alterar o balanceamento do jogo.
 
