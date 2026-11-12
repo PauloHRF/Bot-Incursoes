@@ -247,6 +247,35 @@ def caso_simular_mede_a_sala_de_combate():
     print(f"  a sala foi medida: grupo 5 = {r['medidas'][0]['taxa']:.0%}: ok")
 
 
+def caso_a_medida_vem_de_mesas_sorteadas_com_os_extremos():
+    """A sala é medida contra VÁRIAS mesas, e a página recebe os extremos.
+
+    Cinco cópias da mesma classe não é uma mesa que existe, e o número que
+    ela dava mudava conforme a classe escolhida. A média responde "a sala é
+    justa?"; a pior mesa responde "existe grupo que ela mata?" — e é essa que
+    some na média, então ela sai do servidor pronta em vez de a página ter de
+    saber o que procurar.
+    """
+    r = E.simular({"sala": sala_de_combate(monstros=[dict(CRIATURA, quantidade=3)]),
+                   "tier": 1, "nivel": 4, "repeticoes": 90, "grupos": [3]})
+    assert r["sorteado"] is True and r["classe"] == "sorteado", r["classe"]
+    medida = r["medidas"][0]
+    assert medida["mesas"] > 1, medida
+    assert medida["pior"]["taxa"] <= r["medidas"][0]["taxa"] <= medida["melhor"]["taxa"]
+    assert len(set(medida["pior"]["classes"])) > 1, (
+        "a pior mesa saiu com uma classe só: o grupo voltou a ser uniforme"
+    )
+    assert medida["pior"]["amostras"] >= 1 and medida["lutas"] >= medida["mesas"]
+
+    # E a classe continua aceita, como DIAGNÓSTICO: "dura para quem?".
+    d = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
+                   "repeticoes": 30, "grupos": [3], "classe": "mago"})
+    assert d["sorteado"] is False and d["classe"] == "mago"
+    assert d["medidas"][0]["mesas"] == 1 and d["medidas"][0]["pior"] is None
+    assert "erro" in E.simular({"sala": sala_de_combate(), "classe": "padeiro"})
+    print(f"  a sala foi medida contra {medida['mesas']} mesas sorteadas: ok")
+
+
 def caso_a_mesma_semente_da_o_mesmo_numero():
     """Dois autores comparando números precisam ver o mesmo número."""
     pedido = {"sala": sala_de_combate(), "tier": 1, "nivel": 2,
@@ -333,8 +362,11 @@ def caso_as_repeticoes_tem_teto():
     """A bancada é local, mas um número enorme trava a página do autor."""
     import simular_combate as sc
     # Este caso confere os limites da API; os outros casos medem lutas reais.
+    # A resposta de mentira tem a MESMA forma da de verdade — inclusive as
+    # composições —, senão ela deixa de ser um substituto e vira outra coisa.
     def medir(monstros, tamanho, args, rng):
-        return {"taxa": 1.0, "rodadas": 1.0, "caidos": 0.0}
+        return {"taxa": 1.0, "rodadas": 1.0, "caidos": 0.0, "amostras": args.repeticoes,
+                "composicoes": [{"classes": ["mago"], "taxa": 1.0, "amostras": 1}]}
     with patch.object(sc, "simular", side_effect=medir) as chamada:
         r = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
                        "repeticoes": 10**9, "grupos": [2]})
@@ -429,6 +461,7 @@ for caso in (
     caso_o_pool_traz_o_veredito_do_bot,
     caso_o_pool_recusa_pedido_torto,
     caso_simular_mede_a_sala_de_combate,
+    caso_a_medida_vem_de_mesas_sorteadas_com_os_extremos,
     caso_a_mesma_semente_da_o_mesmo_numero,
     caso_mudar_a_lista_de_grupos_nao_mexe_nos_outros,
     caso_a_bancada_abre_sem_o_motor_e_diz_o_que_falta,

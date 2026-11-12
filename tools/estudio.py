@@ -435,8 +435,11 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
     if not monstros:
         return {"erro": f"a sala não tem criatura escrita para o tier {tier}."}
 
-    classe = str(payload.get("classe") or "guerreiro")
-    if classes.classe(classe) is None:
+    # Sem classe, a sala é medida contra mesas SORTEADAS — ver
+    # `tools/simulacao/grupos.py`. Com classe, o estúdio volta ao grupo
+    # uniforme, que agora é o diagnóstico e não o padrão.
+    classe = str(payload.get("classe") or "")
+    if classe and classes.classe(classe) is None:
         return {"erro": f"classe desconhecida: {classe}."}
     nivel = _inteiro(payload.get("nivel"), min(10, tier * 2), 1, 10)
     repeticoes = _inteiro(payload.get("repeticoes"), REPETICOES_PADRAO, 50,
@@ -450,23 +453,33 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
     if not grupos:
         grupos = list(GRUPOS_PADRAO)
 
-    args = SimpleNamespace(classe=classe, nivel=nivel, repeticoes=repeticoes, tier=tier, coletar_detalhes=False)
+    args = SimpleNamespace(classe=classe or None, nivel=nivel, repeticoes=repeticoes,
+                           tier=tier, coletar_detalhes=False)
     medidas = []
     for tamanho in grupos:
         # Um rng por tamanho, derivado da mesma semente: assim mudar a lista
         # de grupos nao muda o numero dos outros.
         bruto = sc.simular(monstros, tamanho, args, random.Random(f"{semente}:{tamanho}"))
+        # Os extremos saem daqui prontos: a pior mesa é a resposta de "existe
+        # grupo que esta sala mata?", e deixá-la para a página ordenar seria
+        # pedir que ela soubesse o que a média esconde.
+        mesas = sorted(bruto["composicoes"], key=lambda c: c["taxa"])
         medidas.append({
             "grupo": tamanho,
             "taxa": bruto["taxa"],
             "rodadas": None if bruto["rodadas"] != bruto["rodadas"] else bruto["rodadas"],
             "caidos": bruto["caidos"],
+            "lutas": bruto["amostras"],
+            "mesas": len(mesas),
+            "pior": mesas[0] if len(mesas) > 1 else None,
+            "melhor": mesas[-1] if len(mesas) > 1 else None,
         })
     return {
         "sala": sala.id,
         "tema": tema,
         "tier": tier,
-        "classe": classe,
+        "classe": classe or "sorteado",
+        "sorteado": not classe,
         "nivel": nivel,
         "repeticoes": repeticoes,
         "semente": semente,
@@ -491,7 +504,7 @@ def sugerir(payload: dict[str, Any]) -> dict[str, Any]:
         ambiente=(payload.get("ambiente") or None),
         tipo=(payload.get("tipo") or None),
         dificuldade=str(payload.get("dificuldade") or "media"),
-        classe=str(payload.get("classe") or "guerreiro"),
+        classe=str(payload.get("classe") or "") or None,
         nivel=payload.get("nivel") if isinstance(payload.get("nivel"), int) else None,
         # Cada sugestão custa uma busca inteira, e a página espera por ela.
         quantas=_inteiro(payload.get("quantas"), 2, 1, 4),

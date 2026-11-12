@@ -16,21 +16,54 @@ from src.rules import tier
 from src.incursoes import Monstro, carregar, carregar_banco
 from tools.simulacao.execucao import Ficha, simular as executar
 from tools.simulacao.estatisticas import resumir
-from tools.simulacao import politica as sb
+from tools.simulacao import grupos, politica as sb
 
 LIMITE_RODADAS = 50
 
 
+def mesas(tamanho: int, args, rng: random.Random) -> list[tuple[Ficha, ...]]:
+    """As composições a medir, e quantas lutas cada uma leva.
+
+    Sem `args.classe`, a sala é medida contra mesas SORTEADAS — ver
+    `tools/simulacao/grupos.py`. Com uma classe, volta ao grupo uniforme, que
+    não é mais o padrão e sim o diagnóstico: "esta sala é dura PARA QUEM?".
+    """
+    classe = getattr(args, "classe", None)
+    if classe:
+        return [tuple(Ficha(classe, args.nivel, getattr(args, "escolhas", None))
+                      for _ in range(tamanho))], args.repeticoes
+    quantas, por_mesa = grupos.dividir(
+        args.repeticoes, getattr(args, "composicoes", None) or grupos.COMPOSICOES_PADRAO
+    )
+    return grupos.sortear(tamanho, args.nivel, quantas, rng), por_mesa
+
+
 def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> dict:
-    """API usada pelo Estudio e sugeridor: mesma assinatura e mesmas medidas."""
-    fichas = [Ficha(args.classe, args.nivel, getattr(args, "escolhas", None)) for _ in range(tamanho)]
+    """API usada pelo Estudio e sugeridor: mesma assinatura e mesmas medidas.
+
+    A taxa que volta é a de TODAS as lutas juntas. `composicoes` traz cada
+    mesa com a taxa dela — é onde aparece a que sofre, que a média esconde.
+    """
+    composicoes, por_mesa = mesas(tamanho, args, rng)
     detalhes = getattr(args, "coletar_detalhes", True)
-    resumo = resumir(executar(monstros, fichas, args.repeticoes, rng,
-                             limite=LIMITE_RODADAS, tier=getattr(args, "tier", None), coletar_detalhes=detalhes))
+    todas, por_composicao = [], []
+    for mesa in composicoes:
+        lutas = executar(monstros, list(mesa), por_mesa, rng, limite=LIMITE_RODADAS,
+                         tier=getattr(args, "tier", None), coletar_detalhes=detalhes)
+        todas.extend(lutas)
+        por_composicao.append({
+            "classes": grupos.nomes_da_mesa(mesa),
+            "taxa": sum(l["inimigos_derrotados"] for l in lutas) / len(lutas),
+            "amostras": len(lutas),
+        })
+    resumo = resumir(todas)
     # A pagina e o sugeridor usam somente estas medidas. Pular a coleta nao
     # altera a luta nem publica zeros como se fossem dano/cura medidos.
-    return resumo if detalhes else {k: resumo[k] for k in (
-        "taxa", "rodadas", "caidos", "ic95", "amostras", "vitorias", "limites")}
+    if not detalhes:
+        resumo = {k: resumo[k] for k in (
+            "taxa", "rodadas", "caidos", "ic95", "amostras", "vitorias", "limites")}
+    resumo["composicoes"] = por_composicao
+    return resumo
 
 
 def main() -> int:
@@ -42,8 +75,14 @@ def main() -> int:
     parser.add_argument("--repeticoes", type=int, default=2000)
     parser.add_argument(
         "--classe",
-        default="guerreiro",
-        help="Classe do grupo simulado (" + ", ".join(sorted(classes.CLASSES)) + ")",
+        default=None,
+        help="Mede contra um grupo de UMA classe, para diagnóstico. Sem isto o "
+             "grupo é sorteado, que é o padrão. Classes: "
+             + ", ".join(sorted(classes.CLASSES)),
+    )
+    parser.add_argument(
+        "--composicoes", type=int, default=grupos.COMPOSICOES_PADRAO,
+        metavar="N", help=f"quantas mesas sorteadas medir (padrão: {grupos.COMPOSICOES_PADRAO})",
     )
     parser.add_argument("--nivel", type=int, default=8, help="Nivel do grupo (1 a 10)")
     parser.add_argument("--semente", type=int, default=None)
@@ -73,25 +112,34 @@ def main() -> int:
         parser.error("--nivel deve estar entre 1 e 10")
     if not args.grupos or any(n <= 0 for n in args.grupos):
         parser.error("--grupos deve conter tamanhos positivos")
-    if classes.classe(args.classe) is None:
-        parser.error(f"classe desconhecida: {args.classe}")
-    args.escolhas = sb.escolhas_automaticas(args.classe, args.nivel)
-    disponiveis = classes.habilidades(args.classe, args.nivel, args.escolhas)
-    ids_escolhas = {
-        h.id: {opcao["id"] for opcao in (h.escolha or {}).get("opcoes", [])}
-        for _, h in disponiveis
-        if h.decidivel and (h.escolha or {}).get("tipo") == "opcao"
-    }
-    for escolha in args.escolha:
-        if "=" not in escolha:
-            parser.error(f"escolha deve ter formato ID=OPCAO: {escolha}")
-        identificador, opcao = escolha.split("=", 1)
-        if identificador not in ids_escolhas or opcao not in ids_escolhas[identificador]:
-            parser.error(
-                f"escolha invalida: {escolha}. "
-                f"Opcoes disponiveis: {', '.join(sorted(ids_escolhas))}"
-            )
-        args.escolhas[identificador] = opcao
+    if args.composicoes < 1:
+        parser.error("--composicoes deve ser maior que zero")
+    # --escolha mexe na ficha de UMA classe. Com o grupo sorteado não existe
+    # "a ficha": sao doze mesas de classes diferentes, e aplicar a escolha a
+    # todas seria inventar magia em quem nao a tem.
+    if args.escolha and not args.classe:
+        parser.error("--escolha precisa de --classe: o grupo sorteado não tem uma ficha só")
+    args.escolhas = None
+    if args.classe:
+        if classes.classe(args.classe) is None:
+            parser.error(f"classe desconhecida: {args.classe}")
+        args.escolhas = sb.escolhas_automaticas(args.classe, args.nivel)
+        disponiveis = classes.habilidades(args.classe, args.nivel, args.escolhas)
+        ids_escolhas = {
+            h.id: {opcao["id"] for opcao in (h.escolha or {}).get("opcoes", [])}
+            for _, h in disponiveis
+            if h.decidivel and (h.escolha or {}).get("tipo") == "opcao"
+        }
+        for escolha in args.escolha:
+            if "=" not in escolha:
+                parser.error(f"escolha deve ter formato ID=OPCAO: {escolha}")
+            identificador, opcao = escolha.split("=", 1)
+            if identificador not in ids_escolhas or opcao not in ids_escolhas[identificador]:
+                parser.error(
+                    f"escolha invalida: {escolha}. "
+                    f"Opcoes disponiveis: {', '.join(sorted(ids_escolhas))}"
+                )
+            args.escolhas[identificador] = opcao
 
     # Aceita tanto o JSON de uma incursao quanto o banco de salas de uma
     # Organizacao — as salas de combate do meio do caminho moram no banco.
@@ -182,39 +230,54 @@ def main() -> int:
         print(
             f"{m.nome}: CA {m.ca}, ataque {m.ataque:+d}, dano {m.dano}, {m.hp} HP{extras}"
         )
-    do_grupo = classes.classe(args.classe)
-    if do_grupo is None:
-        print(f"Classe '{args.classe}' nao existe.", file=sys.stderr)
-        return 1
-    n = do_grupo.numeros(args.nivel)
-    e = classes.efeitos(args.classe, args.nivel, args.escolhas)
-    print(
-        f"Grupo: {do_grupo.nome} nivel {args.nivel} (tier {tier(args.nivel)}) — "
-        f"CA {n.ca}, acerto {n.acerto:+d}, dano {n.dano}, {n.hp} HP"
-        + (f", {e['ataques']}x por rodada" if e["ataques"] > 1 else "")
-        + (f", critico com {e['critico_em']}+" if e["critico_em"] < 20 else "")
-        + f"  ({args.repeticoes} combates por linha)"
-    )
-    habilidades_disponiveis = classes.habilidades(args.classe, args.nivel, args.escolhas)
-    if args.escolhas:
-        print("Escolhas da ficha: " + ", ".join(
-            f"{id_}={opcao}" for id_, opcao in sorted(args.escolhas.items())
-        ))
-    passivas = [h.nome for _, h in habilidades_disponiveis if not h.acionavel]
-    ativas = [h.nome for _, h in habilidades_disponiveis
-              if h.acionavel and (h.acao or {}).get("tipo") != "reacao"]
-    reativas = [h.nome for _, h in habilidades_disponiveis
-                if (h.acao or {}).get("tipo") == "reacao"]
-    print()
-    print("Habilidades carregadas:")
-    print("  Passivas: " + (", ".join(passivas) if passivas else "nenhuma"))
-    print("  Ativas: " + (", ".join(ativas) if ativas else "nenhuma"))
-    print("  Reações: " + (", ".join(reativas) if reativas else "nenhuma"))
+    if args.classe:
+        do_grupo = classes.classe(args.classe)
+        n = do_grupo.numeros(args.nivel)
+        e = classes.efeitos(args.classe, args.nivel, args.escolhas)
+        print(
+            f"Grupo: {do_grupo.nome} nivel {args.nivel} (tier {tier(args.nivel)}) — "
+            f"CA {n.ca}, acerto {n.acerto:+d}, dano {n.dano}, {n.hp} HP"
+            + (f", {e['ataques']}x por rodada" if e["ataques"] > 1 else "")
+            + (f", critico com {e['critico_em']}+" if e["critico_em"] < 20 else "")
+            + f"  ({args.repeticoes} combates por linha)"
+        )
+        print("DIAGNÓSTICO: cinco da mesma classe não é uma mesa que existe. "
+              "Serve para perguntar 'esta sala é dura PARA QUEM?'; para saber "
+              "se ela é justa, meça sem --classe.")
+        habilidades_disponiveis = classes.habilidades(args.classe, args.nivel, args.escolhas)
+        if args.escolhas:
+            print("Escolhas da ficha: " + ", ".join(
+                f"{id_}={opcao}" for id_, opcao in sorted(args.escolhas.items())
+            ))
+        passivas = [h.nome for _, h in habilidades_disponiveis if not h.acionavel]
+        ativas = [h.nome for _, h in habilidades_disponiveis
+                  if h.acionavel and (h.acao or {}).get("tipo") != "reacao"]
+        reativas = [h.nome for _, h in habilidades_disponiveis
+                    if (h.acao or {}).get("tipo") == "reacao"]
+        print()
+        print("Habilidades carregadas:")
+        print("  Passivas: " + (", ".join(passivas) if passivas else "nenhuma"))
+        print("  Ativas: " + (", ".join(ativas) if ativas else "nenhuma"))
+        print("  Reações: " + (", ".join(reativas) if reativas else "nenhuma"))
+    else:
+        mesas_medidas, por_mesa = grupos.dividir(args.repeticoes, args.composicoes)
+        print(
+            f"Grupo: SORTEADO, nivel {args.nivel} (tier {tier(args.nivel)}) — "
+            f"{mesas_medidas} mesas por linha, {por_mesa} combates cada "
+            f"({mesas_medidas * por_mesa} no total)"
+        )
     print()
     print(f"{'grupo':>6}  {'vitória':>8}  {'rodadas':>8}  {'caídos':>7}  {'cura':>8}  {'recursos':>8}  {'ataques':>8}")
     for tamanho in args.grupos:
         r = simular(monstros, tamanho, args, rng)
         print(f"{tamanho:>6}  {r['taxa']:>7.1%}  {r['rodadas']:>8.1f}  {r['caidos']:>7.1f}  {r['cura']:>8.1f}  {r['recursos']:>8.1f}  {r['ataques_basicos']:>8.1f}")
+        # Os extremos ao lado da media: a mesa que sofre some na media, e e
+        # justamente ela que diz se a sala mata alguem de verdade.
+        if len(r["composicoes"]) > 1:
+            ordenadas = sorted(r["composicoes"], key=lambda c: c["taxa"])
+            for rotulo, mesa in (("pior", ordenadas[0]), ("melhor", ordenadas[-1])):
+                print(f"  mesa {rotulo}: {mesa['taxa']:>6.1%} em {mesa['amostras']} lutas"
+                      f" — {', '.join(mesa['classes'])}")
         print(f"  Efeitos indiretos (totais em {r['amostras']} lutas): dano periódico {r['dano_periodico']} | cura passiva {r['cura_passiva']}")
         print(f"  THP: gerado {r['thp_gerado']:.1f}/luta | restante {r['thp_restante']:.1f}/luta")
         print(f"  Quedas: {r['quedas_distintas']:.2f} personagens distintos/luta | {r['caidos']:.2f} caidos no fim")

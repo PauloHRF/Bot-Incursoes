@@ -102,7 +102,7 @@ def _monstros(nome: str, quantidade: int) -> list:
 
 
 def medir_bando(
-    monstros: list, classe: str, nivel: int, tamanho: int,
+    monstros: list, classe: Optional[str], nivel: int, tamanho: int,
     confrontos: int, chave: str, semente: Any,
 ) -> Optional[float]:
     """A taxa de vitória daquele bando contra um grupo daquele tamanho."""
@@ -110,7 +110,8 @@ def medir_bando(
 
     if not monstros:
         return None
-    args = SimpleNamespace(classe=classe, nivel=nivel, repeticoes=confrontos, coletar_detalhes=False)
+    args = SimpleNamespace(classe=classe or None, nivel=nivel, repeticoes=confrontos,
+                           coletar_detalhes=False)
     bruto = sc.simular(
         monstros, tamanho, args, random.Random(f"{semente}:{chave}:{tamanho}")
     )
@@ -341,7 +342,7 @@ def sugerir(
     ambiente: Optional[str] = None,
     tipo: Optional[str] = None,
     dificuldade: str = "media",
-    classe: str = "guerreiro",
+    classe: Optional[str] = None,
     nivel: Optional[int] = None,
     quantas: int = 3,
     semente: Optional[int] = None,
@@ -352,7 +353,10 @@ def sugerir(
                         f"Use {', '.join(FAIXAS_DE_VITORIA)}."}
     if not 1 <= tier <= TIER_MAXIMO:
         return {"erro": f"tier precisa ir de 1 a {TIER_MAXIMO}."}
-    if classes.classe(classe) is None:
+    # Sem classe o grupo e sorteado, que e o padrao: cinco copias da mesma
+    # classe nao e uma mesa que existe. Com classe, o sugeridor vira
+    # diagnostico — "que bando serve para um grupo SO de magos?".
+    if classe and classes.classe(classe) is None:
         return {"erro": f"classe desconhecida: {classe}."}
 
     faixa = FAIXAS_DE_VITORIA[dificuldade]
@@ -435,7 +439,7 @@ def sugerir(
         "tipo": tipo,
         "dificuldade": dificuldade,
         "faixa": list(faixa),
-        "classe": classe,
+        "classe": classe or "sorteado",
         "nivel": nivel,
         "semente": semente,
         "janela_de_cr": list(janela),
@@ -455,7 +459,8 @@ def main() -> int:
     parser.add_argument("--tipo", default=None, help="o meta.tipo do bestiário")
     parser.add_argument("--dificuldade", default="media",
                         choices=sorted(FAIXAS_DE_VITORIA))
-    parser.add_argument("--classe", default="guerreiro")
+    parser.add_argument("--classe", default=None,
+                        help="mede contra um grupo de UMA classe; sem isto, sorteado")
     parser.add_argument("--nivel", type=int, default=None)
     parser.add_argument("--quantas", type=int, default=3)
     parser.add_argument("--semente", type=int, default=None)

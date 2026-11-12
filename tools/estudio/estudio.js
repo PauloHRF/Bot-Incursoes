@@ -751,12 +751,27 @@ function parametros() {
   if ($("fSemente").value !== "") p.semente = Number($("fSemente").value);
   return p;
 }
-function barra(grupo, taxa) {
+const pct = taxa => taxa == null ? "—" : `${Math.round(taxa * 100)}%`;
+
+/* A barra é a MÉDIA das mesas. Sozinha ela responde "a sala é justa?" e
+   esconde a outra pergunta — "existe mesa que ela mata?" —, porque o grupo
+   que sofre vira um pedaço pequeno de uma média alta. Por isso a pior mesa
+   vem logo abaixo, com as classes dela e quantas lutas a mediram. */
+function barra(grupo, taxa, medida) {
   const n = no("div", "taxa-linha"), trilha = no("div", "trilha"), preenchimento = no("span", taxa < .45 ? "duro" : taxa < .8 ? "medio" : "");
   preenchimento.style.width = `${Math.max(0, Math.min(100, taxa * 100))}%`;
   trilha.append(preenchimento); trilha.setAttribute("aria-hidden", "true");
-  n.append(no("span", "", `${grupo} jogadores`), trilha, no("b", "", taxa == null ? "—" : `${Math.round(taxa * 100)}%`));
-  return n;
+  n.append(no("span", "", `${grupo} jogadores`), trilha, no("b", "", pct(taxa)));
+  if (!medida?.pior) return n;
+  const bloco = no("div", "taxa-bloco"), extremos = no("div", "taxa-extremos");
+  const pior = no("span", medida.pior.taxa < .45 ? "duro" : "");
+  // Com o número de lutas junto: a taxa de UMA mesa vem de uma fatia da
+  // amostra, e sem o tamanho dela o autor leria ruído como veredito.
+  pior.append(no("b", "", `pior ${pct(medida.pior.taxa)}`),
+              no("span", "", ` em ${medida.pior.amostras} lutas · ${medida.pior.classes.join(", ")}`));
+  extremos.append(pior, no("span", "", `melhor ${pct(medida.melhor.taxa)}`));
+  bloco.append(n, extremos);
+  return bloco;
 }
 function conta(rotulo, valor) {
   const n = no("div", "conta-linha"); n.append(no("span", "", rotulo), no("b", "", valor)); $("contaMedida").append(n);
@@ -773,11 +788,16 @@ async function medir() {
     if (atual !== contexto()) { aviso("A sala ou os parâmetros mudaram. Meça novamente."); return; }
     if (r.erro) { recados("saidaMedida", r); return; }
     medidaContexto = atual;
-    $("tituloMedida").textContent = `${texto(nome)} · Tier ${r.tier} · ${r.repeticoes} repetições`;
-    $("barrasMedida").className = ""; $("barrasMedida").replaceChildren(...r.medidas.map(m => barra(m.grupo, m.taxa)));
+    const primeira = r.medidas[0] || {};
+    $("tituloMedida").textContent = `${texto(nome)} · Tier ${r.tier} · ${primeira.lutas ?? r.repeticoes} combates`;
+    $("barrasMedida").className = ""; $("barrasMedida").replaceChildren(...r.medidas.map(m => barra(m.grupo, m.taxa, m)));
     $("contaMedida").replaceChildren();
     r.medidas.forEach(m => conta(`Grupo de ${m.grupo}`, `${m.rodadas == null ? "—" : m.rodadas.toFixed(1)} rodadas · ${m.caidos.toFixed(1)} caídos`));
-    conta("Classe / nível", `${r.classe} / ${r.nivel}`); conta("Semente", r.semente);
+    conta(r.sorteado ? "Mesas sorteadas" : "Classe (diagnóstico)",
+      r.sorteado
+        ? `${primeira.mesas ?? "?"} mesas · nível ${r.nivel}`
+        : `${r.classe} · nível ${r.nivel} — não é uma mesa que existe`);
+    conta("Semente", r.semente);
     conta("Criaturas", r.criaturas.map(m => m.nome).join(", "));
   } catch (erro) { if (atual === contexto()) recados("saidaMedida", {erro: erro.message}); }
   finally { medindo = false; $("btMedir").textContent = "Medir combate"; desatualizar(); }
@@ -927,7 +947,22 @@ async function iniciar() {
     Object.entries(C.bancos).forEach(([nome, b]) => { originais[nome] = {banco: b.original || {organizacao: b.organizacao, salas: b.salas}, arquivo: b.arquivo}; });
     preencher("fBanco", Object.keys(C.bancos)); $("fBanco").disabled = false;
     preencher("fTierSim", Array.from({length: C.limites.tier_maximo}, (_, i) => i + 1), 2);
-    preencher("fClasse", C.classes, "guerreiro");
+    /* "Sorteado" primeiro e como padrão: cinco cópias da mesma classe não é
+       uma mesa que existe, e o número que ela dava dependia de QUAL classe.
+       As classes continuam ali, debaixo de um rótulo que diz o que são. */
+    const quemJoga = $("fClasse");
+    quemJoga.replaceChildren();
+    const sorteado = document.createElement("option");
+    sorteado.value = ""; sorteado.textContent = "Sorteado · mesas variadas";
+    quemJoga.append(sorteado);
+    const umaSo = document.createElement("optgroup");
+    umaSo.label = "Uma classe só (diagnóstico)";
+    C.classes.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      umaSo.append(o);
+    });
+    quemJoga.append(umaSo);
     preencher("fAmb", [["", "Qualquer ambiente"], ...C.ambientes]);
     preencher("fBicho", [["", "Qualquer tipo"], ...C.tipos_de_bicho.map(t => [t.id, `${t.id} (${t.quantas})`])]);
     // As 385 do bestiario no campo de criatura: o autor escolhe da lista em

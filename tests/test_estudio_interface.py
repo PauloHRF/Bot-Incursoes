@@ -406,7 +406,7 @@ class Interface(unittest.TestCase):
         pedidos = []
         def responder(rota):
             pedido = rota.request.post_data_json; pedidos.append(pedido)
-            rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": pedido["classe"], "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 2.5, "caidos": .3}]})
+            rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": "sorteado", "sorteado": True, "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 2.5, "caidos": .3, "mesas": 12, "lutas": 240, "pior": {"classes": ["bardo", "mago", "monge"], "taxa": .41, "amostras": 20}, "melhor": {"classes": ["clerigo", "guerreiro", "paladino"], "taxa": .94, "amostras": 20}}]})
         self.page.route("**/api/simular", responder)
         self.page.locator('[name="grupo"][value="5"]').uncheck()
         self.page.locator("#fSemente").fill("123")
@@ -415,8 +415,43 @@ class Interface(unittest.TestCase):
         expect(self.page.locator("#contaMedida")).to_contain_text("Grupo de 3")
         self.assertEqual(pedidos[0]["grupos"], [3])
         self.assertEqual(pedidos[0]["semente"], 123)
+        # O grupo sorteado é o PADRÃO: ninguém escolheu classe nenhuma.
+        self.assertEqual(pedidos[0]["classe"], "")
         self.page.locator("#fNivel").fill("5")
         expect(self.page.locator("#medidaDesatualizada")).to_be_visible()
+
+    def test_a_medida_mostra_a_pior_mesa_e_nao_so_a_media(self):
+        """A média responde "a sala é justa?" e esconde a outra pergunta.
+
+        Um grupo que vence 75% das vezes na média pode ter uma composição em
+        41% dentro dele — a diferença entre "difícil" e "a mesa morre". Com
+        só a barra na tela, as duas salas se parecem.
+        """
+        self.abrir(self.combates[0])
+        self.assertEqual(self.page.locator("#fClasse").input_value(), "")
+        # Os padrões do formulário têm de passar na própria validação dele:
+        # um `step` que não fecha com o `min` reprova o campo, e `medir`
+        # desiste sem dizer nada — o botão vira enfeite.
+        for campo in ("#fReps", "#fNivel"):
+            self.assertTrue(self.page.locator(campo).evaluate("n => n.checkValidity()"), campo)
+        medida = {"grupo": 5, "taxa": .75, "rodadas": 3.0, "caidos": .5, "mesas": 12,
+                  "lutas": 240,
+                  "pior": {"classes": ["bardo", "mago", "mago", "monge", "xama"],
+                           "taxa": .41, "amostras": 20},
+                  "melhor": {"classes": ["clerigo", "druida", "guerreiro", "ladino",
+                                         "paladino"], "taxa": .94, "amostras": 20}}
+        self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
+            "sala": "X", "tier": 2, "classe": "sorteado", "sorteado": True, "nivel": 4,
+            "repeticoes": 240, "semente": 9, "criaturas": [{"nome": "Teste"}],
+            "medidas": [medida]}))
+        self.page.locator("#btMedir").click()
+        barras = self.page.locator("#barrasMedida")
+        expect(barras).to_contain_text("75%")
+        expect(barras).to_contain_text("pior 41%")
+        expect(barras).to_contain_text("mago, mago")
+        expect(barras).to_contain_text("20 lutas")
+        expect(barras).to_contain_text("melhor 94%")
+        expect(self.page.locator("#contaMedida")).to_contain_text("12 mesas")
 
     def test_o_limite_de_criaturas_e_por_bando_e_nao_a_soma_da_sala(self):
         """Seis no tier 1 e dois no tier 2 é sala válida.

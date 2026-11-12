@@ -19,6 +19,7 @@ sys.path.insert(0, str(RAIZ))
 
 from src import aleatorio, classes, database as db, motor
 from src.incursoes import HabilidadeDoMonstro, Monstro, Sala
+from tools.simulacao import grupos
 from tools.simulacao.execucao import Bancada, Ficha, simular_async
 from tools.simulacao.comparacao import carregar_builds, carregar_cenarios, comparar
 from tools.simulacao.estatisticas import intervalo
@@ -107,6 +108,79 @@ class Execucao(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(rows[0]["semente"], rows[1]["semente"])
         for k in ("vitorias", "rodadas_media", "hp_restante_pct", "cura_media"):
             self.assertEqual(rows[0][k], rows[1][k])
+
+
+class Mesas(unittest.TestCase):
+    """Quem senta na mesa quando uma sala é medida.
+
+    A medida era contra cinco cópias da mesma classe — uma mesa que nunca vai
+    existir. Pior: o número dependia de QUAL classe, então quem escolhia a
+    classe escolhia a resposta sem saber. Agora a sala enfrenta várias mesas
+    sorteadas, e o que volta é a média com os extremos ao lado.
+    """
+
+    def test_sem_classe_nenhuma_mesa_e_cinco_copias_da_mesma(self):
+        args = SimpleNamespace(nivel=8, repeticoes=240, coletar_detalhes=False)
+        r = simular([Monstro("Alvo", 15, 6, "2d6", 52)], 5, args, random.Random(5))
+        mesas = r["composicoes"]
+        self.assertEqual(len(mesas), grupos.COMPOSICOES_PADRAO)
+        iguais = [m["classes"] for m in mesas if len(set(m["classes"])) == 1]
+        self.assertEqual(iguais, [], f"voltou a mesa de uma classe só: {iguais}")
+        self.assertGreater(len({tuple(m["classes"]) for m in mesas}), 1)
+        # As lutas de todas as mesas somam a amostra, e a média sai delas.
+        self.assertEqual(sum(m["amostras"] for m in mesas), r["amostras"])
+
+    def test_a_composicao_muda_o_resultado_e_a_media_esconde(self):
+        """A razão de os extremos virem junto com a média.
+
+        Mesas diferentes passam por aperto diferente na MESMA sala. Uma média
+        de 70% pode ser "todo mundo em 70%" ou "metade em 95% e metade em
+        45%", e são salas diferentes para quem joga. Sem a pior mesa na tela,
+        as duas se parecem.
+        """
+        args = SimpleNamespace(nivel=4, repeticoes=240, coletar_detalhes=False)
+        r = simular([Monstro("Alvo", 16, 8, "3d8+4", 120)], 3, args, random.Random(3))
+        taxas = [m["taxa"] for m in r["composicoes"]]
+        # Esta sala mede ~70% na média, e vai de 20% a 100% entre as mesas:
+        # é literalmente a diferença entre "difícil" e "morre todo mundo",
+        # dentro de um número só.
+        self.assertGreater(max(taxas) - min(taxas), 0.40, taxas)
+        self.assertLessEqual(min(taxas), r["taxa"])
+        self.assertGreaterEqual(max(taxas), r["taxa"])
+
+    def test_a_mesma_semente_da_as_mesmas_mesas(self):
+        """Dois autores comparando números precisam ver o mesmo número."""
+        args = SimpleNamespace(nivel=8, repeticoes=90, coletar_detalhes=False)
+        monstros = [Monstro("Alvo", 14, 5, "1d8", 40)]
+        a = simular(monstros, 4, args, random.Random(21))
+        b = simular(monstros, 4, args, random.Random(21))
+        self.assertEqual(a["composicoes"], b["composicoes"])
+        outra = simular(monstros, 4, args, random.Random(22))
+        self.assertNotEqual(
+            [m["classes"] for m in a["composicoes"]],
+            [m["classes"] for m in outra["composicoes"]],
+        )
+
+    def test_com_classe_volta_ao_grupo_uniforme_para_diagnostico(self):
+        """"Esta sala é dura PARA QUEM?" continua sendo uma pergunta válida."""
+        args = SimpleNamespace(classe="mago", nivel=8, repeticoes=20, coletar_detalhes=False)
+        r = simular([Monstro("Alvo", 14, 5, "1d8", 40)], 4, args, random.Random(5))
+        self.assertEqual(r["composicoes"], [{"classes": ["mago"] * 4,
+                                             "taxa": r["taxa"], "amostras": 20}])
+
+    def test_amostra_pequena_mede_menos_mesas_e_nao_mesas_piores(self):
+        """Doze mesas de oito lutas não medem composição nenhuma.
+
+        Uma taxa vinda de oito combates é ruído com três dígitos; dizer "esta
+        mesa venceu 38%" a partir dela é inventar. Então a amostra curta corta
+        o número de mesas, nunca o número de lutas por mesa.
+        """
+        mesas, por = grupos.dividir(100, 12)
+        self.assertGreaterEqual(por, grupos.MINIMO_POR_COMPOSICAO)
+        self.assertLessEqual(mesas * por, 100)
+        self.assertEqual(grupos.dividir(1200, 12), (12, 100))
+        with self.assertRaises(ValueError):
+            grupos.dividir(0, 12)
 
 
 class Interface(unittest.TestCase):

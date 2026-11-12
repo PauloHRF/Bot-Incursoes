@@ -344,6 +344,11 @@ def caso_sugerir_mede_de_verdade():
 
     assert "erro" not in r, r
     assert r["semente"] == 7 and r["sugestoes"], r
+    # Contra MESAS SORTEADAS, como o estúdio mede. Se o sugeridor calibrasse
+    # contra cinco cópias de uma classe, a dificuldade que ele promete e o
+    # número que a bancada mostra seriam réguas diferentes — e a faixa
+    # "média" valeria só para quem jogasse com cinco guerreiros.
+    assert r["classe"] == "sorteado", r["classe"]
     lo, hi = r["faixa"]
     for s in r["sugestoes"]:
         assert s["bando"] and all(p["quantidade"] >= 1 for p in s["bando"])
