@@ -45,37 +45,45 @@ CHANCE_DE_MIMICO = 1.0
 # Quem aparece quando os Mímicos acordam, tier por tier.
 #
 # Nada é esticado por multiplicador aqui, como em nenhuma outra sala. E o
-# Mímico sozinho não dá conta de todos os tiers: ele é CR 2 e satura — seis
-# deles deixam 85% do HP de um grupo de tier 3 e 93% de um de tier 4. Do tier
+# Mímico sozinho não dá conta de todos os tiers: ele é CR 2 e satura. Do tier
 # 3 para cima o baú tem companhia, e quem dá o peso é quem morava com ele: o
-# Xorn come metal e pedra preciosa, a Naga Guardiã guarda tesouro e o Golem de
-# Pedra é guardião de câmara. A ficção é a mesma — o tesouro era isca.
+# Xorn come metal e pedra preciosa, e o Golem de Argila é feito para guardar
+# câmara e cofre. A ficção é a mesma — o tesouro era isca.
 #
-# Medido com a mesa de cinco no nível do tier, 300 combates por linha, mirando
-# o que uma sala do caminho deve cobrar: vitória ≥ 95% e HP restante 55–75%.
+# O ALVO, que é decisão de design e não sai de medição: vitória ≥ 95%, HP
+# restante entre 55% e 75%, e a mesa azarada (uma em dez) não podendo ser
+# dizimada. A emboscada é castigo por falhar num teste, não um segundo chefe:
+# ela cobra, não encerra a incursão.
 #
-# Os números ANTERIORES nunca foram conferidos contra esse alvo, e estavam
-# muito longe dele: o grupo saía da emboscada com 87% do HP no tier 1 e com
-# 99% no tier 5 — um por cento de custo. A sala acontecia e não cobrava nada.
+# MEDIDO COM `tools/calibrar_emboscada.py`, contra MESAS SORTEADAS — grupos
+# de cinco tirados entre as catorze classes, 40 mesas e 600 lutas por linha:
 #
-# O que medimos agora, e que fica aqui para o próximo que mexer:
-#   T1 4 Mímicos .................. 66% do HP sobra, vitória 97%
-#   T2 6 Mímicos .................. 83%, vitória 100%  (ver abaixo)
-#   T3 1 Mímico + 5 Xorn .......... 69%, vitória 100%
-#   T4 1 Mímico + 4 Nagas Guardiãs  64%, vitória 100%
-#   T5 1 Mímico + 5 Golens de Pedra 75%, vitória 100%
+#   T1 3 Mímicos ................. vitória 97,5%  HP 67,7%  1-em-10 87%
+#   T2 5 Mímicos ................. vitória 99,5%  HP 72,5%  1-em-10 100%
+#   T3 1 Mímico + 4 Xorn ......... vitória 95,5%  HP 72,9%  1-em-10 87%
+#   T4 1 Mímico + 3 Golens Argila  vitória 98,5%  HP 67,2%  1-em-10 100%
+#   T5 1 Mímico + 5 Golens Argila  vitória 98,8%  HP 74,4%  1-em-10 100%
 #
-# O T2 é o único fora da faixa, e não por falta de tentativa: seis é o teto de
-# MAX_INIMIGOS, e o Mímico satura — é CR 2 e não acompanha o grupo que sobe.
-# Tirá-lo da faixa exigiria dar companhia ao baú já no tier 2, e aí a regra
-# "do tier 3 para cima o baú tem companhia" deixa de valer.
+# A TABELA ANTERIOR foi medida contra cinco cópias da mesma classe, e isso não
+# é uma mesa que existe: cinco guerreiros não têm conjurador frágil. Contra
+# mesas de verdade ela matava o grupo NOS CINCO TIERS — no tier 4, a pior mesa
+# vencia 5% das vezes. Note que quase toda linha nova tem MENOS criaturas que
+# a antiga: ela não estava só descalibrada, estava uniformemente pesada.
+#
+# Duas criaturas saíram, e por medida: a Naga Guardiã (CR 10, três ataques)
+# deixa um vão no tier 4 — duas devolvem 77% do HP e qualquer peso a mais
+# derruba a vitória para 90%, sem nada no meio. O Golem de Pedra passa no
+# tier 5 com 4 cópias (95,5% / 71,2% / 87%), e fica aqui como alternativa se
+# alguém preferir variedade de criatura entre T4 e T5; perde-se margem, que é
+# a diferença entre uma incursão encerrada a cada 22 emboscadas e uma a cada
+# 83.
 NOME_DO_MIMICO = "Mímico"
 A_EMBOSCADA: dict[int, tuple[tuple[str, int], ...]] = {
-    1: ((NOME_DO_MIMICO, 4),),
-    2: ((NOME_DO_MIMICO, 6),),
-    3: ((NOME_DO_MIMICO, 1), ("Xorn", 5)),
-    4: ((NOME_DO_MIMICO, 1), ("Naga Guardiã", 4)),
-    5: ((NOME_DO_MIMICO, 1), ("Golem de Pedra", 5)),
+    1: ((NOME_DO_MIMICO, 3),),
+    2: ((NOME_DO_MIMICO, 5),),
+    3: ((NOME_DO_MIMICO, 1), ("Xorn", 4)),
+    4: ((NOME_DO_MIMICO, 1), ("Golem de Argila", 3)),
+    5: ((NOME_DO_MIMICO, 1), ("Golem de Argila", 5)),
 }
 
 

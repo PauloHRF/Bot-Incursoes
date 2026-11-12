@@ -118,6 +118,33 @@ Um arquivo de cenários usa as mesmas entradas de criaturas de uma sala:
 python tools/simular_balanceamento.py --comparar --tier 3 --cenarios cenarios.json --simulacoes 20 --relatorio meus_encontros
 ```
 
+## Calibrar a emboscada do Mímico
+
+```bash
+python tools/calibrar_emboscada.py                      # mede o que está escrito
+python tools/calibrar_emboscada.py --tier 3 --varrer    # a curva, de 1 criatura ao teto
+python tools/calibrar_emboscada.py --tier 4 --bando "Mímico:1,Naga Guardiã:3"
+```
+
+`consequencias.A_EMBOSCADA` é conteúdo **medido**, não escolhido no olho: ela
+é o que acorda quando se falha num Tesouro, e o alvo é cobrar sem matar —
+vitória ≥ 95%, HP restante entre 55% e 75%, e a mesa azarada (uma em dez) não
+podendo ser dizimada.
+
+Três coisas que este comando aprendeu na marra, e que valem para qualquer
+número que vá para o jogo:
+
+- **quarenta mesas, não doze.** O sorteio das mesas é ele próprio uma amostra,
+  e a média de uma dúzia carrega uns dez pontos de erro. Toda escolha feita
+  com doze caiu quando remedida com quarenta;
+- **comparar candidatos exige as mesmas mesas.** `--bando` semeia o sorteio
+  pelo tier, não pelo elenco, senão a diferença entre dois candidatos fica
+  menor que a diferença entre duas amostras;
+- **o veredito olha o percentil, não o mínimo.** O mínimo afunda conforme a
+  amostra cresce — ele estima o pior da população, que não tem fundo —, então
+  dois mínimos de amostras diferentes não se comparam. Ver
+  `tools/simulacao/grupos.mesa_azarada`.
+
 ## Resultados e interpretação
 
 `--relatorio PASTA` grava:
