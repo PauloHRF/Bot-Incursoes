@@ -16,8 +16,13 @@ O que estes casos protegem, e que não é óbvio:
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
+import tempfile
+import threading
+from contextlib import closing
+from http.client import HTTPConnection
 from pathlib import Path
 from unittest.mock import patch
 
@@ -86,6 +91,28 @@ def caso_o_conteudo_le_o_disco_e_tolera_arquivo_ruim():
     assert c["incursoes"], "nenhuma incursão foi lida de data/"
     assert c["problemas"] == [], c["problemas"]
     print(f"  leu {len(c['bancos'])} bancos e {len(c['incursoes'])} incursões: ok")
+
+
+def caso_o_editor_recebe_o_json_original_sem_expandir_criaturas():
+    """Abrir e baixar não pode reescrever referências nem perder extensões."""
+    dados = {
+        "organizacao": "Vórtice Oculto", "nota_do_autor": {"versao": 7},
+        "salas": [sala_de_combate(id=f"C{n}", monstros=[
+            {"nome": "Aarakocra", "quantidade": 2},
+        ], anotacao="preservar") for n in range(3)],
+    }
+    with tempfile.TemporaryDirectory() as pasta:
+        caminho = Path(pasta) / "nome_do_autor.json"
+        caminho.write_text(json.dumps(dados), encoding="utf-8")
+        (Path(pasta) / "quebrado.json").write_text("{", encoding="utf-8")
+        with patch.object(E, "PASTA_BANCOS", Path(pasta)):
+            r = E._bancos()
+    banco = r["bancos"][dados["organizacao"]]
+    assert banco["original"] == dados
+    assert banco["arquivo"] == "nome_do_autor.json"
+    assert banco["salas"][0]["monstros"][0]["hp"] > 0
+    assert any("quebrado.json" in p for p in r["problemas"])
+    print("  o editor preserva o JSON original e o nome do arquivo: ok")
 
 
 # ------------------------------------------------------------- conferir
@@ -256,8 +283,8 @@ def caso_as_repeticoes_tem_teto():
 def caso_a_pagina_so_chama_rota_que_existe():
     """Anti-deriva: a página e o servidor são escritos em arquivos diferentes."""
     assert E.PAGINA.exists(), f"a página não está em {E.PAGINA}"
-    html = E.PAGINA.read_text(encoding="utf-8")
-    chamadas = set(re.findall(r'api\("(/api/[a-z]+)"', html))
+    codigo = E.PAGINA.with_name("estudio.js").read_text(encoding="utf-8")
+    chamadas = set(re.findall(r'api\("(/api/[a-z]+)"', codigo))
     assert chamadas, "a página não chama o servidor: ela ficaria sem dado nenhum"
     fora = chamadas - set(E.ROTAS)
     assert not fora, f"a página chama rota que não existe: {sorted(fora)}"
@@ -266,8 +293,7 @@ def caso_a_pagina_so_chama_rota_que_existe():
 
 def caso_a_pagina_nao_copia_as_listas_do_codigo():
     """Se a página listasse os temas, eles envelheceriam calados."""
-    html = E.PAGINA.read_text(encoding="utf-8")
-    codigo = html.split("<script>")[-1]
+    codigo = E.PAGINA.with_name("estudio.js").read_text(encoding="utf-8")
     copiados = [t for t in I.TEMAS if f'"{t}"' in codigo]
     assert not copiados, (
         f"a página tem tema escrito no JavaScript: {copiados}. "
@@ -276,10 +302,38 @@ def caso_a_pagina_nao_copia_as_listas_do_codigo():
     print("  a página não tem lista do código copiada dentro: ok")
 
 
+def caso_o_servidor_entrega_os_arquivos_da_interface():
+    with E.ThreadingHTTPServer(("127.0.0.1", 0), E.Bancada) as servidor:
+        tarefa = threading.Thread(target=servidor.serve_forever, daemon=True)
+        tarefa.start()
+        try:
+            for rota, arquivo, tipo in (
+                ("/", "index.html", "text/html"),
+                ("/estudio.js", "estudio.js", "text/javascript"),
+                ("/estudio.css", "estudio.css", "text/css"),
+            ):
+                with closing(HTTPConnection(*servidor.server_address)) as conexao:
+                    conexao.request("GET", rota)
+                    resposta = conexao.getresponse()
+                    assert resposta.status == 200
+                    assert resposta.getheader("Content-Type").startswith(tipo)
+                    assert resposta.read() == E.PAGINA.with_name(arquivo).read_bytes()
+            with closing(HTTPConnection(*servidor.server_address)) as conexao:
+                conexao.request("GET", "/../estudio.py")
+                resposta = conexao.getresponse()
+                assert resposta.status == 404
+                resposta.read()
+        finally:
+            servidor.shutdown()
+            tarefa.join()
+    print("  a interface carrega pelo servidor sem expor outros arquivos: ok")
+
+
 for caso in (
     caso_o_conteudo_vem_do_codigo,
     caso_os_minimos_por_tamanho_saem_da_conta_do_sorteio,
     caso_o_conteudo_le_o_disco_e_tolera_arquivo_ruim,
+    caso_o_editor_recebe_o_json_original_sem_expandir_criaturas,
     caso_conferir_reconhece_os_tres_tipos,
     caso_a_sala_sozinha_nao_leva_bronca_do_banco,
     caso_conferir_devolve_os_problemas_de_verdade,
@@ -294,6 +348,7 @@ for caso in (
     caso_as_repeticoes_tem_teto,
     caso_a_pagina_so_chama_rota_que_existe,
     caso_a_pagina_nao_copia_as_listas_do_codigo,
+    caso_o_servidor_entrega_os_arquivos_da_interface,
 ):
     caso()
 

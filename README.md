@@ -81,6 +81,11 @@ Ele sobe em `127.0.0.1` e usa o validador e o motor de combate do próprio bot,
 então passar ali é passar no bot. Não escreve em `data/`: devolve o arquivo
 para você mandar.
 
+Escolha um banco e uma sala na lateral e edite o JSON com a prévia ao lado.
+Use **Banco inteiro** para alterar várias salas. Combate e filtro ficam em
+abas próprias. Os rascunhos ficam no navegador; **Baixar JSON** exporta o
+banco completo, preservando referências ao bestiário e campos extras.
+
 Para um bando de criaturas numa dificuldade dada — a dificuldade é **medida**
 por simulação, não declarada:
 
@@ -1124,7 +1129,7 @@ tools/
   importar_planilha.py       incursão -> JSON, com validação
   validar_conteudo.py        confere incursão e banco com o validador do bot
   estudio.py                 a bancada local de quem escreve: sala, filtro e medição
-  estudio/index.html         a página do estúdio
+  estudio/                   a interface do estúdio (HTML, CSS e JavaScript)
   sugestor.py                sugere um bando medindo a dificuldade, em vez de declará-la
   relatorio_de_pool.py       quantas salas cada tema tem, e que tamanhos aguenta
   importar_ambientes.py      acrescenta meta.ambientes ao bestiário, do 5etools

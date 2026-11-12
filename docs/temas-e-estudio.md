@@ -431,25 +431,38 @@ por isso que ele vive neste repositório e não em outro. Código separado seria
 uma segunda cópia das regras, e uma segunda régua sempre acaba discordando da
 primeira.
 
-*Construído.* O que ficou de fora desta primeira versão, e está dito na própria
-página: a sugestão de combate (seção 10) e a faixa da dungeon inteira — essa
-segunda porque ela precisa de uma política de escolha declarada, e um número
-sem dizer qual política foi usada seria mentira com número em cima.
+O fluxo parte do JSON:
 
-O que a página faz:
+1. Escolha o banco ou use **Abrir JSON** para importar um arquivo.
+2. Busque e selecione uma sala na lateral. **Nova**, **Duplicar** e **Excluir**
+   alteram o rascunho.
+3. Edite **Esta sala** ou **Banco inteiro**. A prévia e os contadores acompanham
+   a edição; **Conferir sala** e **Conferir banco** usam o validador do bot.
+4. Em **Testar combate**, escolha tier, classe, nível e tamanhos de grupo. A
+   medição mostra vitória, rodadas e caídos. **Sugerir criaturas** procura
+   encontros e permite aplicar uma sugestão ao tier e à variante selecionados.
+5. Em **Filtro da incursão**, confira as salas disponíveis por temas ou IDs
+   e copie o trecho `filtro` para o JSON da incursão.
+6. Use **Baixar JSON** para exportar o banco completo e coloque-o em
+   `data/bancos/`. A exportação preserva os campos extras e os nomes do
+   bestiário, sem expandir as fichas das criaturas.
 
-- **Escrever sala**: campos do tipo certo (CD, perícia e alvo para sala de
-  teste; criaturas para combate), temas como fichas clicáveis, contador de
-  caracteres ao vivo.
-- **Montar o filtro da dungeon** mostrando o pool que ele deixa **contra o
-  mínimo do tamanho**, com a conta visível.
-- **Sugerir combate** pelos três eixos, e verificar cada sugestão simulando-a.
-- **Simular sala**: taxa de vitória, rodadas e quantos caem, para grupos de 5,
-  4, 3 e 2. Isso o `simular_combate.py` já faz hoje.
-- **Simular a dungeon** como faixa, não como número — ver abaixo.
-- **Prever o card**: como a sala fica no embed do Discord, que é onde o texto
-  comprido se revela comprido.
-- **Exportar o JSON** pronto para mandar.
+Rascunhos ficam no armazenamento local do navegador, separados por banco.
+**Restaurar original** descarta as alterações após confirmação. Um JSON
+incompleto permanece no editor e bloqueia trocas de sala/banco e exportação
+até ser corrigido. A ajuda de formato fica recolhida junto à prévia.
+
+Atalhos: **Ctrl+Enter** confere o documento aberto e **Ctrl+S** baixa o banco
+completo (no macOS, use Cmd). É possível baixar um rascunho com erros de
+conteúdo; confira o banco antes de colocá-lo no bot.
+
+Os testes opcionais da interface usam Chromium e Playwright:
+
+```bash
+pip install playwright
+python -m playwright install chromium
+python tests/test_estudio_interface.py
+```
 
 O que o colaborador precisa instalar: Python, o repositório e as dependências.
 É o preço da opção local, e é o que mantém o resto em zero: sem TLS, sem login,
@@ -462,10 +475,8 @@ E eu não vou fingir que existe. Duas coisas impedem:
 - HP, mana e poção **atravessam** as salas sem resetar, então a ordem importa;
 - o caminho é sorteado 3 portas por parada, e **os jogadores escolhem**.
 
-Um "73%" sem dizer qual política de escolha foi usada é uma mentira com número
-em cima. O que o estúdio mostra é uma **faixa**: escolha aleatória (piso) contra
-melhor escolha possível (teto), mais a tabela sala por sala. Para quem está
-escrevendo, a tabela vale mais que o número.
+Por isso, o estúdio mede **uma sala por vez**, com HP e recursos completos.
+Ele não estima a vitória da dungeon inteira.
 
 ### Sala de teste não precisa de Monte Carlo
 
