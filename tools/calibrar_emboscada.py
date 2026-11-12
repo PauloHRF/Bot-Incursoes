@@ -45,8 +45,18 @@ VITORIA_MINIMA = 0.95
 HP_RESTANTE = (55.0, 75.0)
 MESA = 5
 
+# Quantas mesas sortear para CALIBRAR — bem mais que as doze da bancada.
+#
+# O sorteio das mesas é ele próprio uma amostra, e foi uma surpresa cara: o
+# mesmo elenco do tier 4 mediu 57,5% com um sorteio e 32,5% com outro. Entre
+# mesas, a taxa vai de 0% a 100% no mesmo combate, então o desvio é enorme e
+# a média de doze mesas carrega uns dez pontos de erro. Para olhar uma sala na
+# bancada isso serve (o autor quer a ordem de grandeza e a pior mesa); para
+# escrever um número que vai para o jogo, não serve.
+COMPOSICOES_DA_CALIBRACAO = 40
 
-def medir(tier: int, repeticoes: int, semente: int) -> dict:
+
+def medir(tier: int, repeticoes: int, semente: int, composicoes: int) -> dict:
     """A emboscada daquele tier contra a mesa, pelo caminho do bot."""
     monstros = [
         m
@@ -54,8 +64,40 @@ def medir(tier: int, repeticoes: int, semente: int) -> dict:
         for m in monstros_de_criatura({"nome": nome, "quantidade": quantas}, "emboscada")
     ]
     args = SimpleNamespace(classe=None, nivel=min(10, tier * 2), tier=tier,
-                           repeticoes=repeticoes)
+                           repeticoes=repeticoes, composicoes=composicoes)
     return sc.simular(monstros, MESA, args, random.Random(f"{semente}:{tier}"))
+
+
+def ler_bando(texto: str) -> list[tuple[str, int]]:
+    """`"Mímico:1, Xorn:4, Armadura Animada:1"` vira o elenco da emboscada.
+
+    Existe porque a curva de uma criatura só é grossa: entre quatro e cinco
+    Xorns o HP restante cai de 81% para 66%, e o alvo mora no meio. Para
+    chegar lá é preciso misturar — uma âncora pesada mais lacaios —, e isso
+    não é uma quantidade, é uma hipótese a medir.
+    """
+    elenco = []
+    for parte in texto.split(","):
+        nome, _, quantas = parte.rpartition(":")
+        if not nome.strip() or not quantas.strip().isdigit():
+            raise ValueError(f"escreva 'Nome:quantidade', e não {parte.strip()!r}")
+        elenco.append((nome.strip(), int(quantas)))
+    return elenco
+
+
+def medir_elenco(elenco, tier: int, repeticoes: int, semente: int,
+                 composicoes: int) -> dict:
+    monstros = [
+        m
+        for nome, quantas in elenco
+        for m in monstros_de_criatura({"nome": nome, "quantidade": quantas}, "emboscada")
+    ]
+    if len(monstros) != sum(q for _n, q in elenco):
+        faltam = [n for n, _ in elenco if not any(n.split()[0] in m.nome for m in monstros)]
+        raise SystemExit(f"criatura fora do bestiário: {', '.join(faltam) or elenco}")
+    args = SimpleNamespace(classe=None, nivel=min(10, tier * 2), tier=tier,
+                           repeticoes=repeticoes, composicoes=composicoes)
+    return sc.simular(monstros, MESA, args, random.Random(f"{semente}:{tier}:{elenco}"))
 
 
 def veredito(taxa: float, hp: float) -> str:
@@ -68,7 +110,7 @@ def veredito(taxa: float, hp: float) -> str:
     return "no alvo"
 
 
-def varrer(tier: int, repeticoes: int, semente: int) -> list[dict]:
+def varrer(tier: int, repeticoes: int, semente: int, composicoes: int) -> list[dict]:
     """A curva da emboscada daquele tier, de uma criatura até o teto.
 
     Varredura e não bisseção, de propósito: a bisseção devolve UM ponto, e
@@ -89,7 +131,7 @@ def varrer(tier: int, repeticoes: int, semente: int) -> list[dict]:
             for m in monstros_de_criatura({"nome": n, "quantidade": q}, "emboscada")
         ]
         a = SimpleNamespace(classe=None, nivel=min(10, tier * 2), tier=tier,
-                            repeticoes=repeticoes)
+                            repeticoes=repeticoes, composicoes=composicoes)
         r = sc.simular(monstros, MESA, a, random.Random(f"{semente}:{tier}:{quantas}"))
         curva.append({
             "quantas": quantas, "nome": nome,
@@ -106,8 +148,17 @@ def main() -> int:
     parser.add_argument("--repeticoes", type=int, default=300)
     parser.add_argument("--semente", type=int, default=20261112)
     parser.add_argument(
+        "--composicoes", type=int, default=COMPOSICOES_DA_CALIBRACAO, metavar="N",
+        help=f"quantas mesas sortear por ponto medido (padrao: {COMPOSICOES_DA_CALIBRACAO})",
+    )
+    parser.add_argument(
         "--varrer", action="store_true",
         help="mede de 1 criatura até o teto, em vez de só o que está escrito",
+    )
+    parser.add_argument(
+        "--bando", action="append", default=[], metavar="ELENCO",
+        help='mede este elenco em vez do escrito; pode repetir. '
+             'Ex.: --bando "Mímico:1,Xorn:4,Armadura Animada:1"',
     )
     args = parser.parse_args()
 
@@ -119,6 +170,19 @@ def main() -> int:
           f"{HP_RESTANTE[0]:.0f}–{HP_RESTANTE[1]:.0f}%  "
           f"(mesa de {MESA}, mesas sorteadas, {args.repeticoes} lutas por ponto)")
 
+    if args.bando:
+        if not args.tier:
+            parser.error("--bando precisa de --tier: o alvo é por tier")
+        print(f"\n{'vitória':>8}  {'HP rest.':>9}  {'pior mesa':>9}  {'veredito':<32}  elenco")
+        for texto in args.bando:
+            elenco = ler_bando(texto)
+            r = medir_elenco(elenco, args.tier, args.repeticoes, args.semente, args.composicoes)
+            pior = min(c["taxa"] for c in r["composicoes"])
+            quem = ", ".join(f"{q}x {n}" for n, q in elenco)
+            print(f"{r['taxa']:>7.1%}  {r['hp_restante_pct']:>8.1f}%  {pior:>8.0%}  "
+                  f"{veredito(r['taxa'], r['hp_restante_pct']):<32}  {quem}")
+        return 0
+
     if args.varrer:
         for tier in tiers:
             fixos = list(consequencias.emboscada_do_tier(tier)[:-1])
@@ -126,7 +190,7 @@ def main() -> int:
             print(f"\n--- tier {tier} (nível {min(10, tier * 2)}) · {companhia}N x "
                   f"{consequencias.emboscada_do_tier(tier)[-1][0]}")
             print(f"{'N':>3}  {'vitória':>8}  {'HP rest.':>9}  {'pior mesa':>9}  veredito")
-            for p in varrer(tier, args.repeticoes, args.semente):
+            for p in varrer(tier, args.repeticoes, args.semente, args.composicoes):
                 print(f"{p['quantas']:>3}  {p['taxa']:>7.1%}  {p['hp']:>8.1f}%  "
                       f"{p['pior']:>8.0%}  {p['veredito']}")
         return 0
@@ -135,7 +199,7 @@ def main() -> int:
           f"{'veredito':<32}  emboscada")
     fora = 0
     for tier in tiers:
-        r = medir(tier, args.repeticoes, args.semente)
+        r = medir(tier, args.repeticoes, args.semente, args.composicoes)
         pior = min(r["composicoes"], key=lambda c: c["taxa"])
         quem = ", ".join(f"{q}x {n}" for n, q in consequencias.emboscada_do_tier(tier))
         parecer = veredito(r["taxa"], r["hp_restante_pct"])

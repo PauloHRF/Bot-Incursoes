@@ -25,6 +25,14 @@ mesa sem curandeiro nenhum é justamente o caso que o autor precisa ver. O
 degenerado — as cinco iguais, que é o que estamos saindo de — tem chance de
 uma em quatorze mil por composição, então ele não volta pela porta dos
 fundos.
+
+O QUE O NÚMERO DE MESAS CUSTA, e que custou caro descobrir: o sorteio é ele
+próprio uma amostra. Entre mesas, a taxa do MESMO combate vai de 0% a 100%,
+então a média de uma dúzia delas carrega cerca de dez pontos de erro — o
+mesmo elenco mediu 57,5% com um sorteio e 32,5% com outro. Doze mesas servem
+para olhar uma sala na bancada, onde o que se quer é a ordem de grandeza e a
+pior mesa. Para CALIBRAR, não servem: `tools/calibrar_emboscada.py` sorteia
+quarenta, e quem for escrever número que vai para o jogo deve fazer o mesmo.
 """
 from __future__ import annotations
 
