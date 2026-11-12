@@ -10,159 +10,237 @@
 <body>
 <div class="app">
   <header class="cabecalho">
-    <div class="marca"><span class="marca-icone" aria-hidden="true">✦</span><div><h1>Estúdio de Incursões</h1><p>Edite, confira e teste suas salas.</p></div></div>
+    <div class="marca"><span class="marca-icone" aria-hidden="true">✦</span><div><h1>Estúdio de Incursões</h1><p>Escreva, confira e meça o que vai para o bot.</p></div></div>
     <span class="estado" id="estado" role="status">Carregando bancos…</span>
   </header>
 
   <div id="erroInicial" class="recados" role="alert" hidden></div>
+
   <div class="barra-arquivo">
     <div class="campo banco-campo"><label for="fBanco">Banco de salas</label><select id="fBanco" disabled></select></div>
     <div class="acoes-arquivo">
       <button id="btAbrir" class="botao" type="button">Abrir JSON</button>
       <input id="fArquivo" type="file" accept=".json,application/json" hidden>
-      <button id="btConferirBanco" class="botao" type="button">Conferir banco</button>
       <button id="btBaixar" class="botao principal" type="button">↓ Baixar JSON</button>
       <button id="btRecarregar" class="botao discreto" type="button" title="Descartar o rascunho e abrir a versão do projeto">Restaurar original</button>
     </div>
   </div>
-  <div id="saidaBanco" class="recados" aria-live="polite" hidden></div>
 
-  <main class="bancada">
-    <aside class="painel navegador" aria-label="Salas do banco">
-      <div class="painel-cabecalho"><h2>Salas <span id="contaSalas" class="contador">0</span></h2><button id="btNova" class="botao pequena" type="button">+ Nova</button></div>
-      <div class="busca"><label class="sr-only" for="fBusca">Buscar sala</label><input id="fBusca" type="search" placeholder="Buscar nome ou ID"></div>
-      <ul id="listaSalas" class="salas"></ul>
-      <p id="listaVazia" class="vazio" hidden>Nenhuma sala encontrada.</p>
-      <p class="nota-lateral" id="notaDescanso"></p>
-    </aside>
+  <!-- Os quatro lugares da bancada. Não são "abas da sala": são trabalhos
+       diferentes, com listas, formulários e ferramentas diferentes. -->
+  <nav class="lugares" role="tablist" aria-label="O que você vai fazer">
+    <button id="lugarTeste" type="button" role="tab" data-lugar="Teste" aria-controls="painelTeste" aria-selected="true" tabindex="0">
+      <span class="lugar-icone" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M10 2.4 16.6 6.2v7.6L10 17.6 3.4 13.8V6.2z"/><path d="M10 7.1v.1M10 9.4v3.2" stroke-linecap="round"/></svg></span>
+      <span class="lugar-texto"><span class="lugar-nome">Salas de teste</span><span class="lugar-sub" id="subTeste">&nbsp;</span></span>
+      <span class="lugar-conta" id="contaTeste">—</span>
+    </button>
+    <button id="lugarCombate" type="button" role="tab" data-lugar="Combate" aria-controls="painelCombate" aria-selected="false" tabindex="-1">
+      <span class="lugar-icone" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3.4 3.4 12.6 12.6M16.6 3.4 7.4 12.6M4.6 16.6 7.6 13.6M15.4 16.6 12.4 13.6"/></svg></span>
+      <span class="lugar-texto"><span class="lugar-nome">Combates</span><span class="lugar-sub" id="subCombate">&nbsp;</span></span>
+      <span class="lugar-conta" id="contaCombate">—</span>
+    </button>
+    <button id="lugarDungeon" type="button" role="tab" data-lugar="Dungeon" aria-controls="painelDungeon" aria-selected="false" tabindex="-1">
+      <span class="lugar-icone" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="4" cy="15" r="2.1"/><circle cx="10" cy="4.6" r="2.1"/><circle cx="16" cy="14" r="2.1"/><path d="M5.2 13.2 8.8 6.6M11.3 6.2 14.8 12.2"/></svg></span>
+      <span class="lugar-texto"><span class="lugar-nome">Montar dungeon</span><span class="lugar-sub">O caminho e as salas que podem cair nele</span></span>
+      <span class="lugar-conta" id="contaPoolAtalho">—</span>
+    </button>
+    <button id="lugarInspecao" type="button" role="tab" data-lugar="Inspecao" aria-controls="painelInspecao" aria-selected="false" tabindex="-1">
+      <span class="lugar-icone" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8.8" cy="8.8" r="5"/><path d="M12.6 12.6 17 17"/></svg></span>
+      <span class="lugar-texto"><span class="lugar-nome">Inspecionar</span><span class="lugar-sub">Tudo que o banco já tem</span></span>
+      <span class="lugar-conta" id="contaTudo">—</span>
+    </button>
+  </nav>
 
-    <div class="mesa">
-      <div class="contexto"><div><span id="tipoSala" class="etiqueta">Sala</span><h2 id="nomeSala">Selecione uma sala</h2></div><span id="idSala" class="id-sala"></span></div>
-      <nav class="abas" role="tablist" aria-label="Ferramentas da sala">
-        <button id="abaEditar" type="button" role="tab" aria-controls="painelEditar" aria-selected="true" tabindex="0" data-aba="Editar">Escrever sala</button>
-        <button id="abaCombate" type="button" role="tab" aria-controls="painelCombate" aria-selected="false" tabindex="-1" data-aba="Combate">Testar combate</button>
-        <button id="abaFiltro" type="button" role="tab" aria-controls="painelFiltro" aria-selected="false" tabindex="-1" data-aba="Filtro">Filtro da incursão</button>
-      </nav>
+  <main>
+    <section id="painelTeste" role="tabpanel" aria-labelledby="lugarTeste"><div id="ancoraTeste" class="ancora"></div></section>
 
-      <section id="painelEditar" role="tabpanel" aria-labelledby="abaEditar">
-        <div class="edicao-grid">
-          <div class="painel editor-painel">
-            <form id="formSala" class="form-sala" autocomplete="off">
-              <div class="form-linha">
-                <div class="campo campo-id">
-                  <label for="fId">id</label>
-                  <input id="fId" type="text" maxlength="16" spellcheck="false">
-                </div>
-                <div class="campo">
-                  <label for="fTipo">tipo</label>
-                  <select id="fTipo"></select>
-                </div>
-                <div class="campo campo-pontos">
-                  <label for="fPontos">pontos da Organização</label>
-                  <input id="fPontos" type="number" min="0" max="99" step="1">
-                </div>
-              </div>
-
-              <div class="campo">
-                <label for="fNome">nome</label>
-                <input id="fNome" type="text">
-                <p class="medida"><span>vai para o título do cartão</span>
-                  <span><b id="cNome">0</b> / <span id="tetoNome">256</span></span></p>
-              </div>
-
-              <div class="campo">
-                <label for="fDesc">descrição</label>
-                <textarea id="fDesc" rows="5"></textarea>
-                <p class="medida"><span id="dicaDesc"></span>
-                  <span><b id="cDesc">0</b> / <span id="tetoDesc">4096</span></span></p>
-              </div>
-
-              <div class="campo">
-                <span class="rotulo">temas</span>
-                <div id="fichasSala" class="fichas" role="group" aria-label="Temas da sala"></div>
-                <p class="medida"><span>marque todos em que a sala cabe — é isso que mantém o sorteio com opção</span></p>
-              </div>
-
-              <fieldset id="blocoTeste" class="bloco">
-                <legend>O teste da sala</legend>
-                <div class="form-linha">
-                  <div class="campo">
-                    <label for="fDif">dificuldade</label>
-                    <select id="fDif"></select>
-                  </div>
-                  <div class="campo">
-                    <label for="fCd">CD <span class="legenda">(no tier 1)</span></label>
-                    <input id="fCd" type="number" min="1" max="40" step="1">
-                  </div>
-                  <div class="campo">
-                    <label for="fAlvo">sucessos necessários</label>
-                    <input id="fAlvo" type="number" min="1" max="99" step="1">
-                  </div>
-                </div>
-                <div class="campo">
-                  <span class="rotulo">perícias aceitas</span>
-                  <div id="fichasPericias" class="fichas" role="group" aria-label="Perícias da sala"></div>
-                </div>
-              </fieldset>
-
-              <fieldset id="blocoCriaturas" class="bloco">
-                <legend>Quem mora aqui</legend>
-                <div class="rolagem">
-                  <table class="tabela-criaturas">
-                    <thead><tr>
-                      <th>criatura</th><th class="n">quantas</th>
-                      <th>tier</th><th>tema</th><th><span class="sr-only">remover</span></th>
-                    </tr></thead>
-                    <tbody id="linhasCriaturas"></tbody>
-                  </table>
-                </div>
-                <datalist id="listaCriaturas"></datalist>
-                <button id="btNovaCriatura" class="botao discreto pequena" type="button">+ Criatura</button>
-                <p class="legenda" id="recadoCriaturas"></p>
-              </fieldset>
-
-              <details class="bloco-extra">
-                <summary>Campos opcionais</summary>
-                <div class="campo">
-                  <label for="fRecompensa">recompensa <span class="legenda">(texto do cartão)</span></label>
-                  <input id="fRecompensa" type="text">
-                </div>
-                <div class="campo">
-                  <label for="fImagem">imagem <span class="legenda">(URL)</span></label>
-                  <input id="fImagem" type="text" spellcheck="false">
-                </div>
-              </details>
-            </form>
-
-            <div class="editor-acoes"><button id="btConferir" class="botao pequena" type="button">Conferir sala</button><button id="btConferirBanco" class="botao discreto pequena" type="button">Conferir o banco</button><button id="btDuplicar" class="botao discreto pequena" type="button">Duplicar</button><button id="btExcluir" class="botao discreto pequena perigo" type="button">Excluir</button></div>
-            <div id="saidaSala" class="recados" aria-live="polite" hidden></div>
-            <div id="saidaBanco" class="recados" aria-live="polite" hidden></div>
-          </div>
-          <aside class="previa-coluna" aria-label="Prévia da sala">
-            <div class="painel previa"><div class="painel-cabecalho"><h3>Prévia</h3><span class="legenda">Discord</span></div><div class="discord"><h3 id="dTitulo">Sua sala aparece aqui</h3><p id="dCorpo"></p><div id="dCampos" class="discord-campos"></div></div><div id="temasPrevia" class="etiquetas"></div><p id="limitesTexto" class="legenda"></p></div>
-            <details class="ajuda"><summary>Como isto vira uma dungeon</summary><p>A sala entra no <strong>banco da Organização</strong>, e toda incursão dela pode sorteá-la. O tema decide em quais.</p><p>Criatura entra <strong>pelo nome do bestiário</strong> — são 385, com os números do livro. Criatura feita à mão, com multiataque ou ação especial, vai pela planilha: <code>tools/gerar_modelo_banco.py</code>.</p><p><a href="https://github.com/PauloHRF/Bot-Incursoes/blob/master/docs/formato-das-incursoes.md" target="_blank" rel="noopener">Ver o formato completo ↗</a></p><p><kbd>Ctrl</kbd> + <kbd>Enter</kbd> confere. <kbd>Ctrl</kbd> + <kbd>S</kbd> baixa o banco.</p></details>
-          </aside>
-        </div>
-      </section>
-
-      <section id="painelCombate" role="tabpanel" aria-labelledby="abaCombate" hidden>
-        <div id="avisoCombate" class="aviso-inline" hidden>Selecione uma sala de Combate para testar.</div>
+    <section id="painelCombate" role="tabpanel" aria-labelledby="lugarCombate" hidden>
+      <div id="ancoraCombate" class="ancora"></div>
+      <div id="avisoCombate" class="aviso-inline" hidden>Nenhuma sala de Combate aberta. Crie uma para medir e sugerir.</div>
+      <div class="ferramentas">
         <div class="painel parametros">
-          <div class="painel-cabecalho"><h3>Grupo de teste</h3><span class="legenda">Uma classe por grupo</span></div>
+          <div class="painel-cabecalho"><div><h3>Medir contra um grupo</h3><p class="legenda">Uma classe por grupo, HP e recursos cheios.</p></div></div>
           <div class="campos cinco"><div class="campo"><label for="fTierSim">Tier da sala</label><select id="fTierSim"></select></div><div class="campo"><label for="fClasse">Classe</label><select id="fClasse"></select></div><div class="campo"><label for="fNivel">Nível</label><input id="fNivel" type="number" min="1" max="10" value="4"></div><div class="campo"><label for="fReps">Repetições</label><input id="fReps" type="number" min="50" max="20000" step="50" value="100"></div><div class="campo"><label for="fTemaSim">Variante</label><select id="fTemaSim"></select></div></div>
           <div class="simulacao-acoes"><fieldset class="grupo-checks"><legend>Jogadores</legend><label><input type="checkbox" name="grupo" value="5" checked>5</label><label><input type="checkbox" name="grupo" value="4">4</label><label><input type="checkbox" name="grupo" value="3" checked>3</label><label><input type="checkbox" name="grupo" value="2">2</label></fieldset><div class="campo semente"><label for="fSemente">Semente <span class="opcional">opcional</span></label><input id="fSemente" type="number" min="0" placeholder="Automática"></div><button id="btMedir" class="botao principal" type="button">Medir combate</button></div>
           <p class="legenda">Comece com poucas repetições. Aumente para confirmar o resultado.</p>
         </div>
-        <div class="painel resultado"><div class="painel-cabecalho"><h3>Resultado</h3><span id="tituloMedida" class="legenda">Ainda não medido</span></div><div id="barrasMedida" class="resultado-vazio">Meça o combate para comparar os tamanhos de grupo.</div><p id="medidaDesatualizada" class="aviso-inline" hidden>Resultado anterior. Meça novamente após as alterações.</p><div id="contaMedida" class="contas"></div><div id="saidaMedida" class="recados" aria-live="polite" hidden></div><p class="legenda">A medição vale para esta sala, com HP e recursos completos.</p></div>
-        <details class="painel sugeridor"><summary><span><strong>Sugerir criaturas</strong><small>Encontre um encontro para este tier.</small></span><span aria-hidden="true">＋</span></summary><div class="detalhes-conteudo"><div class="campos tres"><div class="campo"><label for="fAmb">Ambiente</label><select id="fAmb"></select></div><div class="campo"><label for="fBicho">Tipo de criatura</label><select id="fBicho"></select></div><div class="campo"><label for="fDifCombate">Dificuldade</label><select id="fDifCombate"></select></div></div><div class="linha"><button id="btSugerir" class="botao" type="button">Gerar sugestões</button><span id="recadoSugerir" class="legenda" role="status"></span></div><div id="sugestoes" class="sugestoes"></div><div id="saidaSugerir" class="recados" aria-live="polite" hidden></div></div></details>
-      </section>
+        <div class="painel resultado"><div class="painel-cabecalho"><h3>Resultado</h3><span id="tituloMedida" class="legenda">Ainda não medido</span></div><div id="barrasMedida" class="resultado-vazio">Meça o combate para comparar os tamanhos de grupo.</div><p id="medidaDesatualizada" class="aviso-inline" hidden>Resultado anterior. Meça novamente após as alterações.</p><div id="contaMedida" class="contas"></div><div id="saidaMedida" class="recados" aria-live="polite" hidden></div></div>
+      </div>
+      <details class="painel sugeridor"><summary><span><strong>Não sabe quem pôr aqui?</strong><small>O estúdio procura um bando que caia na dificuldade pedida.</small></span><span class="mais" aria-hidden="true">＋</span></summary><div class="detalhes-conteudo"><div class="campos tres"><div class="campo"><label for="fAmb">Ambiente</label><select id="fAmb"></select></div><div class="campo"><label for="fBicho">Tipo de criatura</label><select id="fBicho"></select></div><div class="campo"><label for="fDifCombate">Dificuldade</label><select id="fDifCombate"></select></div></div><div class="linha"><button id="btSugerir" class="botao" type="button">Gerar sugestões</button><span id="recadoSugerir" class="legenda" role="status"></span></div><div id="sugestoes" class="sugestoes"></div><div id="saidaSugerir" class="recados" aria-live="polite" hidden></div></div></details>
+    </section>
 
-      <section id="painelFiltro" role="tabpanel" aria-labelledby="abaFiltro" hidden>
-        <div class="painel"><div class="painel-cabecalho"><div><h3>Salas disponíveis para a incursão</h3><p class="legenda">Escolha temas ou IDs e confira quantas salas entram.</p></div><button id="btCopiarFiltro" class="botao pequena" type="button">Copiar filtro JSON</button></div><div class="campos tres"><div class="campo"><label for="fTam">Tamanho</label><select id="fTam"></select></div><div class="campo"><label for="fIncluir">Incluir IDs</label><input id="fIncluir" type="text" placeholder="Opcional · separados por vírgula"></div><div class="campo"><label for="fExcluir">Excluir IDs</label><input id="fExcluir" type="text" placeholder="Opcional · separados por vírgula"></div></div><fieldset class="temas-filtro"><legend>Temas</legend><div id="fichasFiltro" class="fichas"></div></fieldset><p id="notaFiltro" class="legenda">Sem temas ou IDs, usa o banco inteiro.</p></div>
-        <div class="painel"><div class="painel-cabecalho"><h3 id="contaPool">Conferindo salas…</h3><span id="selo" class="etiqueta"></span></div><progress id="barraPool" max="1" value="0" aria-label="Salas disponíveis no filtro"></progress><p id="contaFiltro" class="legenda"></p><div id="saidaFiltro" class="recados" aria-live="polite" hidden></div><div class="rolagem"><table><thead><tr><th>Sala</th><th>Tipo</th><th>Temas</th></tr></thead><tbody id="tabelaPool"></tbody></table></div></div>
-      </section>
-    </div>
+    <section id="painelDungeon" role="tabpanel" aria-labelledby="lugarDungeon" hidden>
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <div><h3>O caminho</h3><p class="legenda">Quantas paradas a dungeon tem e quais salas podem cair nelas.</p></div>
+          <div class="campo campo-incursao"><label for="fIncursao">Partir de uma incursão</label><select id="fIncursao"></select></div>
+        </div>
+        <div class="campos tres">
+          <div class="campo"><label for="fTam">Tamanho</label><select id="fTam"></select><p class="legenda" id="notaTamanho"></p></div>
+          <div class="campo"><label for="fIncluir">Só estas salas <span class="legenda">(IDs)</span></label><input id="fIncluir" type="text" placeholder="Opcional · separados por vírgula"></div>
+          <div class="campo"><label for="fExcluir">Menos estas salas <span class="legenda">(IDs)</span></label><input id="fExcluir" type="text" placeholder="Opcional · separados por vírgula"></div>
+        </div>
+        <fieldset class="temas-filtro"><legend>Temas que a dungeon aceita</legend><div id="fichasFiltro" class="fichas"></div></fieldset>
+        <p id="notaFiltro" class="legenda">Sem temas ou IDs, usa o banco inteiro.</p>
+      </div>
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <div><h3 id="contaPool">Conferindo salas…</h3><p class="legenda" id="contaFiltro"></p></div>
+          <div class="linha"><span id="selo" class="etiqueta"></span><button id="btCopiarFiltro" class="botao pequena" type="button">Copiar filtro JSON</button></div>
+        </div>
+        <progress id="barraPool" max="1" value="0" aria-label="Salas disponíveis no filtro"></progress>
+        <div id="saidaFiltro" class="recados" aria-live="polite" hidden></div>
+        <div class="rolagem"><table><thead><tr><th>Sala</th><th>Tipo</th><th>Temas</th></tr></thead><tbody id="tabelaPool"></tbody></table></div>
+      </div>
+    </section>
+
+    <section id="painelInspecao" role="tabpanel" aria-labelledby="lugarInspecao" hidden>
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <div><h3>O banco inteiro</h3><p class="legenda" id="resumoBanco"></p></div>
+          <button id="btConferirBanco" class="botao" type="button">Conferir o banco</button>
+        </div>
+        <div id="saidaBanco" class="recados" aria-live="polite" hidden></div>
+        <div id="mapaBanco" class="mapa"></div>
+      </div>
+      <div class="painel">
+        <div class="painel-cabecalho">
+          <div><h3>Salas <span id="contaInspecao" class="contador">0</span></h3><p class="legenda">Clique em qualquer uma para abri-la na bancada.</p></div>
+          <div class="campo busca-inspecao"><label class="sr-only" for="fBuscaInspecao">Buscar</label><input id="fBuscaInspecao" type="search" placeholder="Buscar nome, ID ou criatura"></div>
+        </div>
+        <div class="filtros-inspecao">
+          <div class="grupo-fichas"><span class="rotulo">Tipo</span><div id="fichasTipos" class="fichas"></div></div>
+          <div class="grupo-fichas"><span class="rotulo">Tema</span><div id="fichasTemasInspecao" class="fichas"></div></div>
+        </div>
+        <div class="rolagem">
+          <table class="tabela-inspecao">
+            <thead><tr><th>Sala</th><th>Tipo</th><th>Temas</th><th>O que tem dentro</th><th class="n">Pontos</th></tr></thead>
+            <tbody id="tabelaInspecao"></tbody>
+          </table>
+        </div>
+        <p id="inspecaoVazia" class="vazio" hidden>Nenhuma sala com esses filtros.</p>
+      </div>
+    </section>
   </main>
+
+  <!-- A bancada de escrever sala. É UMA, e muda de lugar: Evento e Combate
+       são o mesmo móvel com gavetas diferentes, e duplicar o formulário
+       duplicaria cada id da página. -->
+  <div id="bancada" class="bancada">
+    <aside class="painel navegador" aria-label="Salas deste lugar">
+      <div class="painel-cabecalho"><h2><span id="tituloLista">Salas</span> <span id="contaSalas" class="contador">0</span></h2><button id="btNova" class="botao pequena principal" type="button">+ Nova</button></div>
+      <div class="busca"><label class="sr-only" for="fBusca">Buscar sala</label><input id="fBusca" type="search" placeholder="Buscar nome ou ID"></div>
+      <ul id="listaSalas" class="salas"></ul>
+      <p id="listaVazia" class="vazio" hidden>Nenhuma sala aqui.</p>
+      <p class="nota-lateral" id="notaLista"></p>
+    </aside>
+
+    <div class="mesa">
+      <div class="contexto"><div><span id="tipoSala" class="etiqueta">Sala</span><h2 id="nomeSala">Selecione uma sala</h2></div><span id="idSala" class="id-sala"></span></div>
+
+      <div class="edicao-grid">
+        <div class="painel editor-painel">
+          <form id="formSala" class="form-sala" autocomplete="off">
+            <div class="form-linha">
+              <div class="campo campo-id">
+                <label for="fId">id</label>
+                <input id="fId" type="text" maxlength="16" spellcheck="false">
+              </div>
+              <div class="campo">
+                <label for="fTipo">tipo</label>
+                <select id="fTipo"></select>
+              </div>
+              <div class="campo campo-pontos">
+                <label for="fPontos">pontos da Organização</label>
+                <input id="fPontos" type="number" min="0" max="99" step="1">
+              </div>
+            </div>
+            <p class="explicacao" id="dicaTipo"></p>
+
+            <div class="campo">
+              <label for="fNome">nome</label>
+              <input id="fNome" type="text">
+              <p class="medida"><span>vai para o título do cartão</span>
+                <span><b id="cNome">0</b> / <span id="tetoNome">256</span></span></p>
+            </div>
+
+            <div class="campo">
+              <label for="fDesc">descrição</label>
+              <textarea id="fDesc" rows="5"></textarea>
+              <p class="medida"><span id="dicaDesc"></span>
+                <span><b id="cDesc">0</b> / <span id="tetoDesc">4096</span></span></p>
+            </div>
+
+            <div class="campo">
+              <span class="rotulo">temas</span>
+              <div id="fichasSala" class="fichas" role="group" aria-label="Temas da sala"></div>
+              <p class="medida"><span>marque todos em que a sala cabe — é isso que mantém o sorteio com opção</span></p>
+            </div>
+
+            <fieldset id="blocoTeste" class="bloco">
+              <legend>O teste da sala</legend>
+              <div class="form-linha">
+                <div class="campo">
+                  <label for="fDif">dificuldade</label>
+                  <select id="fDif"></select>
+                </div>
+                <div class="campo">
+                  <label for="fCd">CD <span class="legenda">(no tier 1)</span></label>
+                  <input id="fCd" type="number" min="1" max="40" step="1">
+                  <p class="legenda" id="dicaCd"></p>
+                </div>
+                <div class="campo">
+                  <label for="fAlvo">sucessos necessários</label>
+                  <input id="fAlvo" type="number" min="1" max="99" step="1">
+                </div>
+              </div>
+              <div class="campo">
+                <span class="rotulo">perícias aceitas</span>
+                <div id="fichasPericias" class="fichas" role="group" aria-label="Perícias da sala"></div>
+              </div>
+            </fieldset>
+
+            <fieldset id="blocoCriaturas" class="bloco">
+              <legend>Quem mora aqui</legend>
+              <div class="rolagem">
+                <table class="tabela-criaturas">
+                  <thead><tr>
+                    <th>criatura</th><th class="n">quantas</th>
+                    <th>tier</th><th>tema</th><th><span class="sr-only">remover</span></th>
+                  </tr></thead>
+                  <tbody id="linhasCriaturas"></tbody>
+                </table>
+              </div>
+              <datalist id="listaCriaturas"></datalist>
+              <button id="btNovaCriatura" class="botao discreto pequena" type="button">+ Criatura</button>
+              <p class="legenda" id="recadoCriaturas"></p>
+            </fieldset>
+
+            <details class="bloco-extra">
+              <summary>Campos opcionais</summary>
+              <div class="campo">
+                <label for="fRecompensa">recompensa <span class="legenda">(texto do cartão)</span></label>
+                <input id="fRecompensa" type="text">
+              </div>
+              <div class="campo">
+                <label for="fImagem">imagem <span class="legenda">(URL)</span></label>
+                <input id="fImagem" type="text" spellcheck="false">
+              </div>
+            </details>
+          </form>
+
+          <div class="editor-acoes"><button id="btConferir" class="botao pequena" type="button">Conferir sala</button><button id="btDuplicar" class="botao discreto pequena" type="button">Duplicar</button><button id="btVirar" class="botao discreto pequena" type="button">Virar combate</button><button id="btExcluir" class="botao discreto pequena perigo" type="button">Excluir</button></div>
+          <div id="saidaSala" class="recados" aria-live="polite" hidden></div>
+        </div>
+
+        <aside class="previa-coluna" aria-label="Prévia da sala">
+          <div class="painel previa"><div class="painel-cabecalho"><h3>Prévia</h3><span class="legenda">Discord</span></div><div class="discord"><h3 id="dTitulo">Sua sala aparece aqui</h3><p id="dCorpo"></p><div id="dCampos" class="discord-campos"></div></div><div id="temasPrevia" class="etiquetas"></div><p id="limitesTexto" class="legenda"></p></div>
+          <details class="ajuda"><summary>Como isto vira uma dungeon</summary><p>A sala entra no <strong>banco da Organização</strong>, e toda incursão dela pode sorteá-la. O tema decide em quais.</p><p>Criatura entra <strong>pelo nome do bestiário</strong> — são 385, com os números do livro. Criatura feita à mão, com multiataque ou ação especial, vai pela planilha: <code>tools/gerar_modelo_banco.py</code>.</p><p><a href="https://github.com/PauloHRF/Bot-Incursoes/blob/master/docs/formato-das-incursoes.md" target="_blank" rel="noopener">Ver o formato completo ↗</a></p><p><kbd>Ctrl</kbd> + <kbd>Enter</kbd> confere. <kbd>Ctrl</kbd> + <kbd>S</kbd> baixa o banco.</p></details>
+        </aside>
+      </div>
+    </div>
+  </div>
+
   <footer>Rascunhos ficam neste navegador. Baixe o JSON para usar no bot.</footer>
 </div>
 <div id="toast" role="status" class="toast" hidden></div>

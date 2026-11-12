@@ -5,13 +5,21 @@ const copiar = valor => JSON.parse(JSON.stringify(valor));
 const objeto = valor => valor !== null && typeof valor === "object" && !Array.isArray(valor);
 const texto = valor => valor == null ? "" : String(valor);
 const bonito = valor => JSON.stringify(valor, null, 2);
-const normalizar = valor => texto(valor).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const normalizar = valor => texto(valor).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const ns = "incursoes.estudio.v2.";
-let C, banco, origem, arquivo, indice = 0;
+let C, banco, origem, arquivo, indice = -1;
+/* Os quatro lugares da bancada, e qual sala esta aberta em cada um.
+   `bancadaEm` e o ultimo lugar de ESCRITA (Teste ou Combate): quem vai
+   montar a dungeon e volta tem de reencontrar a sala onde a deixou. */
+let lugar = "Teste", bancadaEm = "Teste";
+const selecao = {Teste: -1, Combate: -1};
+// Familia, resumo e desconto de CD de cada tipo, vindos de /api/conteudo.
+let FAMILIA = {}, RESUMO = {}, DESCONTO = {};
+const tiposVisiveis = new Set(), temasVisiveis = new Set();
 // As linhas da tabela de criaturas, enquanto a sala esta aberta.
 let linhasAtuais = null, linhasDoIndice = -1;
 let originais = {}, sequencia = 0, revisao = 0, medindo = false, sugerindo = false;
-let medidaContexto, sugestaoContexto, timerEdicao, timerPool, timerConferir, timerToast;
+let medidaContexto, sugestaoContexto, timerPool, timerConferir, timerToast;
 let pedidoConferir = 0, pedidoPool = 0, armazenamentoFalhou = false;
 
 function no(tag, classe, conteudo) {
@@ -65,15 +73,18 @@ function recados(id, r, sucesso = "Nenhum problema encontrado.") {
   }
 }
 function preencher(id, itens, escolhido) {
-  const campo = $(id);
-  campo.replaceChildren();
-  itens.forEach(item => {
-    const [valor, rotulo] = Array.isArray(item) ? item : [item, item];
-    const opcao = no("option", "", rotulo); opcao.value = valor; campo.append(opcao);
-  });
-  if ([...campo.options].some(o => o.value === texto(escolhido))) campo.value = texto(escolhido);
+  preencherSelect($(id), itens.map(i => Array.isArray(i) ? i : [i, i]), texto(escolhido));
 }
-function sala() { return banco?.salas[indice]; }
+function preencherSelect(alvo, pares, escolhido) {
+  alvo.replaceChildren();
+  pares.forEach(([valor, rotulo]) => {
+    const o = document.createElement("option");
+    o.value = valor; o.textContent = rotulo;
+    if (texto(valor) === texto(escolhido)) o.selected = true;
+    alvo.append(o);
+  });
+}
+function sala() { return indice < 0 ? undefined : banco?.salas[indice]; }
 function contexto() {
   return JSON.stringify([origem, indice, revisao, $("fTierSim").value, $("fTemaSim").value,
     $("fClasse").value, $("fNivel").value, $("fReps").value, $("fSemente").value,
@@ -85,10 +96,10 @@ function guardar() {
   gravarLocal("ultimo", origem);
   $("estado").textContent = armazenamentoFalhou ? "Baixe o JSON para salvar" : "Rascunho neste navegador";
 }
-/* A conferencia da FORMA de um arquivo aberto do disco. Saiu junto com o
-   editor de JSON por engano e voltou: o formulario nao deixa o autor
-   escrever um banco torto, mas `importar` abre o que vier, e sem isto um
-   arquivo qualquer virava `banco` e quebrava a tela em vez de avisar. */
+/* A conferencia da FORMA de um arquivo aberto do disco. O formulario nao
+   deixa o autor escrever um banco torto, mas `importar` abre o que vier, e
+   sem isto um arquivo qualquer virava `banco` e quebrava a tela em vez de
+   avisar. */
 function estrutura(dados, bancoInteiro) {
   if (!objeto(dados)) throw new Error("Use um objeto JSON entre { e }.");
   if (bancoInteiro && (typeof dados.organizacao !== "string" || !Array.isArray(dados.salas) || !dados.salas.every(objeto))) {
@@ -96,9 +107,24 @@ function estrutura(dados, bancoInteiro) {
   }
 }
 
-const SEM_TESTE = new Set(["Combate", "Descanso"]);
+/* ------------------------------------------------- tipos e famílias
 
-function temTeste(tipo) { return !SEM_TESTE.has(tipo); }
+   A familia de um tipo diz o que o autor FAZ ao escrever a sala, e e o que
+   divide a bancada em lugares. Ela vem do servidor junto com os tipos: um
+   tipo novo no bot aparece aqui sem ninguem lembrar de mexer na pagina.
+   Tipo desconhecido cai em "teste" para a sala continuar visivel e
+   editavel — sumir da tela seria pior do que aparecer no lugar errado. */
+function familia(tipo) { return FAMILIA[tipo] || "teste"; }
+function lugarDoTipo(tipo) { return familia(tipo) === "combate" ? "Combate" : "Teste"; }
+function tipoNovo(fam) { return (C.sala_nova || {})[fam]; }
+function tiposDoLugar(atual) {
+  const quero = bancadaEm === "Combate" ? ["combate"] : ["teste"];
+  const lista = C.tipos.filter(t => quero.includes(familia(t)));
+  // O tipo da sala aberta entra sempre, mesmo fora da familia do lugar: um
+  // select que nao tem o valor da sala mostra OUTRA coisa e mente calado.
+  if (atual && !lista.includes(atual)) lista.unshift(atual);
+  return lista;
+}
 
 function fichas(alvo, lista, marcados, aoTrocar) {
   const caixa = $(alvo);
@@ -209,15 +235,38 @@ function desenharCriaturas(reconstruir = false) {
   contarBando();
 }
 
+/* O limite de criaturas é POR BANDO — o que entra na mesa de uma vez —, e
+   não a soma do que está escrito na sala: o bot cobra `MAX_INIMIGOS` por
+   tier (e por variante de tema), porque é um tier por incursão. Somando os
+   tiers, o estúdio pintava de vermelho uma sala que ele mesmo aprova em
+   /api/conferir, e mandava o autor apagar criatura que não sobrava.
+
+   Linha sem nome não conta: é um campo em branco esperando o autor, e
+   `montarMonstros` também a ignora ao escrever no objeto. */
+function bandos() {
+  const contagem = new Map();
+  (linhasAtuais || []).forEach(l => {
+    if (!texto(l.nome).trim()) return;
+    const chave = l.tier ? `tier ${l.tier}${l.tema ? ` · ${l.tema}` : ""}` : "sem tier";
+    contagem.set(chave, (contagem.get(chave) || 0) + Math.max(1, Number(l.quantidade) || 1));
+  });
+  return [...contagem].sort((a, b) => b[1] - a[1]);
+}
+
 function contarBando() {
-  // Linha sem nome nao conta: ela e um campo em branco esperando o autor, e
-  // `montarMonstros` tambem a ignora ao escrever no objeto.
-  const linhas = (linhasAtuais || []).filter(l => texto(l.nome).trim());
-  const total = linhas.reduce((n, l) => n + Math.max(1, Number(l.quantidade) || 1), 0);
-  $("recadoCriaturas").textContent = linhas.length
-    ? `${total} criatura(s) no bando${total > C.limites.inimigos ? ` — o máximo é ${C.limites.inimigos}` : ""}.`
-    : "Sala de Combate sem criatura não passa na validação.";
-  $("recadoCriaturas").classList.toggle("invalido", total > C.limites.inimigos);
+  const todos = bandos(), teto = C.limites.inimigos;
+  const recado = $("recadoCriaturas");
+  if (!todos.length) {
+    recado.textContent = "Sala de Combate sem criatura não passa na validação.";
+    recado.classList.remove("invalido");
+    return;
+  }
+  const [maiorNome, maior] = todos[0], estoura = maior > teto;
+  const excesso = estoura ? ` — o máximo é ${teto} por bando` : "";
+  recado.textContent = todos.length > 1
+    ? `${todos.length} bandos · o maior tem ${maior} criatura(s) em ${maiorNome}${excesso}.`
+    : `${maior} criatura(s) no bando${estoura ? ` — o máximo é ${teto}` : ""}.`;
+  recado.classList.toggle("invalido", estoura);
 }
 
 function gravarLinhas(linhas) {
@@ -228,22 +277,14 @@ function gravarLinhas(linhas) {
   alterado();
 }
 
-function preencherSelect(alvo, pares, escolhido) {
-  alvo.replaceChildren();
-  pares.forEach(([valor, rotulo]) => {
-    const o = document.createElement("option");
-    o.value = valor; o.textContent = rotulo;
-    if (valor === escolhido) o.selected = true;
-    alvo.append(o);
-  });
-}
+/* ------------------------------------------------------- o formulário */
 
 function mostrarEditor() {
   const s = sala();
   if (linhasDoIndice !== indice) { linhasAtuais = null; linhasDoIndice = -1; }
   const form = $("formSala");
   form.hidden = !s;
-  if (!s) { previa(); controles(); return; }
+  if (!s) { $("dicaTipo").textContent = ""; previa(); controles(); return; }
 
   $("fId").value = texto(s.id);
   $("fNome").value = texto(s.nome);
@@ -251,10 +292,11 @@ function mostrarEditor() {
   $("fPontos").value = s.pontos_organizacao ?? 0;
   $("fRecompensa").value = texto(s.recompensa);
   $("fImagem").value = texto(s.imagem);
-  preencherSelect($("fTipo"), C.tipos.filter(t => t !== "Descanso").map(t => [t, t]), s.tipo);
+  preencherSelect($("fTipo"), tiposDoLugar(s.tipo).map(t => [t, t]), s.tipo);
   preencherSelect($("fDif"), C.dificuldades.map(d => [d, d]), texto(s.dificuldade) || C.dificuldades[1]);
   $("fCd").value = s.cd ?? "";
   $("fAlvo").value = s.alvo_progresso ?? "";
+  $("dicaTipo").textContent = RESUMO[s.tipo] || "";
 
   const temas = Array.isArray(s.temas) ? s.temas : [];
   fichas("fichasSala", C.temas, temas, (tema, ligar) => {
@@ -273,16 +315,14 @@ function mostrarEditor() {
   });
 
   contadores();
-  const combate = s.tipo === "Combate";
-  $("blocoTeste").hidden = !temTeste(s.tipo);
-  $("blocoCriaturas").hidden = !combate;
-  if (combate) desenharCriaturas();
+  $("blocoTeste").hidden = familia(s.tipo) !== "teste";
+  $("blocoCriaturas").hidden = familia(s.tipo) !== "combate";
+  if (familia(s.tipo) === "combate") desenharCriaturas();
   previa(); controles();
 }
 
 /* O formulario escreve direto no objeto, campo a campo. Nao ha "aplicar":
-   o que esta na tela e o que esta no banco, sempre — era o `aplicarEdicao`
-   do JSON que podia divergir enquanto o texto estivesse pela metade. */
+   o que esta na tela e o que esta no banco, sempre. */
 function contadores() {
   const marcar = (alvo, quantos, aviso, teto) => {
     $(alvo).textContent = quantos;
@@ -294,6 +334,9 @@ function contadores() {
   $("tetoNome").textContent = C.limites.titulo;
   $("tetoDesc").textContent = C.limites.descricao;
   $("dicaDesc").textContent = `aviso em 600 · o Discord recusa acima de ${C.limites.descricao}`;
+  const s = sala(), desconto = s ? (DESCONTO[s.tipo] || 0) : 0, cd = numero("fCd");
+  $("dicaCd").textContent = desconto && cd
+    ? `${s.tipo} desconta ${desconto}: vale ${Math.max(1, cd - desconto)} na mesa.` : "";
 }
 
 function lerCampo(id, aplicar) {
@@ -306,26 +349,68 @@ function lerCampo(id, aplicar) {
   });
 }
 
-function pronto() {
-  // Era o portao do JSON pela metade. Com formulario nao ha estado invalido
-  // de sintaxe: ou ha banco aberto, ou nao ha.
-  return !!banco;
-}
+function pronto() { return !!banco; }
+
 function controles() {
   const temSala = !!sala(), pode = !!banco;
   ["btBaixar", "btConferirBanco", "btNova", "btCopiarFiltro"].forEach(id => { $(id).disabled = !pode; });
-  ["btDuplicar", "btExcluir", "btConferir"].forEach(id => { $(id).disabled = !pode || !temSala; });
+  ["btDuplicar", "btExcluir", "btConferir", "btVirar"].forEach(id => { $(id).disabled = !pode || !temSala; });
   $("btRecarregar").disabled = !banco;
-  const combate = temSala && sala().tipo === "Combate";
-  $("avisoCombate").hidden = combate;
+  $("btVirar").textContent = bancadaEm === "Combate" ? "Virar sala de teste" : "Virar combate";
+  const combate = temSala && familia(sala().tipo) === "combate";
+  $("avisoCombate").hidden = combate || lugar !== "Combate";
   $("btMedir").disabled = !pode || !combate || medindo;
   $("btSugerir").disabled = !pode || !combate || sugerindo;
   document.querySelectorAll(".usar-sugestao").forEach(n => { n.disabled = !pode || sugestaoContexto !== contexto(); });
 }
+
+/* ----------------------------------------------------- os quatro lugares */
+
+function indicesDoLugar(nome = bancadaEm) {
+  if (!banco) return [];
+  return banco.salas.reduce((saida, s, i) => {
+    if (lugarDoTipo(s.tipo) === nome) saida.push(i);
+    return saida;
+  }, []);
+}
+
+function entrar(nome, foco = false) {
+  const anterior = bancadaEm;
+  lugar = nome;
+  if (nome === "Teste" || nome === "Combate") bancadaEm = nome;
+  document.querySelectorAll("[data-lugar]").forEach(n => {
+    const ativo = n.dataset.lugar === nome;
+    n.setAttribute("aria-selected", ativo); n.tabIndex = ativo ? 0 : -1;
+    $("painel" + n.dataset.lugar).hidden = !ativo;
+    if (ativo && foco) n.focus();
+  });
+  // A bancada acompanha `bancadaEm` mesmo quando o painel aberto é outro:
+  // quem vai montar a dungeon e volta reencontra a sala onde a deixou.
+  $("ancora" + bancadaEm).append($("bancada"));
+  $("tituloLista").textContent = bancadaEm === "Combate" ? "Combates" : "Salas de teste";
+  $("btNova").textContent = bancadaEm === "Combate" ? "+ Novo combate" : "+ Nova sala";
+  if (anterior !== bancadaEm) $("fBusca").value = "";
+  const disponiveis = indicesDoLugar(bancadaEm), guardado = selecao[bancadaEm];
+  indice = disponiveis.includes(guardado) ? guardado : (disponiveis[0] ?? -1);
+  selecao[bancadaEm] = indice;
+  mostrarEditor();
+  atualizar();
+  if (nome === "Inspecao") conferir(true);
+}
+
+function abrirSala(i) {
+  const destino = lugarDoTipo(banco.salas[i].tipo);
+  selecao[destino] = i;
+  entrar(destino);
+  guardar(); agendarConferencia();
+}
+
 function listar() {
   const busca = normalizar($("fBusca").value), lista = $("listaSalas");
   lista.replaceChildren();
-  banco.salas.forEach((s, i) => {
+  const meus = indicesDoLugar();
+  meus.forEach(i => {
+    const s = banco.salas[i];
     if (!normalizar(`${texto(s.id)} ${texto(s.nome)}`).includes(busca)) return;
     const botao = no("button", "sala-btn"); botao.type = "button";
     botao.setAttribute("aria-current", i === indice ? "true" : "false");
@@ -335,19 +420,182 @@ function listar() {
     botao.append(meta);
     botao.addEventListener("click", () => {
       if (!pronto()) return;
-      indice = i; mostrarEditor(); atualizar(); guardar(); agendarConferencia();
+      indice = i; selecao[bancadaEm] = i;
+      mostrarEditor(); atualizar(); guardar(); agendarConferencia();
     });
     const item = no("li"); item.append(botao); lista.append(item);
   });
-  $("contaSalas").textContent = banco.salas.length;
+  $("contaSalas").textContent = meus.length;
   $("listaVazia").hidden = lista.children.length > 0;
-  $("notaDescanso").textContent = banco.salas.some(s => s.tipo === "Descanso") ? "Descanso aparece nas paradas fixas." : "Sem sala de Descanso.";
+  $("notaLista").textContent = bancadaEm === "Combate"
+    ? "O tier da incursão escolhe quem aparece em cada combate."
+    : banco.salas.some(s => familia(s.tipo) === "parada")
+      ? "O Descanso desta lista é parada fixa: ele não é sorteado."
+      : "Este banco não tem sala de Descanso.";
 }
+
+function contas() {
+  if (!banco) return;
+  $("contaTeste").textContent = indicesDoLugar("Teste").length;
+  $("contaCombate").textContent = indicesDoLugar("Combate").length;
+  $("contaTudo").textContent = banco.salas.length;
+}
+
+/* ---------------------------------------------------------- inspecionar */
+
+function sorteaveis() {
+  return banco.salas.filter(s => familia(s.tipo) !== "parada");
+}
+
+function dentroDa(s) {
+  if (familia(s.tipo) === "parada") return "";
+  if (familia(s.tipo) === "combate") {
+    const linhas = linhasDaSala(s);
+    if (!linhas.length) return "";
+    const tiers = [...new Set(linhas.map(l => l.tier).filter(Boolean))].sort();
+    const variantes = [...new Set(linhas.map(l => l.tema).filter(Boolean))];
+    const nomes = [...new Set(linhas.map(l => texto(l.nome).trim()).filter(Boolean))];
+    const partes = [tiers.length ? `tiers ${tiers.join(", ")}` : "qualquer tier"];
+    if (variantes.length) partes.push(`variantes: ${variantes.join(", ")}`);
+    partes.push(nomes.slice(0, 3).join(", ") + (nomes.length > 3 ? ` +${nomes.length - 3}` : ""));
+    return partes.join(" · ");
+  }
+  const desconto = DESCONTO[s.tipo] || 0, partes = [];
+  if (s.dificuldade) partes.push(s.dificuldade);
+  if (s.cd != null) partes.push(desconto ? `CD ${s.cd} → ${Math.max(1, s.cd - desconto)}` : `CD ${s.cd}`);
+  if (s.alvo_progresso != null) partes.push(`${s.alvo_progresso} sucesso(s)`);
+  if (Array.isArray(s.pericias) && s.pericias.length) partes.push(s.pericias.join(", "));
+  return partes.join(" · ");
+}
+
+function cartao(titulo, conteudo) {
+  const n = no("section");
+  n.append(no("h4", "", titulo), conteudo);
+  return n;
+}
+
+function mapa() {
+  const caixa = $("mapaBanco");
+  caixa.replaceChildren();
+  const pool = sorteaveis().length;
+
+  // O caminho: quais tamanhos este banco consegue montar, com a conta do
+  // sorteio (precisa de `folga` salas para oferecer 3 portas em toda parada).
+  const caminhos = no("div", "contas");
+  Object.entries(C.tamanhos).forEach(([nome, t]) => {
+    const linha = no("div", "conta-linha");
+    const veredito = pool >= t.folga ? "com folga" : pool >= t.terminar ? "sem variedade" : "não fecha";
+    const marca = no("b", "", veredito);
+    marca.style.color = `var(--${pool >= t.folga ? "good" : pool >= t.terminar ? "warn" : "bad"})`;
+    linha.append(no("span", "", `${nome} · ${t.paradas} paradas · quer ${t.folga}`), marca);
+    caminhos.append(linha);
+  });
+  // O mapa dos temas são as fichas do filtro aqui embaixo, que já trazem a
+  // contagem e ainda filtram a tabela. O que falta a elas é isto: sala SEM
+  // tema não aparece em ficha nenhuma, e entra em toda dungeon.
+  const semTema = sorteaveis().filter(s => !(s.temas || []).length).length;
+  const bloco = no("div");
+  bloco.append(caminhos, no("p", "legenda nota-mapa",
+    `"Quer" é o que mantém ${C.limites.opcoes_por_passo} portas em toda parada. `
+    + (semTema
+      ? `${semTema} sala(s) estão sem tema e entram em TODA dungeon, filtrada ou não.`
+      : "Toda sala sorteável tem tema.")));
+  caixa.append(cartao(`O caminho · ${pool} salas sorteáveis`, bloco));
+
+  // Os combates, e o que eles escrevem por tier.
+  const combates = banco.salas.filter(s => familia(s.tipo) === "combate");
+  const porTier = combates.filter(s => objeto(s.monstros_por_tier)).length;
+  const comVariante = combates.filter(s => objeto(s.monstros_por_tema)).length;
+  const vazias = combates.filter(s => !linhasDaSala(s).length).length;
+  const contas = no("div", "contas");
+  [["Salas de combate", combates.length],
+   ["Com criaturas por tier", porTier],
+   ["Com variante por tema", comVariante],
+   ["Sem nenhuma criatura", vazias]].forEach(([rotulo, valor]) => {
+    const linha = no("div", "conta-linha");
+    const b = no("b", "", valor);
+    if (rotulo.startsWith("Sem") && valor) b.style.color = "var(--bad)";
+    linha.append(no("span", "", rotulo), b);
+    contas.append(linha);
+  });
+  caixa.append(cartao("Combates", contas));
+
+  $("resumoBanco").textContent =
+    `${banco.salas.length} salas em ${texto(banco.organizacao)} · arquivo ${texto(arquivo)}`;
+}
+
+function filtrosDaInspecao() {
+  const tipos = $("fichasTipos"), temas = $("fichasTemasInspecao");
+  tipos.replaceChildren(); temas.replaceChildren();
+  const alternar = (conjunto, valor, botao) => {
+    conjunto.has(valor) ? conjunto.delete(valor) : conjunto.add(valor);
+    botao.setAttribute("aria-pressed", conjunto.has(valor));
+    inspecionar();
+  };
+  C.tipos.forEach(t => {
+    const quantas = banco.salas.filter(s => s.tipo === t).length;
+    if (!quantas) return;
+    const b = no("button", "ficha", t); b.type = "button";
+    b.append(no("span", "quantas", quantas));
+    b.setAttribute("aria-pressed", tiposVisiveis.has(t));
+    b.addEventListener("click", () => alternar(tiposVisiveis, t, b));
+    tipos.append(b);
+  });
+  C.temas.forEach(t => {
+    const quantas = banco.salas.filter(s => (s.temas || []).includes(t)).length;
+    // Tema sem sala fica visível e apagado: ele é o buraco do banco, e
+    // esconder o buraco é esconder o trabalho que falta.
+    const b = no("button", "ficha" + (quantas ? "" : " zero"), t); b.type = "button";
+    b.append(no("span", "quantas", quantas));
+    b.disabled = !quantas;
+    b.setAttribute("aria-pressed", temasVisiveis.has(t));
+    b.addEventListener("click", () => alternar(temasVisiveis, t, b));
+    temas.append(b);
+  });
+}
+
+function inspecionar() {
+  if (!banco) return;
+  mapa();
+  filtrosDaInspecao();
+  const busca = normalizar($("fBuscaInspecao").value);
+  const corpo = $("tabelaInspecao");
+  corpo.replaceChildren();
+  let quantas = 0;
+  banco.salas.forEach((s, i) => {
+    if (tiposVisiveis.size && !tiposVisiveis.has(s.tipo)) return;
+    if (temasVisiveis.size && !(s.temas || []).some(t => temasVisiveis.has(t))) return;
+    const dentro = dentroDa(s);
+    if (busca && !normalizar(`${texto(s.id)} ${texto(s.nome)} ${dentro}`).includes(busca)) return;
+    quantas++;
+    const tr = no("tr");
+
+    const primeira = no("td");
+    const abrir = no("button", "abrir-sala"); abrir.type = "button";
+    abrir.append(no("small", "", s.id || "sem id"), no("span", "", s.nome || "Sem nome"));
+    abrir.addEventListener("click", () => abrirSala(i));
+    primeira.append(abrir); tr.append(primeira);
+
+    const tipo = no("td");
+    const etiqueta = no("span", "etiqueta" + (familia(s.tipo) === "combate" ? " combate" : ""), s.tipo || "sem tipo");
+    tipo.append(etiqueta); tr.append(tipo);
+
+    tr.append(no("td", "", (s.temas || []).join(", ") || "—"));
+    tr.append(no("td", "dentro" + (dentro ? "" : " nada"), dentro || "—"));
+    tr.append(no("td", "n", s.pontos_organizacao ?? 0));
+    corpo.append(tr);
+  });
+  $("contaInspecao").textContent = quantas;
+  $("inspecaoVazia").hidden = quantas > 0;
+}
+
+/* ------------------------------------------------------------- a prévia */
+
 function previa() {
   const s = sala();
   $("nomeSala").textContent = s?.nome || "Selecione uma sala";
   $("tipoSala").textContent = s?.tipo || "Sala";
-  $("tipoSala").classList.toggle("combate", s?.tipo === "Combate");
+  $("tipoSala").classList.toggle("combate", !!s && familia(s.tipo) === "combate");
   $("idSala").textContent = texto(s?.id);
   $("dTitulo").textContent = s?.nome || "Sua sala aparece aqui";
   $("dCorpo").textContent = texto(s?.descricao);
@@ -357,11 +605,11 @@ function previa() {
     if (valor == null || valor === "") return;
     const n = no("div"); n.append(no("strong", "", nome), no("span", "", valor)); $("dCampos").append(n);
   }
-  if (s.tipo === "Combate") {
+  if (familia(s.tipo) === "combate") {
     const tiers = objeto(s.monstros_por_tier) ? Object.keys(s.monstros_por_tier) : [];
     campo("Criaturas", tiers.length ? `Tiers ${tiers.join(", ")}` : Array.isArray(s.monstros) ? s.monstros.map(m => `${m.quantidade || 1}× ${texto(m.nome)}`).join(", ") : "Não definidas");
     campo("Variantes", objeto(s.monstros_por_tema) ? Object.keys(s.monstros_por_tema).join(", ") : "");
-  } else if (s.tipo !== "Descanso") {
+  } else if (familia(s.tipo) === "teste") {
     campo("Dificuldade", s.dificuldade); campo("CD base", s.cd); campo("Sucessos", s.alvo_progresso);
     campo("Perícias", Array.isArray(s.pericias) ? s.pericias.join(", ") : "");
   }
@@ -371,12 +619,14 @@ function previa() {
   $("limitesTexto").textContent = `Título ${titulo}/${C.limites.titulo} · Texto ${descricao}/${C.limites.descricao}`;
   $("limitesTexto").style.color = titulo > C.limites.titulo || descricao > C.limites.descricao ? "var(--bad)" : "";
 }
+
 function atualizar() {
-  listar(); previa();
+  listar(); previa(); contas();
   const tema = $("fTemaSim").value;
   preencher("fTemaSim", [["", "Padrão"], ...Object.keys(objeto(sala()?.monstros_por_tema) ? sala().monstros_por_tema : {})], tema);
   desatualizar(); controles();
-  if (!$("painelFiltro").hidden) agendarPool();
+  if (lugar === "Dungeon") agendarPool();
+  if (lugar === "Inspecao") inspecionar();
 }
 function desatualizar() {
   $("medidaDesatualizada").hidden = !medidaContexto || medidaContexto === contexto();
@@ -393,11 +643,19 @@ function carregar(chave) {
   const restauravel = salvo && objeto(salvo.banco) && Array.isArray(salvo.banco.salas) && salvo.banco.salas.every(objeto);
   banco = copiar(restauravel ? salvo.banco : original.banco);
   arquivo = restauravel ? salvo.arquivo : original.arquivo;
-  indice = restauravel ? Math.max(0, Math.min(salvo.indice || 0, banco.salas.length - 1)) : 0;
+  const guardado = restauravel ? Math.max(-1, Math.min(salvo.indice ?? -1, banco.salas.length - 1)) : -1;
   revisao++; sequencia++; pedidoConferir++; pedidoPool++;
+  selecao.Teste = -1; selecao.Combate = -1;
+  // Reabrir o rascunho tem de cair no lugar onde a sala vive, senão o autor
+  // volta num lugar que não mostra a sala que ele estava escrevendo.
+  if (guardado >= 0) {
+    bancadaEm = lugarDoTipo(banco.salas[guardado].tipo);
+    selecao[bancadaEm] = guardado;
+  }
   $("fBanco").value = chave; $("fBusca").value = "";
   $("saidaBanco").hidden = true; $("saidaSala").hidden = true;
-  mostrarEditor(); atualizar();
+  listarIncursoes();
+  entrar(lugar === "Dungeon" || lugar === "Inspecao" ? lugar : bancadaEm);
   guardar(); agendarConferencia();
   if (restauravel) aviso("Rascunho restaurado.");
 }
@@ -416,15 +674,6 @@ async function conferir(inteiro = false) {
     if (id === pedidoConferir) recados(alvo, {erro: erro.message});
   }
 }
-function aba(nome, foco = false) {
-  document.querySelectorAll("[data-aba]").forEach(n => {
-    const ativa = n.dataset.aba === nome;
-    n.setAttribute("aria-selected", ativa); n.tabIndex = ativa ? 0 : -1;
-    $("painel" + n.dataset.aba).hidden = !ativa;
-    if (ativa && foco) n.focus();
-  });
-  if (nome === "Filtro") agendarPool();
-}
 function novoId() {
   const ids = new Set(banco.salas.map(s => s.id));
   const modelo = banco.salas.map(s => texto(s.id).match(/^(.*?)(\d+)$/)).find(Boolean);
@@ -433,13 +682,47 @@ function novoId() {
   while (ids.has(prefixo + String(numero).padStart(largura, "0"))) numero++;
   return prefixo + String(numero).padStart(largura, "0");
 }
+function emBranco() {
+  const tipo = tipoNovo(bancadaEm === "Combate" ? "combate" : "teste") || C.tipos[0];
+  const nova = {id: "", nome: "Nova sala", tipo, descricao: "", temas: []};
+  if (familia(tipo) === "combate") nova.monstros = [];
+  else Object.assign(nova, {dificuldade: C.dificuldades[1], cd: 13, alvo_progresso: 3, pericias: []});
+  return nova;
+}
 function adicionar(duplicar = false) {
   if (!pronto()) return;
-  const nova = duplicar ? copiar(sala()) : {id: "", nome: "Nova sala", tipo: "Evento", descricao: "", temas: [], dificuldade: C.dificuldades[1], cd: 13, alvo_progresso: 3, pericias: []};
+  if (duplicar && !sala()) return;
+  const nova = duplicar ? copiar(sala()) : emBranco();
   nova.id = novoId();
   if (duplicar) nova.nome = `${texto(nova.nome)} (cópia)`;
-  banco.salas.push(nova); indice = banco.salas.length - 1;
-  $("fBusca").value = ""; mostrarEditor(); alterado(); aba("Editar"); $("fId").focus();
+  banco.salas.push(nova);
+  indice = banco.salas.length - 1;
+  selecao[lugarDoTipo(nova.tipo)] = indice;
+  $("fBusca").value = "";
+  if (lugarDoTipo(nova.tipo) !== bancadaEm) entrar(lugarDoTipo(nova.tipo));
+  mostrarEditor(); alterado(); $("fId").focus();
+}
+/* Campo que não pertence ao tipo novo sai: o validador recusa sala de
+   Combate com perícia e sala de teste com criatura, e o autor não tem como
+   ver o resto na tela para apagar à mão. */
+function trocarTipo(s, tipo) {
+  s.tipo = tipo;
+  const fam = familia(tipo);
+  if (fam !== "teste") { s.dificuldade = null; s.cd = null; s.alvo_progresso = null; s.pericias = []; }
+  else s.dificuldade ||= C.dificuldades[1];
+  if (fam !== "combate") { delete s.monstros; delete s.monstros_por_tier; delete s.monstros_por_tema; }
+  linhasAtuais = null; linhasDoIndice = -1;
+}
+function virar() {
+  const s = sala();
+  if (!s) return;
+  const destino = tipoNovo(bancadaEm === "Combate" ? "teste" : "combate");
+  if (!destino) return;
+  trocarTipo(s, destino);
+  selecao[lugarDoTipo(destino)] = indice;
+  entrar(lugarDoTipo(destino));
+  alterado();
+  aviso(`“${texto(s.nome)}” agora é ${destino}.`);
 }
 function baixar() {
   if (!pronto()) return;
@@ -449,6 +732,9 @@ function baixar() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   aviso("JSON do banco baixado.");
 }
+
+/* ------------------------------------------------------ medir e sugerir */
+
 function parametros() {
   for (const id of ["fNivel", "fReps", "fSemente"]) {
     if (!$(id).checkValidity()) { $(id).reportValidity(); return null; }
@@ -517,7 +803,8 @@ async function sugerir() {
         } else if (!objeto(alvo.monstros_por_tier)) alvo.monstros_por_tier = {};
         const tiers = tema ? alvo.monstros_por_tema[tema] : alvo.monstros_por_tier;
         tiers[String(p.tier)] = s.bando.map(m => ({nome: m.nome, quantidade: m.quantidade}));
-        mostrarEditor(); alterado(); aba("Editar"); aviso(`Criaturas aplicadas ao tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
+        linhasAtuais = null; linhasDoIndice = -1;
+        mostrarEditor(); alterado(); aviso(`Criaturas aplicadas ao tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
       });
       card.append(botao); $("sugestoes").append(card);
     });
@@ -525,10 +812,17 @@ async function sugerir() {
   } catch (erro) { if (atual === contexto()) recados("saidaSugerir", {erro: erro.message}); }
   finally { sugerindo = false; if ($("recadoSugerir").textContent === "Simulando candidatos…") $("recadoSugerir").textContent = ""; controles(); }
 }
+
+/* ------------------------------------------------------- montar dungeon */
+
+/* As fichas do filtro são lidas por `#fichasFiltro`, e não por `.ficha`: a
+   mesma classe desenha os temas e as perícias DA SALA, e varrer a página
+   inteira mandava o tema da sala aberta para dentro do filtro da dungeon. */
+function fichasDoFiltro() { return [...document.querySelectorAll("#fichasFiltro .ficha")]; }
 function filtro() {
   const ids = id => [...new Set($(id).value.split(",").map(s => s.trim()).filter(Boolean))];
   const f = {}, incluir = ids("fIncluir"), excluir = ids("fExcluir");
-  const temas = [...document.querySelectorAll('.ficha[aria-pressed="true"]')].map(n => n.dataset.tema);
+  const temas = fichasDoFiltro().filter(n => n.getAttribute("aria-pressed") === "true").map(n => n.dataset.tema);
   if (incluir.length) f.incluir = incluir;
   else if (temas.length) f.temas = temas;
   if (excluir.length) f.excluir = excluir;
@@ -537,6 +831,7 @@ function filtro() {
 function limparPool(mensagem) {
   $("tabelaPool").replaceChildren(); $("contaPool").textContent = mensagem;
   $("barraPool").value = 0; $("contaFiltro").textContent = ""; $("selo").textContent = "";
+  $("contaPoolAtalho").textContent = "—";
   $("saidaFiltro").hidden = true;
 }
 function agendarPool() {
@@ -545,8 +840,10 @@ function agendarPool() {
 }
 async function conferirPool() {
   const f = filtro(), temIds = !!f.incluir;
-  document.querySelectorAll(".ficha").forEach(n => { n.disabled = temIds; });
+  fichasDoFiltro().forEach(n => { n.disabled = temIds; });
   $("notaFiltro").textContent = temIds ? "IDs definidos: os temas não entram no filtro." : "Sem temas ou IDs, usa o banco inteiro.";
+  const t = C.tamanhos[$("fTam").value];
+  $("notaTamanho").textContent = t ? `${t.paradas} paradas · ${t.terminar} salas para terminar` : "";
   if (!banco) { limparPool("Abra um banco para conferir o filtro."); return; }
   const id = ++pedidoPool;
   try {
@@ -554,6 +851,7 @@ async function conferirPool() {
     if (id !== pedidoPool) return;
     if (r.erro) { limparPool("Não foi possível conferir."); recados("saidaFiltro", r); return; }
     $("contaPool").textContent = `${r.pool.length} salas disponíveis`;
+    $("contaPoolAtalho").textContent = r.pool.length;
     $("barraPool").max = Math.max(1, r.sorteaveis); $("barraPool").value = r.pool.length;
     $("contaFiltro").textContent = `${r.pool.length} de ${r.sorteaveis} salas · Precisa de ${r.terminar} para terminar e ${r.folga} para manter ${C.limites.opcoes_por_passo} opções.`;
     $("selo").textContent = r.problemas.length ? "Insuficiente" : r.avisos.length ? "Pouca variedade" : "Suficiente";
@@ -563,6 +861,28 @@ async function conferirPool() {
       tr.append(nome, no("td", "", s.tipo), no("td", "", s.temas.join(", "))); return tr;
     }));
   } catch (erro) { if (id === pedidoPool) { limparPool("Não foi possível conferir."); recados("saidaFiltro", {erro: erro.message}); } }
+}
+/* Partir de uma incursão que já existe: o filtro dela entra nos campos para
+   o autor ver o pool que ela monta hoje — e mexer a partir dali. Só as da
+   Organização aberta: filtro de outra organização aponta para IDs que este
+   banco não tem, e o pool sairia vazio sem dizer por quê. */
+function listarIncursoes() {
+  if (!C || !banco) return;
+  preencher("fIncursao", [["", "Começar do zero"], ...Object.values(C.incursoes || {})
+    .filter(i => i.organizacao === banco.organizacao)
+    .map(i => [i.id, `${i.nome} · ${i.tamanho}`])]);
+}
+function carregarIncursao() {
+  const alvo = C.incursoes[$("fIncursao").value];
+  if (!alvo) return;
+  const f = alvo.filtro || {};
+  $("fTam").value = C.tamanhos[alvo.tamanho] ? alvo.tamanho : $("fTam").value;
+  $("fIncluir").value = (f.incluir || []).join(", ");
+  $("fExcluir").value = (f.excluir || []).join(", ");
+  const pedidos = new Set(f.temas || []);
+  fichasDoFiltro().forEach(n => n.setAttribute("aria-pressed", pedidos.has(n.dataset.tema)));
+  agendarPool();
+  aviso(`Filtro de “${texto(alvo.nome)}” carregado.`);
 }
 async function copiarFiltro() {
   if (!pronto()) return;
@@ -581,12 +901,21 @@ async function importar(evento) {
     const chave = `importado.${Date.now()}.${entrada.name}`;
     originais[chave] = {banco: dados, arquivo: entrada.name};
     const opcao = no("option", "", `${dados.organizacao} · ${entrada.name}`); opcao.value = chave; $("fBanco").append(opcao);
-    carregar(chave); aba("Editar"); aviso("JSON aberto. O arquivo original permanece no disco.");
+    carregar(chave); aviso("JSON aberto. O arquivo original permanece no disco.");
   } catch (erro) { aviso(`Não foi possível abrir: ${erro.message}`); }
 }
+
 async function iniciar() {
   try {
     C = await api("/api/conteudo");
+    (C.tipos_de_sala || []).forEach(t => {
+      FAMILIA[t.id] = t.familia; RESUMO[t.id] = t.resumo; DESCONTO[t.id] = t.desconto_cd || 0;
+    });
+    // O subtítulo de cada lugar sai dos tipos do servidor: tipo novo no bot
+    // aparece no cartão sem ninguém reescrever a página.
+    const daFamilia = f => C.tipos.filter(t => familia(t) === f);
+    $("subTeste").textContent = daFamilia("teste").join(", ");
+    $("subCombate").textContent = "Criaturas, medição e sugestão de bando";
     Object.entries(C.bancos).forEach(([nome, b]) => { originais[nome] = {banco: b.original || {organizacao: b.organizacao, salas: b.salas}, arquivo: b.arquivo}; });
     preencher("fBanco", Object.keys(C.bancos)); $("fBanco").disabled = false;
     preencher("fTierSim", Array.from({length: C.limites.tier_maximo}, (_, i) => i + 1), 2);
@@ -625,8 +954,7 @@ async function iniciar() {
 }
 
 /* Cada campo escreve o seu pedaco no objeto. O `id` e o `tipo` redesenham o
-   formulario, porque mudam o que ele mostra: trocar para Combate troca o
-   bloco do teste pelo das criaturas. */
+   formulario, porque mudam o que ele mostra. */
 lerCampo("fNome", s => { s.nome = $("fNome").value; });
 lerCampo("fDesc", s => { s.descricao = $("fDesc").value; });
 lerCampo("fPontos", s => { s.pontos_organizacao = numero("fPontos") ?? 0; });
@@ -641,16 +969,7 @@ $("fDif").addEventListener("change", () => {
 });
 $("fTipo").addEventListener("change", () => {
   const s = sala(); if (!s) return;
-  s.tipo = $("fTipo").value;
-  // Campo que nao pertence ao tipo novo sai: o validador recusa sala de
-  // Combate com pericia e sala de teste com criatura, e o autor nao tem
-  // como ver o resto na tela para apagar a mao.
-  if (s.tipo === "Combate") {
-    s.dificuldade = null; s.cd = null; s.alvo_progresso = null; s.pericias = [];
-  } else {
-    delete s.monstros; delete s.monstros_por_tier; delete s.monstros_por_tema;
-    s.dificuldade ||= C.dificuldades[1];
-  }
+  trocarTipo(s, $("fTipo").value);
   mostrarEditor(); alterado();
 });
 $("btNovaCriatura").addEventListener("click", () => {
@@ -667,6 +986,7 @@ $("fBanco").addEventListener("change", evento => {
   guardar(); carregar(destino);
 });
 $("fBusca").addEventListener("input", () => { if (banco) listar(); });
+$("fBuscaInspecao").addEventListener("input", () => { if (banco) inspecionar(); });
 $("btAbrir").addEventListener("click", () => { if (pronto()) $("fArquivo").click(); });
 $("fArquivo").addEventListener("change", importar);
 $("btBaixar").addEventListener("click", baixar);
@@ -674,23 +994,30 @@ $("btConferir").addEventListener("click", () => { if (pronto()) conferir(); });
 $("btConferirBanco").addEventListener("click", () => { if (pronto()) conferir(true); });
 $("btNova").addEventListener("click", () => adicionar());
 $("btDuplicar").addEventListener("click", () => adicionar(true));
+$("btVirar").addEventListener("click", virar);
 $("btExcluir").addEventListener("click", () => {
-  if (!pronto() || !confirm(`Excluir “${texto(sala().nome)}” do rascunho?`)) return;
-  banco.salas.splice(indice, 1); indice = Math.max(0, Math.min(indice, banco.salas.length - 1));
-  mostrarEditor(); alterado();
+  if (!pronto() || !sala() || !confirm(`Excluir “${texto(sala().nome)}” do rascunho?`)) return;
+  banco.salas.splice(indice, 1);
+  // Todo índice depois do removido andou um: guardar os antigos abriria a
+  // sala errada. O do lugar atual vira a vizinha, e `entrar` confere.
+  selecao.Teste = -1; selecao.Combate = -1;
+  selecao[bancadaEm] = Math.min(indice, banco.salas.length - 1);
+  indice = -1;
+  entrar(bancadaEm); alterado();
 });
 $("btRecarregar").addEventListener("click", () => {
   if (!banco || !confirm("Descartar o rascunho deste banco e restaurar o JSON original?")) return;
   const original = originais[origem];
-  banco = copiar(original.banco); arquivo = original.arquivo; indice = 0;
-  mostrarEditor(); alterado(); aviso("JSON original restaurado.");
+  banco = copiar(original.banco); arquivo = original.arquivo;
+  selecao.Teste = -1; selecao.Combate = -1; indice = -1;
+  entrar(bancadaEm); alterado(); aviso("JSON original restaurado.");
 });
-const abas = [...document.querySelectorAll("[data-aba]")];
-abas.forEach((n, i) => {
-  n.addEventListener("click", () => aba(n.dataset.aba));
+const cartoes = [...document.querySelectorAll("[data-lugar]")];
+cartoes.forEach((n, i) => {
+  n.addEventListener("click", () => entrar(n.dataset.lugar));
   n.addEventListener("keydown", evento => {
-    const destinos = {ArrowRight: (i + 1) % abas.length, ArrowLeft: (i + abas.length - 1) % abas.length, Home: 0, End: abas.length - 1};
-    if (destinos[evento.key] !== undefined) { evento.preventDefault(); aba(abas[destinos[evento.key]].dataset.aba, true); }
+    const destinos = {ArrowRight: (i + 1) % cartoes.length, ArrowLeft: (i + cartoes.length - 1) % cartoes.length, Home: 0, End: cartoes.length - 1};
+    if (destinos[evento.key] !== undefined) { evento.preventDefault(); entrar(cartoes[destinos[evento.key]].dataset.lugar, true); }
   });
 });
 $("fTierSim").addEventListener("change", () => { $("fNivel").value = Math.min(10, Number($("fTierSim").value) * 2); desatualizar(); });
@@ -700,6 +1027,7 @@ document.querySelectorAll('[name="grupo"]').forEach(n => n.addEventListener("cha
 $("btMedir").addEventListener("click", medir);
 $("btSugerir").addEventListener("click", sugerir);
 ["fTam", "fIncluir", "fExcluir"].forEach(id => $(id).addEventListener("input", agendarPool));
+$("fIncursao").addEventListener("change", carregarIncursao);
 $("btCopiarFiltro").addEventListener("click", copiarFiltro);
 document.addEventListener("keydown", evento => {
   if (!(evento.ctrlKey || evento.metaKey)) return;
@@ -707,5 +1035,8 @@ document.addEventListener("keydown", evento => {
   if (evento.key === "Enter") { evento.preventDefault(); if (pronto()) conferir(); }
 });
 window.addEventListener("beforeunload", guardar);
+// A bancada entra no lugar antes do primeiro pintar: ela mora no fim do HTML
+// e apareceria sob os paineis durante o `await` do conteúdo.
+$("ancoraTeste").append($("bancada"));
 controles();
 iniciar();

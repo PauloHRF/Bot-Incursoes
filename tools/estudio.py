@@ -98,6 +98,73 @@ def _tipos_de_bicho() -> list[dict[str, Any]]:
     ]
 
 
+# A que família cada tipo de sala pertence — o que o autor FAZ ao escrever uma.
+#
+# É esta divisão que separa a bancada em lugares: quem escreve um Evento não
+# precisa ver a tabela de criaturas, e quem monta um Combate não precisa da CD.
+# Ela mora aqui, e não na página, pelo mesmo motivo das outras listas: tipo
+# novo em TIPOS_SALA tem que aparecer em ALGUM lugar da tela, e uma cópia no
+# JavaScript o deixaria de fora calada. Sem o `.get`, de propósito — tipo sem
+# família derruba `conteudo()` na cara de quem o criou, e o teste pega antes.
+FAMILIA_DO_TIPO = {
+    "Combate": "combate",
+    "Descanso": "parada",
+    "Armadilha": "teste",
+    "Evento": "teste",
+    "Tesouro": "teste",
+}
+
+# Com que tipo nasce uma sala nova em cada família. Evento, e não o primeiro
+# tipo da lista: ele é o de folha em branco — passar dá prêmio, falhar cobra —
+# enquanto Armadilha e Tesouro já trazem uma intenção junto.
+SALA_NOVA = {"teste": "Evento", "combate": "Combate"}
+
+
+def _tipos_de_sala() -> list[dict[str, Any]]:
+    """Cada tipo com a família dele e o que a sala cobra do grupo.
+
+    Os NÚMEROS saem das constantes, e não escritos à mão na página: a tela
+    prometer 20% de dano depois de DANO_PCT virar 35 é exatamente a deriva
+    silenciosa que o resto deste arquivo existe para evitar.
+    """
+    from src import consequencias as K
+
+    resumo = {
+        "Combate": (
+            f"O tier escolhe quem aparece. No máximo {I.MAX_INIMIGOS} criaturas no "
+            "bando, cada uma pelo nome do bestiário."
+        ),
+        "Evento": (
+            f"Passar dá um buff, Cura (+{K.CURA_PCT}% do HP) ou Graça. Falhar deixa "
+            f"{K.UNIDADES_DO_CASTIGO} unidades de um debuff."
+        ),
+        "Armadilha": (
+            f"A CD escrita cai {I.DESCONTO_CD_ARMADILHA} na mesa — é a sala mais "
+            f"fácil do caminho. Falhar custa {K.DANO_PCT}% do HP máximo e um debuff."
+        ),
+        "Tesouro": (
+            "Falhar acorda os Mímicos, sempre: a emboscada do tier vira combate no "
+            "mesmo turno."
+        ),
+        "Descanso": (
+            "Parada fixa do caminho, sem teste. Não é sorteada: a incursão a põe "
+            "onde o tamanho manda."
+        ),
+    }
+    return [
+        {
+            "id": tipo,
+            "familia": FAMILIA_DO_TIPO[tipo],
+            "resumo": resumo[tipo],
+            # Quanto este tipo abate da CD escrita (`Sala.cd_efetiva`). Vai
+            # por tipo, e não como "a Armadilha desconta", para a página
+            # mostrar o número certo sem saber de qual tipo ele é.
+            "desconto_cd": I.DESCONTO_CD_ARMADILHA if tipo == "Armadilha" else 0,
+        }
+        for tipo in I.TIPOS_SALA
+    ]
+
+
 def _faixas_de_combate() -> dict[str, list[float]]:
     """As faixas de taxa de vitória que o sugeridor procura."""
     import sugestor
@@ -116,6 +183,10 @@ def conteudo() -> dict[str, Any]:
     return {
         "temas": list(I.TEMAS),
         "tipos": list(I.TIPOS_SALA),
+        # Os mesmos tipos, com a família e o que cada um cobra do grupo. A
+        # página divide os lugares por `familia` em vez de ter a sua lista.
+        "tipos_de_sala": _tipos_de_sala(),
+        "sala_nova": dict(SALA_NOVA),
         "organizacoes": list(I.ORGANIZACOES),
         "dificuldades": list(I.DIFICULDADES),
         "pericias": list(PERICIAS),

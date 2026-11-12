@@ -431,30 +431,51 @@ por isso que ele vive neste repositório e não em outro. Código separado seria
 uma segunda cópia das regras, e uma segunda régua sempre acaba discordando da
 primeira.
 
-O fluxo parte do JSON:
+A página é dividida em **quatro lugares**, e não em abas de uma sala só:
+escrever um Evento, montar um combate, montar a dungeon e olhar o que já
+existe são quatro trabalhos, com listas, campos e ferramentas diferentes.
+Quem vai escrever um Evento não precisa ver a tabela de criaturas, e quem
+monta um Combate não precisa da CD.
 
-1. Escolha o banco ou use **Abrir JSON** para importar um arquivo.
-2. Busque e selecione uma sala na lateral. **Nova**, **Duplicar** e **Excluir**
-   alteram o rascunho.
-3. Edite **Esta sala** ou **Banco inteiro**. A prévia e os contadores acompanham
-   a edição; **Conferir sala** e **Conferir banco** usam o validador do bot.
-4. Em **Testar combate**, escolha tier, classe, nível e tamanhos de grupo. A
-   medição mostra vitória, rodadas e caídos. **Sugerir criaturas** procura
-   encontros e permite aplicar uma sugestão ao tier e à variante selecionados.
-5. Em **Filtro da incursão**, confira as salas disponíveis por temas ou IDs
-   e copie o trecho `filtro` para o JSON da incursão.
-6. Use **Baixar JSON** para exportar o banco completo e coloque-o em
-   `data/bancos/`. A exportação preserva os campos extras e os nomes do
-   bestiário, sem expandir as fichas das criaturas.
+1. **Salas de teste** — Evento, Tesouro e Armadilha. A lista lateral traz só
+   elas, o formulário traz a dificuldade, a CD, os sucessos e as perícias, e
+   o texto sob o tipo diz o que a sala cobra do grupo: a Armadilha desconta
+   `DESCONTO_CD_ARMADILHA` da CD escrita, o Tesouro acorda os Mímicos ao
+   falhar, o Evento premia quem passa e castiga quem falha. Esses números
+   vêm das constantes do bot, não escritos na página. **Virar combate** leva
+   a sala para o outro lugar e limpa o que não pertence ao tipo novo.
+2. **Combates** — a lista traz só as salas de Combate, e o formulário é a
+   tabela de criaturas: nome (dos 385 do bestiário, oferecidos pelo campo),
+   quantas, tier e variante por tema. Embaixo, **Medir contra um grupo** roda
+   o motor do bot e mostra vitória, rodadas e caídos por tamanho de grupo;
+   **Sugerir criaturas** procura um bando na dificuldade pedida e aplica a
+   sugestão ao tier e à variante escolhidos. O máximo de criaturas é cobrado
+   **por bando** — por tier, e por variante de tema —, e não pela soma do que
+   está escrito na sala.
+3. **Montar dungeon** — o tamanho, os temas e os IDs do filtro, com o pool
+   que eles deixam medido contra o que o sorteio precisa para terminar e para
+   manter as portas. **Partir de uma incursão** carrega o que uma incursão da
+   mesma Organização usa hoje; **Copiar filtro JSON** entrega o trecho pronto
+   para o arquivo da incursão.
+4. **Inspecionar** — o banco inteiro numa tabela: tipo, temas, o que tem
+   dentro de cada sala (a CD da Armadilha já com o desconto, os tiers escritos
+   de cada combate) e os pontos. Filtra por tipo e por tema, e clicar numa
+   sala a abre no lugar dela. No topo, o que o banco consegue montar em cada
+   tamanho e a conferência do banco pelo validador do bot.
 
-Rascunhos ficam no armazenamento local do navegador, separados por banco.
-**Restaurar original** descarta as alterações após confirmação. Um JSON
-incompleto permanece no editor e bloqueia trocas de sala/banco e exportação
-até ser corrigido. A ajuda de formato fica recolhida junto à prévia.
+Fora dos lugares fica o arquivo: **Abrir JSON** importa um banco do disco,
+**Baixar JSON** exporta o banco completo para `data/bancos/` — preservando os
+campos extras e os nomes do bestiário, sem expandir as fichas das criaturas —
+e **Restaurar original** descarta o rascunho após confirmação.
 
-Atalhos: **Ctrl+Enter** confere o documento aberto e **Ctrl+S** baixa o banco
-completo (no macOS, use Cmd). É possível baixar um rascunho com erros de
-conteúdo; confira o banco antes de colocá-lo no bot.
+Rascunhos ficam no armazenamento local do navegador, separados por banco, e
+reabrem no lugar da sala que estava aberta. Não existe estado de "JSON pela
+metade": cada campo escreve direto no objeto, então trocar de sala, trocar de
+banco e baixar nunca ficam bloqueados. É possível baixar um rascunho com erros
+de conteúdo; confira o banco antes de colocá-lo no bot.
+
+Atalhos: **Ctrl+Enter** confere a sala aberta e **Ctrl+S** baixa o banco
+completo (no macOS, use Cmd). A ajuda de formato fica recolhida junto à prévia.
 
 Os testes opcionais da interface usam Chromium e Playwright:
 

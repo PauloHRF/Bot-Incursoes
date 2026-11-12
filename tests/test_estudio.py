@@ -74,6 +74,38 @@ def caso_o_conteudo_vem_do_codigo():
     print("  o conteúdo da página vem do código, não de cópia: ok")
 
 
+def caso_cada_tipo_de_sala_tem_familia_e_resumo():
+    """A bancada é dividida em lugares pela FAMÍLIA do tipo.
+
+    Quem escreve um Evento não precisa ver a tabela de criaturas, e quem monta
+    um Combate não precisa da CD — por isso são lugares diferentes, e por isso
+    cada tipo precisa dizer de qual família é. Tipo novo em TIPOS_SALA sem
+    família não teria lugar na tela: viraria sala que ninguém abre. Aqui ele
+    derruba o teste antes de derrubar o estúdio do colaborador.
+    """
+    c = E.conteudo()
+    por_id = {t["id"]: t for t in c["tipos_de_sala"]}
+    assert list(por_id) == list(I.TIPOS_SALA), list(por_id)
+    assert {t["familia"] for t in c["tipos_de_sala"]} == {"teste", "combate", "parada"}, (
+        "família nova: a página só tem lugar para teste, combate e parada"
+    )
+    for tipo, t in por_id.items():
+        assert t["resumo"].strip(), f"{tipo} não diz ao autor o que a sala faz"
+
+    # O desconto da CD sai da REGRA, e não de um número repetido na página.
+    armadilha = I.sala_de_dict(sala_de_teste(tipo="Armadilha"))
+    assert por_id["Armadilha"]["desconto_cd"] == armadilha.cd - armadilha.cd_efetiva(1)
+    assert por_id["Evento"]["desconto_cd"] == 0
+
+    # E a sala que nasce em cada lugar é um tipo daquele lugar.
+    for familia, tipo in c["sala_nova"].items():
+        assert por_id[tipo]["familia"] == familia, (familia, tipo)
+    assert set(c["sala_nova"]) == {"teste", "combate"}, (
+        "o botão '+ Nova' existe em dois lugares e precisa de um tipo para cada"
+    )
+    print("  cada tipo de sala tem família, resumo e desconto: ok")
+
+
 def caso_os_minimos_por_tamanho_saem_da_conta_do_sorteio():
     """`folga` é o que o pool precisa para oferecer 3 portas em toda parada."""
     c = E.conteudo()
@@ -349,6 +381,7 @@ def caso_o_servidor_entrega_os_arquivos_da_interface():
 
 for caso in (
     caso_o_conteudo_vem_do_codigo,
+    caso_cada_tipo_de_sala_tem_familia_e_resumo,
     caso_os_minimos_por_tamanho_saem_da_conta_do_sorteio,
     caso_o_conteudo_le_o_disco_e_tolera_arquivo_ruim,
     caso_o_editor_recebe_o_json_original_sem_expandir_criaturas,
