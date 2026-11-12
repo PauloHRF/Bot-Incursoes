@@ -38,11 +38,15 @@ from src.incursoes import MAX_INIMIGOS, monstros_de_criatura  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
 
 import simular_combate as sc  # noqa: E402
+from tools.simulacao.grupos import mesa_azarada  # noqa: E402
 
 # O alvo. Ver o cabeçalho: é intenção de design, e por isso mora aqui em cima
 # com nome, e não espalhado em comparações pelo código.
 VITORIA_MINIMA = 0.95
 HP_RESTANTE = (55.0, 75.0)
+# E a mesa azarada — a do decimo percentil — nao pode ser dizimada. O piso
+# nao foi escolhido para caber: ver `mesa_azarada` e `veredito`.
+PIOR_MESA_MINIMA = 0.80
 MESA = 5
 
 # Quantas mesas sortear para CALIBRAR — bem mais que as doze da bancada.
@@ -97,12 +101,29 @@ def medir_elenco(elenco, tier: int, repeticoes: int, semente: int,
         raise SystemExit(f"criatura fora do bestiário: {', '.join(faltam) or elenco}")
     args = SimpleNamespace(classe=None, nivel=min(10, tier * 2), tier=tier,
                            repeticoes=repeticoes, composicoes=composicoes)
-    return sc.simular(monstros, MESA, args, random.Random(f"{semente}:{tier}:{elenco}"))
+    # A semente NÃO leva o elenco: assim todo candidato do mesmo tier enfrenta
+    # AS MESMAS mesas, e a diferença entre eles é a diferença entre eles.
+    #
+    # Levava, e isso quase me fez escolher ruído: o mesmo elenco do tier 5
+    # mediu 95,8% com um sorteio e 93,3% com outro, e a "melhora" de um
+    # candidato sobre o outro era menor que isso. Comparar cada candidato
+    # contra mesas próprias é comparar duas amostras, não duas emboscadas.
+    return sc.simular(monstros, MESA, args, random.Random(f"{semente}:{tier}"))
 
 
-def veredito(taxa: float, hp: float) -> str:
+def veredito(taxa: float, hp: float, azarada: float = 1.0) -> str:
+    """O parecer, com a MESA AZARADA entrando na conta.
+
+    A média sozinha aprovava o tier 5 com quatro Golens: 95,8% de vitória e
+    67,4% de HP restante, tudo dentro do alvo — e uma mesa em cada doze sendo
+    dizimada. Isso não é "no alvo"; é uma emboscada que aposta em quem
+    sentou. Com o grupo sorteado o desvio está na mão, e não usá-lo no
+    veredito seria jogar fora a informação que ele trouxe.
+    """
     if taxa < VITORIA_MINIMA:
         return "LETAL — mata o grupo"
+    if azarada < PIOR_MESA_MINIMA:
+        return "instável — dizima a mesa sem cura"
     if hp > HP_RESTANTE[1]:
         return "barata — falhar sai de graça"
     if hp < HP_RESTANTE[0]:
@@ -136,8 +157,9 @@ def varrer(tier: int, repeticoes: int, semente: int, composicoes: int) -> list[d
         curva.append({
             "quantas": quantas, "nome": nome,
             "taxa": r["taxa"], "hp": r["hp_restante_pct"],
-            "pior": min(c["taxa"] for c in r["composicoes"]),
-            "veredito": veredito(r["taxa"], r["hp_restante_pct"]),
+            "pior": mesa_azarada(r["composicoes"]),
+            "veredito": veredito(r["taxa"], r["hp_restante_pct"],
+                                 mesa_azarada(r["composicoes"])),
         })
     return curva
 
@@ -167,20 +189,20 @@ def main() -> int:
         parser.error(f"tier precisa ir de 1 a {TIER_MAXIMO}")
 
     print(f"Alvo: vitória >= {VITORIA_MINIMA:.0%}, HP restante "
-          f"{HP_RESTANTE[0]:.0f}–{HP_RESTANTE[1]:.0f}%  "
-          f"(mesa de {MESA}, mesas sorteadas, {args.repeticoes} lutas por ponto)")
+          f"{HP_RESTANTE[0]:.0f}–{HP_RESTANTE[1]:.0f}%, mesa azarada (1 em 10) >= {PIOR_MESA_MINIMA:.0%}  "
+          f"({args.composicoes} mesas de {MESA}, {args.repeticoes} lutas por ponto)")
 
     if args.bando:
         if not args.tier:
             parser.error("--bando precisa de --tier: o alvo é por tier")
-        print(f"\n{'vitória':>8}  {'HP rest.':>9}  {'pior mesa':>9}  {'veredito':<32}  elenco")
+        print(f"\n{'vitória':>8}  {'HP rest.':>9}  {'1 em 10':>9}  {'veredito':<32}  elenco")
         for texto in args.bando:
             elenco = ler_bando(texto)
             r = medir_elenco(elenco, args.tier, args.repeticoes, args.semente, args.composicoes)
-            pior = min(c["taxa"] for c in r["composicoes"])
+            pior = mesa_azarada(r["composicoes"])
             quem = ", ".join(f"{q}x {n}" for n, q in elenco)
             print(f"{r['taxa']:>7.1%}  {r['hp_restante_pct']:>8.1f}%  {pior:>8.0%}  "
-                  f"{veredito(r['taxa'], r['hp_restante_pct']):<32}  {quem}")
+                  f"{veredito(r['taxa'], r['hp_restante_pct'], pior):<32}  {quem}")
         return 0
 
     if args.varrer:
@@ -189,23 +211,23 @@ def main() -> int:
             companhia = (", ".join(f"{q}x {n}" for n, q in fixos) + " + ") if fixos else ""
             print(f"\n--- tier {tier} (nível {min(10, tier * 2)}) · {companhia}N x "
                   f"{consequencias.emboscada_do_tier(tier)[-1][0]}")
-            print(f"{'N':>3}  {'vitória':>8}  {'HP rest.':>9}  {'pior mesa':>9}  veredito")
+            print(f"{'N':>3}  {'vitória':>8}  {'HP rest.':>9}  {'1 em 10':>9}  veredito")
             for p in varrer(tier, args.repeticoes, args.semente, args.composicoes):
                 print(f"{p['quantas']:>3}  {p['taxa']:>7.1%}  {p['hp']:>8.1f}%  "
                       f"{p['pior']:>8.0%}  {p['veredito']}")
         return 0
 
-    print(f"\n{'tier':>4}  {'vitória':>8}  {'HP rest.':>9}  {'pior mesa':>9}  "
+    print(f"\n{'tier':>4}  {'vitória':>8}  {'HP rest.':>9}  {'1 em 10':>9}  "
           f"{'veredito':<32}  emboscada")
     fora = 0
     for tier in tiers:
         r = medir(tier, args.repeticoes, args.semente, args.composicoes)
-        pior = min(r["composicoes"], key=lambda c: c["taxa"])
+        azarada = mesa_azarada(r["composicoes"])
         quem = ", ".join(f"{q}x {n}" for n, q in consequencias.emboscada_do_tier(tier))
-        parecer = veredito(r["taxa"], r["hp_restante_pct"])
+        parecer = veredito(r["taxa"], r["hp_restante_pct"], azarada)
         fora += parecer != "no alvo"
         print(f"{tier:>4}  {r['taxa']:>7.1%}  {r['hp_restante_pct']:>8.1f}%  "
-              f"{pior['taxa']:>8.0%}  {parecer:<32}  {quem}")
+              f"{azarada:>8.0%}  {parecer:<32}  {quem}")
     print()
     if fora:
         print(f"{fora} tier(s) fora do alvo. Ajuste A_EMBOSCADA e rode de novo.")

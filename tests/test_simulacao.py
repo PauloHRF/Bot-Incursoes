@@ -7,6 +7,7 @@ import csv
 import json
 from pathlib import Path
 import random
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -167,6 +168,39 @@ class Mesas(unittest.TestCase):
         r = simular([Monstro("Alvo", 14, 5, "1d8", 40)], 4, args, random.Random(5))
         self.assertEqual(r["composicoes"], [{"classes": ["mago"] * 4,
                                              "taxa": r["taxa"], "amostras": 20}])
+
+    def test_a_mesa_azarada_nao_muda_com_o_tamanho_da_amostra(self):
+        """Por que o veredito olha o percentil e não a pior mesa.
+
+        O mínimo de uma amostra afunda conforme a amostra cresce: sortear
+        mais mesas é ter mais chance de tirar uma péssima. Medindo a MESMA
+        emboscada com doze e depois com quarenta mesas, a "pior" caiu de 93%
+        para 80% sem nada ter mudado nela — e eu quase reprovei por isso uma
+        calibração que estava certa. Dois mínimos de amostras de tamanhos
+        diferentes não são comparáveis; dois percentis são.
+        """
+        # Mesas com cauda: a maioria perto de 100%, algumas bem abaixo. É a
+        # forma que a medição real tem — e é nela que o mínimo engana.
+        rng = random.Random(11)
+        populacao = [min(1.0, 1.0 - abs(rng.gauss(0, 0.12))) for _ in range(5000)]
+
+        def medias(n):
+            minimos, percentis = [], []
+            for _ in range(400):
+                mesas = [{"taxa": rng.choice(populacao)} for _ in range(n)]
+                minimos.append(min(c["taxa"] for c in mesas))
+                percentis.append(grupos.mesa_azarada(mesas))
+            return (sum(minimos) / len(minimos), sum(percentis) / len(percentis))
+
+        min_12, p10_12 = medias(12)
+        min_80, p10_80 = medias(80)
+        # O mínimo não converge: ele estima o PIOR DA POPULAÇÃO, que não tem
+        # fundo. Sortear mais mesas só o empurra para baixo.
+        self.assertLess(min_80, min_12 - 0.05, (min_12, min_80))
+        # O percentil estima a mesma coisa em qualquer tamanho de amostra.
+        self.assertLess(abs(p10_80 - p10_12), 0.03, (p10_12, p10_80))
+        esperado = statistics.quantiles(sorted(populacao), n=10)[0]
+        self.assertAlmostEqual(p10_80, esperado, delta=0.02)
 
     def test_amostra_pequena_mede_menos_mesas_e_nao_mesas_piores(self):
         """Doze mesas de oito lutas não medem composição nenhuma.
