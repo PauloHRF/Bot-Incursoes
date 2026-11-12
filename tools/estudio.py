@@ -178,6 +178,33 @@ def _faixas_de_combate() -> dict[str, list[float]]:
     return {nome: list(faixa) for nome, faixa in sugestor.FAIXAS_DE_VITORIA.items()}
 
 
+def _python_do_bot() -> Path | None:
+    """O interpretador do `.venv` deste repositório, se houver um."""
+    for relativo in ("Scripts/python.exe", "bin/python"):
+        caminho = RAIZ / ".venv" / relativo
+        if caminho.exists():
+            return caminho
+    return None
+
+
+def _recado_de_dependencia(falta: str) -> str:
+    """O que dizer a quem abriu o estúdio pelo Python errado.
+
+    Com o COMANDO, e não com um conselho: "abra pelo ambiente do bot" supõe
+    que a pessoa saiba qual é e como escrevê-lo no shell dela. O caminho sai
+    com os separadores do sistema justamente por isso — no `cmd.exe` uma
+    barra no começo do comando não é caminho, é opção.
+    """
+    if (venv := _python_do_bot()) is not None:
+        como = f'Use: "{venv}" {Path("tools") / "estudio.py"}'
+    else:
+        como = "Instale as dependências do bot: pip install -r requirements.txt"
+    return (
+        f"Medir e sugerir precisam de '{falta}', que não existe neste Python "
+        f"({sys.executable}). {como}"
+    )
+
+
 def _falta_para_simular() -> str:
     """O que impede a medição de rodar, ou "" quando ela roda.
 
@@ -195,11 +222,8 @@ def _falta_para_simular() -> str:
     try:
         import simular_combate  # noqa: F401
     except ImportError as erro:
-        falta = getattr(erro, "name", None) or "uma dependência do bot"
-        return (
-            f"Medir e sugerir precisam de '{falta}', que não existe neste "
-            f"Python ({sys.executable}). Abra o estúdio pelo ambiente do bot, "
-            f"ou instale com: pip install -r requirements.txt"
+        return _recado_de_dependencia(
+            getattr(erro, "name", None) or "uma dependência do bot"
         )
     return ""
 

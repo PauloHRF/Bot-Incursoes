@@ -292,6 +292,15 @@ def caso_a_bancada_abre_sem_o_motor_e_diz_o_que_falta():
         assert E.simular({"sala": sala_de_combate(), "tier": 1})["erro"] == recado
         assert E.sugerir({"tier": 1, "dificuldade": "media"})["erro"] == recado
 
+    # E o recado traz o COMANDO, não um conselho: "abra pelo ambiente do bot"
+    # supõe que quem leu saiba qual é e como escrevê-lo no shell dele.
+    with patch.object(E, "_python_do_bot", return_value=Path("D:/bot/.venv/py.exe")):
+        aponta = E._recado_de_dependencia("aiosqlite")
+    assert "aiosqlite" in aponta and "py.exe" in aponta, aponta
+    with patch.object(E, "_python_do_bot", return_value=None):
+        sem_venv = E._recado_de_dependencia("aiosqlite")
+    assert "requirements.txt" in sem_venv, sem_venv
+
     assert E._falta_para_simular() == "", (
         "o motor não importa neste Python — rode os testes pelo ambiente do bot"
     )
