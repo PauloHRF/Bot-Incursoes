@@ -1,0 +1,13 @@
+# As provas de interface do estudio (tests/test_estudio_interface.py).
+#
+# Ficam fora do requirements.txt de proposito: o bot nao precisa de navegador
+# para rodar, e quem so hospeda nao deve baixar um Chromium por isso.
+#
+#   pip install -r requirements-estudio.txt
+#   python -m playwright install chromium
+#
+# SEM ISTO AS 12 PROVAS SAO PULADAS, e o runner conta a suite como verde.
+# Elas ja pegaram dois defeitos que nenhum outro teste via — uma funcao
+# apagada que a importacao ainda chamava, e uma variavel removida que
+# estourava ao criar sala.
+playwright>=1.40

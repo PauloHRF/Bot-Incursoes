@@ -39,7 +39,7 @@
     <div class="mesa">
       <div class="contexto"><div><span id="tipoSala" class="etiqueta">Sala</span><h2 id="nomeSala">Selecione uma sala</h2></div><span id="idSala" class="id-sala"></span></div>
       <nav class="abas" role="tablist" aria-label="Ferramentas da sala">
-        <button id="abaEditar" type="button" role="tab" aria-controls="painelEditar" aria-selected="true" tabindex="0" data-aba="Editar">Editar JSON</button>
+        <button id="abaEditar" type="button" role="tab" aria-controls="painelEditar" aria-selected="true" tabindex="0" data-aba="Editar">Escrever sala</button>
         <button id="abaCombate" type="button" role="tab" aria-controls="painelCombate" aria-selected="false" tabindex="-1" data-aba="Combate">Testar combate</button>
         <button id="abaFiltro" type="button" role="tab" aria-controls="painelFiltro" aria-selected="false" tabindex="-1" data-aba="Filtro">Filtro da incursão</button>
       </nav>
@@ -47,17 +47,100 @@
       <section id="painelEditar" role="tabpanel" aria-labelledby="abaEditar">
         <div class="edicao-grid">
           <div class="painel editor-painel">
-            <div class="editor-barra"><div class="seletor-modo" aria-label="Documento em edição"><button id="modoSala" type="button" aria-pressed="true">Esta sala</button><button id="modoBanco" type="button" aria-pressed="false">Banco inteiro</button></div><button id="btFormatar" class="botao discreto pequena" type="button">Formatar</button></div>
-            <label for="fJson" class="sr-only" id="rotuloEditor">JSON da sala selecionada</label>
-            <div class="editor"><pre id="linhas" aria-hidden="true">1</pre><textarea id="fJson" spellcheck="false" wrap="off" autocomplete="off" autocapitalize="off" aria-describedby="erroJson" placeholder="Abra um banco ou importe um arquivo JSON."></textarea></div>
-            <div class="editor-rodape"><span id="sintaxe" class="sintaxe">JSON</span><span id="tamanhoJson"></span></div>
-            <div id="erroJson" class="erro-json" role="alert" hidden></div>
-            <div class="editor-acoes"><button id="btConferir" class="botao pequena" type="button">Conferir sala</button><button id="btDuplicar" class="botao discreto pequena" type="button">Duplicar</button><button id="btExcluir" class="botao discreto pequena perigo" type="button">Excluir</button></div>
+            <form id="formSala" class="form-sala" autocomplete="off">
+              <div class="form-linha">
+                <div class="campo campo-id">
+                  <label for="fId">id</label>
+                  <input id="fId" type="text" maxlength="16" spellcheck="false">
+                </div>
+                <div class="campo">
+                  <label for="fTipo">tipo</label>
+                  <select id="fTipo"></select>
+                </div>
+                <div class="campo campo-pontos">
+                  <label for="fPontos">pontos da Organização</label>
+                  <input id="fPontos" type="number" min="0" max="99" step="1">
+                </div>
+              </div>
+
+              <div class="campo">
+                <label for="fNome">nome</label>
+                <input id="fNome" type="text">
+                <p class="medida"><span>vai para o título do cartão</span>
+                  <span><b id="cNome">0</b> / <span id="tetoNome">256</span></span></p>
+              </div>
+
+              <div class="campo">
+                <label for="fDesc">descrição</label>
+                <textarea id="fDesc" rows="5"></textarea>
+                <p class="medida"><span id="dicaDesc"></span>
+                  <span><b id="cDesc">0</b> / <span id="tetoDesc">4096</span></span></p>
+              </div>
+
+              <div class="campo">
+                <span class="rotulo">temas</span>
+                <div id="fichasSala" class="fichas" role="group" aria-label="Temas da sala"></div>
+                <p class="medida"><span>marque todos em que a sala cabe — é isso que mantém o sorteio com opção</span></p>
+              </div>
+
+              <fieldset id="blocoTeste" class="bloco">
+                <legend>O teste da sala</legend>
+                <div class="form-linha">
+                  <div class="campo">
+                    <label for="fDif">dificuldade</label>
+                    <select id="fDif"></select>
+                  </div>
+                  <div class="campo">
+                    <label for="fCd">CD <span class="legenda">(no tier 1)</span></label>
+                    <input id="fCd" type="number" min="1" max="40" step="1">
+                  </div>
+                  <div class="campo">
+                    <label for="fAlvo">sucessos necessários</label>
+                    <input id="fAlvo" type="number" min="1" max="99" step="1">
+                  </div>
+                </div>
+                <div class="campo">
+                  <span class="rotulo">perícias aceitas</span>
+                  <div id="fichasPericias" class="fichas" role="group" aria-label="Perícias da sala"></div>
+                </div>
+              </fieldset>
+
+              <fieldset id="blocoCriaturas" class="bloco">
+                <legend>Quem mora aqui</legend>
+                <div class="rolagem">
+                  <table class="tabela-criaturas">
+                    <thead><tr>
+                      <th>criatura</th><th class="n">quantas</th>
+                      <th>tier</th><th>tema</th><th><span class="sr-only">remover</span></th>
+                    </tr></thead>
+                    <tbody id="linhasCriaturas"></tbody>
+                  </table>
+                </div>
+                <datalist id="listaCriaturas"></datalist>
+                <button id="btNovaCriatura" class="botao discreto pequena" type="button">+ Criatura</button>
+                <p class="legenda" id="recadoCriaturas"></p>
+              </fieldset>
+
+              <details class="bloco-extra">
+                <summary>Campos opcionais</summary>
+                <div class="campo">
+                  <label for="fRecompensa">recompensa <span class="legenda">(texto do cartão)</span></label>
+                  <input id="fRecompensa" type="text">
+                </div>
+                <div class="campo">
+                  <label for="fImagem">imagem <span class="legenda">(URL)</span></label>
+                  <input id="fImagem" type="text" spellcheck="false">
+                </div>
+              </details>
+            </form>
+
+            <div class="editor-acoes"><button id="btConferir" class="botao pequena" type="button">Conferir sala</button><button id="btConferirBanco" class="botao discreto pequena" type="button">Conferir o banco</button><button id="btDuplicar" class="botao discreto pequena" type="button">Duplicar</button><button id="btExcluir" class="botao discreto pequena perigo" type="button">Excluir</button></div>
             <div id="saidaSala" class="recados" aria-live="polite" hidden></div>
+            <div id="saidaBanco" class="recados" aria-live="polite" hidden></div>
           </div>
           <aside class="previa-coluna" aria-label="Prévia da sala">
             <div class="painel previa"><div class="painel-cabecalho"><h3>Prévia</h3><span class="legenda">Discord</span></div><div class="discord"><h3 id="dTitulo">Sua sala aparece aqui</h3><p id="dCorpo"></p><div id="dCampos" class="discord-campos"></div></div><div id="temasPrevia" class="etiquetas"></div><p id="limitesTexto" class="legenda"></p></div>
-            <details class="ajuda"><summary>Ajuda com o JSON</summary><p>Edite os campos da sala. Use nomes do bestiário em <code>monstros</code> ou <code>monstros_por_tier</code>.</p><p><a href="https://github.com/PauloHRF/Bot-Incursoes/blob/master/docs/formato-das-incursoes.md" target="_blank" rel="noopener">Ver o formato completo ↗</a></p><p><kbd>Ctrl</kbd> + <kbd>Enter</kbd> confere. <kbd>Ctrl</kbd> + <kbd>S</kbd> baixa o banco.</p></details>
+            <details class="ajuda"><summary>Como isto vira uma dungeon</summary><p>A sala entra no <strong>banco da Organização</strong>, e toda incursão dela pode sorteá-la. O tema decide em quais.</p><p>Criatura entra <strong>pelo nome do bestiário</strong> — são 385, com os números do livro. Criatura feita à mão, com multiataque ou ação especial, vai pela planilha: <code>tools/gerar_modelo_banco.py</code>.</p><p><a href="https://github.com/PauloHRF/Bot-Incursoes/blob/master/docs/formato-das-incursoes.md" target="_blank" rel="noopener">Ver o formato completo ↗</a></p><p><kbd>Ctrl</kbd> + <kbd>Enter</kbd> confere. <kbd>Ctrl</kbd> + <kbd>S</kbd> baixa o banco.</p></details>
           </aside>
         </div>
       </section>

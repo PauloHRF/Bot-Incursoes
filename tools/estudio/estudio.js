@@ -7,7 +7,9 @@ const texto = valor => valor == null ? "" : String(valor);
 const bonito = valor => JSON.stringify(valor, null, 2);
 const normalizar = valor => texto(valor).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const ns = "incursoes.estudio.v2.";
-let C, banco, origem, arquivo, indice = 0, modo = "sala", valido = true;
+let C, banco, origem, arquivo, indice = 0;
+// As linhas da tabela de criaturas, enquanto a sala esta aberta.
+let linhasAtuais = null, linhasDoIndice = -1;
 let originais = {}, sequencia = 0, revisao = 0, medindo = false, sugerindo = false;
 let medidaContexto, sugestaoContexto, timerEdicao, timerPool, timerConferir, timerToast;
 let pedidoConferir = 0, pedidoPool = 0, armazenamentoFalhou = false;
@@ -72,7 +74,6 @@ function preencher(id, itens, escolhido) {
   if ([...campo.options].some(o => o.value === texto(escolhido))) campo.value = texto(escolhido);
 }
 function sala() { return banco?.salas[indice]; }
-function documento() { return modo === "banco" ? banco : sala(); }
 function contexto() {
   return JSON.stringify([origem, indice, revisao, $("fTierSim").value, $("fTemaSim").value,
     $("fClasse").value, $("fNivel").value, $("fReps").value, $("fSemente").value,
@@ -80,82 +81,240 @@ function contexto() {
 }
 function guardar() {
   if (!banco || !origem) return;
-  gravarLocal(origem, {banco, arquivo, indice, modo, bruto: $("fJson").value, original: originais[origem]});
+  gravarLocal(origem, {banco, arquivo, indice, original: originais[origem]});
   gravarLocal("ultimo", origem);
   $("estado").textContent = armazenamentoFalhou ? "Baixe o JSON para salvar" : "Rascunho neste navegador";
 }
+/* A conferencia da FORMA de um arquivo aberto do disco. Saiu junto com o
+   editor de JSON por engano e voltou: o formulario nao deixa o autor
+   escrever um banco torto, mas `importar` abre o que vier, e sem isto um
+   arquivo qualquer virava `banco` e quebrava a tela em vez de avisar. */
 function estrutura(dados, bancoInteiro) {
   if (!objeto(dados)) throw new Error("Use um objeto JSON entre { e }.");
   if (bancoInteiro && (typeof dados.organizacao !== "string" || !Array.isArray(dados.salas) || !dados.salas.every(objeto))) {
     throw new Error('O banco precisa de "organizacao" e de uma lista "salas" com objetos.');
   }
 }
-function linhas() {
-  const quantidade = $("fJson").value.split("\n").length;
-  $("linhas").textContent = Array.from({length: quantidade}, (_, i) => i + 1).join("\n");
-  $("linhas").scrollTop = $("fJson").scrollTop;
-  $("tamanhoJson").textContent = `${quantidade} linhas`;
+
+const SEM_TESTE = new Set(["Combate", "Descanso"]);
+
+function temTeste(tipo) { return !SEM_TESTE.has(tipo); }
+
+function fichas(alvo, lista, marcados, aoTrocar) {
+  const caixa = $(alvo);
+  caixa.replaceChildren();
+  lista.forEach(item => {
+    const b = no("button", "ficha", item);
+    b.type = "button";
+    b.setAttribute("aria-pressed", marcados.includes(item) ? "true" : "false");
+    b.addEventListener("click", () => {
+      const tem = marcados.includes(item);
+      aoTrocar(item, !tem);
+      alterado();
+    });
+    caixa.append(b);
+  });
 }
+
+function numero(id) {
+  const bruto = $(id).value.trim();
+  if (bruto === "") return null;
+  const n = Number(bruto);
+  return Number.isFinite(n) ? n : null;
+}
+
+/* As criaturas em LINHAS, e nao aninhadas: `monstros`, `monstros_por_tier` e
+   `monstros_por_tema` sao a mesma coisa vista de tres jeitos, e uma tabela de
+   (criatura, quantas, tier, tema) escreve as tres sem o autor saber que elas
+   existem. A volta — de linhas para os tres campos — fica em `montarMonstros`. */
+function linhasDaSala(s) {
+  const saida = [];
+  (s.monstros || []).forEach(m => saida.push({...m, tier: "", tema: ""}));
+  Object.entries(s.monstros_por_tier || {}).forEach(([tier, lista]) =>
+    (lista || []).forEach(m => saida.push({...m, tier, tema: ""})));
+  Object.entries(s.monstros_por_tema || {}).forEach(([tema, porTier]) =>
+    Object.entries(porTier || {}).forEach(([tier, lista]) =>
+      (lista || []).forEach(m => saida.push({...m, tier, tema}))));
+  return saida;
+}
+
+function montarMonstros(s, linhas) {
+  delete s.monstros; delete s.monstros_por_tier; delete s.monstros_por_tema;
+  linhas.forEach(l => {
+    const nome = texto(l.nome).trim();
+    if (!nome) return;
+    const bicho = {nome};
+    const q = Number(l.quantidade);
+    if (Number.isFinite(q) && q > 1) bicho.quantidade = q;
+    if (!l.tier) { (s.monstros ||= []).push(bicho); return; }
+    if (!l.tema) {
+      ((s.monstros_por_tier ||= {})[l.tier] ||= []).push(bicho);
+      return;
+    }
+    (((s.monstros_por_tema ||= {})[l.tema] ||= {})[l.tier] ||= []).push(bicho);
+  });
+}
+
+function desenharCriaturas(reconstruir = false) {
+  const s = sala();
+  const corpo = $("linhasCriaturas");
+  corpo.replaceChildren();
+  if (!s) return;
+  if (reconstruir || linhasAtuais === null || linhasDoIndice !== indice) {
+    linhasAtuais = linhasDaSala(s);
+    linhasDoIndice = indice;
+  }
+  const linhas = linhasAtuais;
+  const temas = Array.isArray(s.temas) ? s.temas : [];
+  linhas.forEach((l, i) => {
+    const tr = no("tr");
+
+    const nome = no("td");
+    const campoNome = document.createElement("input");
+    campoNome.type = "text"; campoNome.value = texto(l.nome);
+    campoNome.setAttribute("list", "listaCriaturas");
+    campoNome.addEventListener("input", () => { linhas[i].nome = campoNome.value; gravarLinhas(linhas); });
+    nome.append(campoNome); tr.append(nome);
+
+    const quantas = no("td", "n");
+    const campoQ = document.createElement("input");
+    campoQ.type = "number"; campoQ.min = "1"; campoQ.max = String(C.limites.inimigos);
+    campoQ.value = String(l.quantidade || 1);
+    campoQ.addEventListener("input", () => { linhas[i].quantidade = campoQ.value; gravarLinhas(linhas); });
+    quantas.append(campoQ); tr.append(quantas);
+
+    const tier = no("td");
+    const campoT = document.createElement("select");
+    preencherSelect(campoT, [["", "qualquer"]].concat(
+      Array.from({length: C.limites.tier_maximo}, (_, n) => [String(n + 1), `tier ${n + 1}`])), texto(l.tier));
+    campoT.addEventListener("change", () => { linhas[i].tier = campoT.value; gravarLinhas(linhas); });
+    tier.append(campoT); tr.append(tier);
+
+    const tema = no("td");
+    const campoTema = document.createElement("select");
+    preencherSelect(campoTema, [["", "padrão"]].concat(temas.map(t => [t, t])), texto(l.tema));
+    campoTema.disabled = !l.tier || !temas.length;
+    campoTema.title = temas.length ? "" : "A sala precisa ter tema para ter variante.";
+    campoTema.addEventListener("change", () => { linhas[i].tema = campoTema.value; gravarLinhas(linhas); });
+    tema.append(campoTema); tr.append(tema);
+
+    const fora = no("td");
+    const botao = no("button", "botao discreto pequena", "×");
+    botao.type = "button"; botao.title = "Remover";
+    botao.addEventListener("click", () => { linhas.splice(i, 1); gravarLinhas(linhas); desenharCriaturas(); });
+    fora.append(botao); tr.append(fora);
+
+    corpo.append(tr);
+  });
+  contarBando();
+}
+
+function contarBando() {
+  // Linha sem nome nao conta: ela e um campo em branco esperando o autor, e
+  // `montarMonstros` tambem a ignora ao escrever no objeto.
+  const linhas = (linhasAtuais || []).filter(l => texto(l.nome).trim());
+  const total = linhas.reduce((n, l) => n + Math.max(1, Number(l.quantidade) || 1), 0);
+  $("recadoCriaturas").textContent = linhas.length
+    ? `${total} criatura(s) no bando${total > C.limites.inimigos ? ` — o máximo é ${C.limites.inimigos}` : ""}.`
+    : "Sala de Combate sem criatura não passa na validação.";
+  $("recadoCriaturas").classList.toggle("invalido", total > C.limites.inimigos);
+}
+
+function gravarLinhas(linhas) {
+  const s = sala();
+  if (!s) return;
+  montarMonstros(s, linhas);
+  contarBando();
+  alterado();
+}
+
+function preencherSelect(alvo, pares, escolhido) {
+  alvo.replaceChildren();
+  pares.forEach(([valor, rotulo]) => {
+    const o = document.createElement("option");
+    o.value = valor; o.textContent = rotulo;
+    if (valor === escolhido) o.selected = true;
+    alvo.append(o);
+  });
+}
+
 function mostrarEditor() {
-  clearTimeout(timerEdicao);
-  $("fJson").value = documento() ? bonito(documento()) : "";
-  $("fJson").disabled = !documento();
-  $("modoSala").setAttribute("aria-pressed", modo === "sala");
-  $("modoBanco").setAttribute("aria-pressed", modo === "banco");
-  $("rotuloEditor").textContent = modo === "banco" ? "JSON do banco inteiro" : "JSON da sala selecionada";
-  valido = true;
-  mostrarSintaxe(); linhas();
+  const s = sala();
+  if (linhasDoIndice !== indice) { linhasAtuais = null; linhasDoIndice = -1; }
+  const form = $("formSala");
+  form.hidden = !s;
+  if (!s) { previa(); controles(); return; }
+
+  $("fId").value = texto(s.id);
+  $("fNome").value = texto(s.nome);
+  $("fDesc").value = texto(s.descricao);
+  $("fPontos").value = s.pontos_organizacao ?? 0;
+  $("fRecompensa").value = texto(s.recompensa);
+  $("fImagem").value = texto(s.imagem);
+  preencherSelect($("fTipo"), C.tipos.filter(t => t !== "Descanso").map(t => [t, t]), s.tipo);
+  preencherSelect($("fDif"), C.dificuldades.map(d => [d, d]), texto(s.dificuldade) || C.dificuldades[1]);
+  $("fCd").value = s.cd ?? "";
+  $("fAlvo").value = s.alvo_progresso ?? "";
+
+  const temas = Array.isArray(s.temas) ? s.temas : [];
+  fichas("fichasSala", C.temas, temas, (tema, ligar) => {
+    const atual = new Set(Array.isArray(s.temas) ? s.temas : []);
+    ligar ? atual.add(tema) : atual.delete(tema);
+    s.temas = C.temas.filter(t => atual.has(t));
+    if (!s.temas.length) delete s.temas;
+    mostrarEditor();
+  });
+  const pericias = Array.isArray(s.pericias) ? s.pericias : [];
+  fichas("fichasPericias", C.pericias, pericias, (pericia, ligar) => {
+    const atual = new Set(Array.isArray(s.pericias) ? s.pericias : []);
+    ligar ? atual.add(pericia) : atual.delete(pericia);
+    s.pericias = C.pericias.filter(p => atual.has(p));
+    mostrarEditor();
+  });
+
+  contadores();
+  const combate = s.tipo === "Combate";
+  $("blocoTeste").hidden = !temTeste(s.tipo);
+  $("blocoCriaturas").hidden = !combate;
+  if (combate) desenharCriaturas();
+  previa(); controles();
 }
-function mostrarSintaxe(erro) {
-  $("erroJson").hidden = !erro;
-  let mensagem = erro?.message;
-  if (erro instanceof SyntaxError) {
-    const local = erro.message.match(/line (\d+) column (\d+)/);
-    mensagem = "Confira aspas, vírgulas e chaves" + (local ? ` na linha ${local[1]}, coluna ${local[2]}.` : ".");
-  }
-  $("erroJson").textContent = erro ? `JSON incompleto: ${mensagem}` : "";
-  $("sintaxe").textContent = erro ? "Corrija o JSON para continuar" : "JSON válido";
-  $("sintaxe").classList.toggle("invalido", !!erro);
-  $("fJson").setAttribute("aria-invalid", !!erro);
-  controles();
+
+/* O formulario escreve direto no objeto, campo a campo. Nao ha "aplicar":
+   o que esta na tela e o que esta no banco, sempre — era o `aplicarEdicao`
+   do JSON que podia divergir enquanto o texto estivesse pela metade. */
+function contadores() {
+  const marcar = (alvo, quantos, aviso, teto) => {
+    $(alvo).textContent = quantos;
+    $(alvo).classList.toggle("invalido", quantos > teto);
+    $(alvo).classList.toggle("atencao", quantos > aviso && quantos <= teto);
+  };
+  marcar("cNome", $("fNome").value.length, 80, C.limites.titulo);
+  marcar("cDesc", $("fDesc").value.length, 600, C.limites.descricao);
+  $("tetoNome").textContent = C.limites.titulo;
+  $("tetoDesc").textContent = C.limites.descricao;
+  $("dicaDesc").textContent = `aviso em 600 · o Discord recusa acima de ${C.limites.descricao}`;
 }
-function aplicarEdicao() {
-  clearTimeout(timerEdicao);
-  if (!banco || !documento()) return false;
-  const estavaValido = valido;
-  try {
-    const dados = JSON.parse($("fJson").value);
-    estrutura(dados, modo === "banco");
-    const mudou = JSON.stringify(dados) !== JSON.stringify(documento());
-    if (modo === "banco") { banco = dados; indice = Math.max(0, Math.min(indice, banco.salas.length - 1)); }
-    else banco.salas[indice] = dados;
-    valido = true;
-    mostrarSintaxe();
-    if (mudou) alterado();
-    else { guardar(); if (!estavaValido) { agendarConferencia(); if (!$("painelFiltro").hidden) agendarPool(); } }
-    return true;
-  } catch (erro) {
-    valido = false; revisao++;
-    mostrarSintaxe(erro);
-    pedidoConferir++; pedidoPool++;
-    $("saidaSala").hidden = true; $("saidaBanco").hidden = true;
-    desatualizar(); guardar();
-    if (!$("painelFiltro").hidden) limparPool("Corrija o JSON para conferir o filtro.");
-    return false;
-  }
+
+function lerCampo(id, aplicar) {
+  $(id).addEventListener("input", () => {
+    const s = sala();
+    if (!s) return;
+    aplicar(s);
+    contadores();
+    alterado();
+  });
 }
+
 function pronto() {
-  if (!banco) return false;
-  if (!aplicarEdicao()) { aviso("Corrija o JSON antes de continuar."); $("fJson").focus(); return false; }
-  return true;
+  // Era o portao do JSON pela metade. Com formulario nao ha estado invalido
+  // de sintaxe: ou ha banco aberto, ou nao ha.
+  return !!banco;
 }
 function controles() {
-  const temSala = !!sala(), pode = !!banco && valido;
+  const temSala = !!sala(), pode = !!banco;
   ["btBaixar", "btConferirBanco", "btNova", "btCopiarFiltro"].forEach(id => { $(id).disabled = !pode; });
   ["btDuplicar", "btExcluir", "btConferir"].forEach(id => { $(id).disabled = !pode || !temSala; });
-  $("btFormatar").disabled = !documento();
-  $("modoSala").disabled = !temSala;
-  $("modoBanco").disabled = !banco;
   $("btRecarregar").disabled = !banco;
   const combate = temSala && sala().tipo === "Combate";
   $("avisoCombate").hidden = combate;
@@ -235,23 +394,20 @@ function carregar(chave) {
   banco = copiar(restauravel ? salvo.banco : original.banco);
   arquivo = restauravel ? salvo.arquivo : original.arquivo;
   indice = restauravel ? Math.max(0, Math.min(salvo.indice || 0, banco.salas.length - 1)) : 0;
-  modo = restauravel && salvo.modo === "banco" || !banco.salas.length ? "banco" : "sala";
   revisao++; sequencia++; pedidoConferir++; pedidoPool++;
   $("fBanco").value = chave; $("fBusca").value = "";
   $("saidaBanco").hidden = true; $("saidaSala").hidden = true;
   mostrarEditor(); atualizar();
-  if (restauravel && typeof salvo.bruto === "string") {
-    $("fJson").value = salvo.bruto; linhas(); aplicarEdicao();
-  }
   guardar(); agendarConferencia();
   if (restauravel) aviso("Rascunho restaurado.");
 }
 function agendarConferencia() {
   clearTimeout(timerConferir);
-  timerConferir = setTimeout(() => conferir(modo === "banco"), 650);
+  timerConferir = setTimeout(() => conferir(false), 650);
 }
 async function conferir(inteiro = false) {
-  if (!banco || !valido || !documento()) return;
+  if (!banco) return;
+  if (!inteiro && !sala()) return;
   const id = ++pedidoConferir, versao = revisao, fonte = origem, alvo = inteiro ? "saidaBanco" : "saidaSala";
   try {
     const r = await api("/api/conferir", {dados: inteiro ? banco : sala()});
@@ -282,8 +438,8 @@ function adicionar(duplicar = false) {
   const nova = duplicar ? copiar(sala()) : {id: "", nome: "Nova sala", tipo: "Evento", descricao: "", temas: [], dificuldade: C.dificuldades[1], cd: 13, alvo_progresso: 3, pericias: []};
   nova.id = novoId();
   if (duplicar) nova.nome = `${texto(nova.nome)} (cópia)`;
-  banco.salas.push(nova); indice = banco.salas.length - 1; modo = "sala";
-  $("fBusca").value = ""; mostrarEditor(); alterado(); aba("Editar"); $("fJson").focus();
+  banco.salas.push(nova); indice = banco.salas.length - 1;
+  $("fBusca").value = ""; mostrarEditor(); alterado(); aba("Editar"); $("fId").focus();
 }
 function baixar() {
   if (!pronto()) return;
@@ -391,7 +547,7 @@ async function conferirPool() {
   const f = filtro(), temIds = !!f.incluir;
   document.querySelectorAll(".ficha").forEach(n => { n.disabled = temIds; });
   $("notaFiltro").textContent = temIds ? "IDs definidos: os temas não entram no filtro." : "Sem temas ou IDs, usa o banco inteiro.";
-  if (!banco || !valido) { limparPool("Corrija o JSON para conferir o filtro."); return; }
+  if (!banco) { limparPool("Abra um banco para conferir o filtro."); return; }
   const id = ++pedidoPool;
   try {
     const r = await api("/api/pool", {organizacao: banco.organizacao, tamanho: $("fTam").value, filtro: f, salas: banco.salas});
@@ -437,6 +593,15 @@ async function iniciar() {
     preencher("fClasse", C.classes, "guerreiro");
     preencher("fAmb", [["", "Qualquer ambiente"], ...C.ambientes]);
     preencher("fBicho", [["", "Qualquer tipo"], ...C.tipos_de_bicho.map(t => [t.id, `${t.id} (${t.quantas})`])]);
+    // As 385 do bestiario no campo de criatura: o autor escolhe da lista em
+    // vez de digitar, e nome digitado errado vira sala sem criatura.
+    const nomes = $("listaCriaturas");
+    nomes.replaceChildren();
+    (C.criaturas || []).forEach(nome => {
+      const o = document.createElement("option");
+      o.value = nome;
+      nomes.append(o);
+    });
     preencher("fDifCombate", Object.keys(C.dificuldades_de_combate).map(d => [d, `${d} · ${C.dificuldades_de_combate[d].map(v => Math.round(v * 100)).join("–")}% de vitória`]), "media");
     preencher("fTam", Object.keys(C.tamanhos));
     C.temas.forEach(t => {
@@ -459,14 +624,43 @@ async function iniciar() {
   } catch (erro) { recados("erroInicial", {erro: erro.message}); $("estado").textContent = "Não foi possível carregar"; }
 }
 
-$("fJson").addEventListener("input", () => {
-  linhas(); clearTimeout(timerEdicao);
-  // O texto fica intacto enquanto se escreve, inclusive no meio de uma chave.
-  valido = false; revisao++; pedidoConferir++; pedidoPool++; desatualizar();
-  $("sintaxe").textContent = "Editando…";
-  timerEdicao = setTimeout(aplicarEdicao, 300);
+/* Cada campo escreve o seu pedaco no objeto. O `id` e o `tipo` redesenham o
+   formulario, porque mudam o que ele mostra: trocar para Combate troca o
+   bloco do teste pelo das criaturas. */
+lerCampo("fNome", s => { s.nome = $("fNome").value; });
+lerCampo("fDesc", s => { s.descricao = $("fDesc").value; });
+lerCampo("fPontos", s => { s.pontos_organizacao = numero("fPontos") ?? 0; });
+lerCampo("fCd", s => { s.cd = numero("fCd"); });
+lerCampo("fAlvo", s => { s.alvo_progresso = numero("fAlvo"); });
+lerCampo("fRecompensa", s => { s.recompensa = $("fRecompensa").value.trim() || null; });
+lerCampo("fImagem", s => { s.imagem = $("fImagem").value.trim() || null; });
+lerCampo("fId", s => { s.id = $("fId").value.trim(); listar(); });
+$("fDif").addEventListener("change", () => {
+  const s = sala(); if (!s) return;
+  s.dificuldade = $("fDif").value; alterado();
 });
-$("fJson").addEventListener("scroll", () => { $("linhas").scrollTop = $("fJson").scrollTop; });
+$("fTipo").addEventListener("change", () => {
+  const s = sala(); if (!s) return;
+  s.tipo = $("fTipo").value;
+  // Campo que nao pertence ao tipo novo sai: o validador recusa sala de
+  // Combate com pericia e sala de teste com criatura, e o autor nao tem
+  // como ver o resto na tela para apagar a mao.
+  if (s.tipo === "Combate") {
+    s.dificuldade = null; s.cd = null; s.alvo_progresso = null; s.pericias = [];
+  } else {
+    delete s.monstros; delete s.monstros_por_tier; delete s.monstros_por_tema;
+    s.dificuldade ||= C.dificuldades[1];
+  }
+  mostrarEditor(); alterado();
+});
+$("btNovaCriatura").addEventListener("click", () => {
+  const s = sala(); if (!s) return;
+  if (linhasAtuais === null || linhasDoIndice !== indice) {
+    linhasAtuais = linhasDaSala(s); linhasDoIndice = indice;
+  }
+  linhasAtuais.push({nome: "", quantidade: 1, tier: "", tema: ""});
+  desenharCriaturas(); alterado();
+});
 $("fBanco").addEventListener("change", evento => {
   const destino = evento.target.value;
   if (!pronto()) { evento.target.value = origem; return; }
@@ -478,25 +672,19 @@ $("fArquivo").addEventListener("change", importar);
 $("btBaixar").addEventListener("click", baixar);
 $("btConferir").addEventListener("click", () => { if (pronto()) conferir(); });
 $("btConferirBanco").addEventListener("click", () => { if (pronto()) conferir(true); });
-$("btFormatar").addEventListener("click", () => { if (pronto()) { mostrarEditor(); guardar(); } });
 $("btNova").addEventListener("click", () => adicionar());
 $("btDuplicar").addEventListener("click", () => adicionar(true));
 $("btExcluir").addEventListener("click", () => {
   if (!pronto() || !confirm(`Excluir “${texto(sala().nome)}” do rascunho?`)) return;
   banco.salas.splice(indice, 1); indice = Math.max(0, Math.min(indice, banco.salas.length - 1));
-  if (!sala()) modo = "banco";
   mostrarEditor(); alterado();
 });
 $("btRecarregar").addEventListener("click", () => {
   if (!banco || !confirm("Descartar o rascunho deste banco e restaurar o JSON original?")) return;
   const original = originais[origem];
-  banco = copiar(original.banco); arquivo = original.arquivo; indice = 0; modo = banco.salas.length ? "sala" : "banco";
+  banco = copiar(original.banco); arquivo = original.arquivo; indice = 0;
   mostrarEditor(); alterado(); aviso("JSON original restaurado.");
 });
-["sala", "banco"].forEach(m => $(m === "sala" ? "modoSala" : "modoBanco").addEventListener("click", () => {
-  if (!pronto() || modo === m) return;
-  modo = m; mostrarEditor(); guardar(); agendarConferencia();
-}));
 const abas = [...document.querySelectorAll("[data-aba]")];
 abas.forEach((n, i) => {
   n.addEventListener("click", () => aba(n.dataset.aba));
@@ -516,7 +704,7 @@ $("btCopiarFiltro").addEventListener("click", copiarFiltro);
 document.addEventListener("keydown", evento => {
   if (!(evento.ctrlKey || evento.metaKey)) return;
   if (evento.key.toLowerCase() === "s") { evento.preventDefault(); baixar(); }
-  if (evento.key === "Enter") { evento.preventDefault(); if (pronto()) conferir(modo === "banco"); }
+  if (evento.key === "Enter") { evento.preventDefault(); if (pronto()) conferir(); }
 });
 window.addEventListener("beforeunload", guardar);
 controles();

@@ -12,8 +12,14 @@ AQUI = Path(__file__).resolve().parent
 SUITES = ("smoke.py", "test_run.py", "test_votacao.py", "test_combate.py", "test_pontos.py", "test_personagens.py", "test_critico_expertise.py", "test_ajuda_feedback.py", "test_geracao.py", "test_faixa.py", "test_tier.py", "test_semana.py", "test_registro.py", "test_bando.py", "test_habilidades.py", "test_ativas.py", "test_duracao.py", "test_thp.py", "test_reacoes.py", "test_escolhas.py", "test_saves.py", "test_criaturas.py", "test_iniciativa.py", "test_bestiario.py", "test_condicoes.py", "test_fichas.py", "test_ameaca.py", "test_xama.py", "test_clerigo.py", "test_artifice.py", "test_mago.py", "test_bruxo.py", "test_druida.py", "test_feiticeiro.py", "test_bardo.py", "test_inspiracao_save.py", "test_ladino.py", "test_patrulheiro.py", "test_mercado.py", "test_pocoes.py", "test_telas.py", "test_backup.py", "test_descanso.py", "test_corridas.py", "test_substituicao.py", "test_substituicao_reservas.py", "test_encerrar.py", "test_migracao.py", "test_formato.py", "test_conteudo.py", "test_estudio.py", "test_sugestor.py", "test_simulacao.py")
 
 
+# Codigo que uma suite devolve para dizer "nao rodei" — hoje so a da
+# interface, que precisa do playwright. Nao e falha, e nao pode ser silencio:
+# contar como verde foi o que escondeu 12 provas paradas.
+PULADA = 3
+
+
 def main() -> int:
-    falhas = []
+    falhas, puladas = [], []
     for suite in SUITES:
         print(f"\n=== {suite} ===")
         try:
@@ -26,14 +32,20 @@ def main() -> int:
             print(f"{suite}: estourou o tempo limite", flush=True)
             falhas.append(suite)
             continue
-        if processo.returncode != 0:
+        if processo.returncode == PULADA:
+            puladas.append(suite)
+        elif processo.returncode != 0:
             falhas.append(suite)
 
     print()
+    if puladas:
+        print(f"PULADAS, nao rodaram: {', '.join(puladas)}")
     if falhas:
         print(f"FALHARAM: {', '.join(falhas)}")
         return 1
-    print(f"tudo verde ({len(SUITES)} suítes)")
+    rodaram = len(SUITES) - len(puladas)
+    print(f"tudo verde ({rodaram} de {len(SUITES)} suítes"
+          + (f"; {len(puladas)} pulada(s))" if puladas else ")"))
     return 0
 
 

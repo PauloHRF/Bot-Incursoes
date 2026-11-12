@@ -71,11 +71,32 @@ class Interface(unittest.TestCase):
         self.assertEqual(self.erros, [])
 
     def json(self):
-        return json.loads(self.page.locator("#fJson").input_value())
+        """A sala aberta, como o estudio a tem na memoria.
 
-    def editar(self, dados):
-        self.page.locator("#fJson").fill(json.dumps(dados, ensure_ascii=False, indent=2))
-        expect(self.page.locator("#sintaxe")).to_have_text("JSON válido")
+        Lida e nao digitada: o formulario e dirigido pelos campos (que e o
+        que se quer testar), e o objeto serve para CONFERIR o que eles
+        fizeram. Era o textarea de JSON que dava as duas coisas de uma vez.
+        """
+        return self.page.evaluate("JSON.parse(JSON.stringify(sala() || null))")
+
+    def banco(self):
+        return self.page.evaluate("JSON.parse(JSON.stringify(banco || null))")
+
+    def escrever(self, campo, valor):
+        """Digita num campo do formulario, como o autor faz."""
+        self.page.locator(campo).fill(valor)
+        self.page.locator(campo).dispatch_event("input")
+
+    def semear(self, dados):
+        """Poe dados na sala aberta sem passar pelo formulario.
+
+        So para montar o cenario de campos que o formulario NAO mostra — a
+        prova de que editar o nome nao apaga o resto do arquivo precisa que
+        exista um resto. O que se testa depois disso continua sendo a UI.
+        """
+        self.page.evaluate(
+            "d => { Object.assign(sala(), d); mostrarEditor(); alterado(); }", dados
+        )
 
     def baixar(self):
         expect(self.page.locator("#btBaixar")).to_be_enabled()
@@ -95,47 +116,67 @@ class Interface(unittest.TestCase):
         self.assertEqual(self.json()["tipo"], "Descanso")
         self.assertEqual(self.baixar(), self.inicial)
 
-    def test_sala_e_banco_compartilham_edicoes_sem_perder_campos(self):
-        dados = self.json()
-        dados.update(nome='Sala "revisada" <tag>', descricao="Texto curto.", extensao={"valor": [1, 2]})
-        self.editar(dados)
-        expect(self.page.locator("#dTitulo")).to_have_text(dados["nome"])
-        expect(self.page.locator("#dCorpo")).to_have_text("Texto curto.")
-        self.page.locator("#modoBanco").click()
-        banco = self.json()
-        self.assertEqual(banco["salas"][0], dados)
-        banco["nota_do_autor"] = {"preservar": True}
-        banco["salas"][1]["nome"] = "Outra sala alterada"
-        self.editar(banco)
-        expect(self.page.locator(".sala-btn").nth(1)).to_contain_text("Outra sala alterada")
-        self.page.locator(".sala-btn").nth(1).click()
-        self.assertEqual(self.json(), banco)  # Continua no modo banco.
-        self.page.locator("#modoSala").click()
-        self.assertEqual(self.json(), banco["salas"][1])
-        self.assertEqual(self.baixar(), banco)
+    def test_editar_no_formulario_nao_apaga_o_resto_da_sala(self):
+        """Escrever no formulario mexe no campo escrito, e em mais nada.
 
-    def test_json_incompleto_bloqueia_trocas_e_sobrevive_ao_reload(self):
-        original = self.page.locator("#fJson").input_value()
-        self.page.locator("#fJson").fill('{"nome":')
-        expect(self.page.locator("#erroJson")).to_be_visible()
+        O editor de JSON mostrava a sala inteira, entao o autor via o que
+        sobrevivia. O formulario mostra uma parte — e e justamente por isso
+        que isto precisa de prova: campo que ele nao desenha (uma extensao
+        do arquivo, uma chave que o bot ainda nao le) tem de continuar la
+        depois de o autor trocar o nome.
+        """
+        self.semear({"extensao": {"valor": [1, 2]}})
+        self.escrever("#fNome", 'Sala "revisada" <tag>')
+        expect(self.page.locator("#dTitulo")).to_have_text('Sala "revisada" <tag>')
+        self.escrever("#fDesc", "Texto curto.")
+        expect(self.page.locator("#dCorpo")).to_have_text("Texto curto.")
+
+        atual = self.json()
+        self.assertEqual(atual["extensao"], {"valor": [1, 2]})
+        self.assertEqual(atual["nome"], 'Sala "revisada" <tag>')
+        self.assertEqual(atual["id"], self.inicial["salas"][0]["id"])
+
+        # E o que foi escrito acompanha a troca de sala e volta inteiro.
         self.page.locator(".sala-btn").nth(1).click()
-        self.page.locator("#modoBanco").click()
-        outra = self.page.locator("#fBanco option").nth(1).get_attribute("value")
-        self.page.locator("#fBanco").select_option(outra)
-        expect(self.page.locator("#fJson")).to_have_value('{"nome":')
-        expect(self.page.locator("#btBaixar")).to_be_disabled()
-        self.page.reload()
-        expect(self.page.locator("#fJson")).to_have_value('{"nome":')
-        self.page.locator("#fJson").fill(original)
+        self.escrever("#fNome", "Outra sala alterada")
+        expect(self.page.locator(".sala-btn").nth(1)).to_contain_text("Outra sala alterada")
+        self.page.locator(".sala-btn").nth(0).click()
+        self.assertEqual(self.json()["nome"], 'Sala "revisada" <tag>')
+        self.assertEqual(self.json()["extensao"], {"valor": [1, 2]})
+
+        baixado = self.baixar()
+        self.assertEqual(baixado["salas"][0]["extensao"], {"valor": [1, 2]})
+        self.assertEqual(baixado["salas"][1]["nome"], "Outra sala alterada")
+
+    def test_o_formulario_nao_tem_estado_de_sintaxe_quebrada(self):
+        """O estado que este arquivo mais testava deixou de existir.
+
+        Com o editor de JSON, metade de uma chave travava trocar de sala, de
+        banco e o download, e o texto quebrado tinha de sobreviver ao reload
+        para o autor nao perder o que escrevia. Nada disso existe num
+        formulario: cada campo escreve direto no objeto, e nao ha momento em
+        que a sala esteja ilegivel.
+
+        Fica como prova de que a troca valeu: baixar continua liberado
+        enquanto se escreve, e o rascunho sobrevive ao reload.
+        """
+        self.escrever("#fNome", "Meio de uma frase")
         expect(self.page.locator("#btBaixar")).to_be_enabled()
+        self.page.locator(".sala-btn").nth(1).click()
+        expect(self.page.locator("#btBaixar")).to_be_enabled()
+        self.page.locator(".sala-btn").nth(0).click()
+        self.assertEqual(self.json()["nome"], "Meio de uma frase")
+
         self.page.reload()
-        expect(self.page.locator("#fJson")).to_have_value(original)
-        self.assertEqual(self.baixar(), self.inicial)
+        expect(self.page.locator(".sala-btn").first).to_be_visible()
+        self.assertEqual(self.json()["nome"], "Meio de uma frase")
+        self.assertEqual(self.baixar()["salas"][0]["nome"], "Meio de uma frase")
 
     def test_rascunho_por_banco_e_busca(self):
         primeiro = self.page.locator("#fBanco").input_value()
-        dados = self.json(); dados["nome"] = "Rascunho persistido"
-        self.editar(dados)
+        dados = self.json()
+        self.escrever("#fNome", "Rascunho persistido")
+        dados["nome"] = "Rascunho persistido"
         outra = self.page.locator("#fBanco option").nth(1).get_attribute("value")
         self.page.locator("#fBanco").select_option(outra)
         self.page.locator("#fBanco").select_option(primeiro)
@@ -166,7 +207,10 @@ class Interface(unittest.TestCase):
     def test_importar_banco_vazio_e_restaurar_importacao(self):
         dados = {"organizacao": self.inicial["organizacao"], "salas": [], "extra": 7}
         self.page.locator("#fArquivo").set_input_files({"name": "meu-banco.json", "mimeType": "application/json", "buffer": json.dumps(dados).encode()})
-        expect(self.page.locator("#modoBanco")).to_have_attribute("aria-pressed", "true")
+        # Sem salas, o formulario some e a lista fica vazia — era o "modo
+        # banco" que cobria este caso quando havia um editor de JSON.
+        expect(self.page.locator(".sala-btn")).to_have_count(0)
+        expect(self.page.locator("#formSala")).to_be_hidden()
         self.assertEqual(self.baixar(), dados)
         self.page.locator("#btNova").click()
         self.assertEqual(self.json()["tipo"], "Evento")
@@ -177,8 +221,9 @@ class Interface(unittest.TestCase):
         self.assertEqual(self.baixar(), dados)
 
     def test_filtro_utiliza_edicoes_e_exporta_json(self):
-        dados = self.json(); dados["nome"] = "Sala do filtro"
-        self.editar(dados)
+        dados = self.json()
+        self.escrever("#fNome", "Sala do filtro")
+        dados["nome"] = "Sala do filtro"
         self.page.locator("#abaFiltro").click()
         self.page.locator("#fIncluir").fill(dados["id"])
         expect(self.page.locator("#tabelaPool tr")).to_have_count(1)
@@ -212,11 +257,13 @@ class Interface(unittest.TestCase):
     def test_sugestao_aplica_somente_o_tier_da_variante_escolhida(self):
         self.combate()
         self.page.locator("#abaEditar").click()
-        dados = self.json()
         tema = self.conteudo["temas"][0]
-        dados["monstros_por_tema"] = {tema: {"1": [{"nome": "Aarakocra"}]}}
-        dados["extra"] = "preservado"
-        self.editar(dados)
+        antes = self.json()
+        self.semear({
+            "temas": [tema],
+            "monstros_por_tema": {tema: {"1": [{"nome": "Aarakocra"}]}},
+            "extra": "preservado",
+        })
         self.page.locator("#abaCombate").click()
         self.page.locator("#fTemaSim").select_option(tema)
         self.page.locator(".sugeridor summary").click()
@@ -225,8 +272,8 @@ class Interface(unittest.TestCase):
         self.page.locator(".usar-sugestao").click()
         novo = self.json()
         self.assertEqual(novo["monstros_por_tema"][tema]["2"], [{"nome": "Aarakocra", "quantidade": 2}])
-        self.assertEqual(novo["monstros_por_tema"][tema]["1"], dados["monstros_por_tema"][tema]["1"])
-        self.assertEqual(novo["monstros_por_tier"], dados["monstros_por_tier"])
+        self.assertEqual(novo["monstros_por_tema"][tema]["1"], [{"nome": "Aarakocra"}])
+        self.assertEqual(novo["monstros_por_tier"], antes["monstros_por_tier"])
         self.assertEqual(novo["extra"], "preservado")
         self.page.locator("#abaCombate").click()
         expect(self.page.locator(".usar-sugestao")).to_be_disabled()
@@ -264,5 +311,20 @@ class Interface(unittest.TestCase):
         self.assertEqual(self.baixar(), self.inicial)
 
 
+# O runner le o codigo de saida, e `unittest` sai com 0 mesmo pulando tudo:
+# sem playwright, as doze provas nao rodavam e `todos.py` dizia "tudo verde".
+# Ficou invisivel por tempo demais — e, quando enfim rodaram, pegaram dois
+# defeitos de primeira. O 3 e o combinado com o runner para "nao rodou".
+PULADA = 3
+
 if __name__ == "__main__":
+    if sync_playwright is None:
+        for linha in (
+            "SUITE PULADA: falta o playwright, e as 12 provas da interface",
+            "nao rodaram. Instale com:",
+            "  pip install -r requirements-estudio.txt",
+            "  python -m playwright install chromium",
+        ):
+            print(linha)
+        raise SystemExit(PULADA)
     unittest.main(verbosity=2)

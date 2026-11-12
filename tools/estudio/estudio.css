@@ -178,3 +178,24 @@ footer {color:var(--muted); font-size:11px; text-align:center; padding:26px 0}
 @media(max-width:1180px) {.edicao-grid {grid-template-columns:minmax(0,1fr) 250px}.bancada {grid-template-columns:210px minmax(0,1fr);gap:18px}.barra-arquivo {flex-wrap:wrap}.banco-campo {width:260px}.acoes-arquivo {justify-content:flex-end}.cinco {grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:950px) {.edicao-grid {grid-template-columns:1fr}.previa-coluna {display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px}.ajuda {margin-top:0}.editor textarea,.editor pre {height:420px}.acoes-arquivo {justify-content:flex-start}.barra-arquivo {align-items:end}.bancada {gap:16px}.contexto>div {flex-wrap:wrap;gap:5px}.contexto h2 {font-size:18px}}
 @media(max-width:700px) {.app {padding:0 14px}.cabecalho {padding:20px 0 16px;align-items:start;flex-wrap:wrap;gap:12px}.cabecalho .estado {margin-left:56px}.marca-icone {width:40px;height:40px}.barra-arquivo {padding:14px;gap:12px;margin-bottom:16px}.banco-campo {width:100%}.acoes-arquivo {gap:6px}.acoes-arquivo .botao {font-size:11px;padding:8px 10px}.bancada {grid-template-columns:1fr}.navegador {position:static}.salas {max-height:170px;min-height:0}.nota-lateral {padding:8px 14px}.contexto {margin-top:6px}.abas {gap:20px}.abas button {font-size:11px}.previa-coluna {display:block}.ajuda {margin-top:14px}.tres,.cinco {grid-template-columns:repeat(2,minmax(0,1fr))}.sugestoes {grid-template-columns:1fr}.painel-cabecalho {flex-wrap:wrap}.simulacao-acoes {gap:13px}.semente {width:130px}.editor pre,.editor textarea {font-size:11px}.contexto h2 {font-size:19px}}
+
+/* ---- o formulario da sala (substituiu o editor de JSON) ---- */
+.form-sala {display:grid; gap:14px}
+.form-linha {display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px}
+.campo-id input {font-family:var(--mono,ui-monospace,monospace)}
+textarea {border:1px solid var(--line); border-radius:6px; background:var(--paper); width:100%; padding:8px 10px; min-width:0; font:inherit; line-height:1.45; resize:vertical}
+.medida {display:flex; justify-content:space-between; gap:10px; margin:0; font-size:11px; color:var(--muted)}
+.medida b {font-variant-numeric:tabular-nums; font-weight:600}
+.bloco {border:1px solid var(--line); border-radius:8px; padding:12px 13px 13px; display:grid; gap:12px; margin:0}
+.bloco legend {padding:0 6px}
+.bloco[hidden] {display:none}
+.bloco-extra {border:1px solid var(--line); border-radius:8px; padding:10px 13px}
+.bloco-extra summary {cursor:pointer; font-size:12px; color:var(--muted)}
+.bloco-extra[open] {display:grid; gap:12px}
+.tabela-criaturas {width:100%; border-collapse:collapse; font-size:13px}
+.tabela-criaturas th {text-align:left; font-size:11px; color:var(--muted); font-weight:550; padding:0 6px 6px 0}
+.tabela-criaturas th.n, .tabela-criaturas td.n {width:80px}
+.tabela-criaturas td {padding:0 6px 6px 0; vertical-align:top}
+.tabela-criaturas td:last-child {width:34px; padding-right:0}
+.invalido {color:var(--bad)}
+.medida .atencao {color:var(--warn,#8a5b00)}
