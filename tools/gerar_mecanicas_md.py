@@ -29,6 +29,7 @@ from src import (  # noqa: E402
     condicoes as cond,
     consequencias as C,
     consumiveis,
+    embeds as E,
     habilidades as H,
     incursoes as I,
     itens,
@@ -273,6 +274,26 @@ def combate() -> str:
         "o turno fica livre) e a **Poção da Aceleração** (beber não custa a "
         "ação). Ver `mercado.md` para as poções.",
         "",
+        "## Preparar a ação, e mudar de ideia",
+        "",
+        "Clicar antes da sua vez **guarda** a ação: ela sai quando a "
+        "iniciativa chegar em você. Isso é o normal, não a exceção — o painel "
+        "é uma mensagem só para o grupo inteiro, e cada um clica quando vê.",
+        "",
+        "Enquanto a ação está guardada, **clicar de novo troca**. A escolha "
+        "anterior sai da mesa e a nova entra, e o que a antiga tinha "
+        "reservado volta: o uso da habilidade, a poção que já havia saído da "
+        "bolsa. É a mesma devolução de quando a vez não chega "
+        "(`_devolver_reservas`), pelo mesmo motivo — a ação não aconteceu.",
+        "",
+        "Depois de a ação **sair**, não há o que trocar: dano não se desfaz. "
+        "Aí o aviso volta a ser o de sempre, dizendo com o que o turno foi "
+        "gasto.",
+        "",
+        "Isso também é como quem foi substituído retoma a vez: a ação que o "
+        "grupo escolheu por ele fica guardada como qualquer outra, então ele "
+        "aparecer e clicar desfaz a do grupo.",
+        "",
         "## O ataque",
         "",
         "**1d20 + acerto** contra a CA do alvo. O acerto e o dano saem da "
@@ -324,6 +345,46 @@ def combate() -> str:
         f"**ataque − {motor.DEFASAGEM_DE_SAVE}**. Os dois caminhos recebem o "
         "ajuste de tier, para o bestiário e o conteúdo escrito à mão não "
         "resistirem de formas diferentes.",
+        "",
+        "## A área rola um dado só",
+        "",
+        "O sopro do dragão, a bola de fogo, o estouro que pega a sala "
+        "inteira: **a rolagem é uma, e todo mundo debaixo dela enfrenta o "
+        "mesmo número**. O que continua por pessoa é o que é da pessoa — o "
+        "save, a metade de quem passou, a redução de dano e a vida "
+        "temporária.",
+        "",
+        "Rolando por alvo, a mesma baforada dava cinco números diferentes, e "
+        "com cinco alvos a chance de *alguém* tirar perto do máximo virava "
+        "quase certa: o efeito ficava mais forte só por haver mais gente para "
+        "acertar. A regra vale nas duas direções — criatura contra o grupo "
+        "(`motor.usar_habilidade_do_inimigo`) e magia de área contra a sala "
+        "(`alvos: \"todos\"`, e o `dano_em_todos` dos Guerreiros Anciões).",
+        "",
+        "**O multiataque é o contrário.** Quando a habilidade rola *ataque* "
+        "em vez de impor save, cada alvo leva um golpe **seu**, com acerto e "
+        "dano próprios: ali são vários golpes, não um efeito. O mesmo vale "
+        "para o alvo extra do feiticeiro, que é uma segunda conjuração de uma "
+        "magia de alvo único.",
+        "",
+        "## As marcas do painel",
+        "",
+        "Ao lado do HP, o painel acende o que está **ligado** naquele "
+        "personagem — e os dois estados que tiram alguém da rodada:",
+        "",
+    ]
+    L += lista([
+        f"{emoji} **{nome}** — {texto}"
+        for emoji, nome, texto, _aceso in E.MARCAS + E.ESTADOS
+    ] + [
+        f"{E.MARCA_ABATIDO} **Abatida** — a criatura caiu, e ela não volta.",
+    ])
+    L += [
+        "Nenhuma dessas marcas repete ícone de condição (`condicoes.md`), "
+        "porque as duas famílias dividem a **mesma linha**. Três repetiam, e "
+        "o jogador lia a coisa errada sem ter como saber: quem cedeu foram as "
+        "marcas, porque as condições são o vocabulário da planilha. "
+        "`/incursao buffs` é a legenda do que estiver aceso na hora.",
         "",
         "## Vida temporária (THP)",
         "",
@@ -614,7 +675,7 @@ def ameaca_md() -> str:
         "antes de qualquer um escrever.",
         "",
         "O campo é **separado** do que as habilidades somam. No mesmo campo, a "
-        "marca 🩸 do painel — que quer dizer \"tem algo ligado chamando "
+        f"marca {E.MARCA_AMEACA} do painel — que quer dizer \"tem algo ligado chamando "
         "atenção\" — apareceria em todo mundo que já agiu, e deixaria de dizer "
         "nada.",
         "",

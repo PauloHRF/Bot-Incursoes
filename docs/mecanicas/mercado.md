@@ -69,7 +69,7 @@ O Anel do Mestre é ferramenta de mesa: serve para atravessar uma incursão **so
 
 ## As poções
 
-Prateleira própria, de **3 vagas**: as 2 de vida estão **sempre** em cartaz, e a terceira é sorteada por semana e por personagem, como a de equipamento. São 50 poções no catálogo.
+Prateleira própria, de **3 vagas**: as 2 de vida estão **sempre** em cartaz, e a terceira é sorteada por semana e por personagem, como a de equipamento. São 32 poções no catálogo.
 
 **Até 3 de cada tipo na bolsa.** É a contenção delas, no lugar do slot: o equipamento é único por personagem porque o slot impede o stack, e a poção empilha — sem um teto, ouro guardado viraria estoque e a incursão longa deixaria de cobrar o HP que ela cobra.
 
@@ -86,7 +86,7 @@ Prateleira própria, de **3 vagas**: as 2 de vida estão **sempre** em cartaz, e
 
 As de prazo (Aceleração, Resistência, Dano) valem **3 turnos**, e beber a segunda da mesma família renova a primeira em vez de somar com ela — o efeito é gravado pela família, como as habilidades.
 
-O sorteio da vaga que sobra é **por família** e só depois por poção. As 36 de buff são três quartos do catálogo: sorteando direto, três de cada quatro semanas trariam buff e a de Mana apareceria uma vez por ano.
+O sorteio da vaga que sobra é **por família** e só depois por poção. As 18 de buff são três quartos do catálogo: sorteando direto, três de cada quatro semanas trariam buff e a de Mana apareceria uma vez por ano.
 
 A de buff empilha uma condição da tabela de buffs (`condicoes.md`), e o nível são os **stacks** — então o prazo dela é o da tabela, que decai 1 por combate, e não os 3 turnos das outras. A de Mana devolve um uso **já gasto** de uma habilidade daquele tier, escolhida por quem bebe; sem nada gasto, ela não é bebida.
 

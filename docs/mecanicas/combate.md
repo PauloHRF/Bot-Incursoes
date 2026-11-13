@@ -59,6 +59,20 @@ Rolando por alvo, a mesma baforada dava cinco números diferentes, e com cinco a
 
 **O multiataque é o contrário.** Quando a habilidade rola *ataque* em vez de impor save, cada alvo leva um golpe **seu**, com acerto e dano próprios: ali são vários golpes, não um efeito. O mesmo vale para o alvo extra do feiticeiro, que é uma segunda conjuração de uma magia de alvo único.
 
+## As marcas do painel
+
+Ao lado do HP, o painel acende o que está **ligado** naquele personagem — e os dois estados que tiram alguém da rodada:
+
+- 🛡️ **Protegido** — O dano que chega está sendo cortado.
+- 🎯 **Com vantagem** — Os ataques dele saem com vantagem.
+- 💠 **Abençoado** — CA a mais, ou cura chegando a cada turno.
+- ❗ **Chamando atenção** — Uma habilidade ligada está puxando a atenção dos inimigos.
+- ⚰️ **Caído** — Está no chão: fora do combate até alguém levantar com uma cura.
+- 😵 **Atordoado** — Perde a vez desta rodada.
+- ☠️ **Abatida** — a criatura caiu, e ela não volta.
+
+Nenhuma dessas marcas repete ícone de condição (`condicoes.md`), porque as duas famílias dividem a **mesma linha**. Três repetiam, e o jogador lia a coisa errada sem ter como saber: quem cedeu foram as marcas, porque as condições são o vocabulário da planilha. `/incursao buffs` é a legenda do que estiver aceso na hora.
+
 ## Vida temporária (THP)
 
 A THP absorve dano antes do HP, e **empilha**: receber uma nova soma na que já havia, em vez de substituir.

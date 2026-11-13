@@ -10,26 +10,20 @@ O que uma sala deixa no personagem. O catálogo é transcrição direta da plani
 
 Os tetos: Deterioração em 10, Exaustão em 5. O resto não tem teto.
 
-## O catálogo (25 condições)
+## O catálogo (13 condições)
 
 Os valores são **o que um stack faz**, com o sinal já dentro.
 
-### Debuffs (12)
+### Debuffs (6)
 
 |  | Condição | O que um stack faz | Fonte | Decai | Teto |
 |---|---|---|---|---|---|
 | 🩸 | Deterioração | HP máximo -10% | Armadilha | sim | 10 |
 | 💀 | Perdição | ataque -1; saves -1 | Armadilha | sim | — |
-| 💫 | Perturbação | testes -1 | Armadilha | sim | — |
+| 💫 | Perturbação | testes -2 | Armadilha | sim | — |
 | 😨 | Medo | saves -2 | Armadilha | sim | — |
 | 🤢 | Envenenado | ataque -1; testes -1 | Armadilha | sim | — |
-| 💔 | Debilidade | cura recebida -10% | Armadilha | sim | — |
 | 🐌 | Letargia | iniciativa -2 | Armadilha | sim | — |
-| 🥀 | Fraqueza | -2 em Atletismo | Evento | sim | — |
-| 🤡 | Tolice | -2 em Arcanismo, História, Investigação, Natureza, Religião | Evento | sim | — |
-| 🦥 | Moleza | -2 em Acrobacia, Prestidigitação, Furtividade | Evento | sim | — |
-| 🙃 | Introversão | -2 em Enganação, Intimidação, Atuação, Persuasão | Evento | sim | — |
-| 🌫 | Insensatez | -2 em Intuição, Medicina, Percepção, Sobrevivência | Evento | sim | — |
 
 ### Exaustão (1)
 
@@ -41,22 +35,16 @@ A Exaustão é a única condição com tipo próprio, e merece: ela **não decai
 
 A coluna **Fonte** diz de qual sorteio ela sai, e não por quantos caminhos ela chega. A Exaustão é a condição com mais entradas no jogo: o sorteio do Evento perdido, o da Armadilha perdida, o golpe ou a habilidade de uma criatura que drena, e **voltar do chão por cura** — que cobra um ponto fixo, sem sorteio nenhum (ver `combate.md`).
 
-### Buffs (12)
+### Buffs (6)
 
 |  | Condição | O que um stack faz | Fonte | Decai | Teto |
 |---|---|---|---|---|---|
 | 💚 | Sustento | HP máximo +10% | — | sim | — |
 | ✨ | Benção | ataque +1; saves +1 | — | sim | — |
-| 🧭 | Orientação | testes +1 | — | sim | — |
+| 🧭 | Orientação | testes +2 | — | sim | — |
 | 🦁 | Coragem | saves +2 | — | sim | — |
 | 💧 | Purificado | ataque +1; testes +1 | — | sim | — |
-| 🌿 | Vigor | cura recebida +10% | — | sim | — |
 | ⚡ | Rapidez | iniciativa +2 | — | sim | — |
-| 💪 | Potência | +2 em Atletismo | — | sim | — |
-| 📖 | Esperteza | +2 em Arcanismo, História, Investigação, Natureza, Religião | — | sim | — |
-| 💨 | Pressa | +2 em Acrobacia, Prestidigitação, Furtividade | — | sim | — |
-| 💬 | Sociável | +2 em Enganação, Intimidação, Atuação, Persuasão | — | sim | — |
-| 👀 | Prudência | +2 em Intuição, Medicina, Percepção, Sobrevivência | — | sim | — |
 
 ## O teto tira o personagem da incursão
 

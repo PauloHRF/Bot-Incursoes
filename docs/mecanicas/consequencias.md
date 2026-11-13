@@ -13,11 +13,11 @@ E é **um sorteio só para o grupo inteiro**: é uma armadilha que disparou, nã
 ### Armadilha
 
 - **Grupo venceu:** desarmada. Ninguém se machuca nela, nem quem falhou a própria rolagem.
-- **Grupo perdeu:** todos que rolaram levam **−20% do HP máximo** e o **mesmo** debuff de Armadilha, sorteado uma vez.
+- **Grupo perdeu:** todos que rolaram levam **−35% do HP máximo** e o **mesmo** debuff de Armadilha, sorteado uma vez.
 
 ### Evento
 
-- **Grupo venceu:** um prêmio sorteado. Os 12 buffs do catálogo são sempre candidatos — são o piso. A Cura (+20% do HP) entra no bolo só se alguém estiver machucado, e a Graça só se alguém carregar debuff: não faz sentido oferecer cura a um grupo inteiro nem perdão a um grupo limpo.
+- **Grupo venceu:** um prêmio sorteado. Os 6 buffs do catálogo são sempre candidatos — são o piso. A Cura (+20% do HP) entra no bolo só se alguém estiver machucado, e a Graça só se alguém carregar debuff: não faz sentido oferecer cura a um grupo inteiro nem perdão a um grupo limpo.
 - **Grupo perdeu:** todos que rolaram pegam o **mesmo** castigo, sorteado uma vez: um debuff de Evento, ou um ponto de Exaustão.
 
 A Graça tira **um stack de um debuff de alguém** do grupo, sorteado entre todos. Ela não é condição: não tem stack nem prazo, acontece na hora.
@@ -25,7 +25,7 @@ A Graça tira **um stack de um debuff de alguém** do grupo, sorteado entre todo
 ### Tesouro
 
 - **Grupo venceu:** o **texto de recompensa escrito na sala** — e não um item do mercado. Os itens de tesouro vivem na planilha do grupo, não no bot; a economia do bot é a do mercado (ver `mercado.md`).
-- **Grupo perdeu:** não leva nada — e tem 35% de chance de acordar o que fingia ser um baú. Acordando, a sala vira combate em vez de devolver o grupo à votação, com uma linha por tier: **T1** 3 Mímico; **T2** 5 Mímico; **T3** 2 Mímico + 2 Xorn; **T4** 1 Mímico + 2 Naga Guardiã; **T5** 1 Mímico + 2 Golem de Pedra. O Mímico é CR 2 e satura — seis deles deixam 85% do HP de um grupo de tier 3 —, então do tier 3 para cima quem dá o peso é quem morava com o baú.
+- **Grupo perdeu:** não leva nada — e tem 100% de chance de acordar o que fingia ser um baú. Acordando, a sala vira combate em vez de devolver o grupo à votação, com uma linha por tier: **T1** 3 Mímico; **T2** 5 Mímico; **T3** 1 Mímico + 4 Xorn; **T4** 1 Mímico + 3 Golem de Argila; **T5** 1 Mímico + 5 Golem de Argila. O Mímico é CR 2 e satura — seis deles deixam 85% do HP de um grupo de tier 3 —, então do tier 3 para cima quem dá o peso é quem morava com o baú.
 
 ### Combate e Descanso
 
@@ -38,8 +38,8 @@ O sorteio não é do catálogo inteiro: cada fonte tem a lista dela.
 
 | Fonte | Debuffs sorteáveis |
 |---|---|
-| Armadilha | Deterioração, Perdição, Perturbação, Medo, Envenenado, Debilidade, Letargia |
-| Evento | Fraqueza, Tolice, Moleza, Introversão, Insensatez, Exaustão |
+| Armadilha | Deterioração, Perdição, Perturbação, Medo, Envenenado, Letargia |
+| Evento | Deterioração, Perdição, Perturbação, Medo, Envenenado, Letargia, Exaustão |
 
 ## Sair da incursão
 
