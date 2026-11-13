@@ -110,30 +110,33 @@ Espalhamento por tier:
 
 ## Ameaça: fatia da atenção das criaturas
 
-Num grupo de cinco onde os outros quatro estão no piso (2).
+Num grupo de cinco onde os outros quatro estão no piso.
 
-| Classe | Ameaça | Abertura | 5 rodadas, todos batendo |
-|---|---|---|---|
-| Bárbaro | 12 | 38.0% | 38.0% |
-| Guerreiro | 12 | 38.0% | 38.0% |
-| Paladino | 10 | 35.9% | 35.9% |
-| Patrulheiro | 8 | 33.3% | 33.3% |
-| Xamã | 8 | 33.3% | 33.3% |
-| Druida | 8 | 33.3% | 33.3% |
-| Monge | 6 | 30.2% | 30.2% |
-| Clérigo | 6 | 30.2% | 30.2% |
-| Bruxo | 6 | 30.2% | 30.2% |
-| Artífice | 4 | 26.1% | 26.1% |
-| Mago | 4 | 26.1% | 26.1% |
-| Feiticeiro | 4 | 26.1% | 26.1% |
-| Bardo | 4 | 26.1% | 26.1% |
-| Ladino | 2 | 20.0% | 20.0% |
+| Classe | Ameaça | Abertura | +5 (rodada média) | +10 (rodada boa) |
+|---|---|---|---|---|
+| Bárbaro | 12 | 38.0% | 42.2% | 45.3% |
+| Guerreiro | 12 | 38.0% | 42.2% | 45.3% |
+| Paladino | 10 | 35.9% | 40.6% | 44.2% |
+| Patrulheiro | 8 | 33.3% | 38.9% | 42.9% |
+| Xamã | 8 | 33.3% | 38.9% | 42.9% |
+| Druida | 8 | 33.3% | 38.9% | 42.9% |
+| Monge | 6 | 30.2% | 37.0% | 41.4% |
+| Clérigo | 6 | 30.2% | 37.0% | 41.4% |
+| Bruxo | 6 | 30.2% | 37.0% | 41.4% |
+| Artífice | 4 | 26.1% | 34.7% | 39.8% |
+| Mago | 4 | 26.1% | 34.7% | 39.8% |
+| Feiticeiro | 4 | 26.1% | 34.7% | 39.8% |
+| Bardo | 4 | 26.1% | 34.7% | 39.8% |
+| Ladino | 2 | 20.0% | 31.9% | 38.0% |
 
-O uniforme seria 20%. A coluna da direita mantém a ordem da abertura:
-a ameaça gerada é proporcional à da classe, então acumular não
-desmancha o grupo — o que desloca é a AÇÃO. O mesmo clérigo, no mesmo
-time, sai de 20.1% batendo para 25.4% curando, porque
-cura e área geram o dobro.
+O uniforme seria 20%. A abertura é só a classe; as outras duas
+colunas são a mesma classe depois de uma rodada em que ela moveu HP.
+A ameaça do HP movido vale **uma rodada** e esfria, então a tabela não
+acumula: ela mostra o teto de uma rodada, não o fim do combate.
+
+Os `+5` e `+10` saem do medidor: a ação média move 8,9% da
+poça do lado afetado e a de p90 move 17,6%, que a escala
+(55) converte nesses pontos.
 
 ## Perícia: melhor modificador por tier
 

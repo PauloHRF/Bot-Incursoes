@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 import aiosqlite
 
-from . import condicoes, config
+from . import ameaca, condicoes, config
 from .incursoes import GolpeDoMonstro, HabilidadeDoMonstro
 from .rules import normalizar_lista_pericias, normalizar_pericia
 
@@ -2078,21 +2078,33 @@ async def aplicar_efeito(
     await conn.commit()
 
 
-async def somar_ameaca_gerada(
+async def somar_ameaca_da_rodada(
     conn: aiosqlite.Connection,
     run_id: int,
     passo: int,
+    rodada: int,
     user_id: int,
     quanto: int,
-    expira: int,
 ) -> None:
-    """Acrescenta ameaça gerada, em vez de substituir.
+    """Acrescenta ameaça à conta DESTA rodada, em vez de substituir.
 
-    Mora em `run_efeitos` de propósito. A chave de lá já é
-    (run, passo, alvo, efeito), que é exatamente o escopo da acumulação — ela
-    vale pelo combate e morre quando o grupo troca de sala, porque o `passo`
-    muda —, e quem monta o estado já soma `valor["ameaca"]` em `ameaca_extra`.
-    Nenhum encanamento novo, nenhuma coluna nova.
+    Mora em `run_efeitos` de propósito: a chave de lá é
+    (run, passo, alvo, efeito), e quem monta o estado já soma
+    `valor["ameaca"]`. Nenhum encanamento novo, nenhuma coluna nova — a
+    rodada entra no NOME do efeito (`ameaca.efeito_da_rodada`), porque a
+    chave não tem coluna para ela.
+
+    **Uma conta por rodada, e não uma pelo combate.** Acumulando do primeiro
+    golpe ao fim, a conta convergia: depois de três rodadas as fatias andavam
+    meio ponto e a mira ficava parada no que a classe decidiu na abertura. E
+    uma Fireball no começo travava o mago no teto pelo resto da luta, porque
+    nada do que viesse depois conseguia mais mexer na razão. Com a janela de
+    uma rodada o calor esfria sozinho: quem a lê pede sempre a rodada
+    ANTERIOR, fechada, e por isso todo mundo é visto exatamente uma vez por
+    cada criatura, não importa a posição na iniciativa.
+
+    O prazo é `rodada + 2` para a linha ainda estar ativa na rodada seguinte
+    (`efeitos_ativos` filtra `expira > rodada`) e sair sozinha depois.
 
     A soma é feita DENTRO do banco, e não em Python: dois jogadores clicando
     junto leriam o mesmo valor antes de qualquer um dos dois escrever, e um
@@ -2103,13 +2115,15 @@ async def somar_ameaca_gerada(
     await conn.execute(
         "INSERT INTO run_efeitos"
         " (run_id, passo, alvo_tipo, alvo_id, efeito, dono, valor, expira)"
-        " VALUES (?, ?, 'personagem', ?, 'ameaca_gerada', NULL,"
+        " VALUES (?, ?, 'personagem', ?, ?, NULL,"
         "         json_object('ameaca', ?), ?)"
         " ON CONFLICT(run_id, passo, alvo_tipo, alvo_id, efeito) DO UPDATE SET"
         "   valor = json_object('ameaca',"
-        "     json_extract(run_efeitos.valor, '$.ameaca') + ?),"
-        "   expira = max(run_efeitos.expira, excluded.expira)",
-        (run_id, passo, user_id, quanto, expira, quanto),
+        "     json_extract(run_efeitos.valor, '$.ameaca') + ?)",
+        (
+            run_id, passo, user_id, ameaca.efeito_da_rodada(rodada),
+            quanto, rodada + 2, quanto,
+        ),
     )
     await conn.commit()
 

@@ -9,6 +9,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from src import (  # noqa: E402
+    ameaca,
     classes as cl,
     config,
     database as db,
@@ -34,6 +35,9 @@ BANCO = Path(__file__).resolve().parent / "teste_ladino.db"
 # Aguenta o combate inteiro sem machucar ninguém: o caso é sobre as marcas,
 # não sobre sobreviver. HP alto para a explosão nunca derrubá-lo.
 BONECO = {"nome": "Boneco", "ca": 1, "ataque": -20, "dano": "1d1", "hp": 9000}
+# O mesmo boneco com HP de sala de verdade, para os casos que medem AMEAÇA: a
+# ameaça gerada é fração do HP da sala, e contra 9000 tudo arredonda para zero.
+BONECO_DE_SALA = {**BONECO, "hp": 400}
 
 
 def ordem_fixa(*quem):
@@ -58,7 +62,7 @@ def ordem_fixa(*quem):
     motor.rolar_iniciativas = rolar
 
 
-async def preparar(nivel=3, quantos=1, inimigos=1):
+async def preparar(nivel=3, quantos=1, inimigos=1, monstro=None):
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -74,7 +78,7 @@ async def preparar(nivel=3, quantos=1, inimigos=1):
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
     incursao, _ = montar_conteudo(
-        cog, tamanho="Curta", monstro_objetivo=BONECO,
+        cog, tamanho="Curta", monstro_objetivo=monstro or BONECO,
         inimigos_objetivo=inimigos, salas=salas_sem_combate(),
     )
     run_id = await db.criar_run(conn, GUILD, CANAL, incursao.id, JOGADORES[0])
@@ -468,44 +472,54 @@ async def caso_a_furtividade_congela_a_ameaca():
     O ataque que ABRE a habilidade conta ameaça normalmente — a ficha diz
     "realiza um ataque e depois entra em Stealth". Os turnos seguintes é que
     saem de graça.
+
+    O caso lê a conta DA RODADA, do banco, e não o `ameaca_gerada` do
+    combatente: a conta de uma rodada só chega ao combatente na rodada
+    seguinte (é a janela), e o que se mede aqui é se ela foi ESCRITA.
     """
     ordem_fixa(("p", JOGADORES[0]), ("i", 0))
-    conn, canal, cog, incursao, run = await preparar(nivel=5)
+    # Um boneco de tamanho de sala, e não o de 9000 HP dos outros casos: a
+    # ameaça é FRAÇÃO da poça, e contra 9000 um golpe de ladino move 0,2% e
+    # arredonda para zero ponto — o caso mediria zero contra zero.
+    conn, canal, cog, incursao, run = await preparar(nivel=5, monstro=BONECO_DE_SALA)
     msg = await canal.fetch_message(run["mensagem_id"])
     passo = cog._passo(run)
     dono = JOGADORES[0]
 
-    async def ameaca_de():
-        """A ameaça acumulada, lida de onde o bot a lê: do combatente.
-
-        Ela mora em `run_efeitos` com o efeito 'ameaca_gerada', e quem monta
-        o estado soma em `ameaca_gerada` do combatente.
-        """
+    async def rodada_agora() -> int:
         atual = await db.buscar_run(conn, run["id"])
         estado = await cog._estado_combate(atual, incursao.objetivo)
-        quem = estado.combatente(dono)
-        return quem.ameaca_gerada if quem else 0
+        return estado.rodada
 
-    # um ataque normal: a ameaça sobe
-    inter = FakeInteraction(canal, dono, msg)
-    await cog.atacar(inter, run["id"], "OBJ")
-    subiu = await ameaca_de()
-    assert subiu > 0, subiu
+    async def conta_da(rodada: int) -> int:
+        """O que a conta daquela rodada guardou para ele."""
+        efeitos = await db.efeitos_ativos(conn, run["id"], passo, rodada - 1)
+        return sum(
+            (e["valor"] or {}).get("ameaca", 0)
+            for e in efeitos
+            if e["alvo_tipo"] == "personagem"
+            and e["alvo_id"] == dono
+            and e["efeito"] == ameaca.efeito_da_rodada(rodada)
+        )
+
+    # um ataque normal: a conta da rodada dele sobe
+    primeira = await rodada_agora()
+    await cog.atacar(FakeInteraction(canal, dono, msg), run["id"], "OBJ")
+    assert await conta_da(primeira) > 0, primeira
 
     # a Furtividade: o ataque dela também conta, e o Stealth começa depois
-    inter = FakeInteraction(canal, dono, msg)
-    await cog.usar_habilidade(inter, run["id"], "OBJ", "furtividade")
-    com_a_ativa = await ameaca_de()
-    assert com_a_ativa > subiu, (subiu, com_a_ativa)
+    da_ativa = await rodada_agora()
+    await cog.usar_habilidade(FakeInteraction(canal, dono, msg), run["id"], "OBJ", "furtividade")
+    assert await conta_da(da_ativa) > 0, "o ataque que abre o Stealth conta"
     assert await cog._escondido(run, dono, 99) is False, "o stealth tem prazo"
 
-    # e os ataques seguintes não somam mais nada
+    # e os ataques seguintes não escrevem conta nenhuma
     for _ in range(2):
-        inter = FakeInteraction(canal, dono, msg)
-        await cog.atacar(inter, run["id"], "OBJ")
-    assert await ameaca_de() == com_a_ativa, (
-        f"a ameaça subiu durante o Stealth: {await ameaca_de()} vs {com_a_ativa}"
-    )
+        escondido = await rodada_agora()
+        await cog.atacar(FakeInteraction(canal, dono, msg), run["id"], "OBJ")
+        assert await conta_da(escondido) == 0, (
+            f"a ameaça subiu na rodada {escondido}, durante o Stealth"
+        )
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)

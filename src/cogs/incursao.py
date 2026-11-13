@@ -2001,10 +2001,11 @@ class Incursoes(commands.Cog):
                 return
             quem.dano_extra += valor.get("dano_extra", 0)
             quem.ca_extra += valor.get("ca", 0)
-            # A acumulacao chega pelo mesmo `run_efeitos` que as habilidades,
-            # mas vai para outro campo: a marca do painel e para quem tem algo
-            # LIGADO chamando atencao, nao para quem simplesmente agiu.
-            if ligado["efeito"] == "ameaca_gerada":
+            # A conta da rodada chega pelo mesmo `run_efeitos` que as
+            # habilidades, mas vai para outro campo: a marca do painel e para
+            # quem tem algo LIGADO chamando atencao, nao para quem
+            # simplesmente agiu.
+            if ameaca.rodada_do_efeito(ligado["efeito"]) is not None:
                 quem.ameaca_gerada += valor.get("ameaca", 0)
             else:
                 quem.ameaca_extra += valor.get("ameaca", 0)
@@ -2104,6 +2105,19 @@ class Incursoes(commands.Cog):
         ligados = await db.efeitos_ativos(
             self.bot.db, run["id"], passo, linha["rodada"] - 1
         )
+        # A JANELA da ameaça gerada: vale a rodada seguinte à que a gerou, e
+        # só ela. O filtro mora aqui porque este é o único lugar que tem a
+        # rodada na mão e os efeitos ainda por aplicar; `_aplicar_ligado` é
+        # estático e recebe uma linha de cada vez.
+        #
+        # A conta da rodada CORRENTE também vem do banco (ela está sendo
+        # escrita agora), e é justamente a que não pode entrar: quem age antes
+        # na iniciativa chamaria atenção na própria rodada e quem age depois
+        # não, e a posição na fila viraria metade da mecânica.
+        ligados = [
+            l for l in ligados
+            if ameaca.rodada_do_efeito(l["efeito"]) in (None, linha["rodada"] - 1)
+        ]
         for ligado in ligados:
             if ligado["alvo_tipo"] != "inimigo":
                 continue
@@ -2698,9 +2712,13 @@ class Incursoes(commands.Cog):
         self, run: dict[str, Any], estado: EstadoCombate, user_id: int, turno: dict
     ) -> str:
         """Faz a ação que o personagem escolheu, agora que a vez chegou."""
+        # O HP dos dois lados ANTES de a ação valer: o que ela mover é a
+        # ameaça que ela gera. Tirado aqui, uma vez, para os três caminhos
+        # abaixo medirem a mesma coisa.
+        antes = self._hp_em_jogo(estado)
         if turno["acao"] == "ataque":
             texto = await self._resolver_ataque(run, estado, user_id, turno["alvos"])
-            await self._gerar_ameaca(run, estado, user_id, None)
+            await self._gerar_ameaca(run, estado, user_id, None, antes)
             await self._marcas_orfas(run, estado)
             return texto
         # A poção guardada na vez: ela já saiu da bolsa quando foi escolhida,
@@ -2711,7 +2729,7 @@ class Incursoes(commands.Cog):
             texto = await self._resolver_habilidade(
                 run, estado, user_id, consumiveis.habilidade_de(pocao), turno["alvos"]
             )
-            await self._gerar_ameaca(run, estado, user_id, pocao.acao)
+            await self._gerar_ameaca(run, estado, user_id, pocao.acao, antes)
             return texto
 
         personagem = await self._personagem_na_run(run, user_id)
@@ -2727,14 +2745,15 @@ class Incursoes(commands.Cog):
         texto = await self._resolver_habilidade(
             run, estado, user_id, habilidade, turno["alvos"]
         )
-        await self._gerar_ameaca(run, estado, user_id, habilidade.acao)
+        await self._gerar_ameaca(run, estado, user_id, habilidade.acao, antes)
         await self._marcas_orfas(run, estado)
         self._registrar(run, estado.rodada, [f"✨ {estado.combatente(user_id).nome} usa **{habilidade.nome}**"])
         return texto
 
-    # A ameaca gerada vale pelo combate inteiro, e nao por um numero de
-    # rodadas. O prazo grande diz isso: quem apaga a conta e a troca de sala,
-    # porque o `passo` faz parte da chave em `run_efeitos`.
+    # O prazo de quem vale pelo combate inteiro, e nao por um numero de
+    # rodadas: quem apaga a conta e a troca de sala, porque o `passo` faz
+    # parte da chave em `run_efeitos`. A ameaca gerada NAO usa mais este
+    # prazo — ela tem janela de uma rodada (ver `somar_ameaca_da_rodada`).
     PRAZO_DO_COMBATE = 10 ** 6
 
     EFEITO_DA_MARCA = "marca_fatal"
@@ -3006,14 +3025,60 @@ class Incursoes(commands.Cog):
                 return True
         return False
 
+    @staticmethod
+    def _hp_em_jogo(estado: EstadoCombate) -> tuple[int, int]:
+        """(HP dos inimigos, HP+THP do grupo) AGORA.
+
+        As duas pontas da medição: a diferença de antes para depois de uma
+        ação é o que ela moveu. A vida temporária entra junto com o HP porque
+        dar THP é devolver vida — para quem recebe não há diferença.
+        """
+        inimigos = sum(max(0, i.hp_atual) for i in estado.inimigos)
+        grupo = sum(
+            max(0, c.hp_atual) + max(0, c.thp) for c in estado.combatentes
+        )
+        return inimigos, grupo
+
+    @staticmethod
+    def _potes_de_hp(estado: EstadoCombate) -> tuple[int, int]:
+        """Os denominadores: o HP máximo de cada lado.
+
+        O MÁXIMO, e não o atual: a poça não encolhe conforme a luta anda,
+        senão o mesmo golpe valeria mais no fim do combate que no começo e a
+        última rodada viraria a mais importante de todas.
+
+        O grupo conta só os jogadores. Invocação movimenta HP e pode levar
+        cura, mas somar o corpo dela ao denominador faria o druida diluir a
+        ameaça de todo mundo só por ter conjurado.
+        """
+        inimigos = sum(i.hp_max for i in estado.inimigos)
+        grupo = sum(c.hp_max for c in estado.combatentes if not c.e_invocacao)
+        return inimigos, grupo
+
     async def _gerar_ameaca(
-        self, run: dict[str, Any], estado: EstadoCombate, user_id: int, acao
+        self,
+        run: dict[str, Any],
+        estado: EstadoCombate,
+        user_id: int,
+        acao,
+        antes: tuple[int, int],
     ) -> None:
-        """O que o personagem acabou de fazer chama atencao da criatura.
+        """O HP que a ação acabou de mover chama a atenção da criatura.
 
         Mora aqui, no `_resolver_turno`, e nao em cada resolvedor: este e o
         gargalo por onde o ataque e a habilidade passam os dois, e o uso FORA
         de combate nao passa — que e o certo, nao ha criatura para chamar.
+
+        **A medição é por fora**, comparando o HP dos dois lados antes e
+        depois. São doze resolvedores, cada um devolvendo texto, e nenhum
+        deles sabe dizer um número: fazê-los devolver o dano seria mexer nos
+        doze e manter os doze em sincronia para sempre. De fora, o que se mede
+        é o que de fato aconteceu com a sala — inclusive o que vier por
+        caminhos que ainda não existem.
+
+        O overkill fica de fora por consequência, e isso é o certo: bater 40
+        num inimigo de 5 move 5 de HP, e matar o que já ia morrer não é
+        notável.
         """
         quem = estado.combatente(user_id)
         if quem is None or quem.e_invocacao:
@@ -3022,9 +3087,19 @@ class Incursoes(commands.Cog):
         # acumulou continua valendo, e segue podendo cair por outros efeitos.
         if await self._escondido(run, user_id, estado.rodada):
             return
-        await db.somar_ameaca_gerada(
-            self.bot.db, run["id"], self._passo(run), user_id,
-            ameaca.gerada_por(quem.classe, acao), self.PRAZO_DO_COMBATE,
+        pontos = ameaca.declarada_por(acao)
+        if pontos is None:
+            depois = self._hp_em_jogo(estado)
+            dos_inimigos, do_grupo = self._potes_de_hp(estado)
+            pontos = ameaca.pontos_do_hp(
+                dano=antes[0] - depois[0],
+                cura=depois[1] - antes[1],
+                hp_dos_inimigos=dos_inimigos,
+                hp_do_grupo=do_grupo,
+            )
+        await db.somar_ameaca_da_rodada(
+            self.bot.db, run["id"], self._passo(run), estado.rodada,
+            user_id, pontos,
         )
 
     async def _vez_do_inimigo(

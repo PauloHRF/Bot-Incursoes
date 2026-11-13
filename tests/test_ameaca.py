@@ -423,43 +423,77 @@ async def caso_combatente_nasce_com_a_ameaca_da_classe():
     print("  o combatente nasce com a ameaça da classe dele: ok")
 
 
-def caso_cada_acao_gera_ameaca():
-    """A regra: cada acao gera a ameaca da propria classe, dobrada em area e cura."""
-    for classe in cl.CLASSES:
-        assert ameaca.gerada_por(classe) == ameaca.inicial(classe), classe
+def caso_o_hp_movido_vira_pontos():
+    """A regua e uma so: dano, cura e dano evitado, cada um na propria poca.
 
-    um_alvo = {"tipo": "save", "save": "DES", "alvos": 1, "dano": "4d8"}
-    todos = {"tipo": "save", "save": "DES", "alvos": "todos", "dano": "8d6"}
-    assert ameaca.gerada_por("clerigo", um_alvo) == ameaca.inicial("clerigo")
-    assert ameaca.gerada_por("clerigo", todos) == 2 * ameaca.inicial("clerigo")
-    assert ameaca.gerada_por("clerigo", {"tipo": "cura"}) == 2 * ameaca.inicial("clerigo")
-    assert ameaca.gerada_por("bardo", {"tipo": "grupo"}) == 2 * ameaca.inicial("bardo")
+    E em FRACAO, nao em numero absoluto: e isso que faz a mesma Fireball
+    valer igual no tier 1 e no tier 5. Em absoluto o mago de tier 5 teria dez
+    vezes a ameaca do de tier 1 por fazer exatamente a mesma coisa.
+    """
+    # Metade da sala e metade da sala, em qualquer escala de HP.
+    pequena = ameaca.pontos_do_hp(dano=300, hp_dos_inimigos=600)
+    grande = ameaca.pontos_do_hp(dano=1500, hp_dos_inimigos=3000)
+    assert pequena == grande == round(ameaca.ESCALA_DO_HP * 0.5), (pequena, grande)
 
-    # Ser proporcional a classe e o que mantem o tanque: o guerreiro gera por
-    # golpe o triplo do que o mago gera, igual a razao das iniciais.
-    assert ameaca.gerada_por("guerreiro") == 3 * ameaca.gerada_por("mago")
+    # As tres coisas somam, cada uma contra o lado que ela mexeu.
+    so_dano = ameaca.pontos_do_hp(dano=100, hp_dos_inimigos=1000, hp_do_grupo=250)
+    so_cura = ameaca.pontos_do_hp(cura=25, hp_dos_inimigos=1000, hp_do_grupo=250)
+    juntos = ameaca.pontos_do_hp(
+        dano=100, cura=25, hp_dos_inimigos=1000, hp_do_grupo=250
+    )
+    # A soma e das FRACOES, e o arredondamento e um so no fim: por isso a
+    # tolerancia de um ponto em vez de igualdade exata.
+    assert abs(juntos - (so_dano + so_cura)) <= 1, (so_dano, so_cura, juntos)
+    # Dano evitado entra pela poca do GRUPO, como a cura: as duas devolvem HP
+    # a quem estava levando pancada.
+    assert ameaca.pontos_do_hp(evitado=25, hp_do_grupo=250) == so_cura
 
-    # E por isso as razoes quase nao mudam quando todos batem rodada apos
-    # rodada. Somar um valor fixo igual para todos diluiria a inicial.
-    grupo = ["guerreiro", "ladino", "mago"]
-    crua = [ameaca.inicial(c) for c in grupo]
-    abertura = ameaca.porcentagens(crua)[0]
-    for _ in range(5):
-        crua = [x + ameaca.gerada_por(c) for x, c in zip(crua, grupo)]
-    assert abs(ameaca.porcentagens(crua)[0] - abertura) < 0.5, (crua, abertura)
+    # Poca vazia nao divide, e nada disso devolve negativo.
+    assert ameaca.pontos_do_hp(dano=50) == 0, "sem inimigo nao ha dano a medir"
+    assert ameaca.pontos_do_hp(cura=50) == 0, "sem grupo nao ha cura a medir"
+    assert ameaca.pontos_do_hp(dano=-50, hp_dos_inimigos=100) == 0
+    assert ameaca.pontos_do_hp(cura=-50, hp_do_grupo=100) == 0
 
-    # Uma habilidade pode declarar e pular a regra inteira, classe e tudo —
-    # o gancho da provocacao.
-    assert ameaca.gerada_por("mago", {"tipo": "cura", "ameaca_gerada": 9}) == 9
-    assert ameaca.gerada_por("guerreiro", {"ameaca_gerada": 0}) == 0
+    # A escala esta calibrada no alvo de design: a acao de p90 medida no
+    # simulador (17,6% da poca) rende uns 10 pontos.
+    p90 = ameaca.pontos_do_hp(dano=176, hp_dos_inimigos=1000)
+    assert 8 <= p90 <= 12, (p90, ameaca.ESCALA_DO_HP)
+    print(f"  o HP movido vira pontos em fracao da poca (p90 = {p90}): ok")
 
-    # Classe desconhecida cai no PADRAO, e nao em zero.
-    assert ameaca.gerada_por(None) == ameaca.PADRAO
-    print("  cada acao gera a ameaca da classe, dobrada em area e cura: ok")
+
+def caso_a_acao_pode_declarar_a_ameaca():
+    """O gancho da provocacao: a habilidade cujo ponto e chamar atencao.
+
+    Ela nao deveria depender de ter machucado alguem, entao declara o numero
+    e pula a conta do HP inteira.
+    """
+    assert ameaca.declarada_por(None) is None
+    assert ameaca.declarada_por({}) is None
+    assert ameaca.declarada_por({"tipo": "cura"}) is None, "sem declarar, e None"
+    assert ameaca.declarada_por({"ameaca_gerada": 9}) == 9
+    assert ameaca.declarada_por({"ameaca_gerada": 0}) == 0, "zero e uma escolha"
+    assert ameaca.declarada_por({"ameaca_gerada": -3}) == 0, "nunca negativa"
+    print("  a acao pode declarar a ameaca e pular a conta do HP: ok")
+
+
+def caso_a_rodada_vai_no_nome_do_efeito():
+    """E o nome que faz a janela: `run_efeitos` nao tem coluna de rodada."""
+    assert ameaca.efeito_da_rodada(3) == f"{ameaca.PREFIXO_DA_RODADA}3"
+    assert ameaca.rodada_do_efeito(ameaca.efeito_da_rodada(7)) == 7
+    # E nao confunde com os outros efeitos que moram na mesma tabela.
+    for outro in ("atordoado", "rage", "furtividade", "marca_fatal"):
+        assert ameaca.rodada_do_efeito(outro) is None, outro
+    assert ameaca.rodada_do_efeito(f"{ameaca.PREFIXO_DA_RODADA}abc") is None
+    print("  a rodada vai no nome do efeito, e so ela e lida de volta: ok")
 
 
 async def caso_ameaca_acumula_no_combate():
-    """Agindo, o personagem vai chamando atencao — e a conta morre com a sala."""
+    """O dano feito chama atencao na rodada SEGUINTE, e esfria depois.
+
+    Pelo caminho inteiro do bot: o personagem bate, o HP do inimigo cai, a
+    conta da rodada e gravada em `run_efeitos` com a rodada no nome, e o
+    estado da rodada seguinte a le em `ameaca_gerada`. Depois dela, nao.
+    """
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -474,9 +508,12 @@ async def caso_ameaca_acumula_no_combate():
     await criar_grupo(conn, nivel=8, classe="guerreiro")
     canal = FakeCanal(CANAL)
     cog = Incursoes(FakeBot(conn, canal))
-    # Um saco de pancada com HP alto: o combate precisa durar as rodadas.
+    # Um saco de pancada que dura as tres rodadas, mas nao e grande demais: a
+    # ameaca e FRACAO da poca, e contra 4000 de HP um golpe de guerreiro move
+    # meio por cento e arredonda para zero ponto. Seiscentos e a ordem de
+    # grandeza de uma sala de verdade.
     incursao, _ = montar_conteudo(
-        cog, tamanho="Curta", monstro_objetivo={**INDEFESO, "hp": 4000},
+        cog, tamanho="Curta", monstro_objetivo={**INDEFESO, "hp": 600},
         inimigos_objetivo=1, salas=salas_sem_combate(),
     )
     run_id = await db.criar_run(conn, GUILD, CANAL, incursao.id, JOGADORES[0])
@@ -494,28 +531,90 @@ async def caso_ameaca_acumula_no_combate():
     passo = cog._passo(run)
     dono = JOGADORES[0]
 
-    inicial = (await cog._estado_combate(run, incursao.objetivo)).combatente(dono)
-    assert inicial.ameaca_gerada == 0, "nada gerado antes de agir"
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    inicial = estado.combatente(dono)
+    assert estado.rodada == 1
+    assert inicial.ameaca_gerada == 0, "na rodada 1 ninguem fez nada ainda"
 
-    # Duas rodadas de ataque: todos batem, para a iniciativa dar a volta.
+    # Rodada 1: os dois batem, e a iniciativa da a volta para a rodada 2.
     msg = await canal.fetch_message(run["mensagem_id"])
-    for _ in range(2):
-        for user_id in JOGADORES[:2]:
-            await cog.atacar(FakeInteraction(canal, user_id, msg), run["id"], "OBJ")
+    for user_id in JOGADORES[:2]:
+        await cog.atacar(FakeInteraction(canal, user_id, msg), run["id"], "OBJ")
 
     run = await db.buscar_run(conn, run_id)
-    depois = (await cog._estado_combate(run, incursao.objetivo)).combatente(dono)
-    por_golpe = ameaca.gerada_por("guerreiro")
-    assert depois.ameaca_gerada == 2 * por_golpe, (depois.ameaca_gerada, por_golpe)
-    assert depois.ameaca_total > inicial.ameaca_total, "ele chamou mais atencao"
-    # E a acumulacao NAO vaza para o `ameaca_extra`, que e o que acende a
-    # marca do painel. Se vazasse, a marca apareceria em todo mundo que agiu.
-    assert depois.ameaca_extra == 0, "a marca e para habilidade ligada, nao para ter agido"
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    assert estado.rodada == 2, estado.rodada
+    na_dois = estado.combatente(dono)
+    # O dano da rodada 1 chama atencao na rodada 2. O saco tem 4000 de HP,
+    # entao a fracao e pequena e o ponto do caso e que ela EXISTE.
+    assert na_dois.ameaca_gerada > 0, "o dano da rodada passada tem de pesar"
+    assert na_dois.ameaca_total > inicial.ameaca_total, "ele chamou mais atencao"
+    # E NAO vaza para o `ameaca_extra`, que e o que acende a marca do painel.
+    # Se vazasse, a marca apareceria em todo mundo que agiu.
+    assert na_dois.ameaca_extra == 0, "a marca e para habilidade ligada, nao para ter agido"
+
+    # Rodada 2, agora medindo o HP de verdade: a conta tem de BATER com o que
+    # saiu da sala. Sem isso o caso aceitaria qualquer numero positivo — e um
+    # "antes" quebrado (medido como zero) daria pontos enormes e passaria.
+    hp_antes = sum(i.hp_atual for i in estado.inimigos)
+    pote = sum(i.hp_max for i in estado.inimigos)
+    quieto = JOGADORES[1]
+    await cog.atacar(FakeInteraction(canal, dono, msg), run["id"], "OBJ")
+    await cog.atacar(FakeInteraction(canal, quieto, msg), run["id"], "OBJ")
+    run = await db.buscar_run(conn, run_id)
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    assert estado.rodada == 3, estado.rodada
+    saiu = hp_antes - sum(i.hp_atual for i in estado.inimigos)
+    assert saiu > 0, "os dois bateram no saco"
+    esperado = ameaca.pontos_do_hp(dano=saiu, hp_dos_inimigos=pote)
+    conta_da_rodada = sum(
+        (e["valor"] or {}).get("ameaca", 0)
+        for e in await db.efeitos_ativos(conn, run_id, passo, 2)
+        if e["efeito"] == ameaca.efeito_da_rodada(2)
+    )
+    # Tolerancia de dois pontos: cada uma das duas acoes arredonda a propria
+    # fracao, e a soma dos arredondados nao e o arredondado da soma.
+    assert abs(conta_da_rodada - esperado) <= 2, (conta_da_rodada, esperado, saiu)
+    # A conta da rodada 1 ainda esta no banco (expira = 3), e justamente por
+    # isso o filtro da janela existe: so a da rodada 2 pode entrar.
+    nomes = {
+        e["efeito"] for e in await db.efeitos_ativos(conn, run_id, passo, 2)
+        if ameaca.rodada_do_efeito(e["efeito"]) is not None
+    }
+    assert ameaca.efeito_da_rodada(2) in nomes, nomes
+    na_tres = estado.combatente(dono)
+    da_rodada_2 = await db.efeitos_ativos(conn, run_id, passo, 2)
+    soma_da_2 = sum(
+        (e["valor"] or {}).get("ameaca", 0) for e in da_rodada_2
+        if e["alvo_id"] == dono
+        and e["efeito"] == ameaca.efeito_da_rodada(2)
+    )
+    assert na_tres.ameaca_gerada == soma_da_2, (na_tres.ameaca_gerada, soma_da_2)
+
+    # A JANELA e explicita, e nao um efeito colateral do prazo. Hoje o prazo
+    # (`rodada + 2`) mais a limpeza de fim de rodada ja fazem a conta velha
+    # desaparecer sozinha, o que esconderia um filtro quebrado — entao o caso
+    # planta uma conta antiga com prazo longo e confere que ela e IGNORADA.
+    # Sem o filtro, essa linha somaria e o personagem levaria o calor de uma
+    # rodada que ja esfriou.
+    quente = na_tres.ameaca_gerada
+    await db.aplicar_efeito(
+        conn, run_id, passo, "personagem", dono,
+        ameaca.efeito_da_rodada(1), {"ameaca": 99}, 10 ** 6,
+    )
+    estado = await cog._estado_combate(
+        await db.buscar_run(conn, run_id), incursao.objetivo
+    )
+    assert estado.rodada == 3, estado.rodada
+    de_novo = estado.combatente(dono).ameaca_gerada
+    assert de_novo == quente, (
+        f"a conta da rodada 1 entrou na rodada 3: {de_novo} em vez de {quente}"
+    )
 
     # E a conta morre com a sala: a chave em `run_efeitos` tem o `passo`.
     assert await db.efeitos_ativos(conn, run_id, passo + 1, 1) == []
-    print(f"  a ameaca acumula agindo ({inicial.ameaca_total} -> "
-          f"{depois.ameaca_total}) e morre com a sala: ok")
+    print(f"  o dano de uma rodada pesa na seguinte ({inicial.ameaca_total} -> "
+          f"{na_dois.ameaca_total}) e morre com a sala: ok")
 
 
 async def main():
@@ -540,7 +639,9 @@ async def main():
         caso_atordoado_ainda_tem_prioridade_sobre_ameaca()
         caso_habilidade_soma_na_ameaca()
         caso_reckless_attack_da_ameaca()
-        caso_cada_acao_gera_ameaca()
+        caso_o_hp_movido_vira_pontos()
+        caso_a_acao_pode_declarar_a_ameaca()
+        caso_a_rodada_vai_no_nome_do_efeito()
         await caso_combatente_nasce_com_a_ameaca_da_classe()
         await caso_ameaca_acumula_no_combate()
     finally:

@@ -104,40 +104,103 @@ def de_ferido(hp_atual: int, hp_max: int) -> int:
     return AMEACA_DE_FERIDO if hp_atual <= hp_max * LIMIAR_DE_FERIDO else 0
 
 
-# A regra cabe numa frase: **cada ação gera a ameaça da própria classe, em
-# dobro se for área ou cura**. Esta tabela é só o "em dobro" — o multiplicador
-# do valor da classe, por tipo de ação.
+# ===================================================== o que a ação move de HP
 #
-# Cura dobra porque é o motivo clássico de o curandeiro precisar de alguém na
-# frente dele; área dobra porque acertar cinco criaturas é mais notável que
-# acertar uma.
+# A ameaça que se GERA agindo é o HP que a ação mexeu, e a régua é uma só para
+# as três coisas que um personagem faz numa luta:
 #
-# Multiplicar o valor da CLASSE, em vez de somar um valor fixo igual para
-# todos, é o que mantém o tanque de pé: as razões entre o grupo quase não
-# mudam ao longo do combate, e a deriva vem só de quem faz o quê. Somar fixo
-# diluiria a inicial — em três rodadas o mago que estoura área passaria o
-# guerreiro, e o combate voltaria a focar justamente quem não aguenta.
+#   - o dano que ele causou, contra o HP máximo somado dos INIMIGOS da sala;
+#   - a cura que ele deu (HP e vida temporária), contra o HP máximo do GRUPO;
+#   - o dano que ele EVITOU incapacitando uma criatura — o que ela daria nas
+#     rodadas que perdeu —, também contra o HP do grupo.
 #
-# O valor é DECLARADO, e não o dano feito: o jogador precisa saber de antemão
-# o que chama atenção, e ameaça-por-dano faria o mesmo golpe valer o dobro só
-# por ter critado.
-DOBRA_A_AMEACA = ("cura", "grupo", "area")
+# Cada um medido contra a própria poça, que é o que torna as três
+# comparáveis: "quanto desta luta você acabou de mover".
+#
+# POR QUE FRAÇÃO, e não o dano cru. Em números absolutos o tier alto dominaria
+# a conta: a mesma Fireball tira 90 de uma sala de T1 e 450 de uma de T5, e a
+# ameaça de um mago de tier 5 seria dez vezes a de um de tier 1 por fazer
+# exatamente a mesma coisa. Em fração as duas valem igual, e é por isso que a
+# ESCALA é um número só para o jogo todo.
+#
+# ISTO INVERTE uma decisão antiga, e vale dizer por quê. A regra era "cada
+# ação gera a ameaça da própria classe, dobrada em área e cura" — valor
+# DECLARADO, de propósito, porque ameaça-por-dano faz o mesmo golpe valer o
+# dobro só por ter critado, e o jogador não consegue prever nada. O que mudou
+# foi o prazo: aquela conta acumulava o combate inteiro, então depois de três
+# rodadas ela convergia e as fatias paravam de andar meio ponto por rodada. A
+# janela de UMA rodada (ver `database.somar_ameaca_da_rodada`) devolve a
+# variação, e com ela o dano volta a poder entrar sem travar nada no teto — o
+# preço é que a mira responde ao dado, e não só à escolha.
+
+# Quantos pontos de ameaça 100% do HP de um lado vale.
+#
+# Calibrado para que uma rodada MUITO BOA renda uns 10 pontos, que é o que
+# leva um personagem do grupo 5 de 14,4% para 23,9% da atenção numa mesa de um
+# por grupo — ele encosta no tanque sem passar por cima dele.
+#
+# "Muito boa" é o p90 das ações medidas em `tools/medir_ameaca.py`: a bateria
+# de cenários dos cinco tiers, com mesas sorteadas e os resolvedores reais,
+# deu 17,6% da poça no p90 (7.091 ações), e 10/0,176 ≈ 55. A ação MÉDIA move
+# 8,9% e rende 5 pontos; a de p99 move 35,9% e rende 20.
+#
+# A premissa da escala única é que a fração não ande com o tier, e ela se
+# sustenta: o p90 varia 1,8x entre tiers (13,5% no T2, 24,1% no T3), que é
+# ruído de cenário e não tendência. Rodar o medidor de novo depois de mexer em
+# dano de classe, HP de criatura ou tamanho de sala é o jeito de saber se ela
+# continua valendo.
+ESCALA_DO_HP = 55
+
+# O prefixo do efeito que guarda a conta de uma rodada. O número da rodada vai
+# no nome porque a chave de `run_efeitos` não tem coluna de rodada, e é ele que
+# faz a janela funcionar: quem lê pede o da rodada ANTERIOR, e só esse entra.
+PREFIXO_DA_RODADA = "ameaca_rodada:"
 
 
-def gerada_por(classe: Optional[str], acao: Optional[dict] = None) -> int:
-    """Quanta ameaça quem acabou de agir acrescenta à conta dele.
+def efeito_da_rodada(rodada: int) -> str:
+    """O nome do efeito que guarda o HP movido naquela rodada."""
+    return f"{PREFIXO_DA_RODADA}{int(rodada)}"
 
-    Uma habilidade pode declarar `ameaca_gerada` e pular a regra inteira,
-    classe e tudo. É o gancho para uma provocação de verdade.
+
+def rodada_do_efeito(efeito: str) -> Optional[int]:
+    """A rodada que aquele nome de efeito carrega, ou None se não é um deles."""
+    if not str(efeito).startswith(PREFIXO_DA_RODADA):
+        return None
+    try:
+        return int(str(efeito)[len(PREFIXO_DA_RODADA):])
+    except ValueError:
+        return None
+
+
+def pontos_do_hp(
+    dano: int = 0,
+    cura: int = 0,
+    evitado: int = 0,
+    hp_dos_inimigos: int = 0,
+    hp_do_grupo: int = 0,
+) -> int:
+    """Os pontos de ameaça de uma ação, pelo HP que ela moveu.
+
+    Poça vazia não divide: sem inimigo na sala não há dano a medir, e sem
+    grupo não há cura. O resultado nunca é negativo — uma ação que se volta
+    contra o próprio grupo não dá ameaça negativa, dá zero.
     """
-    acao = acao or {}
-    declarada = acao.get("ameaca_gerada")
-    if declarada is not None:
-        return max(0, int(declarada))
-    tipo = acao.get("tipo") or "golpes"
-    if tipo == "save" and acao.get("alvos") == "todos":
-        tipo = "area"
-    return inicial(classe) * (2 if tipo in DOBRA_A_AMEACA else 1)
+    fracao = 0.0
+    if hp_dos_inimigos > 0:
+        fracao += max(0, dano) / hp_dos_inimigos
+    if hp_do_grupo > 0:
+        fracao += (max(0, cura) + max(0, evitado)) / hp_do_grupo
+    return round(ESCALA_DO_HP * fracao)
+
+
+def declarada_por(acao: Optional[dict]) -> Optional[int]:
+    """A ameaça que a ação declara, pulando a conta do HP movido.
+
+    É o gancho para uma provocação de verdade: uma habilidade cujo ponto é
+    chamar atenção não deveria depender de ter machucado alguém.
+    """
+    valor = (acao or {}).get("ameaca_gerada")
+    return None if valor is None else max(0, int(valor))
 
 
 def peso(x: int) -> float:

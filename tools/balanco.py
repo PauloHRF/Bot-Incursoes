@@ -479,59 +479,42 @@ def documento() -> str:
 
     # ----------------------------------------------------------- ameaça
     L += ["## Ameaça: fatia da atenção das criaturas", "",
-          "Num grupo de cinco onde os outros quatro estão no piso (2).", ""]
+          "Num grupo de cinco onde os outros quatro estão no piso.", ""]
 
     def _piso_da_ameaca() -> str:
-        """A classe que ancora as duas colunas: a de menor ameaca inicial."""
+        """A classe que ancora a tabela: a de menor ameaça inicial."""
         return min(cl.CLASSES, key=ameaca.inicial)
 
-    def _todos_batendo(cid: str, rodadas: int = 5) -> float:
-        """A fatia depois de cinco rodadas em que TODOS atacam.
-
-        O grupo de comparação faz a mesma coisa que a classe medida, de
-        propósito: assim a coluna responde a uma pergunta só — acumular
-        desmancha a ordem? —, sem misturar o dobro que área e cura geram.
-        """
-        # O grupo de comparacao e a classe do PISO, a mesma das duas colunas:
-        # com um piso em cada coluna a tabela comparava bases diferentes, e o
-        # acumulo parecia desmanchar a ordem quando era so a base que mudava.
-        grupo = [cid] + [_piso_da_ameaca()] * 4
-        crua = [ameaca.inicial(c) for c in grupo]
-        for _ in range(rodadas):
-            crua = [x + ameaca.gerada_por(c) for x, c in zip(crua, grupo)]
-        return ameaca.porcentagens(crua)[0]
-
     piso = ameaca.inicial(_piso_da_ameaca())
+
+    def _com(extra: int, cid: str) -> float:
+        return ameaca.porcentagens(
+            [ameaca.inicial(cid) + extra] + [piso] * 4
+        )[0]
+
+    # O que a AÇÃO acrescenta não vem mais da classe: vem do HP que ela moveu
+    # (ver `mecanicas/ameaca.md`). As duas colunas da direita são a ação média
+    # e a de p90 medidas em `tools/medir_ameaca.py`, em pontos de ameaça.
+    media, p90 = 5, 10
     L += tabela(
-        ["Classe", "Ameaça", "Abertura", "5 rodadas, todos batendo"],
+        ["Classe", "Ameaça", "Abertura", f"+{media} (rodada média)",
+         f"+{p90} (rodada boa)"],
         [
             [nome[cid], str(ameaca.inicial(cid)),
-             f"{ameaca.porcentagens([ameaca.inicial(cid)] + [piso] * 4)[0]:.1f}%",
-             f"{_todos_batendo(cid):.1f}%"]
+             f"{_com(0, cid):.1f}%", f"{_com(media, cid):.1f}%",
+             f"{_com(p90, cid):.1f}%"]
             for cid in sorted(cl.CLASSES, key=lambda c: -ameaca.inicial(c))
         ],
     )
-
-    # Quanto a ação escolhida desloca, isolado do resto: o mesmo clérigo, cinco
-    # rodadas batendo contra cinco rodadas curando, no mesmo grupo.
-    def _cinco_rodadas(cid: str, acao, grupo: list[str]) -> float:
-        crua = [ameaca.inicial(c) for c in grupo]
-        for _ in range(5):
-            crua = [
-                x + ameaca.gerada_por(c, acao if i == 0 else None)
-                for i, (x, c) in enumerate(zip(crua, grupo))
-            ]
-        return ameaca.porcentagens(crua)[0]
-
-    time = ["clerigo", "guerreiro", "guerreiro", "ladino", "ladino"]
-    batendo = _cinco_rodadas("clerigo", None, time)
-    curando = _cinco_rodadas("clerigo", {"tipo": "cura"}, time)
     L += [
-        "O uniforme seria 20%. A coluna da direita mantém a ordem da abertura:",
-        "a ameaça gerada é proporcional à da classe, então acumular não",
-        "desmancha o grupo — o que desloca é a AÇÃO. O mesmo clérigo, no mesmo",
-        f"time, sai de {batendo:.1f}% batendo para {curando:.1f}% curando, porque",
-        "cura e área geram o dobro.",
+        "O uniforme seria 20%. A abertura é só a classe; as outras duas",
+        "colunas são a mesma classe depois de uma rodada em que ela moveu HP.",
+        "A ameaça do HP movido vale **uma rodada** e esfria, então a tabela não",
+        "acumula: ela mostra o teto de uma rodada, não o fim do combate.",
+        "",
+        f"Os `+{media}` e `+{p90}` saem do medidor: a ação média move 8,9% da",
+        f"poça do lado afetado e a de p90 move 17,6%, que a escala",
+        f"({ameaca.ESCALA_DO_HP}) converte nesses pontos.",
         "",
     ]
 

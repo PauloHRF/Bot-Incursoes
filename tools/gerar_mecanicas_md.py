@@ -623,39 +623,60 @@ def ameaca_md() -> str:
         "Quem está no chão não entra: ele já saiu do sorteio por outro "
         "caminho.",
         "",
-        "## Quanto cada ação gera",
+        "## Quanto cada ação gera: o HP que ela moveu",
         "",
-        "**Cada ação gera a ameaça da própria classe, dobrada se for área ou "
-        "cura.** Cabe numa frase de propósito: o jogador precisa saber de "
-        "antemão o que chama atenção.",
+        "Uma régua só para as três coisas que um personagem faz numa luta, "
+        "cada uma medida contra a própria poça:",
         "",
-        "Dobram: " + ", ".join(f"`{t}`" for t in ameaca.DOBRA_A_AMEACA) + ".",
+    ]
+    L += lista([
+        "o **dano** que ele causou, em fração do HP máximo somado dos "
+        "inimigos da sala;",
+        "a **cura** que ele deu (HP e vida temporária), em fração do HP "
+        "máximo do grupo;",
+        "o **dano que ele evitou** incapacitando uma criatura — o que ela "
+        "daria nas rodadas que perdeu —, também em fração do HP do grupo.",
+    ])
+    L += [
+        f"A fração vira pontos pela escala, que é **{ameaca.ESCALA_DO_HP}** "
+        "pontos por 100% da poça. Medido na bateria dos cinco tiers com os "
+        "resolvedores reais (`tools/medir_ameaca.py`, 7.091 ações):",
         "",
     ]
     L += tabela(
-        ["Classe", "Por golpe", "Por área ou cura"],
+        ["Ação", "Fração da poça", "Pontos"],
         [
-            [cl.CLASSES[cid].nome,
-             str(ameaca.gerada_por(cid)),
-             str(ameaca.gerada_por(cid, {"tipo": "cura"}))]
-            for cid in sorted(cl.CLASSES, key=lambda c: -ameaca.inicial(c))
+            ["média", "8,9%", str(ameaca.pontos_do_hp(dano=89, hp_dos_inimigos=1000))],
+            ["boa (p90)", "17,6%", str(ameaca.pontos_do_hp(dano=176, hp_dos_inimigos=1000))],
+            ["excepcional (p99)", "35,9%",
+             str(ameaca.pontos_do_hp(dano=359, hp_dos_inimigos=1000))],
         ],
     )
     L += [
-        "Duas decisões que valem explicação:",
+        "**Por que fração, e não o dano cru.** Em números absolutos o tier "
+        "alto dominaria: a mesma Fireball tira 90 de uma sala de T1 e 450 de "
+        "uma de T5, e o mago de tier 5 teria dez vezes a ameaça do de tier 1 "
+        "por fazer exatamente a mesma coisa. Em fração as duas valem igual, e "
+        "é isso que permite uma escala só para o jogo todo — o p90 varia 1,8x "
+        "entre tiers, que é ruído de cenário e não tendência.",
         "",
-        "**É valor declarado, e não o dano feito.** Ameaça-por-dano faria o "
-        "mesmo golpe valer o dobro só por ter critado, e o jogador não "
-        "conseguiria prever nada.",
+        "**Por que vale uma rodada só.** A regra anterior era valor "
+        "*declarado* — a ameaça da própria classe, dobrada em área e cura —, e "
+        "ela acumulava o combate inteiro. Acumulando, a conta convergia: "
+        "depois de três rodadas as fatias andavam meio ponto e a mira ficava "
+        "parada no que a classe decidiu na abertura. A janela de uma rodada "
+        "devolve a variação, e com ela o dano pode entrar sem travar ninguém "
+        "no teto. O preço, dito de frente: a mira passou a responder ao dado, "
+        "e não só à escolha.",
         "",
-        "**É proporcional à classe, e não um valor fixo igual para todos.** "
-        "Fixo diluía a inicial: em três rodadas o mago que estoura área "
-        "passaria o guerreiro, e o combate voltaria a focar justamente quem "
-        "não aguenta. Proporcional, as razões do grupo quase não mudam, e a "
-        "deriva vem só de quem faz o quê.",
+        "**O overkill fica de fora**, por consequência de medir HP movido: "
+        "bater 40 num inimigo de 5 move 5, porque matar o que já ia morrer "
+        "não é notável.",
         "",
-        "Uma habilidade pode declarar `ameaca_gerada` na ação e pular a regra "
-        "inteira, classe e tudo. É o gancho para uma provocação de verdade.",
+        "Uma habilidade pode declarar `ameaca_gerada` na ação e pular a conta "
+        "inteira. É o gancho para uma provocação de verdade — uma habilidade "
+        "cujo ponto é chamar atenção não deveria depender de ter machucado "
+        "alguém.",
         "",
         "## A curva",
         "",
@@ -664,9 +685,10 @@ def ameaca_md() -> str:
         f"anterior, então ninguém trava o combate stackando ameaça.",
         "",
         "**Não é a fórmula de armadura `x / (x + Y)`**, e a diferença importa "
-        "porque a ameaça acumula. Aquela tem teto em 1, então com a conta "
-        "crescendo todo mundo encosta no teto e o sorteio volta a ser quase "
-        "uniforme:",
+        "porque os pontos do HP movido são grandes perto da inicial — uma "
+        "rodada de p99 soma 20 numa escala que vai de 2 a 12. Aquela fórmula "
+        "tem teto em 1, então com a conta crescendo todo mundo encosta no "
+        "teto e o sorteio volta a ser quase uniforme:",
         "",
     ]
     L += tabela(
@@ -684,37 +706,60 @@ def ameaca_md() -> str:
         "pequeno achata** (tudo encosta em 1) e **K = 1 é o stack simples**, "
         "somar e dividir.",
         "",
-        "## A deriva durante o combate",
+        "## A janela: o que valeu na rodada passada",
         "",
-        "Um grupo de cinco em que o guerreiro e o paladino batem, o clérigo "
-        "cura, o ladino bate e o mago estoura área:",
+        "A ameaça do HP movido numa rodada vale na rodada **seguinte**, e só "
+        "nela. Na rodada R a criatura olha o que foi feito em R-1, fechada.",
+        "",
+        "É o que tira a iniciativa da conta: todo mundo é visto exatamente "
+        "uma vez por cada criatura, não importa a posição na fila. Com uma "
+        "janela que incluísse a rodada corrente, quem joga antes da criatura "
+        "chamaria atenção na própria rodada e quem joga depois não — e a "
+        "posição na iniciativa viraria metade da mecânica.",
+        "",
+        "A rodada 1 fica só com a posição da classe, o que é justo: ninguém "
+        "fez nada ainda. Uma mesa de um personagem por grupo abrindo o "
+        "combate:",
         "",
     ]
-    acoes = [None, None, {"tipo": "cura"}, None,
-             {"tipo": "save", "alvos": "todos"}]
-    crua = [ameaca.inicial(c) for c in grupo]
-    linhas = []
-    for rodada in range(0, 6):
-        fatias = ameaca.fracoes(crua)
-        linhas.append([str(rodada)] + [pct(f) for f in fatias])
-        crua = [x + ameaca.gerada_por(c, a) for x, c, a in zip(crua, grupo, acoes)]
     L += tabela(
-        ["Rodada"] + [cl.CLASSES[c].nome for c in grupo], linhas
+        ["Rodada"] + [cl.CLASSES[c].nome for c in grupo],
+        [
+            ["1 (só a classe)"]
+            + [pct(f) for f in ameaca.fracoes([ameaca.inicial(c) for c in grupo])],
+            ["2 (o mago estourou área em 1)"]
+            + [
+                pct(f)
+                for f in ameaca.fracoes([
+                    ameaca.inicial(c) + (12 if c == "mago" else 4)
+                    for c in grupo
+                ])
+            ],
+            ["3 (e em 2 ele não fez nada)"]
+            + [
+                pct(f)
+                for f in ameaca.fracoes([
+                    ameaca.inicial(c) + (0 if c == "mago" else 4)
+                    for c in grupo
+                ])
+            ],
+        ],
     )
     L += [
-        "O tanque segue o tanque, o curandeiro sobe (é o motivo clássico de "
-        "ele precisar de alguém na frente) e quem bate um alvo só perde "
-        "espaço. A ordem da abertura nunca se desmancha: a geração é "
-        "proporcional à inicial.",
+        "O calor esfria sozinho, e é isso que a janela compra: sem ela a "
+        "Fireball da rodada 1 travaria o mago no teto pelo resto da luta, "
+        "porque nada do que viesse depois conseguiria mais mexer na razão.",
         "",
         "## Onde a conta mora",
         "",
         "Em `run_efeitos`, sem coluna nova: a chave de lá é "
-        "`(run, passo, alvo, efeito)`, que é exatamente o escopo — a "
-        "acumulação vale pelo combate e morre quando o grupo troca de sala, "
-        "porque o `passo` muda. A soma é um UPSERT dentro do banco, não em "
-        "Python, porque dois jogadores clicando junto leriam o mesmo valor "
-        "antes de qualquer um escrever.",
+        "`(run, passo, alvo, efeito)`, e a rodada entra no NOME do efeito "
+        "(`ameaca_rodada:N`), porque a chave não tem coluna para ela. É o "
+        "nome que faz a janela: quem lê pede o da rodada anterior, e só esse "
+        "entra. A conta morre com a sala de graça, porque o `passo` faz parte "
+        "da chave. A soma é um UPSERT dentro do banco, não em Python, porque "
+        "dois jogadores clicando junto leriam o mesmo valor antes de qualquer "
+        "um escrever.",
         "",
         "O campo é **separado** do que as habilidades somam. No mesmo campo, a "
         f"marca {E.MARCA_AMEACA} do painel — que quer dizer \"tem algo ligado chamando "

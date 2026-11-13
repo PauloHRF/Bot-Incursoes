@@ -34,36 +34,29 @@ São **pontos fixos**, e não uma fração da inicial. Por ser plano, o bônus e
 
 Quem está no chão não entra: ele já saiu do sorteio por outro caminho.
 
-## Quanto cada ação gera
+## Quanto cada ação gera: o HP que ela moveu
 
-**Cada ação gera a ameaça da própria classe, dobrada se for área ou cura.** Cabe numa frase de propósito: o jogador precisa saber de antemão o que chama atenção.
+Uma régua só para as três coisas que um personagem faz numa luta, cada uma medida contra a própria poça:
 
-Dobram: `cura`, `grupo`, `area`.
+- o **dano** que ele causou, em fração do HP máximo somado dos inimigos da sala;
+- a **cura** que ele deu (HP e vida temporária), em fração do HP máximo do grupo;
+- o **dano que ele evitou** incapacitando uma criatura — o que ela daria nas rodadas que perdeu —, também em fração do HP do grupo.
 
-| Classe | Por golpe | Por área ou cura |
+A fração vira pontos pela escala, que é **55** pontos por 100% da poça. Medido na bateria dos cinco tiers com os resolvedores reais (`tools/medir_ameaca.py`, 7.091 ações):
+
+| Ação | Fração da poça | Pontos |
 |---|---|---|
-| Bárbaro | 12 | 24 |
-| Guerreiro | 12 | 24 |
-| Paladino | 10 | 20 |
-| Patrulheiro | 8 | 16 |
-| Xamã | 8 | 16 |
-| Druida | 8 | 16 |
-| Monge | 6 | 12 |
-| Clérigo | 6 | 12 |
-| Bruxo | 6 | 12 |
-| Artífice | 4 | 8 |
-| Mago | 4 | 8 |
-| Feiticeiro | 4 | 8 |
-| Bardo | 4 | 8 |
-| Ladino | 2 | 4 |
+| média | 8,9% | 5 |
+| boa (p90) | 17,6% | 10 |
+| excepcional (p99) | 35,9% | 20 |
 
-Duas decisões que valem explicação:
+**Por que fração, e não o dano cru.** Em números absolutos o tier alto dominaria: a mesma Fireball tira 90 de uma sala de T1 e 450 de uma de T5, e o mago de tier 5 teria dez vezes a ameaça do de tier 1 por fazer exatamente a mesma coisa. Em fração as duas valem igual, e é isso que permite uma escala só para o jogo todo — o p90 varia 1,8x entre tiers, que é ruído de cenário e não tendência.
 
-**É valor declarado, e não o dano feito.** Ameaça-por-dano faria o mesmo golpe valer o dobro só por ter critado, e o jogador não conseguiria prever nada.
+**Por que vale uma rodada só.** A regra anterior era valor *declarado* — a ameaça da própria classe, dobrada em área e cura —, e ela acumulava o combate inteiro. Acumulando, a conta convergia: depois de três rodadas as fatias andavam meio ponto e a mira ficava parada no que a classe decidiu na abertura. A janela de uma rodada devolve a variação, e com ela o dano pode entrar sem travar ninguém no teto. O preço, dito de frente: a mira passou a responder ao dado, e não só à escolha.
 
-**É proporcional à classe, e não um valor fixo igual para todos.** Fixo diluía a inicial: em três rodadas o mago que estoura área passaria o guerreiro, e o combate voltaria a focar justamente quem não aguenta. Proporcional, as razões do grupo quase não mudam, e a deriva vem só de quem faz o quê.
+**O overkill fica de fora**, por consequência de medir HP movido: bater 40 num inimigo de 5 move 5, porque matar o que já ia morrer não é notável.
 
-Uma habilidade pode declarar `ameaca_gerada` na ação e pular a regra inteira, classe e tudo. É o gancho para uma provocação de verdade.
+Uma habilidade pode declarar `ameaca_gerada` na ação e pular a conta inteira. É o gancho para uma provocação de verdade — uma habilidade cujo ponto é chamar atenção não deveria depender de ter machucado alguém.
 
 ## A curva
 
@@ -79,24 +72,25 @@ A potência comprime igual embaixo e não satura — ainda é um tanque depois d
 
 `K` é o botão de calibragem, e anda ao contrário do que parece: **K pequeno achata** (tudo encosta em 1) e **K = 1 é o stack simples**, somar e dividir.
 
-## A deriva durante o combate
+## A janela: o que valeu na rodada passada
 
-Um grupo de cinco em que o guerreiro e o paladino batem, o clérigo cura, o ladino bate e o mago estoura área:
+A ameaça do HP movido numa rodada vale na rodada **seguinte**, e só nela. Na rodada R a criatura olha o que foi feito em R-1, fechada.
+
+É o que tira a iniciativa da conta: todo mundo é visto exatamente uma vez por cada criatura, não importa a posição na fila. Com uma janela que incluísse a rodada corrente, quem joga antes da criatura chamaria atenção na própria rodada e quem joga depois não — e a posição na iniciativa viraria metade da mecânica.
+
+A rodada 1 fica só com a posição da classe, o que é justo: ninguém fez nada ainda. Uma mesa de um personagem por grupo abrindo o combate:
 
 | Rodada | Guerreiro | Paladino | Clérigo | Ladino | Mago |
 |---|---|---|---|---|---|
-| 0 | 27,7% | 25,3% | 19,6% | 11,3% | 16,0% |
-| 1 | 25,7% | 23,4% | 22,2% | 10,5% | 18,2% |
-| 2 | 25,1% | 22,9% | 22,9% | 10,3% | 18,7% |
-| 3 | 24,9% | 22,7% | 23,3% | 10,2% | 19,0% |
-| 4 | 24,7% | 22,6% | 23,5% | 10,1% | 19,2% |
-| 5 | 24,6% | 22,5% | 23,6% | 10,1% | 19,3% |
+| 1 (só a classe) | 27,7% | 25,3% | 19,6% | 11,3% | 16,0% |
+| 2 (o mago estourou área em 1) | 23,1% | 21,6% | 18,2% | 14,1% | 23,1% |
+| 3 (e em 2 ele não fez nada) | 26,1% | 24,4% | 20,6% | 16,0% | 13,0% |
 
-O tanque segue o tanque, o curandeiro sobe (é o motivo clássico de ele precisar de alguém na frente) e quem bate um alvo só perde espaço. A ordem da abertura nunca se desmancha: a geração é proporcional à inicial.
+O calor esfria sozinho, e é isso que a janela compra: sem ela a Fireball da rodada 1 travaria o mago no teto pelo resto da luta, porque nada do que viesse depois conseguiria mais mexer na razão.
 
 ## Onde a conta mora
 
-Em `run_efeitos`, sem coluna nova: a chave de lá é `(run, passo, alvo, efeito)`, que é exatamente o escopo — a acumulação vale pelo combate e morre quando o grupo troca de sala, porque o `passo` muda. A soma é um UPSERT dentro do banco, não em Python, porque dois jogadores clicando junto leriam o mesmo valor antes de qualquer um escrever.
+Em `run_efeitos`, sem coluna nova: a chave de lá é `(run, passo, alvo, efeito)`, e a rodada entra no NOME do efeito (`ameaca_rodada:N`), porque a chave não tem coluna para ela. É o nome que faz a janela: quem lê pede o da rodada anterior, e só esse entra. A conta morre com a sala de graça, porque o `passo` faz parte da chave. A soma é um UPSERT dentro do banco, não em Python, porque dois jogadores clicando junto leriam o mesmo valor antes de qualquer um escrever.
 
 O campo é **separado** do que as habilidades somam. No mesmo campo, a marca ❗ do painel — que quer dizer "tem algo ligado chamando atenção" — apareceria em todo mundo que já agiu, e deixaria de dizer nada.
 
