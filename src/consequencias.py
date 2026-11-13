@@ -81,7 +81,17 @@ NOME_DO_MIMICO = "Mímico"
 A_EMBOSCADA: dict[int, tuple[tuple[str, int], ...]] = {
     1: ((NOME_DO_MIMICO, 3),),
     2: ((NOME_DO_MIMICO, 5),),
-    3: ((NOME_DO_MIMICO, 1), ("Xorn", 4)),
+    # O 1+4 saiu de calibragem quando o multiataque passou a cair todo no
+    # mesmo alvo: o Xorn tem DOIS golpes (Garra 1d6+3 e Mordida 3d6+3, uns 20
+    # de média juntos), e concentrados eles dizimavam a mesa azarada — o
+    # percentil caiu de 87% para 75%. O Mímico tem um golpe só e não sentiu
+    # nada, então a correção é trocar Xorn por Mímico.
+    #
+    # Não existe elenco que acerte a faixa inteira aqui: medidos com as mesmas
+    # 40 mesas, 1+3 e 4+2 deixam 82% do HP, 1+4 deixa 71,7% com percentil 75,
+    # e 2+4 mata. O 2+3 passa 4 pontos do teto de HP e acerta todo o resto, e
+    # é para esse lado que se erra: o alvo escrito é cobrar sem matar.
+    3: ((NOME_DO_MIMICO, 2), ("Xorn", 3)),
     4: ((NOME_DO_MIMICO, 1), ("Golem de Argila", 3)),
     5: ((NOME_DO_MIMICO, 1), ("Golem de Argila", 5)),
 }
