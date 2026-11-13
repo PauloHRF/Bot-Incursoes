@@ -640,24 +640,38 @@ def ameaca_md() -> str:
     L += [
         f"A fração vira pontos pela escala, que é **{ameaca.ESCALA_DO_HP}** "
         "pontos por 100% da poça. Medido na bateria dos cinco tiers com os "
-        "resolvedores reais (`tools/medir_ameaca.py`, 7.091 ações):",
+        "resolvedores reais (`tools/medir_ameaca.py`, 7.083 ações):",
         "",
     ]
     L += tabela(
         ["Ação", "Fração da poça", "Pontos"],
         [
-            ["média", "8,9%", str(ameaca.pontos_do_hp(dano=89, hp_dos_inimigos=1000))],
-            ["boa (p90)", "17,6%", str(ameaca.pontos_do_hp(dano=176, hp_dos_inimigos=1000))],
-            ["excepcional (p99)", "35,9%",
-             str(ameaca.pontos_do_hp(dano=359, hp_dos_inimigos=1000))],
+            ["média", "9,4%", str(ameaca.pontos_do_hp(dano=94, hp_dos_inimigos=1000))],
+            ["boa (p90)", "19,4%", str(ameaca.pontos_do_hp(dano=194, hp_dos_inimigos=1000))],
+            ["excepcional (p99)", "38,2%",
+             str(ameaca.pontos_do_hp(dano=382, hp_dos_inimigos=1000))],
         ],
     )
+    L += [
+        "**O que conta como controle** é o que tira a vez: atordoamento e "
+        "prisão. É a leitura literal de \"não foi dado\" — atrapalhar o "
+        "ataque da criatura ou virá-la contra os seus seriam palpites sobre "
+        "dano que ainda pode acontecer. E o que ela daria é o dado **dela** "
+        "vezes a chance de passar da armadura de quem está na frente, porque "
+        "o dano real também erra. Prender um Troll por três rodadas numa mesa "
+        "de tier 5 rende uns 13 pontos: mais que a rodada de p90 de quem bate, "
+        "e é de propósito — é uma ativa de tier 5, uma vez por descanso.",
+        "",
+        "Conta o **ganho**, não o prazo: estender uma prisão de uma rodada "
+        "para três vale duas, e renovar uma que já ia até lá vale zero.",
+        "",
+    ]
     L += [
         "**Por que fração, e não o dano cru.** Em números absolutos o tier "
         "alto dominaria: a mesma Fireball tira 90 de uma sala de T1 e 450 de "
         "uma de T5, e o mago de tier 5 teria dez vezes a ameaça do de tier 1 "
         "por fazer exatamente a mesma coisa. Em fração as duas valem igual, e "
-        "é isso que permite uma escala só para o jogo todo — o p90 varia 1,8x "
+        "é isso que permite uma escala só para o jogo todo — o p90 varia 2x "
         "entre tiers, que é ruído de cenário e não tendência.",
         "",
         "**Por que vale uma rodada só.** A regra anterior era valor "

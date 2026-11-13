@@ -13,6 +13,7 @@ sys.path.insert(0, str(RAIZ))
 
 from src import (  # noqa: E402
     ameaca,
+    incursoes,
     classes as cl,
     config,
     database as db,
@@ -461,6 +462,42 @@ def caso_o_hp_movido_vira_pontos():
     print(f"  o HP movido vira pontos em fracao da poca (p90 = {p90}): ok")
 
 
+def caso_a_media_de_uma_rodada_de_criatura():
+    """O preco de tirar a vez de uma criatura: o que ela daria naquela rodada.
+
+    Com a chance de acerto DENTRO. O texto da regra e "o dano que poderia ter
+    sido dado e nao foi", e o que a criatura daria nao e o maximo do dado
+    dela — e o dado vezes a chance de passar da armadura de quem esta na
+    frente. Sem isso, prender valeria uns 50% mais que o dano real, que
+    tambem erra.
+    """
+    assert motor.media_do_dano("2d10+5") == 16.0
+    assert motor.media_do_dano("1d6") == 3.5
+    assert motor.media_do_dano("7") == 7.0, "numero solto e ele mesmo"
+    assert motor.media_do_dano("coisa nenhuma") == 0.0, "expressao invalida nao estoura"
+
+    # A chance e a regra do d20, com o 1 errando e o 20 acertando sempre.
+    assert motor.chance_de_acerto(7, 17) == 0.55
+    assert motor.chance_de_acerto(0, 99) == 0.05, "o 20 natural acerta sempre"
+    assert motor.chance_de_acerto(99, 1) == 0.95, "o 1 natural erra sempre"
+
+    # Uma criatura de dois golpes soma os dois, cada um com a chance dele.
+    troll = motor.Inimigo(
+        0, "Troll", 15, 7, "1d6+4", 84, 84,
+        golpes=[
+            incursoes.GolpeDoMonstro(nome="Mordida", ataque=7, dano="1d6+4"),
+            incursoes.GolpeDoMonstro(nome="Garra", ataque=7, dano="2d6+4"),
+        ],
+    )
+    esperado = (motor.media_do_dano("1d6+4") + motor.media_do_dano("2d6+4")) * 0.55
+    assert abs(motor.media_por_rodada(troll, 17) - esperado) < 1e-9
+
+    # E contra armadura melhor ela da menos: e o ponto de ter a chance dentro.
+    assert motor.media_por_rodada(troll, 20) < motor.media_por_rodada(troll, 12)
+    print(f"  uma rodada de troll vale {motor.media_por_rodada(troll, 17):.1f} "
+          f"de dano contra CA 17: ok")
+
+
 def caso_a_acao_pode_declarar_a_ameaca():
     """O gancho da provocacao: a habilidade cujo ponto e chamar atencao.
 
@@ -640,6 +677,7 @@ async def main():
         caso_habilidade_soma_na_ameaca()
         caso_reckless_attack_da_ameaca()
         caso_o_hp_movido_vira_pontos()
+        caso_a_media_de_uma_rodada_de_criatura()
         caso_a_acao_pode_declarar_a_ameaca()
         caso_a_rodada_vai_no_nome_do_efeito()
         await caso_combatente_nasce_com_a_ameaca_da_classe()

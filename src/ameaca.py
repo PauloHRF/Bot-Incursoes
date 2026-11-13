@@ -114,6 +114,13 @@ def de_ferido(hp_atual: int, hp_max: int) -> int:
 #   - o dano que ele EVITOU incapacitando uma criatura — o que ela daria nas
 #     rodadas que perdeu —, também contra o HP do grupo.
 #
+# O que conta como controle é **o que tira a vez**: atordoamento e prisão. É a
+# leitura literal de "não foi dado", e não precisa de estimativa nenhuma —
+# atrapalhar o ataque da criatura ou virá-la contra os seus seriam palpites
+# sobre dano que ainda pode acontecer. E o que ela daria é o dado DELA vezes a
+# chance de passar da armadura de quem está na frente (`motor.media_por_rodada`),
+# porque o dano real também erra.
+#
 # Cada um medido contra a própria poça, que é o que torna as três
 # comparáveis: "quanto desta luta você acabou de mover".
 #
@@ -141,11 +148,12 @@ def de_ferido(hp_atual: int, hp_max: int) -> int:
 #
 # "Muito boa" é o p90 das ações medidas em `tools/medir_ameaca.py`: a bateria
 # de cenários dos cinco tiers, com mesas sorteadas e os resolvedores reais,
-# deu 17,6% da poça no p90 (7.091 ações), e 10/0,176 ≈ 55. A ação MÉDIA move
-# 8,9% e rende 5 pontos; a de p99 move 35,9% e rende 20.
+# deu 19,4% da poça no p90 (7.083 ações), e 10/0,194 ≈ 51 — 55 põe a p90 em
+# 11 pontos, dentro do alvo. A ação MÉDIA move 9,4% e rende 5 pontos; a de p99
+# move 38,2% e rende 21.
 #
 # A premissa da escala única é que a fração não ande com o tier, e ela se
-# sustenta: o p90 varia 1,8x entre tiers (13,5% no T2, 24,1% no T3), que é
+# sustenta: o p90 varia 2x entre tiers (13,5% no T2, 26,5% no T3), que é
 # ruído de cenário e não tendência. Rodar o medidor de novo depois de mexer em
 # dano de classe, HP de criatura ou tamanho de sala é o jeito de saber se ela
 # continua valendo.

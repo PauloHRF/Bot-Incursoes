@@ -15,6 +15,7 @@ sys.path.insert(0, str(RAIZ))
 from src import (  # noqa: E402
     aleatorio,
     ameaca,
+    ameaca,
     classes as cl,
     habilidades as H,
     config,
@@ -39,6 +40,12 @@ from fakes import (  # noqa: E402
 _ABERTAS = []
 
 SACO = {**INDEFESO, "hp": 500, "ataque": 1, "dano": "1d1"}
+# Para medir CONTROLE: uma criatura que bate de verdade (senao o dano evitado
+# e zero) e que nao resiste a SAB (senao o save decide o caso, e nao a regra).
+BRUTAMONTES = {
+    "nome": "Brutamontes", "ca": 13, "ataque": 7, "dano": "2d8+4", "hp": 400,
+    "ataques": 2, "saves": "SAB -20",
+}
 
 DOC = [
     (15, 13, 4, 3, 5, 5, "1d10"),
@@ -49,7 +56,7 @@ DOC = [
 ]
 
 
-async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2):
+async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2, monstro=None):
     while _ABERTAS:
         try:
             await _ABERTAS.pop().close()
@@ -66,7 +73,7 @@ async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2):
     cog = Incursoes(FakeBot(conn, canal))
     incursao, _ = montar_conteudo(
         cog, tamanho="Curta", salas=salas_sem_combate(),
-        monstro_objetivo=SACO, inimigos_objetivo=monstros,
+        monstro_objetivo=monstro or SACO, inimigos_objetivo=monstros,
     )
     run_id = await db.criar_run(conn, GUILD, CANAL, incursao.id, JOGADORES[0])
     for user_id in JOGADORES[:quantos]:
@@ -270,6 +277,57 @@ async def caso_hold_monster_prende_tres_rodadas():
     print("  Hold Monster prende por tres rodadas quando pega: ok")
 
 
+async def caso_prender_chama_atencao_sem_dano():
+    """Prender vale o dano que a criatura NAO vai dar — sem machucar ninguem.
+
+    E o ponto de a regua ser "HP movido" e nao "dano feito": o Hold Monster
+    nao tira um ponto de HP de ninguem, e ainda assim devolve ao grupo o HP
+    de tres rodadas de criatura. Chamar atencao por isso e o mesmo que chamar
+    por ter curado o mesmo tanto.
+    """
+    conn, canal, cog, incursao, run = await preparar(
+        escolhas={"magia_mago_t5": "hold_monster"},
+        monstro=BRUTAMONTES, monstros=1,
+    )
+    passo = cog._passo(run)
+    dono = JOGADORES[0]
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    assert estado.rodada == 1
+    hp_antes = estado.inimigos[0].hp_atual
+    bicho = estado.inimigos[0]
+    ca = cog._ca_que_a_criatura_enfrenta(estado)
+    pote = sum(c.hp_max for c in estado.combatentes if not c.e_invocacao)
+
+    alvo = estado.inimigos[0].indice
+    inter = FakeInteraction(canal, dono)
+    await cog.usar_habilidade(inter, run["id"], "OBJ", "hold_monster", [alvo])
+
+    atual = await db.buscar_run(conn, run["id"])
+    estado = await cog._estado_combate(atual, incursao.objetivo)
+    presos = [
+        e for e in await db.efeitos_ativos(conn, run["id"], passo, 0)
+        if e["alvo_tipo"] == "inimigo" and e["efeito"] == "atordoado"
+    ]
+    assert presos, f"o Brutamontes tinha de falhar o save: {leu(inter)}"
+    rodadas = presos[0]["expira"] - 1
+    assert rodadas == 3, presos[0]
+
+    # Nenhum HP saiu de lugar nenhum: so o controle pode ter gerado ameaca.
+    assert estado.inimigos[0].hp_atual == hp_antes, "o Hold Monster nao faz dano"
+
+    conta = sum(
+        (e["valor"] or {}).get("ameaca", 0)
+        for e in await db.efeitos_ativos(conn, run["id"], passo, 0)
+        if e["alvo_id"] == dono and e["efeito"] == ameaca.efeito_da_rodada(1)
+    )
+    evitado = rodadas * motor.media_por_rodada(bicho, ca)
+    esperado = ameaca.pontos_do_hp(evitado=round(evitado), hp_do_grupo=pote)
+    assert esperado > 0, (evitado, pote)
+    assert abs(conta - esperado) <= 1, (conta, esperado, evitado, pote)
+    print(f"  prender tres rodadas de criatura rende {conta} de ameaca, "
+          f"sem dano nenhum: ok")
+
+
 async def caso_fly_tira_tres_de_alcance():
     conn, canal, cog, incursao, run = await preparar(
         escolhas={"magia_mago_t3": "fly"}
@@ -404,6 +462,7 @@ async def main():
         await caso_fireball_pega_todos()
         await caso_a_bola_de_fogo_e_uma_so()
         await caso_hold_monster_prende_tres_rodadas()
+        await caso_prender_chama_atencao_sem_dano()
         await caso_fly_tira_tres_de_alcance()
         caso_fly_reduz_sem_zerar()
         await caso_escudo_arcano_entra_no_combate()

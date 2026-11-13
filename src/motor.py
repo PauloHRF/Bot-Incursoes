@@ -1286,6 +1286,62 @@ def sequencia_de_golpes(inimigo: Inimigo) -> list[Any]:
     return [None] * max(1, inimigo.ataques)
 
 
+def media_do_dano(expressao: str) -> float:
+    """A média de uma expressão de dano, sem rolar nada.
+
+    `2d10+5` dá 16,0. É a mesma leitura de `rolar_dano` — os mesmos termos,
+    com a face trocada pela média dela —, e existe para responder "quanto
+    esta criatura daria" sem gastar dado nem sorte.
+    """
+    try:
+        termos = termos_de_dano(expressao)
+    except ValueError:
+        return 0.0
+    total = 0.0
+    for peso, quantidade, faces in termos:
+        total += peso * quantidade * ((faces + 1) / 2 if faces else 1)
+    return max(0.0, total)
+
+
+def chance_de_acerto(bonus: int, ca: int) -> float:
+    """A fração de d20 que acerta uma CA com aquele bônus.
+
+    O 1 natural erra sempre e o 20 acerta sempre, então a chance vive entre
+    5% e 95% — é a mesma regra que `atacar` aplica, só que resolvida de
+    cabeça em vez de no dado.
+    """
+    precisa = ca - bonus
+    return min(0.95, max(0.05, (21 - precisa) / 20))
+
+
+def media_por_rodada(inimigo: Inimigo, ca_do_grupo: int) -> float:
+    """O dano que uma vez desta criatura daria, em média, contra aquela CA.
+
+    É o preço de tirar a vez dela: é esta conta que vira ameaça quando
+    alguém a prende (ver `ameaca.pontos_do_hp`).
+
+    **Com a chance de acerto dentro**, e não só a média do dado. O texto da
+    regra é "o dano que poderia ter sido dado e não foi", e o que a criatura
+    daria não é o máximo do dado dela — é o dado vezes a chance de passar da
+    armadura de quem está na frente. Sem isso, prender valeria uns 50% mais
+    que o dano real, que também erra.
+
+    A habilidade da criatura fica de fora: ela sai num ritmo próprio (`cada`
+    ou recarga), então contá-la em toda rodada presa inflaria o controle
+    sobre quem tem sopro. O que entra é a sequência de golpes, que é o que
+    ela faz na maioria das vezes.
+    """
+    total = 0.0
+    for golpe in sequencia_de_golpes(inimigo):
+        expressao = getattr(golpe, "dano", None) or inimigo.dano
+        bonus = getattr(golpe, "ataque", None)
+        bonus = inimigo.ataque if bonus is None else bonus
+        total += media_do_dano(expressao) * chance_de_acerto(
+            bonus - inimigo.penalidade_ataque, ca_do_grupo
+        )
+    return total
+
+
 def rodada_dos_inimigos(
     estado: EstadoCombate, rng: Optional[random.Random] = None
 ) -> RodadaInimiga:

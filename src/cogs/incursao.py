@@ -2712,10 +2712,10 @@ class Incursoes(commands.Cog):
         self, run: dict[str, Any], estado: EstadoCombate, user_id: int, turno: dict
     ) -> str:
         """Faz a ação que o personagem escolheu, agora que a vez chegou."""
-        # O HP dos dois lados ANTES de a ação valer: o que ela mover é a
-        # ameaça que ela gera. Tirado aqui, uma vez, para os três caminhos
-        # abaixo medirem a mesma coisa.
-        antes = self._hp_em_jogo(estado)
+        # O retrato da sala ANTES de a ação valer: o que ela mover é a ameaça
+        # que ela gera. Tirado aqui, uma vez, para os três caminhos abaixo
+        # medirem a mesma coisa.
+        antes = await self._retrato_da_sala(run, estado)
         if turno["acao"] == "ataque":
             texto = await self._resolver_ataque(run, estado, user_id, turno["alvos"])
             await self._gerar_ameaca(run, estado, user_id, None, antes)
@@ -3055,13 +3055,79 @@ class Incursoes(commands.Cog):
         grupo = sum(c.hp_max for c in estado.combatentes if not c.e_invocacao)
         return inimigos, grupo
 
+    async def _prisoes(
+        self, run: dict[str, Any], estado: EstadoCombate
+    ) -> dict[int, int]:
+        """Até que rodada cada criatura está presa, pelo que está gravado.
+
+        A chave de `run_efeitos` tem o alvo e o efeito, então há no máximo um
+        `atordoado` por criatura — o dicionário não perde nada.
+        """
+        return {
+            e["alvo_id"]: e["expira"]
+            for e in await db.efeitos_ativos(
+                self.bot.db, run["id"], self._passo(run), estado.rodada - 1
+            )
+            if e["alvo_tipo"] == "inimigo" and e["efeito"] == "atordoado"
+        }
+
+    async def _retrato_da_sala(
+        self, run: dict[str, Any], estado: EstadoCombate
+    ) -> tuple[int, int, dict[int, int]]:
+        """O que a medição da ameaça compara: o HP dos dois lados e as prisões."""
+        inimigos, grupo = self._hp_em_jogo(estado)
+        return inimigos, grupo, await self._prisoes(run, estado)
+
+    @staticmethod
+    def _ca_que_a_criatura_enfrenta(estado: EstadoCombate) -> int:
+        """A CA média que uma criatura encontra, pesada pela ameaça.
+
+        Pesada, e não a média simples: a criatura bate mais em quem puxa mais
+        atenção, e quem puxa mais atenção é justamente quem veste a armadura
+        pesada. A média simples subestimaria a armadura que ela enfrenta de
+        verdade — e esta conta serve para dizer quanto dano ela daria.
+        """
+        de_pe = estado.vivos
+        if not de_pe:
+            return 15
+        fatias = ameaca.fracoes(ameaca.de_quem(de_pe), ameaca.fatores_de(de_pe))
+        return round(sum(c.ca_efetiva * f for c, f in zip(de_pe, fatias)))
+
+    def _dano_evitado(
+        self,
+        estado: EstadoCombate,
+        antes: dict[int, int],
+        depois: dict[int, int],
+    ) -> int:
+        """O dano que as criaturas recém-presas não vão dar.
+
+        É o "dano que poderia ter sido dado e não foi": as rodadas que a ação
+        tirou de cada criatura, vezes o que ela daria numa rodada. Prender um
+        troll por três rodadas é devolver ao grupo o HP de três rodadas de
+        troll, e isso chama atenção como curar o mesmo tanto chamaria.
+
+        Conta o GANHO, e não o prazo inteiro: estender uma prisão de uma
+        rodada para três vale duas, e renovar uma que já ia até lá vale zero.
+        """
+        ca = self._ca_que_a_criatura_enfrenta(estado)
+        total = 0.0
+        for indice, ate in depois.items():
+            inimigo = estado.inimigo(indice)
+            if inimigo is None or inimigo.caido:
+                continue
+            desde = max(antes.get(indice, 0), estado.rodada)
+            rodadas = max(0, ate - desde)
+            if rodadas:
+                total += rodadas * motor.media_por_rodada(inimigo, ca)
+        return round(total)
+
     async def _gerar_ameaca(
         self,
         run: dict[str, Any],
         estado: EstadoCombate,
         user_id: int,
         acao,
-        antes: tuple[int, int],
+        antes: tuple[int, int, dict[int, int]],
     ) -> None:
         """O HP que a ação acabou de mover chama a atenção da criatura.
 
@@ -3094,6 +3160,9 @@ class Incursoes(commands.Cog):
             pontos = ameaca.pontos_do_hp(
                 dano=antes[0] - depois[0],
                 cura=depois[1] - antes[1],
+                evitado=self._dano_evitado(
+                    estado, antes[2], await self._prisoes(run, estado)
+                ),
                 hp_dos_inimigos=dos_inimigos,
                 hp_do_grupo=do_grupo,
             )
