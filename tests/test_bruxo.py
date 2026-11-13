@@ -10,7 +10,14 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes as cl, config, database as db, motor  # noqa: E402
+from src import (  # noqa: E402
+    ameaca,
+    classes as cl,
+    habilidades as H,
+    config,
+    database as db,
+    motor,
+)
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     leu,
@@ -314,8 +321,13 @@ async def caso_demonio_e_alvo_e_tem_hp_proprio():
     estado = await cog._estado_combate(run, incursao.objetivo)
     demonio = next(c for c in estado.combatentes if c.e_invocacao)
 
-    # a ameaca dele conta no sorteio, como de qualquer um
-    assert demonio.ameaca_total == 4, demonio.ameaca_total
+    # a ameaca dele conta no sorteio, como de qualquer um — e o numero sai da
+    # propria habilidade, para a escala dos grupos poder mudar sem quebrar o
+    # caso. Ela tambem e ABSOLUTA, e nao somada a classe nenhuma: a invocacao
+    # nao tem classe.
+    demoniaca = H.POR_ID["summon_greater_demon"]
+    assert demonio.ameaca_total == demoniaca.acao["ameaca"], demonio.ameaca_total
+    assert demonio.ameaca_total > ameaca.inicial("bruxo"), "ele puxa mais que o dono"
     # e o HP dele vai para a tabela de invocacoes, nao para run_participantes
     demonio.hp_atual = 12
     await cog._gravar_hp_do_combatente(run, demonio)

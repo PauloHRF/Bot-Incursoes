@@ -481,6 +481,10 @@ def documento() -> str:
     L += ["## Ameaça: fatia da atenção das criaturas", "",
           "Num grupo de cinco onde os outros quatro estão no piso (2).", ""]
 
+    def _piso_da_ameaca() -> str:
+        """A classe que ancora as duas colunas: a de menor ameaca inicial."""
+        return min(cl.CLASSES, key=ameaca.inicial)
+
     def _todos_batendo(cid: str, rodadas: int = 5) -> float:
         """A fatia depois de cinco rodadas em que TODOS atacam.
 
@@ -488,17 +492,21 @@ def documento() -> str:
         propósito: assim a coluna responde a uma pergunta só — acumular
         desmancha a ordem? —, sem misturar o dobro que área e cura geram.
         """
-        grupo = [cid] + ["mago"] * 4
+        # O grupo de comparacao e a classe do PISO, a mesma das duas colunas:
+        # com um piso em cada coluna a tabela comparava bases diferentes, e o
+        # acumulo parecia desmanchar a ordem quando era so a base que mudava.
+        grupo = [cid] + [_piso_da_ameaca()] * 4
         crua = [ameaca.inicial(c) for c in grupo]
         for _ in range(rodadas):
             crua = [x + ameaca.gerada_por(c) for x, c in zip(crua, grupo)]
         return ameaca.porcentagens(crua)[0]
 
+    piso = ameaca.inicial(_piso_da_ameaca())
     L += tabela(
         ["Classe", "Ameaça", "Abertura", "5 rodadas, todos batendo"],
         [
             [nome[cid], str(ameaca.inicial(cid)),
-             f"{ameaca.porcentagens([ameaca.inicial(cid), 2, 2, 2, 2])[0]:.1f}%",
+             f"{ameaca.porcentagens([ameaca.inicial(cid)] + [piso] * 4)[0]:.1f}%",
              f"{_todos_batendo(cid):.1f}%"]
             for cid in sorted(cl.CLASSES, key=lambda c: -ameaca.inicial(c))
         ],

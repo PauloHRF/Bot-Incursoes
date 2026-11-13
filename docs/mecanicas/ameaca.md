@@ -2,32 +2,37 @@
 
 Sem isto o alvo é sorteado uniformemente, e então não existe tanque: o mago leva tanta pancada quanto o guerreiro de armadura pesada. A Ameaça dá a cada personagem um peso nesse sorteio.
 
-## As três partes
+## As quatro partes
 
 - **A inicial da classe** — a posição dela na sala virando número. Quem bate de perto aparece primeiro. Não escala por tier: ameaça é o papel na sala, não o poder do personagem.
 - **O que as habilidades ligadas somam**, enquanto duram.
 - **O que o personagem gerou agindo**, que acumula do primeiro golpe ao fim do combate e morre com a sala.
+- **O bônus de quem está ferido** — `+3` abaixo de 30% do HP, que é a criatura indo terminar o serviço.
 
-## A inicial de cada classe
+## Os seis grupos
 
-| Classe | Ameaça | Fatia da atenção |
-|---|---|---|
-| Guerreiro | 6 | 30,2% |
-| Paladino | 6 | 30,2% |
-| Bárbaro | 5 | 28,3% |
-| Monge | 4 | 26,1% |
-| Patrulheiro | 3 | 23,4% |
-| Clérigo | 3 | 23,4% |
-| Artífice | 3 | 23,4% |
-| Ladino | 2 | 20,0% |
-| Xamã | 2 | 20,0% |
-| Mago | 2 | 20,0% |
-| Bruxo | 2 | 20,0% |
-| Druida | 2 | 20,0% |
-| Feiticeiro | 2 | 20,0% |
-| Bardo | 2 | 20,0% |
+A inicial sai de seis grupos, e não de um número por classe. Eram três degraus para catorze classes, com sete empatadas no piso: para a criatura, ladino, mago, bardo, bruxo, druida, feiticeiro e xamã eram a mesma pessoa. Os seis degraus abrem a janela de 20–30% para 20–38%.
 
-A fatia é num grupo de cinco onde os outros quatro estão no piso (2). O sorteio uniforme seria 20%. Classe sem tabela cai no padrão, 3.
+| Grupo | Ameaça | Classes | Fatia da atenção |
+|---|---|---|---|
+| G1 | 12 | Guerreiro, Bárbaro | 38,0% |
+| G2 | 10 | Paladino | 35,9% |
+| G3 | 8 | Druida, Xamã, Patrulheiro | 33,3% |
+| G4 | 6 | Monge, Clérigo, Bruxo | 30,2% |
+| G5 | 4 | Artífice, Mago, Feiticeiro, Bardo | 26,1% |
+| G6 | 2 | Ladino | 20,0% |
+
+A fatia é num grupo de cinco onde os outros quatro estão no piso (2); o sorteio uniforme seria 20%. Classe sem grupo cai no padrão, 6.
+
+**Os valores só importam como razão.** A potência normalizada cancela qualquer fator comum, então `12/10/8/6/4/2` e `6/5/4/3/2/1` dão a mesma distribuição. O tamanho absoluto da escala existe para dar resolução ao que é **somado** por cima — o bônus de ferido, o Reckless Attack, os pontos de ação. Dobrar a escala sem dobrar esses números os enfraquece em silêncio.
+
+## Quem está por cair
+
+Abaixo de **30% do HP** o personagem leva `+3` de ameaça: a criatura vai terminar o serviço.
+
+São **pontos fixos**, e não uma fração da inicial. Por ser plano, o bônus empurra muito mais quem tem ameaça baixa — o Ladino sai de 20,0% para 28,3% da atenção, o Guerreiro de 38,0% para 40,6% —, e é exatamente isso que se quer: a criatura abandona o tanque inteiro para ir no mago sangrando. Proporcional faria o contrário, somando mais em quem já era o alvo.
+
+Quem está no chão não entra: ele já saiu do sorteio por outro caminho.
 
 ## Quanto cada ação gera
 
@@ -37,20 +42,20 @@ Dobram: `cura`, `grupo`, `area`.
 
 | Classe | Por golpe | Por área ou cura |
 |---|---|---|
-| Guerreiro | 6 | 12 |
-| Paladino | 6 | 12 |
-| Bárbaro | 5 | 10 |
-| Monge | 4 | 8 |
-| Patrulheiro | 3 | 6 |
-| Clérigo | 3 | 6 |
-| Artífice | 3 | 6 |
+| Bárbaro | 12 | 24 |
+| Guerreiro | 12 | 24 |
+| Paladino | 10 | 20 |
+| Patrulheiro | 8 | 16 |
+| Xamã | 8 | 16 |
+| Druida | 8 | 16 |
+| Monge | 6 | 12 |
+| Clérigo | 6 | 12 |
+| Bruxo | 6 | 12 |
+| Artífice | 4 | 8 |
+| Mago | 4 | 8 |
+| Feiticeiro | 4 | 8 |
+| Bardo | 4 | 8 |
 | Ladino | 2 | 4 |
-| Xamã | 2 | 4 |
-| Mago | 2 | 4 |
-| Bruxo | 2 | 4 |
-| Druida | 2 | 4 |
-| Feiticeiro | 2 | 4 |
-| Bardo | 2 | 4 |
 
 Duas decisões que valem explicação:
 
@@ -80,12 +85,12 @@ Um grupo de cinco em que o guerreiro e o paladino batem, o clérigo cura, o ladi
 
 | Rodada | Guerreiro | Paladino | Clérigo | Ladino | Mago |
 |---|---|---|---|---|---|
-| 0 | 25,9% | 25,9% | 18,3% | 15,0% | 15,0% |
-| 1 | 24,1% | 24,1% | 20,9% | 13,9% | 17,0% |
-| 2 | 23,6% | 23,6% | 21,6% | 13,6% | 17,6% |
-| 3 | 23,4% | 23,4% | 21,9% | 13,5% | 17,9% |
-| 4 | 23,3% | 23,3% | 22,1% | 13,4% | 18,0% |
-| 5 | 23,2% | 23,2% | 22,2% | 13,4% | 18,1% |
+| 0 | 27,7% | 25,3% | 19,6% | 11,3% | 16,0% |
+| 1 | 25,7% | 23,4% | 22,2% | 10,5% | 18,2% |
+| 2 | 25,1% | 22,9% | 22,9% | 10,3% | 18,7% |
+| 3 | 24,9% | 22,7% | 23,3% | 10,2% | 19,0% |
+| 4 | 24,7% | 22,6% | 23,5% | 10,1% | 19,2% |
+| 5 | 24,6% | 22,5% | 23,6% | 10,1% | 19,3% |
 
 O tanque segue o tanque, o curandeiro sobe (é o motivo clássico de ele precisar de alguém na frente) e quem bate um alvo só perde espaço. A ordem da abertura nunca se desmancha: a geração é proporcional à inicial.
 
@@ -97,7 +102,20 @@ O campo é **separado** do que as habilidades somam. No mesmo campo, a marca ❗
 
 ## Imunidade e alcance
 
-Um fator multiplica o **peso** já curvado, e não a ameaça crua. A curva é quase reta embaixo, então mexer na ameaça só daria "modesto" ou "imune", sem meio-termo. No peso o fator é um botão de verdade: 0,2 tira de alcance sem tornar invulnerável, e 0 é imunidade de verdade (o Antilife Shell do druida).
+Um fator multiplica o **peso** já curvado, e não a ameaça crua. A curva é quase reta embaixo, então mexer na ameaça só daria "modesto" ou "imune", sem meio-termo. No peso o fator é um botão de verdade, e 0 é imunidade de verdade (o Antilife Shell do druida).
+
+Quem tem fator hoje, e quanto do peso sobra:
+
+- **Fly** — fator 0.1
+- **Invisibility** — fator 0.1
+- **Antilife Shell** — fator 0
+- **Dimension Door** — fator 0
+
+## Uma escolha por vez da criatura
+
+A criatura sorteia o alvo **uma vez** e descarrega a vez inteira nele: três garras no mesmo peito. Sorteando por golpe, o multiataque virava uma máquina de espalhar dano — o tanque com 38% da atenção levava, em três garras, um golpe e meio, e a Ameaça prometia que a criatura ia **nele**. A promessa valia para o primeiro golpe só, e o resto diluía de volta para o uniforme.
+
+Se o alvo cai no meio da sequência, o resto vai para outro: não se bate em quem já está no chão, e o golpe não se perde por isso. Habilidade de área é outra coisa — ali os alvos são vários por definição, e saem de um sorteio sem reposição.
 
 Quem caiu e quem está atordoado saem do bolo antes da ameaça — atordoar duas vezes não faz nada.
 

@@ -2,13 +2,14 @@
 
 Sem isto o alvo é sorteado uniformemente, então não existe tanque — o mago
 leva tanta pancada quanto o guerreiro de armadura pesada. A Ameaça dá a cada
-personagem um peso nesse sorteio, e esse peso vem de três partes:
+personagem um peso nesse sorteio, e esse peso vem de quatro partes:
 
   - a INICIAL da classe, que é a posição dela na sala: quem bate de perto
     aparece primeiro;
   - o que as habilidades LIGADAS somam enquanto duram;
   - o que o personagem GEROU agindo, que acumula do primeiro golpe ao fim do
-    combate e morre com a sala.
+    combate e morre com a sala;
+  - o bônus de quem está FERIDO, que é a criatura indo terminar o serviço.
 
 A terceira é a que dá história ao combate: quem bate, cura e conjura vai
 chamando atenção, e a criatura troca de alvo conforme a luta anda.
@@ -18,9 +19,16 @@ O peso não é a ameaça crua. Ela passa por uma curva de retorno decrescente:
     peso = x ** K,  com K = 0.5
 
 Cada ponto novo vale menos que o anterior, então ninguém trava o combate
-stackando ameaça. Num grupo de cinco — guerreiro 6, paladino 6, clérigo 3,
-ladino 2, mago 2 — o guerreiro abre com 25,9% da atenção, contra os 20% do
-sorteio uniforme.
+stackando ameaça. Num grupo de cinco — guerreiro 12, paladino 10, clérigo 6,
+mago 4, ladino 2 — o guerreiro abre com 27,7% da atenção e o ladino com
+11,3%, contra os 20% do sorteio uniforme.
+
+**Os valores da inicial só importam como RAZÃO.** A potência normalizada
+cancela qualquer fator comum — `12/10/8/6/4/2` e `6/5/4/3/2/1` dão exatamente
+a mesma distribuição —, então o tamanho absoluto da escala só importa contra
+o que é SOMADO por cima: o `+3` de quem está ferido, o `+6` do Reckless
+Attack e os pontos de ação. Dobrar a escala sem dobrar esses é enfraquecê-los
+em silêncio.
 
 É `x ** K`, e não o `x / (x + Y)` que os jogos usam para armadura, porque a
 ameaça ACUMULA. A fórmula de armadura satura: ela tem teto em 1, e com
@@ -46,32 +54,54 @@ T = TypeVar("T")
 K = 0.5
 
 # Quanto cada classe atrai antes de qualquer habilidade. É a linha de frente
-# virando número: o guerreiro e o paladino estão na cara do inimigo, o ladino
-# ataca pelos lados e o xamã fica atrás. Não escala por tier — ameaça é o papel
-# na sala, não o poder do personagem.
-PADRAO = 3
+# virando número: quem fecha a porta está na cara do inimigo, e o ladino ataca
+# pelos lados. Não escala por tier — ameaça é o papel na sala, não o poder do
+# personagem.
+#
+# SEIS grupos, e não os três de antes. Com cinco classes empatadas no piso,
+# metade da ficha era a mesma pessoa para a criatura: ladino, mago, bardo,
+# bruxo, druida, feiticeiro e xamã tinham todos 2, e o combate não distinguia
+# o druida de urso do mago atrás da coluna. Os degraus abrem a janela de
+# 20–30% para 20–38%.
+GRUPOS: tuple[tuple[int, tuple[str, ...]], ...] = (
+    (12, ("guerreiro", "barbaro")),
+    (10, ("paladino",)),
+    (8, ("druida", "xama", "patrulheiro")),
+    (6, ("monge", "clerigo", "bruxo")),
+    (4, ("artifice", "mago", "feiticeiro", "bardo")),
+    (2, ("ladino",)),
+)
 AMEACA_INICIAL: dict[str, int] = {
-    "guerreiro": 6,
-    "paladino": 6,
-    "barbaro": 5,
-    "monge": 4,
-    "patrulheiro": 3,
-    "ladino": 2,
-    "xama": 2,
-    # Ainda sem tabela de números, mas já com a ameaça definida:
-    "clerigo": 3,
-    "artifice": 3,
-    "druida": 2,
-    "bardo": 2,
-    "bruxo": 2,
-    "feiticeiro": 2,
-    "mago": 2,
+    classe: valor for valor, nomes in GRUPOS for classe in nomes
 }
+# Classe desconhecida fica no meio da escala, que é o quarto grupo.
+PADRAO = 6
+
+# Quem está por cair chama mais atenção: a criatura vai terminar o serviço.
+#
+# PONTOS FIXOS, e não uma fração da inicial dele. Por ser plano, o bônus
+# empurra muito mais quem tem ameaça baixa — o ladino sai de 20% para 28,3%
+# da atenção, o guerreiro de 38% para 40,6% —, e é exatamente isso que se
+# quer: a criatura abandona o tanque inteiro para ir no mago sangrando.
+# Proporcional faria o contrário, somando mais em quem já era o alvo.
+LIMIAR_DE_FERIDO = 0.30
+AMEACA_DE_FERIDO = 3
 
 
 def inicial(classe: Optional[str]) -> int:
     """A ameaça que a classe traz de fábrica. Classe desconhecida fica no meio."""
     return AMEACA_INICIAL.get(str(classe or "").strip().lower(), PADRAO)
+
+
+def de_ferido(hp_atual: int, hp_max: int) -> int:
+    """Os pontos a mais de quem está abaixo do limiar de vida.
+
+    Quem está no chão não entra: ele já saiu do sorteio por outro caminho, e
+    somar ameaça a um caído só poluiria a linha do painel.
+    """
+    if hp_atual <= 0 or hp_max <= 0:
+        return 0
+    return AMEACA_DE_FERIDO if hp_atual <= hp_max * LIMIAR_DE_FERIDO else 0
 
 
 # A regra cabe numa frase: **cada ação gera a ameaça da própria classe, em

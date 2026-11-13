@@ -136,6 +136,129 @@ def caso_toda_classe_prevista_tem_ameaca():
     print(f"  as {len(cl.CLASSES_PREVISTAS)} classes previstas têm ameaça definida: ok")
 
 
+def caso_os_seis_grupos_sao_seis_degraus():
+    """Os grupos existem para a criatura DISTINGUIR as classes.
+
+    Antes eram tres degraus para catorze classes, e sete delas empatadas no
+    piso: ladino, mago, bardo, bruxo, druida, feiticeiro e xama eram a mesma
+    pessoa para a criatura. Agora sao seis valores distintos, um por grupo, e
+    cada degrau vale uns dois pontos e meio de atencao.
+    """
+    valores = [valor for valor, _nomes in ameaca.GRUPOS]
+    assert len(set(valores)) == 6, valores
+    assert valores == sorted(valores, reverse=True), "do mais exposto ao menos"
+    # Nenhuma classe em dois grupos, e nenhum grupo vazio.
+    todas = [c for _v, nomes in ameaca.GRUPOS for c in nomes]
+    assert len(todas) == len(set(todas)), todas
+    assert all(nomes for _v, nomes in ameaca.GRUPOS)
+    # O padrao de classe desconhecida cai DENTRO da escala, e nao fora dela.
+    assert min(valores) <= ameaca.PADRAO <= max(valores), ameaca.PADRAO
+    # E os degraus sao sentidos: cada grupo puxa mais que o de baixo.
+    piso = [min(valores)] * 4
+    fatias = [ameaca.porcentagens([v] + piso)[0] for v in valores]
+    for alto, baixo in zip(fatias, fatias[1:]):
+        assert alto - baixo >= 2.0, (alto, baixo, fatias)
+    print("  seis grupos, seis degraus de uns 2,5 pontos cada: "
+          + " ".join(f"{f:.0f}%" for f in fatias) + ": ok")
+
+
+def caso_a_escala_vale_como_razao():
+    """Dobrar todos os valores nao muda nada — e e por isso que o `+3` importa.
+
+    `peso = x ** 0.5` normalizado cancela qualquer fator comum, entao
+    `12/10/8/6/4/2` e `6/5/4/3/2/1` sao a MESMA distribuicao. O tamanho
+    absoluto da escala existe para dar resolucao ao que e somado por cima (o
+    bonus de ferido, o Reckless, os pontos de acao) — dobrar a escala sem
+    dobrar esses numeros os enfraquece em silencio.
+    """
+    valores = [valor for valor, _nomes in ameaca.GRUPOS]
+    cheia = ameaca.porcentagens(valores)
+    metade = ameaca.porcentagens([v / 2 for v in valores])
+    for a, b in zip(cheia, metade):
+        assert abs(a - b) < 1e-9, (a, b)
+    # Ja o bonus somado muda de peso com a escala: na metade ele vale MAIS.
+    piso = min(valores)
+    na_escala = (ameaca.porcentagens([piso + ameaca.AMEACA_DE_FERIDO] + [piso] * 4)[0]
+                 - ameaca.porcentagens([piso] * 5)[0])
+    na_metade = (ameaca.porcentagens([piso / 2 + ameaca.AMEACA_DE_FERIDO] + [piso / 2] * 4)[0]
+                 - ameaca.porcentagens([piso / 2] * 5)[0])
+    assert na_metade > na_escala, (na_escala, na_metade)
+    print("  a escala vale como razao; o que soma por cima e que sente o tamanho: ok")
+
+
+def caso_ferido_chama_mais_atencao():
+    """Quem esta por cair puxa a criatura — e puxa MAIS se era o apoio.
+
+    O bonus e plano de proposito: somar 3 numa ameaca 2 quase dobra o peso
+    dela, e somar 3 numa ameaca 12 quase nao aparece. E assim que a criatura
+    abandona o tanque inteiro para ir no mago sangrando, que e o que se quer
+    de um "terminar o servico".
+    """
+    assert ameaca.de_ferido(100, 100) == 0, "inteiro nao ganha nada"
+    assert ameaca.de_ferido(31, 100) == 0, "acima do limiar, nada"
+    assert ameaca.de_ferido(30, 100) == ameaca.AMEACA_DE_FERIDO, "no limiar, entra"
+    assert ameaca.de_ferido(1, 100) == ameaca.AMEACA_DE_FERIDO
+    assert ameaca.de_ferido(0, 100) == 0, "no chao sai do sorteio por outro caminho"
+    assert ameaca.de_ferido(10, 0) == 0, "sem HP maximo nao da divisao"
+
+    # No combatente: o campo nao existe, o bonus sai do HP.
+    tanque = combatente("Tanque", ameaca.inicial("guerreiro"), hp=100)
+    apoio = combatente("Apoio", ameaca.inicial("ladino"), hp=100, user_id=2)
+    inteiros = ameaca.porcentagens(ameaca.de_quem([tanque, apoio]))
+    apoio.hp_atual = 20
+    ferido = ameaca.porcentagens(ameaca.de_quem([tanque, apoio]))
+    assert ferido[1] > inteiros[1] + 4, (inteiros, ferido)
+
+    # E o empurrao e MAIOR no apoio que no tanque: o bonus e plano.
+    apoio.hp_atual = 100
+    tanque.hp_atual = 20
+    tanque_ferido = ameaca.porcentagens(ameaca.de_quem([tanque, apoio]))
+    ganho_do_apoio = ferido[1] - inteiros[1]
+    ganho_do_tanque = tanque_ferido[0] - inteiros[0]
+    assert ganho_do_apoio > ganho_do_tanque, (ganho_do_apoio, ganho_do_tanque)
+    print(f"  ferido chama mais atencao, e o apoio mais que o tanque "
+          f"(+{ganho_do_apoio:.0f} contra +{ganho_do_tanque:.0f} pontos): ok")
+
+
+def caso_multiataque_descarrega_no_mesmo_alvo():
+    """Tres garras no mesmo peito, e nao uma em cada.
+
+    Sorteando por golpe, o multiataque virava uma maquina de espalhar dano: o
+    tanque com 38% da atencao levava, em tres garras, um golpe e meio — e a
+    Ameaca prometia que a criatura ia NELE. Agora a criatura escolhe uma vez
+    por vez dela.
+    """
+    rng = random.Random(3)
+    tanque = combatente("Tanque", 12, hp=500, user_id=1)
+    apoio = combatente("Apoio", 2, hp=500, user_id=2)
+    bicho = motor.Inimigo(0, "Bicho", 12, 40, "1d4", 50, 50, ataques=3)
+    estado = motor.EstadoCombate([bicho], 1, [tanque, apoio])
+
+    espalhou = 0
+    for _ in range(300):
+        # Vida cheia a cada rodada: o que se mede e a ESCOLHA do alvo, e sem
+        # isto os dois morrem nas primeiras rodadas e o resto nao mede nada.
+        tanque.hp_atual = tanque.hp_max
+        apoio.hp_atual = apoio.hp_max
+        vez = motor.turno_do_inimigo(bicho, estado, rng)
+        assert len(vez.golpes) == 3, vez.golpes
+        if len({alvo.nome for _golpe, alvo in vez.golpes}) > 1:
+            espalhou += 1
+    assert espalhou == 0, f"{espalhou} vezes a criatura dividiu a vez"
+
+    # Mas se o alvo CAI no meio da sequencia, o resto vai para outro: nao se
+    # bate em quem esta no chao.
+    frangote = combatente("Frangote", 12, hp=1, user_id=3)
+    sobrevivente = combatente("Sobrevivente", 2, hp=500, user_id=4)
+    estado = motor.EstadoCombate([bicho], 1, [frangote, sobrevivente])
+    vez = motor.turno_do_inimigo(bicho, estado, random.Random(1))
+    assert frangote.caido, "o primeiro golpe derrubou"
+    alvos = [alvo.nome for _golpe, alvo in vez.golpes]
+    assert alvos.count("Frangote") == 1, alvos
+    assert "Sobrevivente" in alvos, alvos
+    print("  o multiataque descarrega no mesmo alvo, e troca so se ele cai: ok")
+
+
 # ----------------------------------------------------------------- o sorteio
 
 
@@ -250,15 +373,28 @@ def caso_habilidade_soma_na_ameaca():
 
 
 def caso_reckless_attack_da_ameaca():
-    """O exemplo do grupo: atacar descuidado chama atenção."""
+    """O exemplo do grupo: atacar descuidado chama atenção.
+
+    O caso afirma o EFEITO, e não o número: o que o Reckless promete é mover
+    a mira de forma sentida, e quanto de ameaça isso custa depende da escala
+    dos grupos. Preso ao literal, o caso quebrava em toda recalibragem e
+    deixava passar o contrário — o mesmo `+3` valendo metade depois de a
+    escala dobrar.
+    """
     barbaro = cl.classe("barbaro")
     reckless = next(
         h for _, h in barbaro.habilidades_ate(20) if h.id == "reckless_attack"
     )
-    assert reckless.acao["efeitos"]["ameaca"] == 3
+    extra = reckless.acao["efeitos"]["ameaca"]
+    base = ameaca.inicial("barbaro")
+    piso = [ameaca.inicial("ladino")] * 4
+    antes = ameaca.porcentagens([base] + piso)[0]
+    depois = ameaca.porcentagens([base + extra] + piso)[0]
+    assert depois - antes >= 4.5, (antes, depois, extra)
     assert reckless.acao["efeitos"]["vantagem"] is True, "e continua dando vantagem"
     assert reckless.acao["turnos"] == 1, "a ameaça extra dura o turno e sai"
-    print("  Reckless Attack dá ameaça 3 enquanto está ligado: ok")
+    print(f"  Reckless Attack leva o bárbaro de {antes:.0f}% a {depois:.0f}% "
+          f"da atenção (+{extra} de ameaça): ok")
 
 
 async def caso_combatente_nasce_com_a_ameaca_da_classe():
@@ -392,6 +528,10 @@ async def main():
         caso_ordem_preservada()
         caso_ameaca_por_classe()
         caso_toda_classe_prevista_tem_ameaca()
+        caso_os_seis_grupos_sao_seis_degraus()
+        caso_a_escala_vale_como_razao()
+        caso_ferido_chama_mais_atencao()
+        caso_multiataque_descarrega_no_mesmo_alvo()
         caso_sorteio_bate_com_a_formula()
         caso_sorteio_sem_reposicao()
         caso_motor_pesa_pela_ameaca()

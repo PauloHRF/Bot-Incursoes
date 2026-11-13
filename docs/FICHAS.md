@@ -134,7 +134,7 @@ A explosao passa a 3d6 por marca. E o inimigo que morre antes dela não leva as 
 
 **Vida:** 23 a 103, +20 por tier  
 **Saves fortes:** Força e Constituição  
-**Ameaça inicial:** 5 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 12 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -233,7 +233,7 @@ Com Reckless Attack ligado, o ataque sai com +1d10 de dano, e ele ganha o mesmo 
 
 **Vida:** 21 a 93, +18 por tier  
 **Saves fortes:** Força e Constituição  
-**Ameaça inicial:** 6 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 12 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -332,7 +332,7 @@ Age duas vezes no mesmo turno.
 
 **Vida:** 17 a 73, +14 por tier  
 **Saves fortes:** Força e Destreza  
-**Ameaça inicial:** 4 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 6 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -349,7 +349,7 @@ Age duas vezes no mesmo turno.
 
 **1x por descanso.**
 
-Golpeia duas vezes no mesmo turno.
+Ataca normalmente e ainda golpeia mais duas vezes.
 
 ---
 
@@ -427,7 +427,7 @@ Um ataque que acerta e já sai crítico.
 
 **Vida:** 19 a 83, +16 por tier  
 **Saves fortes:** Destreza e Constituição  
-**Ameaça inicial:** 3 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 8 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -528,7 +528,7 @@ Uma presa por 3 turnos, com +2d8 e vantagem — e ataca na mesma rodada, já com
 
 **Vida:** 21 a 93, +18 por tier  
 **Saves fortes:** Força e Sabedoria  
-**Ameaça inicial:** 6 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 10 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -625,7 +625,7 @@ Quando um aliado falha o teste da sala, soma +5 — e só dispara se o +5 fizer 
 
 **Vida:** 17 a 73, +14 por tier  
 **Saves fortes:** Sabedoria e Carisma  
-**Ameaça inicial:** 2 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 8 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -733,7 +733,7 @@ Os próximos dois ataques dos aliados levam +1d6+5 de dano e critam com 15+, e o
 
 **Vida:** 19 a 73, +13,5 por tier  
 **Saves fortes:** Constituição e Sabedoria  
-**Ameaça inicial:** 3 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 6 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -838,7 +838,7 @@ Escolhe uma: Flame Strike, Mass Cure Wounds ou Dominate Person.
 
 **Vida:** 19 a 73, +13,5 por tier  
 **Saves fortes:** Constituição e Inteligência  
-**Ameaça inicial:** 3 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 4 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -949,7 +949,7 @@ O Flash of Genius dele soma +10 em vez de +5.
 
 **Vida:** 15 a 63, +12 por tier  
 **Saves fortes:** Constituição e Inteligência  
-**Ameaça inicial:** 2 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 4 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -1050,7 +1050,7 @@ Escolhe uma: Cone of Cold, Hold Monster ou Circle of Power.
 
 **Vida:** 19 a 73, +13,5 por tier  
 **Saves fortes:** Sabedoria e Carisma  
-**Ameaça inicial:** 2 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 6 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -1155,7 +1155,7 @@ Escolhe uma: Hold Monster, Synaptic Static ou Summon Greater Demon.
 
 **Vida:** 19 a 73, +13,5 por tier  
 **Saves fortes:** Constituição e Sabedoria  
-**Ameaça inicial:** 2 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 8 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -1260,7 +1260,7 @@ Escolhe uma: Antilife Shell, Conjure Elemental ou Mass Cure Wounds.
 
 **Vida:** 15 a 63, +12 por tier  
 **Saves fortes:** Destreza e Constituição  
-**Ameaça inicial:** 2 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 4 — o peso dele no sorteio de alvo das criaturas
 
 ---
 
@@ -1366,7 +1366,7 @@ Escolhe uma: Polymorph, Cone of Cold ou Dimension Door.
 
 **Vida:** 19 a 71, +13 por tier  
 **Saves fortes:** Destreza e Carisma  
-**Ameaça inicial:** 2 — o peso dele no sorteio de alvo das criaturas
+**Ameaça inicial:** 4 — o peso dele no sorteio de alvo das criaturas
 
 ---
 

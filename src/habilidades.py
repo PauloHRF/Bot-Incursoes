@@ -185,7 +185,11 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        # agora, e usar era pior que nao usar.
                        acao={"tipo": "duracao", "turnos": 1, "alvo": "proprio",
                              "acoes": 1,
-                             "efeitos": {"vantagem": True, "ameaca": 3}})],
+                             # +6, e nao +3: na escala antiga o +3 movia a
+                             # fatia do barbaro em 5 pontos (28,3% -> 33,3%).
+                             # Com a escala dobrada, +3 moveria 2,7 — o mesmo
+                             # numero valendo metade. +6 devolve os 5 pontos.
+                             "efeitos": {"vantagem": True, "ameaca": 6}})],
         4: [Habilidade("relentless", "Relentless", ATIVA,
                        "1x por combate: ao cair a 0 HP fica com 1 HP e ganha 1d12+7 de THP.",
                        usos=_usos("combate"),
@@ -727,7 +731,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "por 3 rodadas — os inimigos quase deixam de mira-los.",
                        usos=_usos("descanso"),
                        acao={"tipo": "duracao", "turnos": 3, "alvo": "aliados",
-                             "alvos": 3, "efeitos": {"ameaca_fator": 0.2}},
+                             "alvos": 3, "efeitos": {"ameaca_fator": 0.1}},
                        exige_escolha=("magia_mago_t3", "fly"))],
         4: [Habilidade("tradicao_arcana", "Tradicao arcana", ESCOLHA,
                        "Escolhe uma: Evocacao Potente, Escudo Arcano ou "
@@ -929,7 +933,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        usos=_usos("incursao"),
                        acao={"tipo": "invocar", "nome": "Demonio do pacto",
                              "ca": 15, "ataque": 8, "dano": "2d6+4", "hp": 45,
-                             "ameaca": 4, "iniciativa": 2},
+                             "ameaca": 8, "iniciativa": 2},
                        exige_escolha=("pacto_t5", "summon_greater_demon"))],
     },
     # O druida e a unica classe com um trade de verdade: o livro diz que ele
@@ -957,6 +961,10 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        usos=_usos("descanso"),
                        acao={"tipo": "forma", "nome": "Urso", "turnos": 3,
                              "ca": 3, "ataques": 1, "thp_por_tier": 3,
+                             # +4 soma na inicial do druida (8) e o deixa em
+                             # 12, que e a do guerreiro: de urso ele fecha a
+                             # porta. O numero e a DIFERENCA entre os grupos,
+                             # e ha teste prendendo isso.
                              "ameaca": 4, "ataca_ao_transformar": True,
                              "dano": {1: "1d8+2", 2: "1d10+2", 3: "2d8+3",
                                       4: "2d10+3", 5: "2d10+5"}},
@@ -1033,7 +1041,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        usos=_usos("descanso"),
                        acao={"tipo": "invocar", "nome": "Bando selvagem",
                              "ca": 13, "ataque": 7, "dano": "2d6+3", "hp": 35,
-                             "ameaca": 3, "iniciativa": 2},
+                             "ameaca": 6, "iniciativa": 2},
                        exige_escolha=("magia_druida_t3", "conjure_animals"))],
         4: [Habilidade("natureza_t4", "Dadiva da natureza", ESCOLHA,
                        "Escolhe uma: Forma Lunar, Pressagio ou Golpe Primal.",
@@ -1090,7 +1098,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        usos=_usos("descanso"),
                        acao={"tipo": "invocar", "nome": "Elemental",
                              "ca": 16, "ataque": 9, "dano": "2d8+5", "hp": 70,
-                             "ameaca": 5, "iniciativa": 2},
+                             "ameaca": 10, "iniciativa": 2},
                        exige_escolha=("magia_druida_t5", "conjure_elemental")),
             Habilidade("mass_cure_wounds_druida", "Mass Cure Wounds", ATIVA,
                        "1x por descanso: o grupo inteiro cura 35% do HP maximo.",
@@ -1397,7 +1405,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        usos=_usos("descanso"),
                        acao={"tipo": "invocar", "nome": "Objetos animados",
                              "ca": 14, "ataque": 8, "dano": "3d6+2", "hp": 50,
-                             "ameaca": 3, "iniciativa": 1},
+                             "ameaca": 6, "iniciativa": 1},
                        exige_escolha=("magia_bardo_t5", "animate_objects")),
             Habilidade("ottos_dance", "Otto's Irresistible Dance", ATIVA,
                        "1x por descanso: um inimigo faz save de SAB; falhando, "

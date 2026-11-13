@@ -114,25 +114,25 @@ Num grupo de cinco onde os outros quatro estão no piso (2).
 
 | Classe | Ameaça | Abertura | 5 rodadas, todos batendo |
 |---|---|---|---|
-| Guerreiro | 6 | 30.2% | 30.2% |
-| Paladino | 6 | 30.2% | 30.2% |
-| Bárbaro | 5 | 28.3% | 28.3% |
-| Monge | 4 | 26.1% | 26.1% |
-| Patrulheiro | 3 | 23.4% | 23.4% |
-| Clérigo | 3 | 23.4% | 23.4% |
-| Artífice | 3 | 23.4% | 23.4% |
+| Bárbaro | 12 | 38.0% | 38.0% |
+| Guerreiro | 12 | 38.0% | 38.0% |
+| Paladino | 10 | 35.9% | 35.9% |
+| Patrulheiro | 8 | 33.3% | 33.3% |
+| Xamã | 8 | 33.3% | 33.3% |
+| Druida | 8 | 33.3% | 33.3% |
+| Monge | 6 | 30.2% | 30.2% |
+| Clérigo | 6 | 30.2% | 30.2% |
+| Bruxo | 6 | 30.2% | 30.2% |
+| Artífice | 4 | 26.1% | 26.1% |
+| Mago | 4 | 26.1% | 26.1% |
+| Feiticeiro | 4 | 26.1% | 26.1% |
+| Bardo | 4 | 26.1% | 26.1% |
 | Ladino | 2 | 20.0% | 20.0% |
-| Xamã | 2 | 20.0% | 20.0% |
-| Mago | 2 | 20.0% | 20.0% |
-| Bruxo | 2 | 20.0% | 20.0% |
-| Druida | 2 | 20.0% | 20.0% |
-| Feiticeiro | 2 | 20.0% | 20.0% |
-| Bardo | 2 | 20.0% | 20.0% |
 
 O uniforme seria 20%. A coluna da direita mantém a ordem da abertura:
 a ameaça gerada é proporcional à da classe, então acumular não
 desmancha o grupo — o que desloca é a AÇÃO. O mesmo clérigo, no mesmo
-time, sai de 18.3% batendo para 23.3% curando, porque
+time, sai de 20.1% batendo para 25.4% curando, porque
 cura e área geram o dobro.
 
 ## Perícia: melhor modificador por tier
@@ -188,8 +188,8 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Clérigo | Cure Wounds | 8 | 6 × 1.42 | 6 de cura |
 |  | Artífice | Cure Wounds | 8 | 6 × 1.42 | 6 de cura |
 | << | Bruxo | Charm Person | 6 | 6 × 1.00 | 6 de dano negado (1 turno(s) de criatura) |
-| << | Monge | Flurry of Blows | 6 | 4 × 1.42 | 4 de golpe a mais |
 | << | Bardo | Healing Word | 5 | 4 × 1.42 | 4 de cura |
+| << | Monge | Flurry of Blows | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 | << | Artífice | Faerie Fire | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 
 ### Tier 2 — mediana 0 HP-eq, 4 ativas
@@ -281,7 +281,7 @@ frequência, os três escopos encostam. Isto é desenho funcionando.
 | Escopo | Ativas | Mediana por uso | Usos/masmorra | Mediana por masmorra |
 |---|---|---|---|---|
 | combate | 9 | 11 | 3.08 | 34 |
-| descanso | 48 | 16 | 1.42 | 23 |
+| descanso | 47 | 16 | 1.42 | 23 |
 | incursao | 17 | 36 | 1.00 | 36 |
 
 ### A mesma magia com disponibilidade diferente

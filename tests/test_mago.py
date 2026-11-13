@@ -16,6 +16,7 @@ from src import (  # noqa: E402
     aleatorio,
     ameaca,
     classes as cl,
+    habilidades as H,
     config,
     database as db,
     motor,
@@ -282,10 +283,13 @@ async def caso_fly_tira_tres_de_alcance():
                                        incursao.objetivo)
     voando = [c for c in estado.vivos if c.ameaca_fator < 1]
     assert len(voando) == 3, [c.nome for c in estado.vivos]
+    # O fator sai da propria habilidade: o caso afirma que ele CHEGA no
+    # combatente, nao qual e o numero dele neste mes.
+    esperado = H.POR_ID["fly"].acao["efeitos"]["ameaca_fator"]
     for c in voando:
-        assert c.ameaca_fator == 0.2, (c.nome, c.ameaca_fator)
+        assert c.ameaca_fator == esperado, (c.nome, c.ameaca_fator, esperado)
         assert c.ameaca_total > 0, "a ameaca crua nao muda: o fator pesa o sorteio"
-    print("  Fly corta a quinto o peso de tres no sorteio de alvo: ok")
+    print(f"  Fly corta o peso de tres no sorteio de alvo para {esperado:g}x: ok")
 
 
 def caso_fly_reduz_sem_zerar():

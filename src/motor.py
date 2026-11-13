@@ -450,10 +450,16 @@ class Combatente:
     def ameaca_total(self) -> int:
         """A ameaça que conta no sorteio.
 
-        As três partes: a da classe, a das habilidades ligadas agora e a que
-        ele acumulou agindo. Ver src/ameaca.py.
+        As quatro partes: a da classe, a das habilidades ligadas agora, a que
+        ele acumulou agindo e o bônus de estar por cair. Ver src/ameaca.py.
         """
-        return max(0, self.ameaca + self.ameaca_extra + self.ameaca_gerada)
+        return max(
+            0,
+            self.ameaca
+            + self.ameaca_extra
+            + self.ameaca_gerada
+            + ameaca.de_ferido(self.hp_atual, self.hp_max),
+        )
 
     @property
     def e_invocacao(self) -> bool:
@@ -1231,9 +1237,14 @@ def turno_do_inimigo(
     """A vez de uma criatura, quando a iniciativa chega nela.
 
     Se tem habilidade pronta nesta rodada, conjura em vez de atacar; senão
-    bate, tantas vezes quanto o multiataque permitir, cada golpe num alvo
-    sorteado — o bot não faz tática, então não concentra tudo numa pessoa.
+    bate, tantas vezes quanto o multiataque permitir, **tudo no mesmo alvo**.
     Caída ou atordoada, perde a vez; e não se ataca quem já está no chão.
+
+    O alvo é UM por vez da criatura, e não um por golpe. Sorteando por golpe,
+    o multiataque virava uma máquina de espalhar dano: o tanque com 38% da
+    atenção levava, em três garras, um golpe e meio — e a Ameaça prometia que
+    a criatura ia nele. A promessa valia para o primeiro golpe só, e o resto
+    diluía de volta para o uniforme. Três garras agora caem no mesmo peito.
     """
     vez = RodadaInimiga(vida_inicial={
         c.user_id: (c.hp_atual, c.thp) for c in estado.combatentes
@@ -1247,8 +1258,12 @@ def turno_do_inimigo(
     if inimigo.usa_habilidade(estado.rodada, rng):
         vez.investidas.extend(usar_habilidade_do_inimigo(inimigo, estado, rng))
         return vez
+    alvo = sortear_alvo(estado, rng)
     for golpe_do_monstro in sequencia_de_golpes(inimigo):
-        alvo = sortear_alvo(estado, rng)
+        # Caindo no meio da sequência, o resto da vez vai para outro: não se
+        # bate em quem já está no chão, e o golpe não se perde por isso.
+        if alvo is None or alvo.caido:
+            alvo = sortear_alvo(estado, rng)
         if alvo is None:
             break
         golpe = contra_atacar(

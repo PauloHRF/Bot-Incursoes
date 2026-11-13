@@ -556,7 +556,7 @@ def ameaca_md() -> str:
         "o mago leva tanta pancada quanto o guerreiro de armadura pesada. A "
         "Ameaça dá a cada personagem um peso nesse sorteio.",
         "",
-        "## As três partes",
+        "## As quatro partes",
         "",
     ]
     L += lista([
@@ -566,20 +566,62 @@ def ameaca_md() -> str:
         "**O que as habilidades ligadas somam**, enquanto duram.",
         "**O que o personagem gerou agindo**, que acumula do primeiro golpe ao "
         "fim do combate e morre com a sala.",
+        f"**O bônus de quem está ferido** — `+{ameaca.AMEACA_DE_FERIDO}` abaixo "
+        f"de {ameaca.LIMIAR_DE_FERIDO:.0%} do HP, que é a criatura indo "
+        "terminar o serviço.",
     ])
-    L += ["## A inicial de cada classe", ""]
+    L += ["## Os seis grupos", ""]
+    L += [
+        "A inicial sai de seis grupos, e não de um número por classe. Eram "
+        "três degraus para catorze classes, com sete empatadas no piso: para "
+        "a criatura, ladino, mago, bardo, bruxo, druida, feiticeiro e xamã "
+        "eram a mesma pessoa. Os seis degraus abrem a janela de 20–30% para "
+        "20–38%.",
+        "",
+    ]
+    _piso = min(ameaca.AMEACA_INICIAL.values())
     L += tabela(
-        ["Classe", "Ameaça", "Fatia da atenção"],
+        ["Grupo", "Ameaça", "Classes", "Fatia da atenção"],
         [
-            [cl.CLASSES[cid].nome, str(ameaca.inicial(cid)),
-             pct(ameaca.fracoes([ameaca.inicial(cid)] + [ameaca.PADRAO - 1] * 4)[0])]
-            for cid in sorted(cl.CLASSES, key=lambda c: -ameaca.inicial(c))
+            [f"G{i}", str(valor),
+             ", ".join(cl.CLASSES[c].nome if c in cl.CLASSES else c for c in nomes),
+             pct(ameaca.fracoes([valor] + [_piso] * 4)[0])]
+            for i, (valor, nomes) in enumerate(ameaca.GRUPOS, start=1)
         ],
     )
     L += [
         f"A fatia é num grupo de cinco onde os outros quatro estão no piso "
-        f"({ameaca.PADRAO - 1}). O sorteio uniforme seria 20%. Classe sem "
-        f"tabela cai no padrão, {ameaca.PADRAO}.",
+        f"({_piso}); o sorteio uniforme seria 20%. Classe sem grupo cai no "
+        f"padrão, {ameaca.PADRAO}.",
+        "",
+        "**Os valores só importam como razão.** A potência normalizada cancela "
+        "qualquer fator comum, então `12/10/8/6/4/2` e `6/5/4/3/2/1` dão a "
+        "mesma distribuição. O tamanho absoluto da escala existe para dar "
+        "resolução ao que é **somado** por cima — o bônus de ferido, o "
+        "Reckless Attack, os pontos de ação. Dobrar a escala sem dobrar esses "
+        "números os enfraquece em silêncio.",
+        "",
+    ]
+    L += [
+        "## Quem está por cair",
+        "",
+        f"Abaixo de **{ameaca.LIMIAR_DE_FERIDO:.0%} do HP** o personagem leva "
+        f"`+{ameaca.AMEACA_DE_FERIDO}` de ameaça: a criatura vai terminar o "
+        "serviço.",
+        "",
+        "São **pontos fixos**, e não uma fração da inicial. Por ser plano, o "
+        "bônus empurra muito mais quem tem ameaça baixa — o Ladino sai de "
+        f"{pct(ameaca.fracoes([_piso] + [_piso] * 4)[0])} para "
+        f"{pct(ameaca.fracoes([_piso + ameaca.AMEACA_DE_FERIDO] + [_piso] * 4)[0])} "
+        "da atenção, o Guerreiro de "
+        f"{pct(ameaca.fracoes([ameaca.inicial('guerreiro')] + [_piso] * 4)[0])} para "
+        f"{pct(ameaca.fracoes([ameaca.inicial('guerreiro') + ameaca.AMEACA_DE_FERIDO] + [_piso] * 4)[0])} "
+        "—, e é exatamente isso que se quer: a criatura abandona o tanque "
+        "inteiro para ir no mago sangrando. Proporcional faria o contrário, "
+        "somando mais em quem já era o alvo.",
+        "",
+        "Quem está no chão não entra: ele já saiu do sorteio por outro "
+        "caminho.",
         "",
         "## Quanto cada ação gera",
         "",
@@ -683,9 +725,34 @@ def ameaca_md() -> str:
         "",
         "Um fator multiplica o **peso** já curvado, e não a ameaça crua. A "
         "curva é quase reta embaixo, então mexer na ameaça só daria \"modesto\" "
-        "ou \"imune\", sem meio-termo. No peso o fator é um botão de verdade: "
-        "0,2 tira de alcance sem tornar invulnerável, e 0 é imunidade de "
-        "verdade (o Antilife Shell do druida).",
+        "ou \"imune\", sem meio-termo. No peso o fator é um botão de verdade, e "
+        "0 é imunidade de verdade (o Antilife Shell do druida).",
+        "",
+        "Quem tem fator hoje, e quanto do peso sobra:",
+        "",
+    ]
+    L += lista([
+        f"**{H.POR_ID[hid].nome}** — fator "
+        f"{H.POR_ID[hid].acao['efeitos']['ameaca_fator']:g}"
+        for hid in ("fly", "invisibility", "antilife_shell", "dimension_door")
+        if hid in H.POR_ID
+        and (H.POR_ID[hid].acao or {}).get("efeitos", {}).get("ameaca_fator")
+        is not None
+    ])
+    L += [
+        "## Uma escolha por vez da criatura",
+        "",
+        "A criatura sorteia o alvo **uma vez** e descarrega a vez inteira "
+        "nele: três garras no mesmo peito. Sorteando por golpe, o multiataque "
+        "virava uma máquina de espalhar dano — o tanque com 38% da atenção "
+        "levava, em três garras, um golpe e meio, e a Ameaça prometia que a "
+        "criatura ia **nele**. A promessa valia para o primeiro golpe só, e o "
+        "resto diluía de volta para o uniforme.",
+        "",
+        "Se o alvo cai no meio da sequência, o resto vai para outro: não se "
+        "bate em quem já está no chão, e o golpe não se perde por isso. "
+        "Habilidade de área é outra coisa — ali os alvos são vários por "
+        "definição, e saem de um sorteio sem reposição.",
         "",
         "Quem caiu e quem está atordoado saem do bolo antes da ameaça — "
         "atordoar duas vezes não faz nada.",
