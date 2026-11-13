@@ -614,6 +614,81 @@ def descanso_duro_feito(troca, linhas: list) -> discord.Embed:
     return e
 
 
+def buffs(
+    condicoes_do_grupo: Optional[dict[int, dict[str, int]]] = None,
+    nomes: Optional[dict[int, str]] = None,
+    estado=None,
+) -> discord.Embed:
+    """O que cada emoji ACESO agora quer dizer, e em quem ele está.
+
+    Agrupado por emoji, e não por pessoa, porque é essa a pergunta que ele
+    responde: "o que é esse símbolo no painel?". Agrupar assim tem um efeito
+    de lado que vale por si — três emoji servem a dois significados cada
+    (✨ é Benção e é Abençoado, 💫 é Perturbação e é atordoado, 🩸 é
+    Deterioração e é ameaça extra), e neste formato os dois sentidos aparecem
+    juntos, em vez de o jogador adivinhar qual é o dele.
+
+    Só entra o que está aceso. O catálogo inteiro não responde nada: a
+    pergunta nasce de olhar a linha de alguém e não reconhecer uma marca.
+    """
+    from . import condicoes
+
+    quem_e = nomes or {}
+    # {emoji: [[nome, texto, [quem, ...]], ...]} — ordem de insercao, que e a
+    # ordem do catalogo e depois a do painel.
+    entradas: dict[str, list[list[Any]]] = {}
+
+    def anotar(emoji: str, nome: str, texto: str, quem: str) -> None:
+        linhas = entradas.setdefault(emoji, [])
+        for item in linhas:
+            if item[0] == nome:
+                item[2].append(quem)
+                return
+        linhas.append([nome, texto, [quem]])
+
+    for condicao in condicoes.CATALOGO:
+        for user_id, carregadas in sorted((condicoes_do_grupo or {}).items()):
+            stacks = (carregadas or {}).get(condicao.id, 0)
+            if stacks <= 0:
+                continue
+            quem = quem_e.get(user_id, f"<@{user_id}>")
+            if stacks > 1:
+                # Com mais de um stack o texto do catalogo (que e de UM) ja nao
+                # serve: vai a conta feita ao lado do nome.
+                somado = condicoes.efeito_somado(condicao.id, stacks)
+                quem = f"{quem} ×{stacks}" + (f" ({somado})" if somado else "")
+            anotar(condicao.icone, condicao.nome, condicao.texto, quem)
+
+    for c in getattr(estado, "combatentes", None) or ():
+        # Quem esta no chao aparece so como caido, como no painel: as marcas
+        # dele nao estao valendo coisa nenhuma enquanto ele nao se levanta.
+        tabela = ESTADOS if c.hp_atual <= 0 else ESTADOS + MARCAS
+        for emoji, nome, texto, aceso in tabela:
+            if aceso(c):
+                anotar(emoji, nome, texto, c.nome)
+
+    e = discord.Embed(title="O que o grupo carrega agora", color=COR_INCURSAO)
+    if not entradas:
+        e.description = (
+            "Nenhum emoji aceso: ninguém carrega condição de sala, e nada "
+            "está ligado no combate."
+        )
+        return e
+    e.description = (
+        "Cada emoji que está na tela agora, o que ele faz e quem o tem."
+    )
+    for emoji, itens in list(entradas.items())[:25]:
+        e.add_field(
+            name=f"{emoji} " + " / ".join(nome for nome, _t, _q in itens),
+            value="\n".join(
+                f"**{nome}** — {texto}\n{', '.join(quem)}"
+                for nome, texto, quem in itens
+            )[:1024],
+            inline=False,
+        )
+    return e
+
+
 def linha_de_condicoes(carregadas: dict[str, int]) -> str:
     """As condições de um personagem em linha: '😨 Medo ×2 · 🐌 Letargia'."""
     from . import condicoes
@@ -817,17 +892,53 @@ def _linha_inimigo(i, marcado: bool = False) -> str:
     )
 
 
+# Cada marca e cada estado do painel, com o que querem dizer e como se sabe que
+# estao acesos. UMA tabela, porque o painel e o `/incursao buffs` leem dela: a
+# marca que alguem acrescentar aparece explicada nos dois, em vez de acender no
+# painel sem ninguem saber o que e. A ORDEM e a do painel.
+MARCAS: tuple[tuple[str, str, str, Any], ...] = (
+    (
+        MARCA_PROTEGIDO, "Protegido",
+        "O dano que chega está sendo cortado.",
+        lambda c: getattr(c, "reducao_dano", 0) or getattr(c, "reducao_plana", 0),
+    ),
+    (
+        MARCA_ALVO, "Com vantagem",
+        "Os ataques dele saem com vantagem.",
+        lambda c: getattr(c, "vantagem", False),
+    ),
+    (
+        MARCA_ABENCOADO, "Abençoado",
+        "CA a mais, ou cura chegando a cada turno.",
+        lambda c: getattr(c, "ca_extra", 0) or getattr(c, "cura_por_turno", 0),
+    ),
+    (
+        MARCA_AMEACA, "Chamando atenção",
+        "Uma habilidade ligada está puxando a atenção dos inimigos.",
+        lambda c: getattr(c, "ameaca_extra", 0) > 0,
+    ),
+)
+
+# Os dois estados que o painel escreve com palavra ao lado, em vez de marca
+# solta. Ficam fora de `MARCAS` para nao mudarem a linha do painel, e entram no
+# `/incursao buffs` porque sao emoji que o grupo tem na tela.
+ESTADOS: tuple[tuple[str, str, str, Any], ...] = (
+    (
+        "💀", "Caído",
+        "Está no chão: fora do combate até alguém levantar com uma cura.",
+        lambda c: c.hp_atual <= 0,
+    ),
+    (
+        "💫", "Atordoado",
+        "Perde a vez desta rodada.",
+        lambda c: getattr(c, "atordoado", False),
+    ),
+)
+
+
 def _marcas_do_combatente(c) -> str:
     """Os efeitos com prazo que estao valendo naquele personagem."""
-    marcas = []
-    if getattr(c, "reducao_dano", 0) or getattr(c, "reducao_plana", 0):
-        marcas.append(MARCA_PROTEGIDO)
-    if getattr(c, "vantagem", False):
-        marcas.append(MARCA_ALVO)
-    if getattr(c, "ca_extra", 0) or getattr(c, "cura_por_turno", 0):
-        marcas.append(MARCA_ABENCOADO)
-    if getattr(c, "ameaca_extra", 0) > 0:
-        marcas.append(MARCA_AMEACA)
+    marcas = [emoji for emoji, _nome, _texto, aceso in MARCAS if aceso(c)]
     return (" " + "".join(marcas)) if marcas else ""
 
 

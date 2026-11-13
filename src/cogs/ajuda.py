@@ -43,6 +43,7 @@ ORDEM_COMANDOS = (
     "incursao desistir",
     "incursao listar",
     "incursao status",
+    "incursao buffs",
     "mercado vitrine",
     "mercado comprar",
     "mercado equipar",

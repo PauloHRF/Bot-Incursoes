@@ -70,6 +70,82 @@ def caso_efeito_somado_faz_a_conta():
     print("  efeito_somado multiplica os números do catálogo: ok")
 
 
+def _texto_do_embed(e) -> str:
+    """Tudo que o jogador le naquele embed, numa string."""
+    partes = [e.title or "", e.description or ""]
+    for campo in e.fields:
+        partes += [campo.name, campo.value]
+    return "\n".join(partes)
+
+
+def caso_buffs_lista_so_o_que_esta_aceso():
+    """A legenda responde o que esta na tela, e nao o catalogo inteiro."""
+    e = E.buffs({1: {"medo": 2}}, {1: "Mira"})
+    assert len(e.fields) == 1, [c.name for c in e.fields]
+    campo = e.fields[0]
+    assert C.POR_ID["medo"].icone in campo.name and "Medo" in campo.name, campo.name
+    # O texto do catalogo (o de UM stack) e a conta de quem empilhou.
+    assert "-2 em todo save" in campo.value, campo.value
+    assert "Mira ×2" in campo.value and "-4 em saves" in campo.value, campo.value
+    # E nada do que ninguem carrega: senao a legenda vira o catalogo de novo.
+    texto = _texto_do_embed(e)
+    for cid in ("coragem", "bencao", "exaustao"):
+        assert C.POR_ID[cid].nome not in texto, cid
+    print("  a legenda dos emoji traz so o que esta aceso: ok")
+
+
+def caso_buffs_junta_os_emoji_de_dois_sentidos():
+    """💫 e Perturbacao E atordoado: agrupado por emoji, os dois saem juntos.
+
+    E o motivo de agrupar assim. Por pessoa, quem visse o 💫 na linha do outro
+    continuaria sem saber qual dos dois era — e sao coisas bem diferentes:
+    uma cobra -2 nos testes por varias salas, a outra tira a vez agora.
+    """
+    tonto = motor.Combatente(2, "Dorn", 15, 0, "1d1", 40, 40, atordoado=True)
+    estado = motor.EstadoCombate([], 1, [tonto])
+    e = E.buffs({1: {"perturbacao": 1}}, {1: "Mira"}, estado)
+    assert len(e.fields) == 1, [c.name for c in e.fields]
+    campo = e.fields[0]
+    assert campo.name.startswith(C.POR_ID["perturbacao"].icone), campo.name
+    assert "Perturbação" in campo.name and "Atordoado" in campo.name, campo.name
+    assert "Mira" in campo.value and "Dorn" in campo.value, campo.value
+    print("  o emoji que serve a dois sentidos sai com os dois: ok")
+
+
+def caso_buffs_do_caido_nao_promete_marca():
+    """Quem esta no chao aparece so como caido: as marcas dele nao valem."""
+    no_chao = motor.Combatente(1, "Kael", 15, 0, "1d1", 40, 0, reducao_dano=0.5)
+    e = E.buffs({}, {}, motor.EstadoCombate([], 1, [no_chao]))
+    nomes = [campo.name for campo in e.fields]
+    assert len(nomes) == 1 and "Caído" in nomes[0], nomes
+    assert E.MARCA_PROTEGIDO not in _texto_do_embed(e), nomes
+    print("  o caido nao leva marca de escudo na legenda: ok")
+
+
+def caso_buffs_sem_nada_diz_que_nao_ha_nada():
+    e = E.buffs({1: {"medo": 0}}, {1: "Mira"})
+    assert not e.fields, [c.name for c in e.fields]
+    assert "Nenhum emoji aceso" in (e.description or ""), e.description
+    print("  sem nada aceso, a legenda diz isso em vez de vir vazia: ok")
+
+
+def caso_a_marca_do_painel_sai_da_mesma_tabela():
+    """O painel e a legenda leem de `E.MARCAS`, para nao divergirem.
+
+    Uma marca acrescentada so no painel acenderia sem explicacao em lugar
+    nenhum — e quem a visse nao teria onde perguntar.
+    """
+    protegido = motor.Combatente(1, "Kael", 15, 0, "1d1", 40, 40, reducao_plana=3)
+    assert E.MARCA_PROTEGIDO in E._marcas_do_combatente(protegido)
+    assert E.MARCA_PROTEGIDO in _texto_do_embed(
+        E.buffs({}, {}, motor.EstadoCombate([], 1, [protegido]))
+    )
+    # E toda marca da tabela tem nome e explicacao.
+    for emoji, nome, texto, _aceso in E.MARCAS + E.ESTADOS:
+        assert emoji and nome and texto.endswith("."), (emoji, nome, texto)
+    print("  painel e legenda leem a mesma tabela de marcas: ok")
+
+
 def caso_painel_diz_quem_ficou_com_quanto():
     """O painel nomeia cada um com o stack DELE, e não um número para todos."""
     titulo, corpo = E.painel_da_condicao(
@@ -429,6 +505,48 @@ async def caso_a_sala_deixa_o_painel_da_condicao():
     print("  a sala perdida deixa a maldição em painel próprio: ok")
 
 
+async def caso_o_comando_de_buffs_le_do_banco():
+    """`/incursao buffs` sai com o que o banco guardou, e com o nome da ficha.
+
+    A sala perdida acabou de gravar um debuff em todo mundo; o comando tem de
+    nomear a condicao, dizer o que ela cobra e dizer em quem esta — sem que o
+    jogador precise saber o id dela nem abrir a planilha.
+    """
+    conn, canal, cog = await preparar(
+        [sala(f"S{i}", "Armadilha", cd=IMPOSSIVEL, alvo_progresso=99,
+              pericias=["Percepção"]) for i in range(1, 7)]
+    )
+    run = await montar_run(conn, canal, cog)
+    alvo, run = await abrir_sala(conn, canal, cog, run)
+    msg = await canal.fetch_message(run["mensagem_id"])
+    for user_id in JOGADORES:
+        atual = await db.buscar_run(conn, run["id"])
+        if atual["status"] != "em_sala":
+            break
+        await cog.rolar(FakeInteraction(canal, user_id, msg), run["id"], alvo.id)
+
+    carregadas = await db.condicoes_da_run(conn, run["id"])
+    debuff = next(iter(next(iter(carregadas.values()))))
+    nomes = {
+        p["user_id"]: p["nome"] for p in await db.personagens_da_run(conn, run["id"])
+    }
+
+    inter = FakeInteraction(canal, JOGADORES[0], msg)
+    await cog.buffs.callback(cog, inter)
+    saida = await inter.original_response()
+    assert saida is not None and saida.embeds, inter.resposta
+    texto = _texto_do_embed(saida.embeds[0])
+    condicao = C.POR_ID[debuff]
+    assert condicao.icone in texto and condicao.nome in texto, texto
+    assert condicao.texto in texto, texto
+    for quem in nomes.values():
+        assert quem in texto, (quem, texto)
+
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  /incursao buffs le as condicoes do banco e nomeia as fichas: ok")
+
+
 async def caso_evento_vencido_nao_deixa_debuff_em_ninguem():
     """A prova no banco: Evento vencido com uma falha no dado, e nada de ruim.
 
@@ -753,6 +871,11 @@ async def caso_inimigos_mostram_barra_sem_valor_de_hp():
 
 async def main():
     caso_efeito_somado_faz_a_conta()
+    caso_buffs_lista_so_o_que_esta_aceso()
+    caso_buffs_junta_os_emoji_de_dois_sentidos()
+    caso_buffs_do_caido_nao_promete_marca()
+    caso_buffs_sem_nada_diz_que_nao_ha_nada()
+    caso_a_marca_do_painel_sai_da_mesma_tabela()
     caso_painel_diz_quem_ficou_com_quanto()
     caso_painel_de_um_so_nao_fala_do_grupo()
     caso_painel_avisa_o_teto()
@@ -765,6 +888,7 @@ async def main():
     await caso_o_cartao_vai_marcando_quem_rolou()
     await caso_quem_esta_caido_nao_entra_na_conta()
     await caso_a_sala_deixa_o_painel_da_condicao()
+    await caso_o_comando_de_buffs_le_do_banco()
     await caso_evento_vencido_nao_deixa_debuff_em_ninguem()
     await caso_evento_perdido_cobra_de_quem_passou_tambem()
     await caso_stack_e_por_personagem_e_nao_do_ultimo_do_laco()

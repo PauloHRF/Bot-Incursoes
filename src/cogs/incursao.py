@@ -6366,6 +6366,39 @@ class Incursoes(commands.Cog):
             )
         )
 
+    @grupo.command(
+        name="buffs",
+        description="O que cada emoji que o grupo carrega agora quer dizer",
+    )
+    async def buffs(self, interaction: discord.Interaction) -> None:
+        """A legenda do que está aceso, e não o catálogo inteiro.
+
+        A pergunta que ele responde nasce de olhar o painel: aparece um
+        símbolo na linha de alguém e ninguém sabe o que ele cobra. Um catálogo
+        de treze condições mais as marcas de combate não responde isso — manda
+        o jogador procurar. Então entra só o que está na tela agora.
+
+        Público, como o `/incursao status`: a dúvida é do grupo, e a resposta
+        em privado faria o próximo perguntar de novo.
+        """
+        run = await self._run_do_contexto(interaction, exigir_participante=False)
+        if not run:
+            return
+        sala = await self._sala_corrente(run)
+        estado = (
+            await self._estado_combate(run, sala)
+            if sala is not None and sala.e_combate
+            else None
+        )
+        await interaction.response.send_message(
+            embed=E.buffs(
+                await db.condicoes_da_run(self.bot.db, run["id"]),
+                # Nomes de PERSONAGEM: a legenda fala do que cada ficha tem.
+                await self._nomes(run),
+                estado,
+            )
+        )
+
     @grupo.command(name="desistir", description="Propõe abandonar a incursão (precisa de maioria)")
     async def desistir(self, interaction: discord.Interaction) -> None:
         run = await self._run_do_contexto(interaction)

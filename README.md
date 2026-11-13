@@ -136,6 +136,7 @@ O desenho de tudo isso, e do que ainda falta, está em
 | `/incursao atacar` | Ataca o primeiro inimigo de pé, na sua vez da iniciativa (mesmo efeito do botão) |
 | `/incursao habilidade` | Abre o menu das suas habilidades ativas |
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
+| `/incursao buffs` | A legenda dos emoji que o grupo tem **agora**: o que cada um faz e em quem está |
 | `/incursao substituir <jogador> [acao] [alvo]` | Age no lugar de quem travou o combate, com o acordo da maioria dos outros |
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
 | `/incursao encerrar <pagar> <devolver_vaga>` | (admin) Encerra a run do canal, pagando ou não as salas vencidas |
@@ -513,6 +514,13 @@ Depois disso, no **painel de combate**, ao lado do HP de cada um, só com os íc
 (`😨×2`). Em **`/incursao status`**, com o nome e a contagem de cada condição. E na hora em
 que a condição decai, numa linha no canal — penalidade invisível é penalidade que a mesa
 não entende.
+
+E quando o ícone sozinho não basta, **`/incursao buffs`** é a legenda do que está aceso
+naquele momento: cada emoji, o que ele cobra e quem o tem. Agrupado por **emoji**, e não
+por pessoa, porque é essa a pergunta — e porque três símbolos servem a dois sentidos cada
+(`✨` é Benção e é Abençoado, `💫` é Perturbação e é atordoado, `🩸` é Deterioração e é
+ameaça extra), de modo que ali os dois aparecem juntos em vez de o jogador adivinhar qual
+é o dele. Só entra o que está na tela: o catálogo inteiro não responde nada.
 
 ### O prêmio do Evento
 
