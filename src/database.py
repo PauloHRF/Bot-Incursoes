@@ -1827,6 +1827,33 @@ async def resolver_turno(
     return cur.rowcount > 0
 
 
+async def desfazer_turno(
+    conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int, user_id: int
+) -> Optional[dict[str, Any]]:
+    """Tira da mesa a ação guardada que ainda não saiu, e devolve o que ela era.
+
+    É a mesma reivindicação de `resolver_turno`, do outro lado: o
+    `resolvida = 0` no `WHERE` faz do `DELETE` a decisão, então quem leva a
+    linha é o único que desfaz. Quem chegar depois lê None e sabe que a ação
+    já virou dano — e dano não se desfaz.
+
+    O que a ação tinha reservado (o uso da habilidade, a poção que saiu da
+    bolsa) **não** volta aqui: volta em quem chama, pelo mesmo caminho de
+    quando a vez não chega. Esta função só decide quem manda na linha.
+    """
+    turno = await turno_de(conn, run_id, passo, rodada, user_id)
+    if not turno or turno["resolvida"]:
+        return None
+    cur = await conn.execute(
+        "DELETE FROM run_turnos"
+        " WHERE run_id = ? AND passo = ? AND rodada = ? AND user_id = ?"
+        "   AND resolvida = 0",
+        (run_id, passo, rodada, user_id),
+    )
+    await conn.commit()
+    return turno if cur.rowcount else None
+
+
 async def _apagar_substituicoes(
     conn: aiosqlite.Connection, run_id: int, passo: int, alvo_id: int
 ) -> None:

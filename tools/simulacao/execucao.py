@@ -75,9 +75,9 @@ class _Combate(Incursoes):
         self.profundidade = 0
         self.limite_atingido = False
 
-    async def _avancar(self, run, sala, interaction=None):
+    async def _avancar(self, run, sala, interaction=None, trocada=None):
         try:
-            return await super()._avancar(run, sala, interaction)
+            return await super()._avancar(run, sala, interaction, trocada)
         except _LimiteDeRodadas:
             self.limite_atingido = True
 

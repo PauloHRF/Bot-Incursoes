@@ -12,6 +12,16 @@ Cada personagem faz **uma** coisa por rodada, e o painel tem os três botões qu
 
 Três coisas fogem disso, e as três são a razão de existirem: a **reação** (dispara sozinha no gatilho, sem consumir a vez), o **Quickened Spell** do feiticeiro (a magia sai como ação de bônus e o turno fica livre) e a **Poção da Aceleração** (beber não custa a ação). Ver `mercado.md` para as poções.
 
+## Preparar a ação, e mudar de ideia
+
+Clicar antes da sua vez **guarda** a ação: ela sai quando a iniciativa chegar em você. Isso é o normal, não a exceção — o painel é uma mensagem só para o grupo inteiro, e cada um clica quando vê.
+
+Enquanto a ação está guardada, **clicar de novo troca**. A escolha anterior sai da mesa e a nova entra, e o que a antiga tinha reservado volta: o uso da habilidade, a poção que já havia saído da bolsa. É a mesma devolução de quando a vez não chega (`_devolver_reservas`), pelo mesmo motivo — a ação não aconteceu.
+
+Depois de a ação **sair**, não há o que trocar: dano não se desfaz. Aí o aviso volta a ser o de sempre, dizendo com o que o turno foi gasto.
+
+Isso também é como quem foi substituído retoma a vez: a ação que o grupo escolheu por ele fica guardada como qualquer outra, então ele aparecer e clicar desfaz a do grupo.
+
 ## O ataque
 
 **1d20 + acerto** contra a CA do alvo. O acerto e o dano saem da tabela da classe no tier, com o equipamento do mercado já somado.

@@ -2312,18 +2312,24 @@ class Incursoes(commands.Cog):
             return
 
         passo = self._passo(run)
-        gasto = await db.acao_do_turno(
-            self.bot.db, run_id, passo, estado.rodada, interaction.user.id
+        gasto = await self._turno_ja_resolvido(
+            run_id, passo, estado.rodada, interaction.user.id
         )
-        if gasto or not await db.marcar_turno(
+        if gasto:
+            await self._dizer(interaction, self._turno_gasto(gasto))
+            return
+        # A ação que ele tinha preparado sai da mesa para esta entrar.
+        trocada = await self._trocar_acao_guardada(
+            run, passo, estado.rodada, interaction.user.id
+        )
+        if not await db.marcar_turno(
             self.bot.db, run_id, passo, estado.rodada, interaction.user.id, "ataque",
             alvos=[alvo.indice] if alvo_indice is not None else [],
             resolvida=False,
         ):
-            await self._dizer(interaction, 
-                self._turno_gasto(gasto or "ataque"))
+            await self._dizer(interaction, self._turno_gasto("ataque"))
             return
-        await self._avancar(run, sala, interaction)
+        await self._avancar(run, sala, interaction, trocada)
 
     async def _resolver_ataque(
         self, run: dict[str, Any], estado: EstadoCombate, user_id: int, alvos: list[int]
@@ -2428,6 +2434,7 @@ class Incursoes(commands.Cog):
         run: dict[str, Any],
         sala: Sala,
         interaction: Optional[discord.Interaction] = None,
+        trocada: Optional[str] = None,
     ) -> None:
         """Anda a iniciativa até precisar de alguém que ainda não escolheu.
 
@@ -2437,7 +2444,9 @@ class Incursoes(commands.Cog):
         Passando do último, a rodada vira e a fila recomeça do topo.
 
         Quem clicou (`interaction`) recebe o resultado se a vez dele chegou
-        agora, ou o aviso de que a ação ficou guardada.
+        agora, ou o aviso de que a ação ficou guardada. `trocada` é o nome da
+        ação que esta substituiu, para o aviso dizer que a troca pegou — a vez
+        que chega na hora não precisa dele, porque o resultado já é a resposta.
         """
         respondido = False
 
@@ -2608,13 +2617,14 @@ class Incursoes(commands.Cog):
             await responder("O combate acabou antes da sua vez.")
             await self._encerrar_combate(encerrar[0], sala, encerrar[1])
             return
+        aviso = f"🔁 Trocou {trocada} por esta. " if trocada else ""
         if esperando:
             await responder(
-                f"Ação guardada: sai quando a iniciativa chegar em você. "
+                f"{aviso}Ação guardada: sai quando a iniciativa chegar em você. "
                 f"Agora é a vez de **{esperando}**."
             )
         else:
-            await responder("Ação guardada.")
+            await responder(f"{aviso}Ação guardada.")
 
     async def _perder_a_vez(
         self, run: dict[str, Any], estado: EstadoCombate, combatente, turno
@@ -3271,6 +3281,63 @@ class Incursoes(commands.Cog):
             f"Você já usou **{nome}** nesta rodada — é uma habilidade **ou** um ataque."
         )
 
+    @staticmethod
+    def _nome_da_acao(acao: str) -> str:
+        """Como a ação guardada se chama numa frase: "o ataque", "**Fireball**"."""
+        if acao == "ataque":
+            return "o ataque"
+        pocao = consumiveis.item(acao)
+        if pocao is not None:
+            return f"**{pocao.nome}**"
+        habilidade = cl.POR_ID.get(acao)
+        return f"**{habilidade.nome}**" if habilidade else f"**{acao}**"
+
+    async def _turno_ja_resolvido(
+        self, run_id: int, passo: int, rodada: int, user_id: int
+    ) -> Optional[str]:
+        """Com o que ele gastou o turno — e só quando já não dá para mudar.
+
+        A ação **guardada** não responde nada aqui, de propósito: ela ainda
+        não aconteceu, então ela não gasta nada que já não possa ser
+        devolvido. O que fecha a porta é a ação resolvida.
+        """
+        turno = await db.turno_de(self.bot.db, run_id, passo, rodada, user_id)
+        if turno and not turno["resolvida"]:
+            return None
+        return await db.acao_do_turno(self.bot.db, run_id, passo, rodada, user_id)
+
+    async def _trocar_acao_guardada(
+        self, run: dict[str, Any], passo: int, rodada: int, user_id: int
+    ) -> Optional[str]:
+        """Tira da mesa a ação preparada, para outra entrar no lugar.
+
+        Preparar antes da vez é o normal, não a exceção: o painel é UMA
+        mensagem para o grupo e todo mundo clica quando vê. Mas a iniciativa
+        chegava nele com a escolha de dois minutos atrás, feita contra uma
+        sala que entretanto mudou de cara — o alvo caiu, o curandeiro ficou em
+        1 de HP, o inimigo que importava acordou. Mudar de ideia não era
+        possível: o jogador lia "você já usou X nesta rodada" e assistia à
+        própria escolha sair errada.
+
+        Agora a escolha guardada é **substituível** até a iniciativa chegar
+        nela. O uso da habilidade e a poção que ela tinha reservado voltam
+        pelo mesmo caminho de quando a vez não chega: a ação não aconteceu, e
+        é só isso que a devolução pergunta.
+
+        Também é por aqui que quem foi substituído retoma a vez: a ação que o
+        grupo escolheu por ele está guardada como qualquer outra, então ele
+        aparecer e clicar desfaz a do grupo. Era o que já se esperava de
+        `marcar_turno`, que mata a proposta aberta quando ele volta ao
+        controle — faltava poder voltar depois de a proposta ter fechado.
+
+        Devolve o nome da ação que saiu, ou None se não havia nada para sair.
+        """
+        turno = await db.desfazer_turno(self.bot.db, run["id"], passo, rodada, user_id)
+        if turno is None:
+            return None
+        await self._devolver_reservas(run, turno, passo)
+        return self._nome_da_acao(turno["acao"])
+
     # ------------------------------------------------------ habilidades
 
     @staticmethod
@@ -3339,15 +3406,15 @@ class Incursoes(commands.Cog):
             )
             return
 
-        # Em combate, quem ja agiu nao abre o menu: o turno e um so.
+        # Em combate, quem ja agiu nao abre o menu: o turno e um so. Quem
+        # apenas PREPAROU abre — o menu e por onde ele troca a escolha.
         incursao = self._incursao_da_run(run)
         sala = await self._sala_corrente(run)
         if sala is not None and sala.e_combate:
             estado = await self._estado_combate(run, sala)
             if estado is not None:
-                gasto = await db.acao_do_turno(
-                    self.bot.db, run_id, self._passo(run), estado.rodada,
-                    interaction.user.id,
+                gasto = await self._turno_ja_resolvido(
+                    run_id, self._passo(run), estado.rodada, interaction.user.id,
                 )
                 if gasto:
                     await interaction.response.send_message(
@@ -3439,14 +3506,14 @@ class Incursoes(commands.Cog):
         # Com o turno gasto só sobra o que não custa ação: a Aceleração. Em vez
         # de recusar o botão inteiro, o menu mostra o que ainda dá — quem já
         # atacou pode beber a Aceleração e ganhar os golpes da próxima rodada.
+        # Quem só preparou vê a bolsa inteira: beber troca o que ele preparou.
         sala = await self._sala_corrente(run)
         gasto = None
         if sala is not None and sala.e_combate:
             estado = await self._estado_combate(run, sala)
             if estado is not None:
-                gasto = await db.acao_do_turno(
-                    self.bot.db, run_id, self._passo(run), estado.rodada,
-                    interaction.user.id,
+                gasto = await self._turno_ja_resolvido(
+                    run_id, self._passo(run), estado.rodada, interaction.user.id,
                 )
         if gasto:
             carregadas = [(p, q) for p, q in carregadas if not p.gasta_turno]
@@ -3555,8 +3622,8 @@ class Incursoes(commands.Cog):
                 return
 
         if estado is not None and pocao.gasta_turno:
-            gasto = await db.acao_do_turno(
-                self.bot.db, run_id, passo, estado.rodada, interaction.user.id
+            gasto = await self._turno_ja_resolvido(
+                run_id, passo, estado.rodada, interaction.user.id
             )
             if gasto:
                 await self._dizer(interaction, self._turno_gasto(gasto))
@@ -3574,6 +3641,11 @@ class Incursoes(commands.Cog):
         if pocao.acao.get("tipo") == "recarga":
             # Resolve na hora, e ainda assim gasta o turno: devolver um uso não
             # tem lugar na iniciativa — não acerta ninguém, não cura ninguém.
+            trocada = None
+            if estado is not None:
+                trocada = await self._trocar_acao_guardada(
+                    run, passo, estado.rodada, interaction.user.id
+                )
             if estado is not None and not await db.marcar_turno(
                 self.bot.db, run_id, passo, estado.rodada, interaction.user.id,
                 pocao.id, resolvida=True,
@@ -3584,6 +3656,8 @@ class Incursoes(commands.Cog):
             texto = await self._resolver_recarga(
                 run, interaction.user.id, habilidade, pocao.acao, escolhida
             )
+            if trocada:
+                texto = f"🔁 {trocada} saiu da vez. {texto}"
             await self._dizer_ou_apagar(run, interaction, texto)
             if estado is not None:
                 # `_avancar`, e nao so redesenhar o painel: a Mana GASTA o
@@ -3608,6 +3682,9 @@ class Incursoes(commands.Cog):
                 await self._atualizar_painel(run, sala, estado)
             return
 
+        trocada = await self._trocar_acao_guardada(
+            run, passo, estado.rodada, interaction.user.id
+        )
         if not await db.marcar_turno(
             self.bot.db, run_id, passo, estado.rodada, interaction.user.id,
             pocao.id, resolvida=False,
@@ -3615,7 +3692,7 @@ class Incursoes(commands.Cog):
             await db.devolver_item(self.bot.db, personagem["id"], pocao.id)
             await self._dizer(interaction, self._turno_gasto("ataque"))
             return
-        await self._avancar(run, sala, interaction)
+        await self._avancar(run, sala, interaction, trocada)
 
     async def usar_habilidade(
         self,
@@ -3690,12 +3767,11 @@ class Incursoes(commands.Cog):
         # Em combate o personagem age uma vez por rodada: ou ataca, ou usa uma
         # habilidade. Reacao nao passa por aqui — dispara sozinha.
         if estado is not None:
-            gasto = await db.acao_do_turno(
-                self.bot.db, run_id, passo, estado.rodada, interaction.user.id
+            gasto = await self._turno_ja_resolvido(
+                run_id, passo, estado.rodada, interaction.user.id
             )
             if gasto:
-                await self._dizer(interaction, 
-                    self._turno_gasto(gasto))
+                await self._dizer(interaction, self._turno_gasto(gasto))
                 return
 
         # Falta escolher em quem: abre o segundo menu antes de gastar o uso.
@@ -3751,6 +3827,11 @@ class Incursoes(commands.Cog):
             await self._atualizar_painel(atual, sala, depois or estado)
             return
 
+        # Depois de o uso estar gasto, e nao antes: se os usos tivessem
+        # acabado, desfazer a escolha anterior deixaria o jogador sem nenhuma.
+        trocada = await self._trocar_acao_guardada(
+            run, passo, estado.rodada, interaction.user.id
+        )
         if not await db.marcar_turno(
             self.bot.db, run_id, passo, estado.rodada, interaction.user.id,
             habilidade.id, alvos=alvos, resolvida=False,
@@ -3759,10 +3840,9 @@ class Incursoes(commands.Cog):
                 self.bot.db, run_id, interaction.user.id, habilidade.chave_de_uso,
                 self._chave_de_recarga(habilidade, run, passo),
             )
-            await self._dizer(interaction, 
-                self._turno_gasto("ataque"))
+            await self._dizer(interaction, self._turno_gasto("ataque"))
             return
-        await self._avancar(run, sala, interaction)
+        await self._avancar(run, sala, interaction, trocada)
 
     async def _resolver_habilidade(
         self, run: dict[str, Any], estado, user_id: int, habilidade, alvos: list[int]

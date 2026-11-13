@@ -191,10 +191,13 @@ async def caso_acao_fora_da_vez_fica_guardada():
     assert agora.inimigos[0].hp_atual == antes.inimigos[0].hp_atual
     assert await situacao(conn, cog, run) == (1, 0)
 
-    # quem ja escolheu nao escolhe de novo
+    # e quem ja escolheu pode TROCAR: a guardada sai da mesa e a nova entra,
+    # porque ela ainda nao aconteceu
     repetido = FakeInteraction(canal, segundo)
     await cog.atacar(repetido, run["id"], "OBJ")
-    assert "já atacou" in repetido.resposta, repetido.resposta
+    assert "Trocou o ataque" in repetido.resposta, repetido.resposta
+    turno = await db.turno_de(conn, run["id"], passo, 1, segundo)
+    assert turno["acao"] == "ataque" and not turno["resolvida"]
 
     # o primeiro age: o golpe dele sai, o guardado sai logo depois, o monstro
     # age e a rodada vira, esperando de novo pelo primeiro
@@ -208,6 +211,80 @@ async def caso_acao_fora_da_vez_fica_guardada():
     assert ataques[0]["user_id"] == primeiro, ataques
     assert await situacao(conn, cog, run) == (2, 0)
     print("  a acao escolhida fora da vez fica guardada e sai na ordem: ok")
+
+
+async def caso_a_acao_preparada_pode_mudar():
+    """Preparar nao e assinar: ate a vez chegar, a escolha ainda e dele.
+
+    O painel e UMA mensagem para o grupo, e todo mundo clica quando ve — so
+    que a iniciativa chegava nele com a escolha de dois minutos atras, contra
+    uma sala que entretanto mudou de cara. A troca devolve o que a escolha
+    anterior tinha reservado: o uso da habilidade volta inteiro.
+    """
+    primeiro, segundo = JOGADORES[0], JOGADORES[1]
+    ordem_fixa(("p", primeiro), ("p", segundo), ("i", 0))
+    conn, canal, cog, incursao, run = await preparar(
+        monstro=PARADO, classe="barbaro"
+    )
+    run = await abrir(conn, cog, incursao, run)
+    passo = cog._passo(run)
+
+    # ele prepara a Rage, fora da vez: o uso sai na escolha
+    await cog.usar_habilidade(FakeInteraction(canal, segundo), run["id"], "OBJ", "rage")
+    assert sum((await db.usos_da_run(conn, run["id"], segundo)).values()) == 1
+
+    # e muda de ideia: o ataque entra no lugar e o uso da Rage volta
+    trocou = FakeInteraction(canal, segundo)
+    await cog.atacar(trocou, run["id"], "OBJ")
+    assert "Trocou **Rage**" in trocou.resposta, trocou.resposta
+    turno = await db.turno_de(conn, run["id"], passo, 1, segundo)
+    assert turno["acao"] == "ataque" and not turno["resolvida"], turno
+    assert sum((await db.usos_da_run(conn, run["id"], segundo)).values()) == 0
+
+    # a vez chega: sai o ataque, e a Rage trocada nao liga
+    await cog.atacar(FakeInteraction(canal, primeiro), run["id"], "OBJ")
+    ligados = await db.efeitos_ativos(conn, run["id"], passo, 0)
+    assert not any(e["efeito"] == "rage" for e in ligados), ligados
+    ataques = await db.ataques_da_rodada(conn, run["id"], passo, 1)
+    assert {a["user_id"] for a in ataques} == {primeiro, segundo}, ataques
+    print("  a acao preparada pode mudar, e a reserva da antiga volta: ok")
+
+
+async def caso_a_acao_que_ja_saiu_nao_se_troca():
+    """Dano nao se desfaz: trocar vale so enquanto a acao esta guardada.
+
+    E a recusa tem de ser a de quem SABE o que ele gastou — "voce ja usou
+    Rage" —, e nao a frase generica do ataque: e por ela que se ve que a
+    guarda olhou o turno dele, em vez de a chave primaria ter aparado o
+    segundo clique por acidente.
+    """
+    primeiro, segundo = JOGADORES[0], JOGADORES[1]
+    ordem_fixa(("p", primeiro), ("i", 0), ("p", segundo))
+    conn, canal, cog, incursao, run = await preparar(
+        monstro=PARADO, classe="barbaro"
+    )
+    run = await abrir(conn, cog, incursao, run)
+    passo = cog._passo(run)
+
+    # a vez dele e agora, entao a Rage SAI em vez de ficar guardada
+    inter = FakeInteraction(canal, primeiro)
+    await cog.usar_habilidade(inter, run["id"], "OBJ", "rage")
+    ligados = await db.efeitos_ativos(conn, run["id"], passo, 0)
+    assert any(e["efeito"] == "rage" and e["alvo_id"] == primeiro for e in ligados)
+    assert (await db.turno_de(conn, run["id"], passo, 1, primeiro))["resolvida"]
+
+    de_novo = FakeInteraction(canal, primeiro)
+    await cog.atacar(de_novo, run["id"], "OBJ")
+    assert "já usou **Rage**" in de_novo.resposta, de_novo.resposta
+    bateu = [
+        a for a in await db.ataques_da_rodada(conn, run["id"], passo, 1)
+        if a["user_id"] == primeiro and a["origem"] == "turno"
+    ]
+    assert not bateu, bateu
+    # e a Rage continua ligada: a recusa nao desfez nada
+    ligados = await db.efeitos_ativos(conn, run["id"], passo, 0)
+    assert any(e["efeito"] == "rage" for e in ligados), ligados
+    print("  a acao que ja saiu nao se troca: ok")
 
 
 async def caso_monstro_entre_jogadores():
@@ -468,6 +545,8 @@ async def main():
         await caso_rolagem_de_verdade_no_combate()
         await caso_monstro_no_topo_age_sem_clique()
         await caso_acao_fora_da_vez_fica_guardada()
+        await caso_a_acao_preparada_pode_mudar()
+        await caso_a_acao_que_ja_saiu_nao_se_troca()
         await caso_monstro_entre_jogadores()
         await caso_habilidade_guardada_sai_na_vez()
         await caso_anuncio_da_habilidade_sai_no_fim_do_turno()
