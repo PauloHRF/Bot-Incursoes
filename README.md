@@ -517,10 +517,23 @@ não entende.
 
 E quando o ícone sozinho não basta, **`/incursao buffs`** é a legenda do que está aceso
 naquele momento: cada emoji, o que ele cobra e quem o tem. Agrupado por **emoji**, e não
-por pessoa, porque é essa a pergunta — e porque três símbolos servem a dois sentidos cada
-(`✨` é Benção e é Abençoado, `💫` é Perturbação e é atordoado, `🩸` é Deterioração e é
-ameaça extra), de modo que ali os dois aparecem juntos em vez de o jogador adivinhar qual
-é o dele. Só entra o que está na tela: o catálogo inteiro não responde nada.
+por pessoa, porque é essa a pergunta — procurar por pessoa obriga a achar primeiro de quem
+é a linha, que é justamente o que quem pergunta não sabe. Só entra o que está na tela: o
+catálogo inteiro não responde nada.
+
+### As marcas do combate, e por que não repetem condição
+
+Ao lado do HP, o painel acende o que está **ligado** naquele personagem: `🛡️` o dano que
+chega está sendo cortado, `🎯` os ataques dele saem com vantagem, `💠` CA a mais ou cura a
+cada turno, `❗` alguma habilidade ligada está puxando a atenção dos inimigos. E os dois
+estados: `⚰️` caído (`☠️` quando é criatura, que não volta) e `😵` atordoado.
+
+Nenhuma dessas marcas pode repetir ícone de condição, porque as duas famílias dividem a
+**mesma linha**. Três repetiam — `✨` era Benção e era Abençoado, `🩸` era Deterioração e
+era ameaça, `💫` era Perturbação e era atordoado — e o jogador lia a coisa errada sem ter
+como saber: um `✨` prometia +1 em ataques quando era CA. Quem cedeu foram as **marcas**,
+não as condições: as condições são o vocabulário da planilha, que a mesa já decorou. Há
+teste guardando a regra.
 
 ### O prêmio do Evento
 

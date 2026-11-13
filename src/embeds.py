@@ -622,14 +622,17 @@ def buffs(
     """O que cada emoji ACESO agora quer dizer, e em quem ele está.
 
     Agrupado por emoji, e não por pessoa, porque é essa a pergunta que ele
-    responde: "o que é esse símbolo no painel?". Agrupar assim tem um efeito
-    de lado que vale por si — três emoji servem a dois significados cada
-    (✨ é Benção e é Abençoado, 💫 é Perturbação e é atordoado, 🩸 é
-    Deterioração e é ameaça extra), e neste formato os dois sentidos aparecem
-    juntos, em vez de o jogador adivinhar qual é o dele.
+    responde: "o que é esse símbolo no painel?". Procurar por pessoa obriga a
+    achar primeiro de quem é a linha, que é justamente o que quem pergunta
+    não sabe.
 
     Só entra o que está aceso. O catálogo inteiro não responde nada: a
     pergunta nasce de olhar a linha de alguém e não reconhecer uma marca.
+
+    Um emoji continua podendo juntar dois sentidos aqui, e os dois saem no
+    mesmo campo. Hoje nenhum junta — nenhuma marca repete ícone de condição,
+    e há teste guardando isso —, mas o formato não depende disso para ler
+    bem, e é o que segura o dia em que o vocabulário crescer.
     """
     from . import condicoes
 
@@ -847,13 +850,28 @@ def resumo_do_golpe(golpes: list[tuple]) -> str:
 
 
 # Marcas dos efeitos com prazo, para o grupo ver o que esta ligado.
+#
+# NENHUMA delas pode repetir o ícone de uma condição de `condicoes.CATALOGO`:
+# as duas famílias dividem a MESMA linha de HP, e repetir faz o jogador ler a
+# coisa errada. Três repetiam — ✨ era Benção e era Abençoado, 🩸 era
+# Deterioração e era ameaça, 💫 era Perturbação e era atordoado —, e quem
+# cedeu foram as marcas, porque as condições são o vocabulário da planilha,
+# que a mesa já decorou. `tests/test_telas.py` guarda a regra.
 MARCA_ALVO = "🎯"
 MARCA_PROTEGIDO = "🛡️"
-MARCA_ABENCOADO = "✨"
+MARCA_ABENCOADO = "💠"
 # Ameaça acima da da classe: alguma habilidade LIGADA está chamando a
 # atenção. Não acende pelo que o personagem gerou agindo — isso todo mundo
 # faz, e a marca em todos não diria nada (ver `Combatente.ameaca_gerada`).
-MARCA_AMEACA = "🩸"
+MARCA_AMEACA = "❗"
+# Caído e atordoado também são marcas, e também precisavam de nome: o painel,
+# a ordem da iniciativa e as linhas do log escreviam cada um o seu, então
+# trocar um deixava os outros para trás.
+MARCA_CAIDO = "⚰️"
+MARCA_ATORDOADO = "😵"
+# A criatura que cai está ABATIDA, e o personagem fica caído: a criatura não
+# volta, e é por isso que são dois símbolos e não um.
+MARCA_ABATIDO = "☠️"
 
 
 def golpes_da_criatura(m) -> str:
@@ -878,7 +896,7 @@ def golpes_da_criatura(m) -> str:
 def _linha_inimigo(i, marcado: bool = False) -> str:
     """Uma criatura no painel: barra de HP enquanto está de pé."""
     if i.caido:
-        return f"☠️ ~~{i.nome}~~ — abatido"
+        return f"{MARCA_ABATIDO} ~~{i.nome}~~ — abatido"
     alvo = f"{MARCA_ALVO} " if marcado else ""
     return (
         f"👹 {alvo}**{i.nome}** {barra(i.hp_atual, i.hp_max, 8)} "
@@ -888,7 +906,8 @@ def _linha_inimigo(i, marcado: bool = False) -> str:
             if getattr(i, "golpes", None)
             else f"{fmt(i.ataque)} · {i.dano}"
         )
-        + (" 💫 *atordoado*" if getattr(i, "atordoado", False) else "")
+        + (f" {MARCA_ATORDOADO} *atordoado*"
+           if getattr(i, "atordoado", False) else "")
     )
 
 
@@ -924,12 +943,12 @@ MARCAS: tuple[tuple[str, str, str, Any], ...] = (
 # `/incursao buffs` porque sao emoji que o grupo tem na tela.
 ESTADOS: tuple[tuple[str, str, str, Any], ...] = (
     (
-        "💀", "Caído",
+        MARCA_CAIDO, "Caído",
         "Está no chão: fora do combate até alguém levantar com uma cura.",
         lambda c: c.hp_atual <= 0,
     ),
     (
-        "💫", "Atordoado",
+        MARCA_ATORDOADO, "Atordoado",
         "Perde a vez desta rodada.",
         lambda c: getattr(c, "atordoado", False),
     ),
@@ -968,9 +987,9 @@ def linha_de_ameaca(combatentes) -> str:
 
 def _linha_hp(c, carregadas: Optional[dict[str, int]] = None) -> str:
     if c.hp_atual <= 0:
-        return f"💀 ~~{c.nome}~~ — caído"
+        return f"{MARCA_CAIDO} ~~{c.nome}~~ — caído"
     if getattr(c, "atordoado", False):
-        atordoado = " 💫 *atordoado*"
+        atordoado = f" {MARCA_ATORDOADO} *atordoado*"
     else:
         atordoado = ""
     # A vida temporaria entra antes do HP, entao aparece separada.
@@ -1066,7 +1085,11 @@ def _linha_iniciativa(
         emoji = "🧝"
     nome = entrada["nome"]
     if quem is not None and quem.caido:
-        return f"💀 {rolagem} ~~{nome}~~"
+        # A lista mistura criatura e personagem, entao ela diz QUAL dos dois
+        # caiu: a criatura esta abatida e nao volta, o personagem esta no chao
+        # e uma cura o levanta.
+        caiu = MARCA_ABATIDO if entrada["tipo"] == "inimigo" else MARCA_CAIDO
+        return f"{caiu} {rolagem} ~~{nome}~~"
     if encerrado:
         return f"{emoji} {rolagem} {nome}"
     if posicao < vez:
@@ -1077,7 +1100,8 @@ def _linha_iniciativa(
         marca = "▫️"
     extra = ""
     if getattr(quem, "atordoado", False):
-        extra = " — 💫 perdeu a vez" if posicao < vez else " — 💫 perde a vez"
+        quando = "perdeu" if posicao < vez else "perde"
+        extra = f" — {MARCA_ATORDOADO} {quando} a vez"
     elif entrada["tipo"] != "inimigo" and posicao >= vez:
         turno = (turnos or {}).get(entrada["alvo_id"])
         if turno is not None:

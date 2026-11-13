@@ -94,22 +94,59 @@ def caso_buffs_lista_so_o_que_esta_aceso():
     print("  a legenda dos emoji traz so o que esta aceso: ok")
 
 
-def caso_buffs_junta_os_emoji_de_dois_sentidos():
-    """💫 e Perturbacao E atordoado: agrupado por emoji, os dois saem juntos.
+def caso_nenhum_emoji_da_linha_tem_dois_sentidos():
+    """Na linha de HP, um símbolo = uma coisa. Três repetiam, e doía.
 
-    E o motivo de agrupar assim. Por pessoa, quem visse o 💫 na linha do outro
-    continuaria sem saber qual dos dois era — e sao coisas bem diferentes:
-    uma cobra -2 nos testes por varias salas, a outra tira a vez agora.
+    As condições de sala e as marcas de combate dividem a MESMA linha, e três
+    ícones serviam aos dois lados: ✨ era Benção e era Abençoado, 🩸 era
+    Deterioração e era ameaça extra, 💫 era Perturbação e era atordoado. O
+    jogador lia a coisa errada e não tinha como saber — um `✨` prometia +1
+    em ataques quando era CA, e um `🩸` prometia -10% de HP máximo quando era
+    o inimigo olhando para ele.
+
+    Quem cedeu foram as MARCAS, e não as condições: as condições são o
+    vocabulário da planilha, que a mesa já decorou.
+
+    Ficam fora deste cerco os ícones que nunca aparecem nesta linha: o tipo da
+    sala (`EMOJI_TIPO`, no cartão da sala e no caminho) e a Organização
+    (`EMOJI_ORG`, no cartão da incursão e no placar) — a Guilda dos Mortos
+    continua 💀 sem conflitar com a Perdição, porque as duas não se encontram
+    em tela nenhuma.
     """
+    sentidos: dict[str, list[str]] = {}
+    for emoji, nome in (
+        [(c.icone, f"condição {c.nome}") for c in C.CATALOGO]
+        + [(emoji, f"marca {nome}") for emoji, nome, _t, _a in E.MARCAS]
+        + [(emoji, f"estado {nome}") for emoji, nome, _t, _a in E.ESTADOS]
+        + [(E.MARCA_ABATIDO, "criatura abatida")]
+    ):
+        sentidos.setdefault(emoji, []).append(nome)
+    repetidos = {e: quais for e, quais in sentidos.items() if len(quais) > 1}
+    assert not repetidos, repetidos
+    print("  na linha de HP, cada emoji quer dizer uma coisa só: ok")
+
+
+def caso_buffs_junta_dois_sentidos_do_mesmo_emoji():
+    """O formato ainda junta, para o dia em que o vocabulário crescer.
+
+    Hoje nenhum emoji tem dois sentidos (ver o caso acima), então a prova é
+    com uma marca inventada: entrando no mesmo ícone de uma condição, os dois
+    saem no MESMO campo, em vez de o segundo sumir ou abrir campo repetido.
+    """
+    medo = C.POR_ID["medo"]
     tonto = motor.Combatente(2, "Dorn", 15, 0, "1d1", 40, 40, atordoado=True)
-    estado = motor.EstadoCombate([], 1, [tonto])
-    e = E.buffs({1: {"perturbacao": 1}}, {1: "Mira"}, estado)
+    guardadas = E.ESTADOS
+    E.ESTADOS = ((medo.icone, "Inventado", "Marca de teste.", lambda c: True),)
+    try:
+        e = E.buffs({1: {"medo": 1}}, {1: "Mira"}, motor.EstadoCombate([], 1, [tonto]))
+    finally:
+        E.ESTADOS = guardadas
     assert len(e.fields) == 1, [c.name for c in e.fields]
     campo = e.fields[0]
-    assert campo.name.startswith(C.POR_ID["perturbacao"].icone), campo.name
-    assert "Perturbação" in campo.name and "Atordoado" in campo.name, campo.name
+    assert campo.name.startswith(medo.icone), campo.name
+    assert "Medo" in campo.name and "Inventado" in campo.name, campo.name
     assert "Mira" in campo.value and "Dorn" in campo.value, campo.value
-    print("  o emoji que serve a dois sentidos sai com os dois: ok")
+    print("  um emoji com dois sentidos sai com os dois no mesmo campo: ok")
 
 
 def caso_buffs_do_caido_nao_promete_marca():
@@ -872,7 +909,8 @@ async def caso_inimigos_mostram_barra_sem_valor_de_hp():
 async def main():
     caso_efeito_somado_faz_a_conta()
     caso_buffs_lista_so_o_que_esta_aceso()
-    caso_buffs_junta_os_emoji_de_dois_sentidos()
+    caso_nenhum_emoji_da_linha_tem_dois_sentidos()
+    caso_buffs_junta_dois_sentidos_do_mesmo_emoji()
     caso_buffs_do_caido_nao_promete_marca()
     caso_buffs_sem_nada_diz_que_nao_ha_nada()
     caso_a_marca_do_painel_sai_da_mesma_tabela()

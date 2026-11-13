@@ -2634,7 +2634,11 @@ class Incursoes(commands.Cog):
         O uso de uma habilidade escolhida volta — ela não chegou a acontecer.
         """
         if combatente is not None and combatente.atordoado and not combatente.caido:
-            self._registrar(run, estado.rodada, [f"💫 {combatente.nome} está atordoado e perde a vez"])
+            self._registrar(
+                run,
+                estado.rodada,
+                [f"{E.MARCA_ATORDOADO} {combatente.nome} está atordoado e perde a vez"],
+            )
         if not turno or turno["resolvida"]:
             return
         passo = self._passo(run)
@@ -3032,7 +3036,11 @@ class Incursoes(commands.Cog):
     ) -> None:
         """A criatura age: ataca ou conjura, e o que ela fez vai para o log."""
         if inimigo.atordoado:
-            self._registrar(run, estado.rodada, [f"💫 {inimigo.nome} está atordoado e perde a vez"])
+            self._registrar(
+                run,
+                estado.rodada,
+                [f"{E.MARCA_ATORDOADO} {inimigo.nome} está atordoado e perde a vez"],
+            )
             return
         feito = motor.turno_do_inimigo(inimigo, estado, None)
         if feito.regenerou:
@@ -4102,7 +4110,7 @@ class Incursoes(commands.Cog):
         cabeca = f"✨ **{habilidade.nome}** (CD {cd})"
         texto = cabeca + "\n" + "\n".join(f"· {l}" for l in linhas)
         if caidos:
-            texto += f"\n💀 caem: {', '.join(caidos)}"
+            texto += f"\n{E.MARCA_ABATIDO} caem: {', '.join(caidos)}"
         await self._anunciar_habilidade(run, texto)
         return texto
 

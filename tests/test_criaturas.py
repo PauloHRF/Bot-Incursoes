@@ -9,7 +9,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import config, database as db, motor  # noqa: E402
+from src import config, database as db, embeds as E, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
 from src.incursoes import (  # noqa: E402
     ATAQUE,
@@ -360,7 +360,9 @@ async def caso_atordoamento_no_combate():
     linha_do_preso = next(
         linha for linha in campos["Iniciativa"].split("\n") if preso.nome in linha
     )
-    assert "💫" in linha_do_preso, campos["Iniciativa"]
+    # Pela constante, e nao pelo emoji solto: trocar a marca do painel nao
+    # deve derrubar um caso que fala do ATORDOAMENTO.
+    assert E.MARCA_ATORDOADO in linha_do_preso, campos["Iniciativa"]
 
     # o golpe de quem sobrou fecha a rodada sozinho
     inter = FakeInteraction(canal, livre.user_id)

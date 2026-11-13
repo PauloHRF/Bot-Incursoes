@@ -93,7 +93,7 @@ O tanque segue o tanque, o curandeiro sobe (é o motivo clássico de ele precisa
 
 Em `run_efeitos`, sem coluna nova: a chave de lá é `(run, passo, alvo, efeito)`, que é exatamente o escopo — a acumulação vale pelo combate e morre quando o grupo troca de sala, porque o `passo` muda. A soma é um UPSERT dentro do banco, não em Python, porque dois jogadores clicando junto leriam o mesmo valor antes de qualquer um escrever.
 
-O campo é **separado** do que as habilidades somam. No mesmo campo, a marca 🩸 do painel — que quer dizer "tem algo ligado chamando atenção" — apareceria em todo mundo que já agiu, e deixaria de dizer nada.
+O campo é **separado** do que as habilidades somam. No mesmo campo, a marca ❗ do painel — que quer dizer "tem algo ligado chamando atenção" — apareceria em todo mundo que já agiu, e deixaria de dizer nada.
 
 ## Imunidade e alcance
 
