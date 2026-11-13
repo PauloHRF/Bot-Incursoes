@@ -11,7 +11,14 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import ameaca, classes as cl, config, database as db, motor  # noqa: E402
+from src import (  # noqa: E402
+    ameaca,
+    classes as cl,
+    config,
+    database as db,
+    embeds as E,
+    motor,
+)
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
@@ -177,6 +184,30 @@ def caso_motor_pesa_pela_ameaca():
     assert abs(obtido - esperado) < 1.5, (obtido, esperado)
     assert contagem["Apoio"] > 0, "o apoio nunca fica imune"
     print(f"  o inimigo mira o tanque em {obtido:.0f}% dos golpes (uniforme seria 50%): ok")
+
+
+def caso_painel_mostra_a_fatia_com_o_fator():
+    """O painel promete o numero que DECIDE, e o fator decide junto.
+
+    Sem o fator a linha mentia exatamente para quem gastou uma acao se
+    protegendo: o mago com Fly lia 25% e era sorteado com 6%. A fatia da tela
+    tem de ser a mesma que `sortear_alvo` usa.
+    """
+    tanque = combatente("Tanque", 6, user_id=1)
+    mago = combatente("Mago", 2, user_id=2)
+    clerigo = combatente("Clerigo", 3, user_id=3)
+    mesa = [tanque, mago, clerigo]
+    mago.ameaca_fator = 0.2  # voando
+
+    linha = E.linha_de_ameaca(mesa)
+    reais = ameaca.porcentagens(ameaca.de_quem(mesa), ameaca.fatores_de(mesa))
+    for quem, fatia in zip(mesa, reais):
+        assert f"{quem.nome} {fatia:.0f}%" in linha, (quem.nome, fatia, linha)
+    # E a fatia dele ficou de fato pequena: sem o fator daria uns 25%.
+    assert reais[1] < 10, reais
+    sem_fator = ameaca.porcentagens(ameaca.de_quem(mesa))
+    assert sem_fator[1] > 20, sem_fator
+    print("  a fatia do painel e a mesma que o sorteio usa, fator incluido: ok")
 
 
 def caso_caido_sai_do_bolo():
@@ -364,6 +395,7 @@ async def main():
         caso_sorteio_bate_com_a_formula()
         caso_sorteio_sem_reposicao()
         caso_motor_pesa_pela_ameaca()
+        caso_painel_mostra_a_fatia_com_o_fator()
         caso_caido_sai_do_bolo()
         caso_atordoado_ainda_tem_prioridade_sobre_ameaca()
         caso_habilidade_soma_na_ameaca()

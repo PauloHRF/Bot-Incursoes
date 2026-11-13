@@ -971,13 +971,20 @@ def linha_de_ameaca(combatentes) -> str:
     As fatias ANDAM durante o combate: cada ação gera ameaça, então quem cura
     e quem estoura área vai puxando atenção. É de propósito que o painel
     mostre isso rodada a rodada.
+
+    **Com os fatores**, e não só com a ameaça crua. Sem eles a linha mentia
+    exatamente para quem gastou uma ação se protegendo: o mago com Fly lia
+    25% e era sorteado com 6%. O painel promete ser o número que decide, e o
+    número que decide inclui o fator — é por ele que `sortear_alvo` passa.
     """
     from . import ameaca
 
     de_pe = [c for c in combatentes if c.hp_atual > 0]
     if len(de_pe) < 2:
         return ""
-    fatias = ameaca.porcentagens([c.ameaca_total for c in de_pe])
+    fatias = ameaca.porcentagens(
+        ameaca.de_quem(de_pe), ameaca.fatores_de(de_pe)
+    )
     partes = [
         f"{c.nome} {fatia:.0f}%{MARCA_AMEACA if c.ameaca_extra > 0 else ''}"
         for c, fatia in sorted(zip(de_pe, fatias), key=lambda par: -par[1])
