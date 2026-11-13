@@ -41,6 +41,14 @@ O número de cada classe está em `docs/FICHAS.md`.
 
 A criatura do bestiário traz os saves escritos. A criatura de sala escrita à mão em geral não traz, e aí o bot deduz: **ataque − 3**. Os dois caminhos recebem o ajuste de tier, para o bestiário e o conteúdo escrito à mão não resistirem de formas diferentes.
 
+## A área rola um dado só
+
+O sopro do dragão, a bola de fogo, o estouro que pega a sala inteira: **a rolagem é uma, e todo mundo debaixo dela enfrenta o mesmo número**. O que continua por pessoa é o que é da pessoa — o save, a metade de quem passou, a redução de dano e a vida temporária.
+
+Rolando por alvo, a mesma baforada dava cinco números diferentes, e com cinco alvos a chance de *alguém* tirar perto do máximo virava quase certa: o efeito ficava mais forte só por haver mais gente para acertar. A regra vale nas duas direções — criatura contra o grupo (`motor.usar_habilidade_do_inimigo`) e magia de área contra a sala (`alvos: "todos"`, e o `dano_em_todos` dos Guerreiros Anciões).
+
+**O multiataque é o contrário.** Quando a habilidade rola *ataque* em vez de impor save, cada alvo leva um golpe **seu**, com acerto e dano próprios: ali são vários golpes, não um efeito. O mesmo vale para o alvo extra do feiticeiro, que é uma segunda conjuração de uma magia de alvo único.
+
 ## Vida temporária (THP)
 
 A THP absorve dano antes do HP, e **empilha**: receber uma nova soma na que já havia, em vez de substituir.

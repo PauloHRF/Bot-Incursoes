@@ -3926,6 +3926,22 @@ class Incursoes(commands.Cog):
         if not mirados:
             return "Nao ha inimigo de pe para a habilidade."
 
+        # UM dado para a sala inteira, quando a magia e uma AREA. A bola de
+        # fogo cai uma vez: o que muda de criatura para criatura e quem
+        # resistiu, nao quanto fogo veio. Rolando por alvo, a mesma magia dava
+        # um numero para cada goblin, e quanto mais goblins houvesse maior a
+        # chance de ALGUM levar perto do maximo — a magia ficava mais forte so
+        # por haver mais gente embaixo dela.
+        #
+        # O alvo extra do feiticeiro e outra coisa: ali uma magia de alvo unico
+        # pega um segundo alvo, e cada um leva um lancamento SEU, com dado
+        # proprio, como o multiataque da criatura.
+        dado_da_area: int | None = None
+        if acao.get("alvos") == "todos" and acao.get("dano"):
+            dado_da_area = motor.rolar_dano(acao["dano"])
+            if dado_extra:
+                dado_da_area += motor.rolar_dano(dado_extra)
+
         linhas: list[str] = []
         caidos: list[str] = []
         for inimigo in mirados:
@@ -3945,10 +3961,12 @@ class Incursoes(commands.Cog):
 
             sofridos: list[str] = []
             if acao.get("dano"):
-                cheio = motor.rolar_dano(acao["dano"])
-                # Empowered Spell: um dado a mais em toda magia dele.
-                if dado_extra:
-                    cheio += motor.rolar_dano(dado_extra)
+                cheio = dado_da_area
+                if cheio is None:
+                    cheio = motor.rolar_dano(acao["dano"])
+                    # Empowered Spell: um dado a mais em toda magia dele.
+                    if dado_extra:
+                        cheio += motor.rolar_dano(dado_extra)
                 levou = cheio if not passou else (cheio // 2 if acao.get("metade") else 0)
                 if levou:
                     inimigo.hp_atual = max(0, inimigo.hp_atual - levou)
@@ -4393,8 +4411,11 @@ class Incursoes(commands.Cog):
 
         if acao.get("dano_em_todos"):
             caiu = []
+            # Uma rolagem para a sala, pelo mesmo motivo de _resolver_save: o
+            # estouro e um, e cobrar um dado por cabeca faria dele uma coisa
+            # mais forte em sala cheia.
+            levou = motor.rolar_dano(acao["dano_em_todos"])
             for inimigo in list(estado.inimigos_vivos):
-                levou = motor.rolar_dano(acao["dano_em_todos"])
                 inimigo.hp_atual = max(0, inimigo.hp_atual - levou)
                 if inimigo.caido:
                     caiu.append(inimigo.nome)
@@ -4402,7 +4423,7 @@ class Incursoes(commands.Cog):
                 self.bot.db, run["id"], passo,
                 {i.indice: i.hp_atual for i in estado.inimigos},
             )
-            linhas.append(f"**{acao['dano_em_todos']}** em todos os inimigos")
+            linhas.append(f"**{levou}** em todos os inimigos")
             if caiu:
                 linhas.append(f"caem: {', '.join(caiu)}")
 

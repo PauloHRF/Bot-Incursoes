@@ -4,13 +4,20 @@ versão que custa 20 de THP."""
 from __future__ import annotations
 
 import asyncio
+import random
 import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes as cl, config, database as db, motor  # noqa: E402
+from src import (  # noqa: E402
+    aleatorio,
+    classes as cl,
+    config,
+    database as db,
+    motor,
+)
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     leu,
@@ -172,10 +179,11 @@ async def caso_guerreiros_ancioes_versao_de_20_thp():
     # 20 de THP na mao: a versao grande fica disponivel
     await db.definir_thp(conn, run["id"], dono, 25)
     estado = await cog._estado_combate(run, incursao.objetivo)
-    antes = sum(i.hp_atual for i in estado.inimigos)
+    antes = {i.indice: i.hp_atual for i in estado.inimigos}
 
     inter = FakeInteraction(canal, dono)
-    await cog.usar_habilidade(inter, run["id"], "OBJ", "guerreiros_ancioes")
+    with aleatorio.usar(random.Random(5)):
+        await cog.usar_habilidade(inter, run["id"], "OBJ", "guerreiros_ancioes")
     estado = await cog._estado_combate(
         await db.buscar_run(conn, run["id"]), incursao.objetivo
     )
@@ -185,10 +193,14 @@ async def caso_guerreiros_ancioes_versao_de_20_thp():
     for c in estado.vivos:
         assert c.critico_em == 1, (c.nome, c.critico_em)
         assert c.dano_bonus == "1d10+5", (c.nome, c.dano_bonus)
-    # e os inimigos levaram 8d6 cada
-    depois = sum(i.hp_atual for i in estado.inimigos)
-    assert antes - depois >= 16, (antes, depois)
-    assert "20%" in leu(inter) and "8d6" in leu(inter), leu(inter)
+    # e os inimigos levaram 8d6 — UM 8d6, o mesmo para a sala inteira: o
+    # estouro e um, e um dado por cabeca faria dele uma coisa maior em sala
+    # cheia. A linha diz o numero que saiu, agora que existe um numero.
+    quedas = {antes[i.indice] - i.hp_atual for i in estado.inimigos}
+    assert len(quedas) == 1, f"um estouro, um dado: {quedas}"
+    levou = quedas.pop()
+    assert 8 <= levou <= 48, levou
+    assert "20%" in leu(inter) and f"**{levou}**" in leu(inter), leu(inter)
     print("  com 20 de THP a habilidade cobra 20 e sai na forma grande: ok")
 
 

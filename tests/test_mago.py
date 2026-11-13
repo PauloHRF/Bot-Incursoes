@@ -12,7 +12,14 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import ameaca, classes as cl, config, database as db, motor  # noqa: E402
+from src import (  # noqa: E402
+    aleatorio,
+    ameaca,
+    classes as cl,
+    config,
+    database as db,
+    motor,
+)
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     leu,
@@ -215,6 +222,33 @@ async def caso_fireball_pega_todos():
     print("  Fireball cobra save de DES de todos, com metade no sucesso: ok")
 
 
+async def caso_a_bola_de_fogo_e_uma_so():
+    """Um dado para a sala: o que muda de criatura para criatura e o save.
+
+    Rolando 8d6 por inimigo, a mesma magia dava um numero para cada um — e
+    quanto mais gente na sala, maior a chance de ALGUM levar perto do maximo,
+    de modo que a magia rendia mais so por haver mais alvos. Os danos agora
+    cabem em dois valores: o cheio de quem falhou e a metade de quem passou.
+    """
+    conn, canal, cog, incursao, run = await preparar(
+        escolhas={"magia_mago_t3": "fireball"}, monstros=3
+    )
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    antes = {i.indice: i.hp_atual for i in estado.inimigos}
+
+    inter = FakeInteraction(canal, JOGADORES[0])
+    with aleatorio.usar(random.Random(31)):
+        await cog.usar_habilidade(inter, run["id"], "OBJ", "fireball")
+    estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
+                                       incursao.objetivo)
+    levados = sorted({antes[i.indice] - i.hp_atual for i in estado.inimigos})
+    assert 8 <= levados[-1] <= 48, levados  # 8d6, e ninguem morre: o saco tem 500
+    assert len(levados) <= 2, f"um dado, logo no maximo o cheio e a metade: {levados}"
+    if len(levados) == 2:
+        assert levados[0] == levados[-1] // 2, levados
+    print("  a bola de fogo rola um dado para a sala, nao um por inimigo: ok")
+
+
 async def caso_hold_monster_prende_tres_rodadas():
     conn, canal, cog, incursao, run = await preparar(
         escolhas={"magia_mago_t5": "hold_monster"}
@@ -364,6 +398,7 @@ async def main():
         caso_cantrip_e_o_ataque_basico()
         await caso_magic_missile_sempre_acerta()
         await caso_fireball_pega_todos()
+        await caso_a_bola_de_fogo_e_uma_so()
         await caso_hold_monster_prende_tres_rodadas()
         await caso_fly_tira_tres_de_alcance()
         caso_fly_reduz_sem_zerar()

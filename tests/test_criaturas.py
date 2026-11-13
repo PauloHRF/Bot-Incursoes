@@ -11,7 +11,12 @@ sys.path.insert(0, str(RAIZ))
 
 from src import config, database as db, motor  # noqa: E402
 from src.cogs.incursao import Incursoes  # noqa: E402
-from src.incursoes import ErroDeValidacao, de_dict  # noqa: E402
+from src.incursoes import (  # noqa: E402
+    ATAQUE,
+    ErroDeValidacao,
+    HabilidadeDoMonstro,
+    de_dict,
+)
 from fakes import (  # noqa: E402
     CANAL,
     GUILD,
@@ -242,6 +247,64 @@ def caso_varios_alvos():
     alvos = motor.sortear_alvos(estado, 2, random.Random(4))
     assert grupo[0] not in alvos, "prefere quem ainda pode agir"
     print("  a habilidade pega varios alvos, sem repetir ninguem: ok")
+
+
+def caso_um_sopro_um_dado():
+    """O sopro sai uma vez: um dado para a mesa, e o resto por pessoa.
+
+    Rolando por alvo, a mesma baforada dava cinco numeros diferentes — e com
+    cinco gargantas embaixo dela a chance de ALGUEM tirar perto do maximo
+    virava quase certa, entao o efeito ficava mais forte so por haver mais
+    gente para acertar. O que continua por pessoa e tudo que e da pessoa: o
+    save, a metade de quem passou, a reducao e a vida temporaria.
+    """
+    def mesa():
+        """Um que escapa sempre, um nu, um couracado e um com escudo."""
+        return [
+            motor.Combatente(1, "Esquiva", 15, 0, "1d1", 300, 300, saves={"DES": 50}),
+            motor.Combatente(2, "Nu", 15, 0, "1d1", 300, 300, saves={"DES": -50}),
+            motor.Combatente(3, "Pelado", 15, 0, "1d1", 300, 300, saves={"DES": -50}),
+            motor.Combatente(4, "Couraca", 15, 0, "1d1", 300, 300,
+                             saves={"DES": -50}, reducao_plana=7),
+            motor.Combatente(5, "Escudado", 15, 0, "1d1", 300, 300,
+                             saves={"DES": -50}, thp=400),
+        ]
+
+    sopro = HabilidadeDoMonstro(
+        nome="Baforada", save="DES", cd=14, dano="10d12", alvos=5, metade=True,
+    )
+    grupo = mesa()
+    dragao = motor.Inimigo(0, "Dragao", 18, 9, "2d10+5", 180, 180, habilidade=sopro)
+    estado = motor.EstadoCombate([dragao], 2, grupo)
+    investidas = motor.usar_habilidade_do_inimigo(dragao, estado, random.Random(11))
+    quem = {i.alvo.nome: i for i in investidas}
+    assert len(quem) == 5, "o sopro pega a mesa inteira"
+
+    cheio = quem["Nu"].dano
+    assert 10 <= cheio <= 120, cheio
+    # UM dado: quem falhou e nao tem desconto leva exatamente o mesmo numero.
+    assert quem["Pelado"].dano == cheio, (quem["Pelado"].dano, cheio)
+    # E o que e da pessoa continua da pessoa.
+    assert quem["Esquiva"].dano == cheio // 2, "passou: metade do MESMO dado"
+    assert quem["Couraca"].dano == cheio - 7, "a reducao e dela, nao do sopro"
+    assert quem["Escudado"].absorvido == cheio and grupo[4].hp_atual == 300
+
+    # A habilidade que ROLA ATAQUE e outra coisa: ali cada alvo leva um golpe
+    # SEU, com acerto e dano proprios, como em qualquer multiataque. Mesa de
+    # cinco iguais, para que a unica diferenca possivel seja o dado.
+    pancada = HabilidadeDoMonstro(
+        nome="Patada", save=ATAQUE, cd=0, dano="10d12", alvos=5,
+    )
+    iguais = [
+        motor.Combatente(i, f"P{i}", 10, 0, "1d1", 300, 300) for i in range(1, 6)
+    ]
+    troll = motor.Inimigo(0, "Troll", 15, 40, "2d10", 90, 90, habilidade=pancada)
+    golpes = motor.usar_habilidade_do_inimigo(
+        troll, motor.EstadoCombate([troll], 2, iguais), random.Random(11)
+    )
+    assert len(golpes) == 5 and all(g.dano for g in golpes), "o troll acerta todos"
+    assert len({g.dano for g in golpes}) > 1, "cada golpe tem o dado dele"
+    print("  o sopro rola um dado para a mesa; o multiataque, um por alvo: ok")
 
 
 def caso_vantagem_da_criatura():
@@ -476,6 +539,7 @@ async def main():
         caso_multiataque_e_investida()
         caso_save_decide_a_investida()
         caso_varios_alvos()
+        caso_um_sopro_um_dado()
         caso_vantagem_da_criatura()
         await caso_atordoamento_no_combate()
         await caso_grupo_todo_preso_nao_trava()

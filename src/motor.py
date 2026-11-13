@@ -1057,10 +1057,22 @@ def usar_habilidade_do_inimigo(
         return []
     alvos = sortear_alvos(estado, habilidade.alvos, rng)
     if e_ataque(habilidade):
-        # Rolagem de ataque: a Matilha vale aqui como vale nos golpes.
+        # Rolagem de ataque é outra coisa: cada alvo leva um golpe SEU, com
+        # acerto e dano próprios, como qualquer multiataque. O dado único
+        # abaixo é do efeito de área, não do ataque múltiplo.
         vantagem = tem_matilha(inimigo, estado)
         return [investir_atacando(inimigo, habilidade, a, rng, vantagem) for a in alvos]
-    return [impor_save(inimigo, habilidade, alvo, rng) for alvo in alvos]
+    # UM dado para a mesa inteira. O sopro é um sopro: ele sai uma vez, e o
+    # que muda de pessoa para pessoa é quem resistiu — não quanto fogo veio.
+    # Rolando por alvo, a mesma baforada dava cinco números diferentes, e com
+    # cinco alvos a chance de ALGUÉM tirar perto do máximo virava quase certa:
+    # o efeito ficava mais forte quanto mais gente houvesse para acertar.
+    #
+    # O que continua por alvo é tudo que é da pessoa: o save, a redução de
+    # dano, a vida temporária e a metade de quem passou. A rolagem é
+    # compartilhada; o que ela custa, não.
+    cheio = rolar_dano(habilidade.dano, rng) if habilidade.dano else None
+    return [impor_save(inimigo, habilidade, alvo, rng, cheio) for alvo in alvos]
 
 
 def tem_matilha(inimigo: Inimigo, estado: EstadoCombate) -> bool:
@@ -1108,11 +1120,19 @@ def investir_atacando(
 
 
 def impor_save(
-    inimigo: Inimigo, efeito: Any, alvo: Combatente, rng: Optional[random.Random] = None
+    inimigo: Inimigo,
+    efeito: Any,
+    alvo: Combatente,
+    rng: Optional[random.Random] = None,
+    dano_rolado: Optional[int] = None,
 ) -> Investida:
     """Um alvo rola o save de um efeito da criatura e sofre o que falhar.
 
     Quem passa escapa inteiro, ou leva metade do dano se o efeito disser.
+
+    `dano_rolado` é o dado que JÁ saiu, quando o efeito pega mais de um alvo:
+    o sopro é um só, e todo mundo debaixo dele enfrenta o mesmo número. Sem
+    ele — efeito de alvo único, como a garra que paralisa — a rolagem é aqui.
     """
     resultado = salvar_combatente(alvo, efeito.save, efeito.cd, rng)
     investida = Investida(inimigo.nome, efeito.nome, alvo, resultado)
@@ -1120,7 +1140,7 @@ def impor_save(
     # diga "metade no sucesso".
     meia_entra = getattr(efeito, "metade", False) and not alvo.save_anula
     if efeito.dano and (not resultado.passou or meia_entra):
-        cheio = rolar_dano(efeito.dano, rng)
+        cheio = rolar_dano(efeito.dano, rng) if dano_rolado is None else dano_rolado
         investida.dano_no_sucesso = reduzido(alvo, cheio // 2) if meia_entra else 0
         sofrido = reduzido(alvo, cheio if not resultado.passou else cheio // 2)
         investida.dano = sofrido
