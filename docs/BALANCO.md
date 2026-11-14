@@ -112,31 +112,32 @@ Espalhamento por tier:
 
 Num grupo de cinco onde os outros quatro estão no piso.
 
-| Classe | Ameaça | Abertura | +5 (rodada média) | +10 (rodada boa) |
+| Classe | Ameaça | Abertura | +5 (rodada média) | +9 (rodada boa) |
 |---|---|---|---|---|
-| Bárbaro | 12 | 38.0% | 42.2% | 45.3% |
-| Guerreiro | 12 | 38.0% | 42.2% | 45.3% |
-| Paladino | 10 | 35.9% | 40.6% | 44.2% |
-| Patrulheiro | 8 | 33.3% | 38.9% | 42.9% |
-| Xamã | 8 | 33.3% | 38.9% | 42.9% |
-| Druida | 8 | 33.3% | 38.9% | 42.9% |
-| Monge | 6 | 30.2% | 37.0% | 41.4% |
-| Clérigo | 6 | 30.2% | 37.0% | 41.4% |
-| Bruxo | 6 | 30.2% | 37.0% | 41.4% |
-| Artífice | 4 | 26.1% | 34.7% | 39.8% |
-| Mago | 4 | 26.1% | 34.7% | 39.8% |
-| Feiticeiro | 4 | 26.1% | 34.7% | 39.8% |
-| Bardo | 4 | 26.1% | 34.7% | 39.8% |
-| Ladino | 2 | 20.0% | 31.9% | 38.0% |
+| Bárbaro | 12 | 38.0% | 42.2% | 44.8% |
+| Guerreiro | 12 | 38.0% | 42.2% | 44.8% |
+| Paladino | 10 | 35.9% | 40.6% | 43.5% |
+| Patrulheiro | 8 | 33.3% | 38.9% | 42.2% |
+| Xamã | 8 | 33.3% | 38.9% | 42.2% |
+| Druida | 8 | 33.3% | 38.9% | 42.2% |
+| Monge | 6 | 30.2% | 37.0% | 40.6% |
+| Clérigo | 6 | 30.2% | 37.0% | 40.6% |
+| Bruxo | 6 | 30.2% | 37.0% | 40.6% |
+| Artífice | 4 | 26.1% | 34.7% | 38.9% |
+| Mago | 4 | 26.1% | 34.7% | 38.9% |
+| Feiticeiro | 4 | 26.1% | 34.7% | 38.9% |
+| Bardo | 4 | 26.1% | 34.7% | 38.9% |
+| Ladino | 2 | 20.0% | 31.9% | 37.0% |
 
 O uniforme seria 20%. A abertura é só a classe; as outras duas
 colunas são a mesma classe depois de uma rodada em que ela moveu HP.
 A ameaça do HP movido vale **uma rodada** e esfria, então a tabela não
 acumula: ela mostra o teto de uma rodada, não o fim do combate.
 
-Os `+5` e `+10` saem do medidor: a ação média move 8,9% da
-poça do lado afetado e a de p90 move 17,6%, que a escala
-(55) converte nesses pontos.
+Os `+5` e `+9` saem da medição de 2026-11-14
+(8135 ações): a ação média move 8.2%
+da poça do lado afetado e a de p90 move 17.2%, que a
+escala (55) converte nesses pontos.
 
 ## Perícia: melhor modificador por tier
 

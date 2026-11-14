@@ -38,7 +38,7 @@ from src.incursoes import MAX_INIMIGOS, monstros_de_criatura  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
 
 from tools.simulacao import grupos, medidor  # noqa: E402
-from tools.simulacao.grupos import mesa_azarada  # noqa: E402
+from tools.simulacao.estatisticas import mesa_azarada  # noqa: E402
 from tools.simulacao import regua  # noqa: E402
 
 # O alvo. Ver o cabeçalho: é intenção de design, e por isso mora aqui em cima

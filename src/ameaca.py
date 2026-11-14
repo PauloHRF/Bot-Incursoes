@@ -146,17 +146,20 @@ def de_ferido(hp_atual: int, hp_max: int) -> int:
 # leva um personagem do grupo 5 de 14,4% para 23,9% da atenção numa mesa de um
 # por grupo — ele encosta no tanque sem passar por cima dele.
 #
-# "Muito boa" é o p90 das ações medidas em `tools/medir_ameaca.py`: a bateria
-# de cenários dos cinco tiers, com mesas sorteadas e os resolvedores reais,
-# deu 19,4% da poça no p90 (7.083 ações), e 10/0,194 ≈ 51 — 55 põe a p90 em
-# 11 pontos, dentro do alvo. A ação MÉDIA move 9,4% e rende 5 pontos; a de p99
-# move 38,2% e rende 21.
+# "Muito boa" é o p90 das ações medidas em `tools/medir_ameaca.py`, que roda a
+# bateria dos cinco tiers com mesas sorteadas e os resolvedores reais. A
+# medição fica gravada em `tools/simulacao/medidas.json`, com a data e o hash
+# do código que a produziu, e os documentos citam DE LÁ — números de medição
+# copiados para dentro de um texto continuam lá depois de o código mudar.
+#
+# Na ordem de grandeza que as medições vêm dando: a ação média move uns 8% da
+# poça e rende 5 pontos, a de p90 move uns 17% e rende 9, a de p99 move uns
+# 35% e rende 19. O alvo de design é a p90 entre 8 e 12 pontos.
 #
 # A premissa da escala única é que a fração não ande com o tier, e ela se
-# sustenta: o p90 varia 2x entre tiers (13,5% no T2, 26,5% no T3), que é
-# ruído de cenário e não tendência. Rodar o medidor de novo depois de mexer em
-# dano de classe, HP de criatura ou tamanho de sala é o jeito de saber se ela
-# continua valendo.
+# sustenta: o p90 varia umas 2x entre tiers, que é ruído de cenário e não
+# tendência. Rodar o medidor de novo depois de mexer em dano de classe, HP de
+# criatura ou tamanho de sala é o jeito de saber se ela continua valendo.
 ESCALA_DO_HP = 55
 
 # O prefixo do efeito que guarda a conta de uma rodada. O número da rodada vai

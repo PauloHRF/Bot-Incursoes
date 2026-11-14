@@ -42,6 +42,7 @@ from src import (  # noqa: E402
 # este arquivo copiar os números daria dois documentos divergindo em silêncio.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import balanco  # noqa: E402
+from tools.simulacao import medidas  # noqa: E402
 
 PASTA = RAIZ / "docs" / "mecanicas"
 
@@ -637,21 +638,42 @@ def ameaca_md() -> str:
         "o **dano que ele evitou** incapacitando uma criatura — o que ela "
         "daria nas rodadas que perdeu —, também em fração do HP do grupo.",
     ])
-    L += [
-        f"A fração vira pontos pela escala, que é **{ameaca.ESCALA_DO_HP}** "
-        "pontos por 100% da poça. Medido na bateria dos cinco tiers com os "
-        "resolvedores reais (`tools/medir_ameaca.py`, 7.083 ações):",
-        "",
-    ]
-    L += tabela(
-        ["Ação", "Fração da poça", "Pontos"],
-        [
-            ["média", "9,4%", str(ameaca.pontos_do_hp(dano=94, hp_dos_inimigos=1000))],
-            ["boa (p90)", "19,4%", str(ameaca.pontos_do_hp(dano=194, hp_dos_inimigos=1000))],
-            ["excepcional (p99)", "38,2%",
-             str(ameaca.pontos_do_hp(dano=382, hp_dos_inimigos=1000))],
-        ],
-    )
+    # A tabela sai da MEDIÇÃO gravada, e não de números copiados para cá: um
+    # número que chega ao documento por cópia continua lá depois de o código
+    # mudar, e ninguém sabe dizer de quando ele é.
+    medida = medidas.de("ameaca_por_acao")
+    if not medida:
+        L += [
+            f"A fração vira pontos pela escala, que é "
+            f"**{ameaca.ESCALA_DO_HP}** pontos por 100% da poça. **Quanto uma "
+            "ação costuma mover ainda não foi medido** — rode "
+            "`tools/medir_ameaca.py`.",
+            "",
+        ]
+    else:
+        L += [
+            f"A fração vira pontos pela escala, que é **{medida['escala']}** "
+            "pontos por 100% da poça. Medido na bateria dos cinco tiers com "
+            f"os resolvedores reais (`tools/medir_ameaca.py`, "
+            f"{medida['acoes']} ações, {medida['quando']}):",
+            "",
+        ]
+        L += tabela(
+            ["Ação", "Fração da poça", "Pontos"],
+            [
+                [rotulo, pct(medida[chave]),
+                 str(ameaca.pontos_do_hp(
+                     dano=round(medida[chave] * 1000), hp_dos_inimigos=1000))]
+                for rotulo, chave in (
+                    ("média", "media"), ("boa (p90)", "p90"),
+                    ("excepcional (p99)", "p99"),
+                )
+            ],
+        )
+        if medidas.esta_velha(medida):
+            L += ["> A medição é de um código anterior a este. Rode "
+                  "`tools/medir_ameaca.py` para saber se ela continua valendo.",
+                  ""]
     L += [
         "**O que conta como controle** é o que tira a vez: atordoamento e "
         "prisão. É a leitura literal de \"não foi dado\" — atrapalhar o "
@@ -671,8 +693,10 @@ def ameaca_md() -> str:
         "alto dominaria: a mesma Fireball tira 90 de uma sala de T1 e 450 de "
         "uma de T5, e o mago de tier 5 teria dez vezes a ameaça do de tier 1 "
         "por fazer exatamente a mesma coisa. Em fração as duas valem igual, e "
-        "é isso que permite uma escala só para o jogo todo — o p90 varia 2x "
-        "entre tiers, que é ruído de cenário e não tendência.",
+        "é isso que permite uma escala só para o jogo todo — o p90 varia "
+        + (f"{medida['espalhamento_entre_tiers']:g}x " if medida
+           and medida.get("espalhamento_entre_tiers") else "pouco ")
+        + "entre tiers, que é ruído de cenário e não tendência.",
         "",
         "**Por que vale uma rodada só.** A regra anterior era valor "
         "*declarado* — a ameaça da própria classe, dobrada em área e cura —, e "

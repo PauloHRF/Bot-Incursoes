@@ -1,0 +1,16 @@
+{
+  "ameaca_por_acao": {
+    "acoes": 8135,
+    "escala": 55,
+    "espalhamento_entre_tiers": 1.98,
+    "media": 0.08191828114340055,
+    "mesas": 12,
+    "p50": 0.059523809523809514,
+    "p90": 0.1716712075468611,
+    "p99": 0.3507834274952919,
+    "quando": "2026-11-14",
+    "repeticoes_por_cenario": 40,
+    "semente": 20261113,
+    "sha256_modelo": "aa2cf7d6d333d2935208d5c73a3c972dff91a62799b56dc695048dd75138e28c"
+  }
+}

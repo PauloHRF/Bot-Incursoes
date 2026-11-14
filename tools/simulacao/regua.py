@@ -49,7 +49,7 @@ ROTULOS = {"facil": "Fácil", "media": "Média", "dificil": "Difícil"}
 #
 # É o PERCENTIL, e não o mínimo: o mínimo de uma amostra afunda conforme ela
 # cresce, então o pior de quarenta sorteios não se compara ao pior de doze.
-# Ver `grupos.mesa_azarada`.
+# Ver `estatisticas.mesa_azarada`.
 PIOR_MESA_MINIMA = 0.80
 
 

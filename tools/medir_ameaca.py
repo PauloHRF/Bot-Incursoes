@@ -40,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from src import ameaca  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
 
-from tools.simulacao import medidor  # noqa: E402
+from tools.simulacao import medidas, medidor  # noqa: E402
 from tools.simulacao.comparacao import carregar_cenarios  # noqa: E402
 
 MESA = 5
@@ -173,6 +173,27 @@ def main() -> int:
         f"ponto(s), a p90 {round(ameaca.ESCALA_DO_HP * geral['p90'])} e a p99 "
         f"{round(ameaca.ESCALA_DO_HP * geral['p99'])}"
     )
+
+    if args.tier:
+        print("\nMedição parcial (um tier): não gravada.")
+        return 0
+    medidas.gravar("ameaca_por_acao", {
+        "acoes": geral["n"],
+        "media": geral["media"],
+        "p50": geral["p50"],
+        "p90": geral["p90"],
+        "p99": geral["p99"],
+        "escala": ameaca.ESCALA_DO_HP,
+        "espalhamento_entre_tiers": (
+            round(max(p90s) / min(p90s), 2) if len(p90s) > 1 else None
+        ),
+        "repeticoes_por_cenario": args.repeticoes,
+        "mesas": COMPOSICOES,
+        "semente": args.semente,
+    })
+    print(f"\nGravado em {medidas.ARQUIVO.relative_to(RAIZ)} — "
+          "`balanco.py` e o gerador de mecânicas leem daí, em vez de o número "
+          "ser copiado à mão para dentro do documento.")
     return 0
 
 

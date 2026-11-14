@@ -15,6 +15,31 @@ def intervalo(vitorias, amostras):
     return min(p, max(0., centro - erro)), max(p, min(1., centro + erro))
 
 
+def mesa_azarada(composicoes) -> float:
+    """A taxa no DÉCIMO PERCENTIL: "uma mesa em dez vai pior que isto".
+
+    E não o mínimo, que é o que se pega primeiro. O mínimo de uma amostra
+    afunda conforme a amostra cresce — quanto mais mesas se sorteia, maior a
+    chance de tirar uma péssima —, então o pior de quarenta sorteios não é
+    comparável ao pior de doze. A MESMA emboscada "piorou" de 93% para 80%
+    só porque foi medida com mais mesas, sem nada ter mudado nela.
+
+    O percentil estima a mesma coisa para qualquer número de sorteios, e é
+    por isso que ele serve para comparar duas medições e para entrar num
+    veredito. O mínimo continua útil para MOSTRAR — a bancada nomeia a pior
+    mesa e diz em quantas lutas ela foi medida —, mas mostrar e decidir são
+    coisas diferentes.
+
+    Mora aqui, e não junto do sorteio das mesas: é estatística, vizinha do
+    Wilson, e quem a usa (o calibrador, a bancada, a régua) não precisa saber
+    como as mesas foram montadas.
+    """
+    taxas = sorted(c["taxa"] for c in composicoes)
+    if len(taxas) < 2:
+        return taxas[0] if taxas else 1.0
+    return statistics.quantiles(taxas, n=10)[0]
+
+
 def resumir(resultados):
     if not resultados:
         raise ValueError("Nenhum combate para resumir.")

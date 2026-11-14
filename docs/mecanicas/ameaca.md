@@ -42,19 +42,19 @@ Uma régua só para as três coisas que um personagem faz numa luta, cada uma me
 - a **cura** que ele deu (HP e vida temporária), em fração do HP máximo do grupo;
 - o **dano que ele evitou** incapacitando uma criatura — o que ela daria nas rodadas que perdeu —, também em fração do HP do grupo.
 
-A fração vira pontos pela escala, que é **55** pontos por 100% da poça. Medido na bateria dos cinco tiers com os resolvedores reais (`tools/medir_ameaca.py`, 7.083 ações):
+A fração vira pontos pela escala, que é **55** pontos por 100% da poça. Medido na bateria dos cinco tiers com os resolvedores reais (`tools/medir_ameaca.py`, 8135 ações, 2026-11-14):
 
 | Ação | Fração da poça | Pontos |
 |---|---|---|
-| média | 9,4% | 5 |
-| boa (p90) | 19,4% | 11 |
-| excepcional (p99) | 38,2% | 21 |
+| média | 8,2% | 5 |
+| boa (p90) | 17,2% | 9 |
+| excepcional (p99) | 35,1% | 19 |
 
 **O que conta como controle** é o que tira a vez: atordoamento e prisão. É a leitura literal de "não foi dado" — atrapalhar o ataque da criatura ou virá-la contra os seus seriam palpites sobre dano que ainda pode acontecer. E o que ela daria é o dado **dela** vezes a chance de passar da armadura de quem está na frente, porque o dano real também erra. Prender um Troll por três rodadas numa mesa de tier 5 rende uns 13 pontos: mais que a rodada de p90 de quem bate, e é de propósito — é uma ativa de tier 5, uma vez por descanso.
 
 Conta o **ganho**, não o prazo: estender uma prisão de uma rodada para três vale duas, e renovar uma que já ia até lá vale zero.
 
-**Por que fração, e não o dano cru.** Em números absolutos o tier alto dominaria: a mesma Fireball tira 90 de uma sala de T1 e 450 de uma de T5, e o mago de tier 5 teria dez vezes a ameaça do de tier 1 por fazer exatamente a mesma coisa. Em fração as duas valem igual, e é isso que permite uma escala só para o jogo todo — o p90 varia 2x entre tiers, que é ruído de cenário e não tendência.
+**Por que fração, e não o dano cru.** Em números absolutos o tier alto dominaria: a mesma Fireball tira 90 de uma sala de T1 e 450 de uma de T5, e o mago de tier 5 teria dez vezes a ameaça do de tier 1 por fazer exatamente a mesma coisa. Em fração as duas valem igual, e é isso que permite uma escala só para o jogo todo — o p90 varia 1.98x entre tiers, que é ruído de cenário e não tendência.
 
 **Por que vale uma rodada só.** A regra anterior era valor *declarado* — a ameaça da própria classe, dobrada em área e cura —, e ela acumulava o combate inteiro. Acumulando, a conta convergia: depois de três rodadas as fatias andavam meio ponto e a mira ficava parada no que a classe decidiu na abertura. A janela de uma rodada devolve a variação, e com ela o dano pode entrar sem travar ninguém no teto. O preço, dito de frente: a mira passou a responder ao dado, e não só à escolha.
 

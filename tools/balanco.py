@@ -32,6 +32,7 @@ from src import (  # noqa: E402
     motor,
     rules,
 )
+from tools.simulacao import medidas  # noqa: E402
 
 SAIDA = RAIZ / "docs" / "BALANCO.md"
 RODADAS = 20000
@@ -493,30 +494,49 @@ def documento() -> str:
         )[0]
 
     # O que a AÇÃO acrescenta não vem mais da classe: vem do HP que ela moveu
-    # (ver `mecanicas/ameaca.md`). As duas colunas da direita são a ação média
-    # e a de p90 medidas em `tools/medir_ameaca.py`, em pontos de ameaça.
-    media, p90 = 5, 10
-    L += tabela(
-        ["Classe", "Ameaça", "Abertura", f"+{media} (rodada média)",
-         f"+{p90} (rodada boa)"],
-        [
-            [nome[cid], str(ameaca.inicial(cid)),
-             f"{_com(0, cid):.1f}%", f"{_com(media, cid):.1f}%",
-             f"{_com(p90, cid):.1f}%"]
-            for cid in sorted(cl.CLASSES, key=lambda c: -ameaca.inicial(c))
-        ],
-    )
-    L += [
-        "O uniforme seria 20%. A abertura é só a classe; as outras duas",
-        "colunas são a mesma classe depois de uma rodada em que ela moveu HP.",
-        "A ameaça do HP movido vale **uma rodada** e esfria, então a tabela não",
-        "acumula: ela mostra o teto de uma rodada, não o fim do combate.",
-        "",
-        f"Os `+{media}` e `+{p90}` saem do medidor: a ação média move 8,9% da",
-        f"poça do lado afetado e a de p90 move 17,6%, que a escala",
-        f"({ameaca.ESCALA_DO_HP}) converte nesses pontos.",
-        "",
-    ]
+    # (ver `mecanicas/ameaca.md`). As colunas da direita saem da MEDIÇÃO
+    # gravada por `tools/medir_ameaca.py` — e não de números copiados para cá
+    # à mão, que é o que elas eram e que um documento gerado não deveria ter.
+    medida = medidas.de("ameaca_por_acao")
+    if not medida:
+        L += tabela(
+            ["Classe", "Ameaça", "Abertura"],
+            [
+                [nome[cid], str(ameaca.inicial(cid)), f"{_com(0, cid):.1f}%"]
+                for cid in sorted(cl.CLASSES, key=lambda c: -ameaca.inicial(c))
+            ],
+        )
+        L += ["O uniforme seria 20%. O que uma rodada de HP movido acrescenta",
+              "ainda **não foi medido**: rode `tools/medir_ameaca.py`.", ""]
+    else:
+        media = round(medida["escala"] * medida["media"])
+        p90 = round(medida["escala"] * medida["p90"])
+        L += tabela(
+            ["Classe", "Ameaça", "Abertura", f"+{media} (rodada média)",
+             f"+{p90} (rodada boa)"],
+            [
+                [nome[cid], str(ameaca.inicial(cid)),
+                 f"{_com(0, cid):.1f}%", f"{_com(media, cid):.1f}%",
+                 f"{_com(p90, cid):.1f}%"]
+                for cid in sorted(cl.CLASSES, key=lambda c: -ameaca.inicial(c))
+            ],
+        )
+        L += [
+            "O uniforme seria 20%. A abertura é só a classe; as outras duas",
+            "colunas são a mesma classe depois de uma rodada em que ela moveu HP.",
+            "A ameaça do HP movido vale **uma rodada** e esfria, então a tabela não",
+            "acumula: ela mostra o teto de uma rodada, não o fim do combate.",
+            "",
+            f"Os `+{media}` e `+{p90}` saem da medição de {medida['quando']}",
+            f"({medida['acoes']} ações): a ação média move {medida['media']:.1%}",
+            f"da poça do lado afetado e a de p90 move {medida['p90']:.1%}, que a",
+            f"escala ({medida['escala']}) converte nesses pontos.",
+            "",
+        ]
+        if medidas.esta_velha(medida):
+            L += ["> A medição é de um código anterior a este. Rode",
+                  "> `tools/medir_ameaca.py` para saber se ela continua valendo.",
+                  ""]
 
     # ---------------------------------------------------------- perícia
     L += ["## Perícia: melhor modificador por tier", ""]

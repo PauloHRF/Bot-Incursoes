@@ -33,11 +33,14 @@ mesmo elenco mediu 57,5% com um sorteio e 32,5% com outro. Doze mesas servem
 para olhar uma sala na bancada, onde o que se quer é a ordem de grandeza e a
 pior mesa. Para CALIBRAR, não servem: `tools/calibrar_emboscada.py` sorteia
 quarenta, e quem for escrever número que vai para o jogo deve fazer o mesmo.
+
+O percentil que lê esse espalhamento (`mesa_azarada`) mora em
+`estatisticas.py`, junto do Wilson: é estatística, e quem a usa não
+precisa saber como as mesas foram montadas.
 """
 from __future__ import annotations
 
 import random
-import statistics
 from typing import Iterable
 
 from src import classes
@@ -113,24 +116,3 @@ def sortear(
 def nomes_da_mesa(mesa: Iterable[Ficha]) -> list[str]:
     """As classes da mesa, ordenadas — é como ela aparece na tela."""
     return sorted(f.classe for f in mesa)
-
-
-def mesa_azarada(composicoes) -> float:
-    """A taxa no DÉCIMO PERCENTIL: "uma mesa em dez vai pior que isto".
-
-    E não o mínimo, que é o que se pega primeiro. O mínimo de uma amostra
-    afunda conforme a amostra cresce — quanto mais mesas se sorteia, maior a
-    chance de tirar uma péssima —, então o pior de quarenta sorteios não é
-    comparável ao pior de doze. A MESMA emboscada "piorou" de 93% para 80%
-    só porque foi medida com mais mesas, sem nada ter mudado nela.
-
-    O percentil estima a mesma coisa para qualquer número de sorteios, e é
-    por isso que ele serve para comparar duas medições e para entrar num
-    veredito. O mínimo continua útil para MOSTRAR — a bancada nomeia a pior
-    mesa e diz em quantas lutas ela foi medida —, mas mostrar e decidir são
-    coisas diferentes.
-    """
-    taxas = sorted(c["taxa"] for c in composicoes)
-    if len(taxas) < 2:
-        return taxas[0] if taxas else 1.0
-    return statistics.quantiles(taxas, n=10)[0]

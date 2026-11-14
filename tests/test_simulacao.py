@@ -24,7 +24,8 @@ from src.incursoes import HabilidadeDoMonstro, Monstro, Sala
 from tools.simulacao import grupos
 from tools.simulacao.execucao import Bancada, Ficha, simular_async
 from tools.simulacao.comparacao import carregar_builds, carregar_cenarios, comparar
-from tools.simulacao import medidor
+from tools.simulacao import medidas, medidor
+from tools.simulacao import estatisticas
 from tools.simulacao.estatisticas import intervalo
 from tools.simular_combate import simular
 
@@ -191,7 +192,7 @@ class Mesas(unittest.TestCase):
             for _ in range(400):
                 mesas = [{"taxa": rng.choice(populacao)} for _ in range(n)]
                 minimos.append(min(c["taxa"] for c in mesas))
-                percentis.append(grupos.mesa_azarada(mesas))
+                percentis.append(estatisticas.mesa_azarada(mesas))
             return (sum(minimos) / len(minimos), sum(percentis) / len(percentis))
 
         min_12, p10_12 = medias(12)
@@ -282,6 +283,38 @@ class Interface(unittest.TestCase):
             self.assertEqual([r for r in linhas("a") if r["classe"] == "guerreiro"], linhas("b"))
             self.assertTrue((pasta/"a/experimento.json").exists())
             self.assertTrue((pasta/"a/relatorio.md").exists())
+
+
+class Medidas(unittest.TestCase):
+    """Onde as medicoes ficam guardadas, para os documentos citarem."""
+
+    def test_medicao_gravada_traz_data_e_codigo(self):
+        """Numero medido que chega ao documento por copia nao tem validade.
+
+        Aconteceu: o BALANCO.md ganhou `media, p90 = 5, 10` digitados a mao,
+        dentro de um documento que e gerado justamente para nao ter numero
+        copiado. Quem mede grava, com a data e o hash do codigo; quem gera
+        documento le, e diz "nao medido" quando nao ha medicao.
+        """
+        with tempfile.TemporaryDirectory() as pasta:
+            arquivo = Path(pasta) / "medidas.json"
+            with patch.object(medidas, "ARQUIVO", arquivo):
+                self.assertEqual(medidas.ler(), {})
+                self.assertIsNone(medidas.de("nao_medido"))
+                registro = medidas.gravar("teste", {"p90": 0.17})
+                self.assertEqual(registro["p90"], 0.17)
+                self.assertEqual(len(registro["sha256_modelo"]), 64)
+                self.assertIn("-", registro["quando"])
+                self.assertEqual(medidas.de("teste")["p90"], 0.17)
+                # Medicao de outro codigo nao e "errada": e "ninguem conferiu
+                # que ela continua valendo", e o minimo e dizer isso.
+                self.assertFalse(medidas.esta_velha(medidas.de("teste")))
+                self.assertTrue(
+                    medidas.esta_velha({"sha256_modelo": "de outro codigo"})
+                )
+                # Arquivo corrompido nao derruba quem gera documento.
+                arquivo.write_text("{isto nao e json", encoding="utf-8")
+                self.assertEqual(medidas.ler(), {})
 
 
 class Medidor(unittest.TestCase):

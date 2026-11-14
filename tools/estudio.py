@@ -50,9 +50,7 @@ from src import bestiario, incursoes as I  # noqa: E402
 from src.rules import ATRIBUTOS, PERICIAS, TIER_MAXIMO  # noqa: E402
 from src import classes  # noqa: E402
 from tools.simulacao import regua  # noqa: E402
-# A funcao, e nao o modulo: `grupos` e nome de variavel local em
-# `simular` (os tamanhos de grupo pedidos), e o import sombreava.
-from tools.simulacao.grupos import mesa_azarada  # noqa: E402
+from tools.simulacao.estatisticas import mesa_azarada  # noqa: E402
 
 PAGINA = Path(__file__).resolve().parent / "estudio" / "index.html"
 PASTA_BANCOS = RAIZ / "data" / "bancos"
@@ -474,7 +472,7 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
         mesas = sorted(bruto["composicoes"], key=lambda c: c["taxa"])
         # A pior mesa é para MOSTRAR e o percentil é para DECIDIR: o mínimo de
         # uma amostra afunda conforme ela cresce, então ele nomeia quem sofreu
-        # mas não entra em veredito nenhum. Ver `grupos.mesa_azarada`.
+        # mas não entra em veredito nenhum. Ver `estatisticas.mesa_azarada`.
         azarada = mesa_azarada(bruto["composicoes"]) if len(mesas) > 1 else None
         medidas.append({
             "grupo": tamanho,
