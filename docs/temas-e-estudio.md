@@ -390,6 +390,13 @@ Essas três faixas continuam sendo **proposta minha e esperando calibração**
 contra `docs/BALANCO.md`. O que não é proposta é o método: a sugestão se
 verifica simulando a si mesma, com o motor de verdade.
 
+As faixas moram em `tools/simulacao/regua.py`, e não aqui dentro: a mesma
+régua diz o veredito da **bancada** (a medida sai com o rótulo ao lado da
+porcentagem, em vez de deixar o autor adivinhar se 62% é o que ele queria) e
+o piso da **mesa azarada** que o calibrador da emboscada usa. Há buraco entre
+as faixas de propósito — 82% não é "quase fácil", é uma sala que não foi
+mirada, e dizer isso é mais honesto que arredondar para o vizinho.
+
 E mostra o grupo de 3 junto, não só o de 5: três é o tamanho de mesa comum, e o
 `tools/simular_combate.py` já reporta 5, 4, 3 e 2.
 

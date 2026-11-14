@@ -31,7 +31,7 @@ sys.path.insert(0, str(RAIZ / "tools"))
 from src import bestiario, incursoes as I  # noqa: E402
 
 import sugestor as S  # noqa: E402
-from tools.simulacao import grupos  # noqa: E402
+from tools.simulacao import grupos, regua  # noqa: E402
 
 
 # ---------------------------------------------------- simulador de mentira
@@ -442,9 +442,14 @@ def caso_as_faixas_estao_declaradas_como_proposta():
         assert 0.0 < lo < hi <= 1.0, (nome, lo, hi)
     faixas = [S.FAIXAS_DE_VITORIA[n] for n in ("dificil", "media", "facil")]
     assert faixas == sorted(faixas), "as faixas se cruzaram: difícil tem que ser menor"
-    fonte = (RAIZ / "tools" / "sugestor.py").read_text(encoding="utf-8")
+    # O aviso tem de estar ONDE AS FAIXAS MORAM, que hoje e a regua
+    # compartilhada — o sugeridor so aponta para ela.
+    fonte = (RAIZ / "tools" / "simulacao" / "regua.py").read_text(encoding="utf-8")
     assert "CALIBRAÇÃO" in fonte.upper(), (
         "sumiu o aviso de que as faixas são proposta e precisam de calibração"
+    )
+    assert S.FAIXAS_DE_VITORIA is regua.FAIXAS_DE_VITORIA, (
+        "o sugeridor voltou a ter faixas próprias; elas divergem em silêncio"
     )
     print("  as faixas são crescentes e declaradas como proposta: ok")
 

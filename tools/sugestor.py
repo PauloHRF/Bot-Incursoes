@@ -34,23 +34,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from src import bestiario, classes, incursoes as I  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
-from tools.simulacao import grupos  # noqa: E402
+from tools.simulacao import grupos, regua  # noqa: E402
 
-# A faixa de taxa de vitória de cada dificuldade, para um grupo de 5 no tier
-# da sala — hoje MESAS SORTEADAS, e não cinco cópias de uma classe. A faixa
-# não mudou com isso (ela é alvo, não medida), mas o que ela significa sim:
-# "média" passou a querer dizer 65–80% contra a mesa que vai aparecer, e não
-# contra a mesa mais forte que dava para montar.
-#
-# ESTES NÚMEROS SÃO PROPOSTA E PRECISAM DE CALIBRAÇÃO contra docs/BALANCO.md.
-# O método é que não é proposta: a sugestão se verifica simulando a si mesma,
-# com o mesmo motor que roda o combate de verdade. Mudar a faixa aqui muda o
-# que o sugeridor procura, e nada mais — nenhuma regra do jogo depende dela.
-FAIXAS_DE_VITORIA = {
-    "facil": (0.85, 0.95),
-    "media": (0.65, 0.80),
-    "dificil": (0.45, 0.60),
-}
+# As faixas moram em `tools/simulacao/regua.py`, com o piso da mesa azarada:
+# a régua é a mesma para o sugeridor, a bancada do Estúdio e o calibrador da
+# emboscada, e tê-la três vezes era o jeito de ela divergir em silêncio.
+FAIXAS_DE_VITORIA = regua.FAIXAS_DE_VITORIA
 
 # Quantas criaturas diferentes entram na busca. Cada uma custa ~3 simulações
 # de bisseção, então este número é o que decide se o botão responde em
@@ -379,9 +368,10 @@ def sugerir(
     semente: Optional[int] = None,
 ) -> dict[str, Any]:
     """Composições que caem na faixa daquela dificuldade, com o número medido."""
-    if dificuldade not in FAIXAS_DE_VITORIA:
-        return {"erro": f"dificuldade '{dificuldade}' não existe. "
-                        f"Use {', '.join(FAIXAS_DE_VITORIA)}."}
+    try:
+        faixa_pedida = regua.faixa_de(dificuldade)
+    except ValueError as erro:
+        return {"erro": str(erro)}
     if not 1 <= tier <= TIER_MAXIMO:
         return {"erro": f"tier precisa ir de 1 a {TIER_MAXIMO}."}
     # Sem classe o grupo e sorteado, que e o padrao: cinco copias da mesma
@@ -390,7 +380,7 @@ def sugerir(
     if classe and classes.classe(classe) is None:
         return {"erro": f"classe desconhecida: {classe}."}
 
-    faixa = FAIXAS_DE_VITORIA[dificuldade]
+    faixa = faixa_pedida
     nivel = nivel or nivel_do_tier(tier)
     semente = semente if isinstance(semente, int) else random.randrange(1, 10**8)
 

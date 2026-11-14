@@ -49,6 +49,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from src import bestiario, incursoes as I  # noqa: E402
 from src.rules import ATRIBUTOS, PERICIAS, TIER_MAXIMO  # noqa: E402
 from src import classes  # noqa: E402
+from tools.simulacao import regua  # noqa: E402
+# A funcao, e nao o modulo: `grupos` e nome de variavel local em
+# `simular` (os tamanhos de grupo pedidos), e o import sombreava.
+from tools.simulacao.grupos import mesa_azarada  # noqa: E402
 
 PAGINA = Path(__file__).resolve().parent / "estudio" / "index.html"
 PASTA_BANCOS = RAIZ / "data" / "bancos"
@@ -404,12 +408,16 @@ def _inteiro(valor: Any, padrao: int, menor: int, maior: int) -> int:
 
 
 def simular(payload: dict[str, Any]) -> dict[str, Any]:
-    """Mede a sala de combate com o motor do bot.
+    """Mede a sala de combate com o motor do bot, contra mesas sorteadas.
 
-    O grupo simulado é de uma classe só, de propósito: o que se quer medir é a
-    SALA, e misturar classes trocaria a variação da sala pela variação do
-    grupo. A semente vai na resposta para dois autores comparando números
-    verem o mesmo número.
+    A semente vai na resposta para dois autores comparando números verem o
+    mesmo número — e para o próprio autor: sem fixá-la, editar o bando e
+    remedir mistura a diferença do bando com a diferença do sorteio.
+
+    Cada medida sai com um VEREDITO (`tools/simulacao/regua.py`), e não só com
+    a porcentagem. Medir e deixar o autor adivinhar se 62% é o que ele queria
+    era metade do trabalho: a régua é a outra metade, e ela já existia no
+    sugeridor e no calibrador da emboscada.
     """
     if falta := _falta_para_simular():
         return {"erro": falta}
@@ -464,6 +472,10 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
         # grupo que esta sala mata?", e deixá-la para a página ordenar seria
         # pedir que ela soubesse o que a média esconde.
         mesas = sorted(bruto["composicoes"], key=lambda c: c["taxa"])
+        # A pior mesa é para MOSTRAR e o percentil é para DECIDIR: o mínimo de
+        # uma amostra afunda conforme ela cresce, então ele nomeia quem sofreu
+        # mas não entra em veredito nenhum. Ver `grupos.mesa_azarada`.
+        azarada = mesa_azarada(bruto["composicoes"]) if len(mesas) > 1 else None
         medidas.append({
             "grupo": tamanho,
             "taxa": bruto["taxa"],
@@ -473,6 +485,8 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
             "mesas": len(mesas),
             "pior": mesas[0] if len(mesas) > 1 else None,
             "melhor": mesas[-1] if len(mesas) > 1 else None,
+            "azarada": azarada,
+            **regua.veredito(bruto["taxa"], azarada),
         })
     return {
         "sala": sala.id,

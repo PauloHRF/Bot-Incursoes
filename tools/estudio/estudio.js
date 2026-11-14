@@ -762,6 +762,12 @@ function barra(grupo, taxa, medida) {
   preenchimento.style.width = `${Math.max(0, Math.min(100, taxa * 100))}%`;
   trilha.append(preenchimento); trilha.setAttribute("aria-hidden", "true");
   n.append(no("span", "", `${grupo} jogadores`), trilha, no("b", "", pct(taxa)));
+  /* O veredito: o que a taxa quer dizer. A porcentagem sozinha deixava o
+     autor adivinhar se 62% era o que ele queria — a régua mora no servidor
+     (tools/simulacao/regua.py), a mesma do sugeridor e do calibrador. */
+  if (medida?.rotulo) {
+    n.append(no("span", `veredito${medida.dificuldade ? "" : " sem-faixa"}`, medida.rotulo));
+  }
   if (!medida?.pior) return n;
   const bloco = no("div", "taxa-bloco"), extremos = no("div", "taxa-extremos");
   const pior = no("span", medida.pior.taxa < .45 ? "duro" : "");
@@ -770,6 +776,10 @@ function barra(grupo, taxa, medida) {
   pior.append(no("b", "", `pior ${pct(medida.pior.taxa)}`),
               no("span", "", ` em ${medida.pior.amostras} lutas · ${medida.pior.classes.join(", ")}`));
   extremos.append(pior, no("span", "", `melhor ${pct(medida.melhor.taxa)}`));
+  /* "dizima" vem do PERCENTIL das mesas, e não da pior: o mínimo afunda
+     conforme a amostra cresce e por isso ele nomeia quem sofreu mas não
+     entra em veredito nenhum. Ver `grupos.mesa_azarada`. */
+  if (medida.dizima) extremos.prepend(no("span", "veredito dizima", "dizima 1 em 10"));
   bloco.append(n, extremos);
   return bloco;
 }

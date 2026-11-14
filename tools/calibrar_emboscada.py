@@ -39,14 +39,17 @@ from src.rules import TIER_MAXIMO  # noqa: E402
 
 import simular_combate as sc  # noqa: E402
 from tools.simulacao.grupos import mesa_azarada  # noqa: E402
+from tools.simulacao import regua  # noqa: E402
 
 # O alvo. Ver o cabeçalho: é intenção de design, e por isso mora aqui em cima
 # com nome, e não espalhado em comparações pelo código.
 VITORIA_MINIMA = 0.95
 HP_RESTANTE = (55.0, 75.0)
 # E a mesa azarada — a do decimo percentil — nao pode ser dizimada. O piso
-# nao foi escolhido para caber: ver `mesa_azarada` e `veredito`.
-PIOR_MESA_MINIMA = 0.80
+# mora na regua compartilhada: e o mesmo criterio que a bancada do Estudio
+# usa para avisar que uma sala aposta em quem sentou, e ter dois numeros para
+# a mesma ideia era o jeito de eles divergirem.
+PIOR_MESA_MINIMA = regua.PIOR_MESA_MINIMA
 MESA = 5
 
 # Quantas mesas sortear para CALIBRAR — bem mais que as doze da bancada.

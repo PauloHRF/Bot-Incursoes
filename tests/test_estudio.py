@@ -34,6 +34,7 @@ from src import bestiario, incursoes as I  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
 
 import estudio as E  # noqa: E402
+from tools.simulacao import regua  # noqa: E402
 
 
 CRIATURA = {"nome": "Coisa", "ca": 13, "ataque": 4, "dano": "1d6", "hp": 12}
@@ -276,6 +277,38 @@ def caso_a_medida_vem_de_mesas_sorteadas_com_os_extremos():
     print(f"  a sala foi medida contra {medida['mesas']} mesas sorteadas: ok")
 
 
+def caso_a_medida_sai_com_veredito():
+    """Medir e mostrar a porcentagem e metade do trabalho.
+
+    A outra metade e dizer o que ela QUER DIZER: a bancada media 62% e
+    deixava o autor adivinhar se era o que ele queria. A regua
+    (`tools/simulacao/regua.py`) e a mesma do sugeridor e do calibrador da
+    emboscada — ter faixas em tres lugares era o jeito de elas divergirem.
+    """
+    r = E.simular({"sala": sala_de_combate(monstros=[dict(CRIATURA, quantidade=3)]),
+                   "tier": 1, "nivel": 4, "repeticoes": 90, "grupos": [3]})
+    medida = r["medidas"][0]
+    assert "rotulo" in medida and medida["rotulo"], medida
+    assert medida["dificuldade"] == regua.dificuldade_de(medida["taxa"]), medida
+    assert isinstance(medida["dizima"], bool)
+
+    # O veredito da mesa azarada vem do PERCENTIL, e nao da pior mesa: o
+    # minimo afunda conforme a amostra cresce, entao ele nomeia quem sofreu
+    # mas nao decide nada.
+    assert medida["azarada"] is None or medida["azarada"] >= medida["pior"]["taxa"]
+    assert medida["dizima"] == (
+        medida["azarada"] is not None and medida["azarada"] < regua.PIOR_MESA_MINIMA
+    ), medida
+
+    # E a regua nao inventa faixa para quem caiu no buraco entre duas: 82% nao
+    # e "quase facil", e uma sala que nao foi mirada.
+    assert regua.dificuldade_de(0.82) is None
+    assert regua.dificuldade_de(0.72) == "media"
+    assert regua.veredito(0.72, 0.5)["dizima"] is True
+    assert regua.veredito(0.72, 0.9)["dizima"] is False
+    print(f"  a medida sai com veredito ({medida['rotulo']}): ok")
+
+
 def caso_a_mesma_semente_da_o_mesmo_numero():
     """Dois autores comparando números precisam ver o mesmo número."""
     pedido = {"sala": sala_de_combate(), "tier": 1, "nivel": 2,
@@ -462,6 +495,7 @@ for caso in (
     caso_o_pool_recusa_pedido_torto,
     caso_simular_mede_a_sala_de_combate,
     caso_a_medida_vem_de_mesas_sorteadas_com_os_extremos,
+    caso_a_medida_sai_com_veredito,
     caso_a_mesma_semente_da_o_mesmo_numero,
     caso_mudar_a_lista_de_grupos_nao_mexe_nos_outros,
     caso_a_bancada_abre_sem_o_motor_e_diz_o_que_falta,
