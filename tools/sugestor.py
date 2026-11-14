@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from src import bestiario, classes, incursoes as I  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
-from tools.simulacao import grupos, regua  # noqa: E402
+from tools.simulacao import grupos, medidor, regua  # noqa: E402
 
 # As faixas moram em `tools/simulacao/regua.py`, com o piso da mesa azarada:
 # a régua é a mesma para o sugeridor, a bancada do Estúdio e o calibrador da
@@ -126,17 +126,14 @@ def medir_bando(
     `tools/calibrar_emboscada.py` tem escrita no corpo: comparar cada
     candidato contra mesas próprias é comparar duas amostras, não dois bandos.
     """
-    import simular_combate as sc
-
     if not monstros:
         return None
-    args = SimpleNamespace(classe=classe or None, nivel=nivel, repeticoes=confrontos,
-                           coletar_detalhes=False, composicoes=MESAS_SORTEADAS,
-                           minimo_por_mesa=grupos.MINIMO_PARA_A_MEDIA)
-    bruto = sc.simular(
-        monstros, tamanho, args, random.Random(f"{semente}:{tamanho}")
-    )
-    return bruto["taxa"]
+    return medidor.medir(
+        monstros, tamanho=tamanho, nivel=nivel, classe=classe,
+        repeticoes=confrontos, semente=semente,
+        mesas=MESAS_SORTEADAS, minimo=grupos.MINIMO_PARA_A_MEDIA,
+        detalhes=False,
+    )["taxa"]
 
 
 def _melhor_na_escala(

@@ -37,7 +37,7 @@ from src import consequencias  # noqa: E402
 from src.incursoes import MAX_INIMIGOS, monstros_de_criatura  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
 
-import simular_combate as sc  # noqa: E402
+from tools.simulacao import grupos, medidor  # noqa: E402
 from tools.simulacao.grupos import mesa_azarada  # noqa: E402
 from tools.simulacao import regua  # noqa: E402
 
@@ -65,14 +65,11 @@ COMPOSICOES_DA_CALIBRACAO = 40
 
 def medir(tier: int, repeticoes: int, semente: int, composicoes: int) -> dict:
     """A emboscada daquele tier contra a mesa, pelo caminho do bot."""
-    monstros = [
-        m
-        for nome, quantas in consequencias.emboscada_do_tier(tier)
-        for m in monstros_de_criatura({"nome": nome, "quantidade": quantas}, "emboscada")
-    ]
-    args = SimpleNamespace(classe=None, nivel=min(10, tier * 2), tier=tier,
-                           repeticoes=repeticoes, composicoes=composicoes)
-    return sc.simular(monstros, MESA, args, random.Random(f"{semente}:{tier}"))
+    return medidor.medir(
+        medidor.bando_de(consequencias.emboscada_do_tier(tier), "emboscada"),
+        tamanho=MESA, tier=tier, repeticoes=repeticoes, semente=semente,
+        mesas=composicoes,
+    )
 
 
 def ler_bando(texto: str) -> list[tuple[str, int]]:
@@ -94,24 +91,22 @@ def ler_bando(texto: str) -> list[tuple[str, int]]:
 
 def medir_elenco(elenco, tier: int, repeticoes: int, semente: int,
                  composicoes: int) -> dict:
-    monstros = [
-        m
-        for nome, quantas in elenco
-        for m in monstros_de_criatura({"nome": nome, "quantidade": quantas}, "emboscada")
-    ]
-    if len(monstros) != sum(q for _n, q in elenco):
-        faltam = [n for n, _ in elenco if not any(n.split()[0] in m.nome for m in monstros)]
-        raise SystemExit(f"criatura fora do bestiário: {', '.join(faltam) or elenco}")
-    args = SimpleNamespace(classe=None, nivel=min(10, tier * 2), tier=tier,
-                           repeticoes=repeticoes, composicoes=composicoes)
-    # A semente NÃO leva o elenco: assim todo candidato do mesmo tier enfrenta
-    # AS MESMAS mesas, e a diferença entre eles é a diferença entre eles.
+    # A semente NÃO leva o elenco — e agora isso é estrutura, não disciplina:
+    # `medidor.semente_de` monta a semente num lugar só e o bando não entra
+    # nela. Todo candidato do mesmo tier enfrenta AS MESMAS mesas, e a
+    # diferença entre eles é a diferença entre eles.
     #
     # Levava, e isso quase me fez escolher ruído: o mesmo elenco do tier 5
     # mediu 95,8% com um sorteio e 93,3% com outro, e a "melhora" de um
-    # candidato sobre o outro era menor que isso. Comparar cada candidato
-    # contra mesas próprias é comparar duas amostras, não duas emboscadas.
-    return sc.simular(monstros, MESA, args, random.Random(f"{semente}:{tier}"))
+    # candidato sobre o outro era menor que isso.
+    try:
+        monstros = medidor.bando_de(elenco, "emboscada")
+    except ValueError as erro:
+        raise SystemExit(str(erro)) from erro
+    return medidor.medir(
+        monstros, tamanho=MESA, tier=tier, repeticoes=repeticoes,
+        semente=semente, mesas=composicoes,
+    )
 
 
 def veredito(taxa: float, hp: float, azarada: float = 1.0) -> str:
@@ -149,14 +144,15 @@ def varrer(tier: int, repeticoes: int, semente: int, composicoes: int) -> list[d
     fixos, (nome, _) = list(base[:-1]), base[-1]
     curva = []
     for quantas in range(1, MAX_INIMIGOS - sum(q for _, q in fixos) + 1):
-        monstros = [
-            m
-            for n, q in fixos + [(nome, quantas)]
-            for m in monstros_de_criatura({"nome": n, "quantidade": q}, "emboscada")
-        ]
-        a = SimpleNamespace(classe=None, nivel=min(10, tier * 2), tier=tier,
-                            repeticoes=repeticoes, composicoes=composicoes)
-        r = sc.simular(monstros, MESA, a, random.Random(f"{semente}:{tier}:{quantas}"))
+        # A QUANTIDADE também não entra na semente. Entrava, e era o mesmo
+        # erro que o `--bando` tem escrito acima que evita: a curva que esta
+        # varredura desenha é para comparar um ponto com o seguinte, e com
+        # mesas próprias para cada ponto ela media ruído por cima da curva.
+        r = medidor.medir(
+            medidor.bando_de(fixos + [(nome, quantas)], "emboscada"),
+            tamanho=MESA, tier=tier, repeticoes=repeticoes,
+            semente=semente, mesas=composicoes,
+        )
         curva.append({
             "quantas": quantas, "nome": nome,
             "taxa": r["taxa"], "hp": r["hp_restante_pct"],
@@ -170,7 +166,13 @@ def varrer(tier: int, repeticoes: int, semente: int, composicoes: int) -> list[d
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tier", type=int, default=None, help="só este tier")
-    parser.add_argument("--repeticoes", type=int, default=300)
+    # Seiscentas, e nao trezentas: com trezentas o piso de quinze lutas por
+    # mesa fazia o pedido de quarenta mesas virar vinte, e o numero de MESAS e
+    # o que manda no erro — a p10 das taxas de mesa precisa de mesas, nao de
+    # lutas dentro delas. Este comando roda quando o conteudo muda, nao a cada
+    # salvamento: o preco e aceitavel para o unico lugar que escreve numero
+    # que vai para o jogo.
+    parser.add_argument("--repeticoes", type=int, default=600)
     parser.add_argument("--semente", type=int, default=20261112)
     parser.add_argument(
         "--composicoes", type=int, default=COMPOSICOES_DA_CALIBRACAO, metavar="N",
@@ -191,9 +193,18 @@ def main() -> int:
     if any(not 1 <= t <= TIER_MAXIMO for t in tiers):
         parser.error(f"tier precisa ir de 1 a {TIER_MAXIMO}")
 
+    # O que SAI do `dividir`, e nao o que foi pedido: o piso de lutas por mesa
+    # morde, e com 300 lutas o pedido de 40 mesas virava 20 em silencio —
+    # enquanto esta linha anunciava 40. "Foi medido com quarenta mesas" era
+    # falso em todo commit que a citou.
+    mesas, por_mesa = grupos.dividir(args.repeticoes, args.composicoes)
     print(f"Alvo: vitória >= {VITORIA_MINIMA:.0%}, HP restante "
           f"{HP_RESTANTE[0]:.0f}–{HP_RESTANTE[1]:.0f}%, mesa azarada (1 em 10) >= {PIOR_MESA_MINIMA:.0%}  "
-          f"({args.composicoes} mesas de {MESA}, {args.repeticoes} lutas por ponto)")
+          f"({mesas} mesas de {MESA}, {por_mesa} lutas cada, "
+          f"{mesas * por_mesa} por ponto)")
+    if mesas < args.composicoes:
+        print(f"  (pediu {args.composicoes} mesas; com {args.repeticoes} lutas "
+              f"só cabem {mesas} — ver `grupos.dividir`)")
 
     if args.bando:
         if not args.tier:

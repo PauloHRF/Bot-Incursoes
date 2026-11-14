@@ -40,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from src import ameaca  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
 
-import simular_combate as sc  # noqa: E402
+from tools.simulacao import medidor  # noqa: E402
 from tools.simulacao.comparacao import carregar_cenarios  # noqa: E402
 
 MESA = 5
@@ -88,13 +88,11 @@ def medir_tier(tier: int, repeticoes: int, semente: int) -> list[float]:
     """As frações de HP movido por ação, na bateria daquele tier."""
     fracoes: list[float] = []
     for sala in carregar_cenarios()[tier]:
-        monstros = list(sala.monstros)
-        args = SimpleNamespace(
-            classe=None, nivel=min(10, tier * 2), tier=tier,
-            repeticoes=repeticoes, composicoes=COMPOSICOES,
-        )
         with Gravador() as gravador:
-            sc.simular(monstros, MESA, args, random.Random(f"{semente}:{tier}"))
+            medidor.medir(
+                list(sala.monstros), tamanho=MESA, tier=tier,
+                repeticoes=repeticoes, semente=semente, mesas=COMPOSICOES,
+            )
         fracoes.extend(gravador.fracoes)
     return fracoes
 

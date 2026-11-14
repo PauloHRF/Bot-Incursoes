@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import csv
+import inspect
 import json
 from pathlib import Path
 import random
@@ -23,6 +24,7 @@ from src.incursoes import HabilidadeDoMonstro, Monstro, Sala
 from tools.simulacao import grupos
 from tools.simulacao.execucao import Bancada, Ficha, simular_async
 from tools.simulacao.comparacao import carregar_builds, carregar_cenarios, comparar
+from tools.simulacao import medidor
 from tools.simulacao.estatisticas import intervalo
 from tools.simular_combate import simular
 
@@ -280,6 +282,50 @@ class Interface(unittest.TestCase):
             self.assertEqual([r for r in linhas("a") if r["classe"] == "guerreiro"], linhas("b"))
             self.assertTrue((pasta/"a/experimento.json").exists())
             self.assertTrue((pasta/"a/relatorio.md").exists())
+
+
+class Medidor(unittest.TestCase):
+    """A semente de uma medicao, montada num lugar so."""
+
+    def test_o_bando_nunca_entra_na_semente(self):
+        """E o que faz a diferenca entre dois numeros ser a diferenca entre
+        dois bandos.
+
+        Dois comandos montavam a semente errado, e os dois tinham a regra
+        escrita por perto: o sugeridor punha o bando, e o `--varrer` do
+        calibrador punha a quantidade. A regra nao cabe num comentario — cabe
+        numa funcao, e e esta.
+        """
+        self.assertEqual(
+            medidor.semente_de(7, 3, 5).random(),
+            medidor.semente_de(7, 3, 5).random(),
+        )
+        # O tier e o tamanho separam, porque sao perguntas diferentes.
+        self.assertNotEqual(
+            medidor.semente_de(7, 3, 5).random(),
+            medidor.semente_de(7, 3, 3).random(),
+        )
+        self.assertNotEqual(
+            medidor.semente_de(7, 3, 5).random(),
+            medidor.semente_de(7, 4, 5).random(),
+        )
+        # E a assinatura nao tem por onde o bando entrar.
+        parametros = set(inspect.signature(medidor.semente_de).parameters)
+        self.assertEqual(parametros, {"semente", "tier", "tamanho"})
+
+    def test_bando_de_recusa_nome_fora_do_bestiario(self):
+        """Medir um bando menor que o pedido devolveria um numero que nao e
+        resposta da pergunta que foi feita."""
+        bando = medidor.bando_de([("Mímico", 2)])
+        self.assertEqual(len(bando), 2)
+        with self.assertRaises(ValueError):
+            medidor.bando_de([("Criatura Que Nao Existe", 1)])
+
+    def test_o_hash_do_modelo_muda_com_o_codigo(self):
+        """A identidade do codigo que mediu: numero sem ela e afirmacao sem data."""
+        igual = medidor.hash_do_modelo()
+        self.assertEqual(igual, medidor.hash_do_modelo())
+        self.assertEqual(len(igual), 64)
 
 
 if __name__ == "__main__":

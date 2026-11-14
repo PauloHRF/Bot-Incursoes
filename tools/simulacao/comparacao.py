@@ -9,6 +9,7 @@ from pathlib import Path
 import random
 
 from src import classes, incursoes as I, rules
+from . import medidor
 from .execucao import Ficha, simular_async
 from .estatisticas import intervalo, resumir
 
@@ -125,15 +126,12 @@ async def comparar(builds, cenarios, tiers, tamanhos, repeticoes, semente, *, ba
                         resultados.append(linha)
                         if progresso:
                             progresso(linha)
-    raiz = Path(__file__).resolve().parents[2]
-    arquivos = sorted((raiz/"src").rglob("*.py")) + sorted(Path(__file__).parent.glob("*.py"))
-    modelo = hashlib.sha256()
-    for arquivo in arquivos:
-        modelo.update(str(arquivo.relative_to(raiz)).encode())
-        modelo.update(arquivo.read_bytes())
     return {"metodo": {
         "motor": "resolvedores de src.cogs.incursao; SQLite em memoria", "semente": semente,
-        "sha256_modelo": modelo.hexdigest(),
+        # A identidade do codigo que mediu, que era o unico lugar do projeto a
+        # gravar isso. Mora no medidor agora, para todo numero medido poder
+        # dizer de qual codigo saiu.
+        "sha256_modelo": medidor.hash_do_modelo(),
         "repeticoes_por_celula": repeticoes, "tiers": list(tiers), "grupos": list(tamanhos),
         "builds": builds, "cenarios": {str(t): [s.para_dict() for s in cenarios[t]] for t in tiers},
         "condicoes": "combate isolado; HP e recursos completos; sem equipamento ou pocoes",
