@@ -54,18 +54,41 @@ COMPOSICOES_PADRAO = 12
 # com menos lutas.
 MINIMO_POR_COMPOSICAO = 15
 
+# O piso de quem só publica a MÉDIA. Ver `dividir`: o número de uma mesa
+# precisa de quinze lutas, a média do conjunto não — e para a média o sorteio
+# das mesas é a maior fonte de erro, então trocar lutas por mesas é compra
+# boa. Dez é onde a conta ainda fecha para quem queira dar uma olhada no
+# detalhe sem acreditar nele.
+MINIMO_PARA_A_MEDIA = 10
 
-def dividir(repeticoes: int, quantas: int = COMPOSICOES_PADRAO) -> tuple[int, int]:
+
+def dividir(
+    repeticoes: int,
+    quantas: int = COMPOSICOES_PADRAO,
+    minimo: int = MINIMO_POR_COMPOSICAO,
+) -> tuple[int, int]:
     """Quantas mesas medir e quantas lutas cada uma leva.
 
     Devolve `(mesas, lutas_por_mesa)`. O produto pode ficar abaixo de
     `repeticoes` — sobra que não dá uma luta inteira para cada mesa é
     descartada, e não jogada numa mesa só, senão uma composição pesaria mais
     que as outras na média sem nada dizer a respeito.
+
+    **Mais repetições compram lutas por mesa, não mesas.** Com `quantas` em
+    doze e o piso em quinze, 200 repetições dão 12×16 e 600 dão 12×50: o
+    número de mesas não se move, e o sorteio das mesas é justamente a maior
+    fonte de erro da média. Quem quer reduzir ESSE erro precisa pedir mais
+    `quantas` — foi o que o calibrador da emboscada aprendeu, e por isso ele
+    pede quarenta.
+
+    `minimo` é o piso de lutas por mesa, e ele existe para proteger o número
+    DE UMA MESA. Quem publica só a média pode baixá-lo (`MINIMO_PARA_A_MEDIA`)
+    e comprar mesas com as mesmas lutas, que é melhor negócio: o erro da média
+    cai com a raiz do número de mesas, e não com o de lutas por mesa.
     """
-    if repeticoes < 1 or quantas < 1:
-        raise ValueError("Repetições e composições precisam ser positivas.")
-    por_mesa = max(MINIMO_POR_COMPOSICAO, repeticoes // quantas)
+    if repeticoes < 1 or quantas < 1 or minimo < 1:
+        raise ValueError("Repetições, composições e mínimo precisam ser positivos.")
+    por_mesa = max(minimo, repeticoes // quantas)
     return max(1, repeticoes // por_mesa), por_mesa
 
 

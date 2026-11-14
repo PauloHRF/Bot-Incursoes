@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from src import bestiario, classes, incursoes as I  # noqa: E402
 from src.rules import TIER_MAXIMO  # noqa: E402
+from tools.simulacao import grupos  # noqa: E402
 
 # A faixa de taxa de vitória de cada dificuldade, para um grupo de 5 no tier
 # da sala — hoje MESAS SORTEADAS, e não cinco cópias de uma classe. A faixa
@@ -64,6 +65,21 @@ MISTURAS_NA_BUSCA = 2
 # caro para PUBLICAR. Misturar os dois daria um número bonito e instável.
 CONFRONTOS_DA_BUSCA = 200
 CONFRONTOS_DA_CONFIRMACAO = 400
+
+# Quantas mesas sortear, e com que piso de lutas por mesa.
+#
+# QUARENTA, e não as doze do padrão, porque o sorteio das mesas é a maior
+# fonte de erro da média — e mais confrontos não compravam mesa nenhuma: com
+# doze mesas, 200 confrontos dão 12×16 e 600 dão 12×50, e o erro fica igual.
+# Medido no mesmo bando com seis sorteios diferentes, pelo MESMO custo de 400
+# lutas: doze mesas de 33 espalharam 19 pontos de taxa (56% a 75%), quarenta
+# mesas de 10 espalharam 9 (61% a 70%). A faixa "média" tem 15 pontos de
+# largura, então 19 de erro não é detalhe: é o bando inteiro mudando de
+# dificuldade conforme quem sentou.
+#
+# O piso cai para dez porque este comando publica a MÉDIA, e o piso de quinze
+# existe para proteger o número de UMA mesa (ver `grupos.dividir`).
+MESAS_SORTEADAS = 40
 
 # Os tamanhos que a confirmação reporta. Três é a mesa comum e cinco é o
 # grupo cheio: a distância entre os dois diz mais que qualquer dos dois.
@@ -106,23 +122,36 @@ def _monstros(nome: str, quantidade: int) -> list:
 
 def medir_bando(
     monstros: list, classe: Optional[str], nivel: int, tamanho: int,
-    confrontos: int, chave: str, semente: Any,
+    confrontos: int, semente: Any,
 ) -> Optional[float]:
-    """A taxa de vitória daquele bando contra um grupo daquele tamanho."""
+    """A taxa de vitória daquele bando contra um grupo daquele tamanho.
+
+    **A semente não leva o bando.** Todos os candidatos — e todos os pontos
+    da bisseção — enfrentam AS MESMAS mesas, e aí a diferença entre dois
+    números é a diferença entre dois bandos.
+
+    Levava, e era o pior defeito deste arquivo: o mesmo bando media 56% ou
+    75% conforme o sorteio, e a bisseção abaixo depende de a taxa CAIR quando
+    a quantidade sobe. Com mesas próprias para cada ponto, a curva que ela
+    bissecava era ruído por cima da curva de verdade — é a mesma lição que
+    `tools/calibrar_emboscada.py` tem escrita no corpo: comparar cada
+    candidato contra mesas próprias é comparar duas amostras, não dois bandos.
+    """
     import simular_combate as sc
 
     if not monstros:
         return None
     args = SimpleNamespace(classe=classe or None, nivel=nivel, repeticoes=confrontos,
-                           coletar_detalhes=False)
+                           coletar_detalhes=False, composicoes=MESAS_SORTEADAS,
+                           minimo_por_mesa=grupos.MINIMO_PARA_A_MEDIA)
     bruto = sc.simular(
-        monstros, tamanho, args, random.Random(f"{semente}:{chave}:{tamanho}")
+        monstros, tamanho, args, random.Random(f"{semente}:{tamanho}")
     )
     return bruto["taxa"]
 
 
 def _melhor_na_escala(
-    montar, chave_de, faixa: tuple[float, float], classe: str, nivel: int,
+    montar, faixa: tuple[float, float], classe: str, nivel: int,
     semente: Any, menor_valor: int, maior_valor: int,
 ) -> tuple[Optional[int], Optional[float], str]:
     """O ponto da escala que cai na faixa, e o veredito da busca.
@@ -146,8 +175,7 @@ def _melhor_na_escala(
     def taxa(n: int) -> Optional[float]:
         if n not in medidas:
             valor = medir_bando(
-                montar(n), classe, nivel, 5, CONFRONTOS_DA_BUSCA,
-                chave_de(n), semente,
+                montar(n), classe, nivel, 5, CONFRONTOS_DA_BUSCA, semente,
             )
             if valor is None:
                 return None
@@ -194,7 +222,7 @@ def composicao_de_uma(
 ) -> Optional[dict[str, Any]]:
     """N criaturas iguais. A composição mais simples, e a mais comum."""
     quantidade, taxa, veredito = _melhor_na_escala(
-        lambda q: _monstros(nome, q), lambda q: f"{nome}x{q}",
+        lambda q: _monstros(nome, q),
         faixa, classe, nivel, semente, 1, I.MAX_INIMIGOS,
     )
     if quantidade is None:
@@ -221,7 +249,7 @@ def composicao_com_ancora(
         return _monstros(ancora, 1) + _monstros(lacaio, k)
 
     quantos, taxa, veredito = _melhor_na_escala(
-        montar, lambda k: f"{ancora}+{lacaio}x{k}",
+        montar,
         faixa, classe, nivel, semente, 1, I.MAX_INIMIGOS - 1,
     )
     if quantos is None:
@@ -399,11 +427,10 @@ def sugerir(
         monstros = []
         for parte in bando:
             monstros.extend(_monstros(parte["nome"], parte["quantidade"]))
-        chave = "+".join(f"{p['nome']}x{p['quantidade']}" for p in bando)
         medidas = {
             tamanho: medir_bando(
                 monstros, classe, nivel, tamanho,
-                CONFRONTOS_DA_CONFIRMACAO, chave, semente,
+                CONFRONTOS_DA_CONFIRMACAO, semente,
             )
             for tamanho in GRUPOS_CONFIRMADOS
         }

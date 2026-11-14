@@ -33,7 +33,9 @@ def mesas(tamanho: int, args, rng: random.Random) -> list[tuple[Ficha, ...]]:
         return [tuple(Ficha(classe, args.nivel, getattr(args, "escolhas", None))
                       for _ in range(tamanho))], args.repeticoes
     quantas, por_mesa = grupos.dividir(
-        args.repeticoes, getattr(args, "composicoes", None) or grupos.COMPOSICOES_PADRAO
+        args.repeticoes,
+        getattr(args, "composicoes", None) or grupos.COMPOSICOES_PADRAO,
+        getattr(args, "minimo_por_mesa", None) or grupos.MINIMO_POR_COMPOSICAO,
     )
     return grupos.sortear(tamanho, args.nivel, quantas, rng), por_mesa
 

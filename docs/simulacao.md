@@ -30,6 +30,23 @@ escolhia a resposta. O detalhe está em `tools/simulacao/grupos.py`.
 *para quem*?", que é outra pergunta e continua valendo. É o único modo em que
 `--escolha` faz sentido, porque só ali existe uma ficha só.
 
+### Quantas mesas, e por que não adianta só subir as repetições
+
+`--repeticoes` compra **lutas por mesa**, não mesas: com as doze do padrão,
+200 repetições dão 12×16 e 600 dão 12×50 — o número de mesas não se move. E é
+o sorteio das mesas que domina o erro da média. Medido no mesmo bando, com
+seis sorteios diferentes e o **mesmo custo** de 400 lutas:
+
+| divisão | taxas medidas | amplitude |
+|---|---|---|
+| 12 mesas × 33 lutas | 67% · 56% · 75% · 69% · 75% · 62% | **19 pontos** |
+| 40 mesas × 10 lutas | 70% · 61% · 67% · 68% · 68% · 68% | **9 pontos** |
+
+Quem quer reduzir esse erro pede mais `--composicoes`. O piso de 15 lutas por
+mesa existe para proteger o número **de uma mesa** — quem publica só a média
+pode baixá-lo e comprar mesas com as mesmas lutas, que é o que o sugeridor
+faz (`grupos.MINIMO_PARA_A_MEDIA`).
+
 ```bash
 python tools/simular_combate.py ... --classe druida --escolha forma_t1=lobo
 ```

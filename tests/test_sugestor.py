@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import random
 import sys
+from types import SimpleNamespace
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -30,6 +31,7 @@ sys.path.insert(0, str(RAIZ / "tools"))
 from src import bestiario, incursoes as I  # noqa: E402
 
 import sugestor as S  # noqa: E402
+from tools.simulacao import grupos  # noqa: E402
 
 
 # ---------------------------------------------------- simulador de mentira
@@ -50,16 +52,27 @@ class SimuladorFalso:
     def __enter__(self):
         self._verdadeiro = S.medir_bando
 
-        def falso(monstros, classe, nivel, tamanho, confrontos, chave, semente):
-            nome, _, quantidade = chave.partition("x")
-            self.chamadas.append((nome, int(quantidade)))
-            return self.taxa(nome, int(quantidade))
+        def falso(monstros, classe, nivel, tamanho, confrontos, semente):
+            # O bando chega pelas CRIATURAS, e nao por uma chave de texto: a
+            # busca deixou de passar o bando na semente (ela agora pareia as
+            # mesas), e o duble le o que ela de fato mede.
+            blocos: list[list] = []
+            for m in monstros:
+                if not blocos or blocos[-1][0] != m.nome:
+                    blocos.append([m.nome, 0])
+                blocos[-1][1] += 1
+            nome = "+".join(n for n, _ in blocos)
+            quantidade = blocos[-1][1]
+            self.chamadas.append((nome, quantidade))
+            return self.taxa(nome, quantidade)
 
         S.medir_bando = falso
         # `_monstros` consulta o bestiario de verdade; aqui so precisa
-        # devolver algo nao-vazio para a busca seguir.
+        # devolver criaturas com nome, que e o que o duble acima le.
         self._monstros = S._monstros
-        S._monstros = lambda nome, q: [object()] * max(1, q)
+        S._monstros = lambda nome, q: [
+            SimpleNamespace(nome=nome) for _ in range(max(1, q))
+        ]
         return self
 
     def __exit__(self, *_):
@@ -188,7 +201,7 @@ def caso_a_bissecao_nao_e_varredura():
     chamadas = []
     verdadeiro = S.medir_bando
 
-    def falso(monstros, classe, nivel, tamanho, confrontos, chave, semente):
+    def falso(monstros, classe, nivel, tamanho, confrontos, semente):
         n = len(monstros)
         chamadas.append(n)
         return max(0.0, 1.0 - n * 0.05)
@@ -196,7 +209,7 @@ def caso_a_bissecao_nao_e_varredura():
     S.medir_bando = falso
     try:
         achado, taxa, veredito = S._melhor_na_escala(
-            montar, lambda n: f"X x{n}", (0.45, 0.60), "guerreiro", 4, 1, 1, 20
+            montar, (0.45, 0.60), "guerreiro", 4, 1, 1, 20
         )
     finally:
         S.medir_bando = verdadeiro
@@ -371,6 +384,52 @@ def caso_a_mesma_semente_da_a_mesma_sugestao():
     print("  a mesma semente dá a mesma sugestão: ok")
 
 
+def caso_a_semente_das_mesas_nao_leva_o_bando():
+    """Dois bandos diferentes enfrentam AS MESMAS mesas.
+
+    E o que faz a diferenca entre dois numeros ser a diferenca entre dois
+    bandos. Levando o bando na semente, o mesmo elenco media 56% ou 75%
+    conforme o sorteio — e a bissecao, que depende de a taxa CAIR quando a
+    quantidade sobe, bissecava ruido por cima da curva de verdade.
+
+    O tamanho do grupo continua separando, e deve: medir mesa de cinco e de
+    tres sao duas perguntas, nao duas amostras da mesma.
+    """
+    import simular_combate as sc
+
+    vistos = []
+    verdadeiro = sc.simular
+
+    def espiao(monstros, tamanho, args, rng):
+        vistos.append((rng.random(), getattr(args, "composicoes", None),
+                       getattr(args, "minimo_por_mesa", None)))
+        return {"taxa": 0.5}
+
+    sc.simular = espiao
+    try:
+        um = [SimpleNamespace(nome="A")]
+        outro = [SimpleNamespace(nome="B") for _ in range(4)]
+        S.medir_bando(um, None, 6, 5, 200, 7)
+        S.medir_bando(outro, None, 6, 5, 200, 7)
+        S.medir_bando(um, None, 6, 3, 200, 7)
+    finally:
+        sc.simular = verdadeiro
+
+    assert vistos[0][0] == vistos[1][0], "bandos diferentes sortearam mesas diferentes"
+    assert vistos[0][0] != vistos[2][0], "o tamanho do grupo tem de separar"
+
+    # E pede as quarenta mesas, nao as doze do padrao: mais confrontos nao
+    # compram mesa nenhuma, e e o numero de MESAS que manda no erro da media.
+    for _semente, composicoes, minimo in vistos:
+        assert composicoes == S.MESAS_SORTEADAS == 40, composicoes
+        assert minimo == grupos.MINIMO_PARA_A_MEDIA, minimo
+    mesas, por_mesa = grupos.dividir(
+        S.CONFRONTOS_DA_CONFIRMACAO, S.MESAS_SORTEADAS, grupos.MINIMO_PARA_A_MEDIA
+    )
+    assert mesas == 40, (mesas, por_mesa)
+    print(f"  as mesas sao as mesmas para todo bando, e sao {mesas}: ok")
+
+
 def caso_as_faixas_estao_declaradas_como_proposta():
     """Elas não são regra de jogo, e o código tem que dizer isso.
 
@@ -408,6 +467,7 @@ for caso in (
     caso_sugerir_recusa_pedido_torto,
     caso_sugerir_mede_de_verdade,
     caso_a_mesma_semente_da_a_mesma_sugestao,
+    caso_a_semente_das_mesas_nao_leva_o_bando,
     caso_as_faixas_estao_declaradas_como_proposta,
 ):
     caso()
