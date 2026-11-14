@@ -3025,36 +3025,6 @@ class Incursoes(commands.Cog):
                 return True
         return False
 
-    @staticmethod
-    def _hp_em_jogo(estado: EstadoCombate) -> tuple[int, int]:
-        """(HP dos inimigos, HP+THP do grupo) AGORA.
-
-        As duas pontas da medição: a diferença de antes para depois de uma
-        ação é o que ela moveu. A vida temporária entra junto com o HP porque
-        dar THP é devolver vida — para quem recebe não há diferença.
-        """
-        inimigos = sum(max(0, i.hp_atual) for i in estado.inimigos)
-        grupo = sum(
-            max(0, c.hp_atual) + max(0, c.thp) for c in estado.combatentes
-        )
-        return inimigos, grupo
-
-    @staticmethod
-    def _potes_de_hp(estado: EstadoCombate) -> tuple[int, int]:
-        """Os denominadores: o HP máximo de cada lado.
-
-        O MÁXIMO, e não o atual: a poça não encolhe conforme a luta anda,
-        senão o mesmo golpe valeria mais no fim do combate que no começo e a
-        última rodada viraria a mais importante de todas.
-
-        O grupo conta só os jogadores. Invocação movimenta HP e pode levar
-        cura, mas somar o corpo dela ao denominador faria o druida diluir a
-        ameaça de todo mundo só por ter conjurado.
-        """
-        inimigos = sum(i.hp_max for i in estado.inimigos)
-        grupo = sum(c.hp_max for c in estado.combatentes if not c.e_invocacao)
-        return inimigos, grupo
-
     async def _prisoes(
         self, run: dict[str, Any], estado: EstadoCombate
     ) -> dict[int, int]:
@@ -3073,10 +3043,15 @@ class Incursoes(commands.Cog):
 
     async def _retrato_da_sala(
         self, run: dict[str, Any], estado: EstadoCombate
-    ) -> tuple[int, int, dict[int, int]]:
-        """O que a medição da ameaça compara: o HP dos dois lados e as prisões."""
-        inimigos, grupo = self._hp_em_jogo(estado)
-        return inimigos, grupo, await self._prisoes(run, estado)
+    ) -> tuple[motor.RetratoDaSala, dict[int, int]]:
+        """O que a medição da ameaça compara: o HP dos dois lados e as prisões.
+
+        O retrato do HP vem de `motor`, e é o MESMO que a bancada de simulação
+        usa para atribuir dano e cura às habilidades: eram duas contas
+        separadas, e o "dano" que o simulador reportava podia não ser o
+        "dano" que o jogo paga em ameaça.
+        """
+        return motor.retrato(estado), await self._prisoes(run, estado)
 
     @staticmethod
     def _ca_que_a_criatura_enfrenta(estado: EstadoCombate) -> int:
@@ -3127,7 +3102,7 @@ class Incursoes(commands.Cog):
         estado: EstadoCombate,
         user_id: int,
         acao,
-        antes: tuple[int, int, dict[int, int]],
+        antes: tuple[motor.RetratoDaSala, dict[int, int]],
     ) -> None:
         """O HP que a ação acabou de mover chama a atenção da criatura.
 
@@ -3155,13 +3130,13 @@ class Incursoes(commands.Cog):
             return
         pontos = ameaca.declarada_por(acao)
         if pontos is None:
-            depois = self._hp_em_jogo(estado)
-            dos_inimigos, do_grupo = self._potes_de_hp(estado)
+            depois = motor.retrato(estado)
+            dos_inimigos, do_grupo = motor.potes_de_hp(estado)
             pontos = ameaca.pontos_do_hp(
-                dano=antes[0] - depois[0],
-                cura=depois[1] - antes[1],
+                dano=motor.dano_tomado(antes[0], depois),
+                cura=motor.hp_devolvido(antes[0], depois),
                 evitado=self._dano_evitado(
-                    estado, antes[2], await self._prisoes(run, estado)
+                    estado, antes[1], await self._prisoes(run, estado)
                 ),
                 hp_dos_inimigos=dos_inimigos,
                 hp_do_grupo=do_grupo,

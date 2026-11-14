@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import random
 from types import SimpleNamespace
 
-from src import aleatorio, classes, database as db, incursoes as I, itens, rules
+from src import aleatorio, classes, database as db, incursoes as I, itens, motor, rules
 from src.cogs.incursao import Incursoes
 from .memoria import Memoria
 from . import politica
@@ -126,6 +126,10 @@ class _Combate(Incursoes):
         finally:
             self.profundidade -= 1
         depois = await self._estado(run)
+        # O dano sai de `motor.dano_tomado`, que e a MESMA conta que a Ameaca
+        # usa para converter HP movido em atencao da criatura. Eram duas, e
+        # discordavam no clamp: o "dano" que esta bancada reportava podia nao
+        # ser o "dano" que o jogo pagava.
         hp_antes = {c.user_id: (c.hp_atual, c.thp) for c in antes.combatentes}
         hp_depois = {c.user_id: (c.hp_atual, c.thp) for c in depois.combatentes}
         cura = thp = recebido = 0
@@ -139,7 +143,7 @@ class _Combate(Incursoes):
                 self.quedas.add(uid)
                 if uid not in self.agiram:
                     self.metricas["quedas_antes_de_agir"] += 1
-        dano = sum(max(0, a.hp_atual - b.hp_atual) for a, b in zip(antes.inimigos, depois.inimigos))
+        dano = motor.dano_tomado(motor.retrato(antes), motor.retrato(depois))
         self.metricas.update(cura=cura, thp_gerado=thp, recebido=recebido, dano=dano)
         if passiva:
             self.metricas.update(cura_passiva=cura, dano_periodico=dano)

@@ -462,6 +462,52 @@ def caso_o_hp_movido_vira_pontos():
     print(f"  o HP movido vira pontos em fracao da poca (p90 = {p90}): ok")
 
 
+def caso_uma_definicao_so_de_hp_movido():
+    """A Ameaca e a bancada de simulacao contam o mesmo HP movido.
+
+    Eram duas contas separadas, e discordavam no clamp: uma somava os totais
+    da sala, a outra clampava por criatura. Isso significa que o "dano" que o
+    simulador reportava podia nao ser o "dano" que o jogo paga em ameaca — e
+    ninguem notaria, porque os dois numeros vivem em telas diferentes.
+
+    O clamp e POR CRIATURA e POR PESSOA, e e essa a escolha que a funcao
+    unica fixa: quem regenerou nao desconta o dano que outra levou, e quem
+    apanhou nao anula a cura que outro recebeu.
+    """
+    def sala(hps, grupo):
+        inimigos = [motor.Inimigo(i, f"I{i}", 10, 1, "1d1", 100, hp)
+                    for i, hp in enumerate(hps)]
+        combatentes = [
+            motor.Combatente(uid, f"P{uid}", 15, 0, "1d1", 100, hp, thp=thp)
+            for uid, (hp, thp) in enumerate(grupo, start=1)
+        ]
+        return motor.EstadoCombate(inimigos, 1, combatentes)
+
+    antes = motor.retrato(sala([100, 100], [(50, 0), (50, 0)]))
+    depois = motor.retrato(sala([60, 100], [(50, 0), (70, 10)]))
+    assert motor.dano_tomado(antes, depois) == 40
+    assert motor.hp_devolvido(antes, depois) == 30, "20 de HP e 10 de THP"
+
+    # Uma criatura regenerando NAO desconta o dano que a outra levou.
+    curado = motor.retrato(sala([60, 130], [(50, 0), (50, 0)]))
+    assert motor.dano_tomado(antes, curado) == 40, "o clamp e por criatura"
+
+    # E um aliado sangrando nao anula a cura que o outro recebeu — senao a
+    # acao que curou deixaria de chamar atencao.
+    misto = motor.retrato(sala([100, 100], [(20, 0), (80, 0)]))
+    assert motor.hp_devolvido(antes, misto) == 30, "o clamp e por pessoa"
+
+    # Os potes sao o MAXIMO, e a invocacao nao entra no do grupo.
+    estado = sala([100, 100], [(50, 0)])
+    estado.combatentes.append(
+        motor.Combatente(99, "Bicho", 13, 0, "1d1", 40, 40, dono=1)
+    )
+    dos_inimigos, do_grupo = motor.potes_de_hp(estado)
+    assert dos_inimigos == 200, dos_inimigos
+    assert do_grupo == 100, "a invocacao diluiria a conta de todo mundo"
+    print("  uma definicao so de HP movido, clampada por criatura e por pessoa: ok")
+
+
 def caso_a_media_de_uma_rodada_de_criatura():
     """O preco de tirar a vez de uma criatura: o que ela daria naquela rodada.
 
@@ -677,6 +723,7 @@ async def main():
         caso_habilidade_soma_na_ameaca()
         caso_reckless_attack_da_ameaca()
         caso_o_hp_movido_vira_pontos()
+        caso_uma_definicao_so_de_hp_movido()
         caso_a_media_de_uma_rodada_de_criatura()
         caso_a_acao_pode_declarar_a_ameaca()
         caso_a_rodada_vai_no_nome_do_efeito()

@@ -1465,6 +1465,80 @@ def ganhar_thp(combatente: Combatente, quantidade: int) -> int:
     return combatente.thp
 
 
+# ===================================================== o que uma ação moveu
+#
+# Duas coisas precisam saber "quanto de HP esta ação mexeu": a Ameaça, que
+# converte isso em atenção da criatura (`ameaca.pontos_do_hp`), e a bancada de
+# simulação, que atribui dano e cura a cada habilidade. Eram duas contas
+# escritas separadas, e discordavam no detalhe — uma somava os totais da sala,
+# a outra clampava por criatura —, o que significa que o "dano" que o
+# simulador reportava podia não ser o "dano" que o jogo pagava em ameaça.
+#
+# Aqui é uma só, e a escolha do clamp é feita UMA vez e explicada: por
+# criatura e por pessoa, porque quem regenerou não desconta o dano que outra
+# levou, e quem apanhou não anula a cura que outro recebeu. Somando totais, um
+# aliado sangrando enquanto outro é curado daria "cura zero", e a ação que
+# curou deixaria de chamar atenção.
+
+
+@dataclass(frozen=True)
+class RetratoDaSala:
+    """Quanto HP cada lado tinha num instante. Dois deles dão o que mudou."""
+
+    inimigos: tuple[int, ...] = ()
+    # user_id -> (HP, vida temporária). A THP entra porque dar THP é devolver
+    # vida: para quem recebe não há diferença.
+    grupo: dict[int, tuple[int, int]] = field(default_factory=dict)
+
+
+def retrato(estado: EstadoCombate) -> RetratoDaSala:
+    """O HP dos dois lados agora, para comparar com depois."""
+    return RetratoDaSala(
+        inimigos=tuple(max(0, i.hp_atual) for i in estado.inimigos),
+        grupo={
+            c.user_id: (max(0, c.hp_atual), max(0, c.thp))
+            for c in estado.combatentes
+        },
+    )
+
+
+def dano_tomado(antes: RetratoDaSala, depois: RetratoDaSala) -> int:
+    """O HP que saiu das criaturas entre os dois retratos.
+
+    O overkill fica de fora por consequência de medir HP que de fato saiu:
+    bater 40 numa criatura de 5 move 5, e matar o que já ia morrer não é mais
+    notável do que isso.
+    """
+    return sum(
+        max(0, a - b) for a, b in zip(antes.inimigos, depois.inimigos)
+    )
+
+
+def hp_devolvido(antes: RetratoDaSala, depois: RetratoDaSala) -> int:
+    """O HP e a vida temporária que entraram no grupo entre os dois retratos."""
+    total = 0
+    for uid, (hp, thp) in depois.grupo.items():
+        antigo_hp, antigo_thp = antes.grupo.get(uid, (hp, thp))
+        total += max(0, hp - antigo_hp) + max(0, thp - antigo_thp)
+    return total
+
+
+def potes_de_hp(estado: EstadoCombate) -> tuple[int, int]:
+    """Os denominadores: o HP MÁXIMO de cada lado.
+
+    O máximo, e não o atual: a poça não encolhe conforme a luta anda, senão o
+    mesmo golpe valeria mais no fim do combate que no começo e a última
+    rodada viraria a mais importante de todas.
+
+    O grupo conta só os jogadores. Invocação movimenta HP e pode levar cura,
+    mas somar o corpo dela ao denominador faria o druida diluir a conta de
+    todo mundo só por ter conjurado.
+    """
+    inimigos = sum(i.hp_max for i in estado.inimigos)
+    grupo = sum(c.hp_max for c in estado.combatentes if not c.e_invocacao)
+    return inimigos, grupo
+
+
 def reduzido(combatente: Combatente, dano: int) -> int:
     """O dano depois da reducao do alvo: Rage e companhia cortam antes do HP.
 
