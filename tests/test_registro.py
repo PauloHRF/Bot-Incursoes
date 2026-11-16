@@ -411,6 +411,9 @@ async def caso_a_run_sem_tier_nao_trava():
 
     run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
     await db.adicionar_participante(conn, run_id, dono, pid)  # sem tier
+    # Run ANTIGA e run que ja acabou. Aberta, ela trancaria por outro motivo
+    # — a ficha em jogo nao muda —, e esse nao e o caso que este conta.
+    await db.atualizar_run(conn, run_id, status="sucesso")
     assert await db.tiers_jogados(conn, pid) == set()
 
     inter = FakeInteraction(canal, dono)
@@ -459,6 +462,140 @@ async def caso_remover_respeita_run_viva():
     assert "esta na run" in inter.resposta, inter.resposta
     assert await db.buscar_personagem(conn, pid) is not None, "apagou mesmo assim"
     print("  a ficha de quem esta numa run viva nao e apagada: ok")
+
+
+async def caso_a_ficha_em_jogo_nao_muda():
+    """Upar, voltar e alterar recusam a ficha que esta numa run viva.
+
+    Os numeros do personagem nao sao gravados na run: o combate le a ficha a
+    cada golpe. Entao o `/ficha upar` no meio da incursao valia na mesma
+    hora — um guerreiro de tier 1, dentro de uma incursao de tier 1, saia
+    dela com os numeros do tier 5. O tier so e conferido na entrada.
+
+    O mercado ja fechava durante a incursao; a ficha nao.
+    """
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", "barbaro",
+        pericias_cheias("barbaro", 3), nivel=3,
+    )
+    # A outra ficha do mesmo jogador, que nao entrou em run nenhuma.
+    em_casa = await db.criar_personagem(
+        conn, GUILD, dono, "Kaelen", "guerreiro",
+        pericias_cheias("guerreiro"),
+    )
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
+    # Sem tier gravado, para o `alterar` chegar ate esta trava: com ele, a
+    # recusa viria antes, por ja ter jogado naquele tier.
+    await db.adicionar_participante(conn, run_id, dono, pid)
+    antes = await db.buscar_personagem(conn, pid)
+
+    # 'recrutando' ja tranca: o tier e conferido na entrada, e subir com o
+    # personagem ja no grupo furaria a conferencia do mesmo jeito.
+    for status in ("recrutando", "em_sala"):
+        await db.atualizar_run(conn, run_id, status=status)
+        for comando in (ficha.upar, ficha.voltar, ficha.alterar):
+            inter = FakeInteraction(canal, dono)
+            await comando.callback(ficha, inter, "Vhalor")
+            assert f"esta na run #{run_id}" in (inter.resposta or ""), (
+                status, comando.name, inter.resposta
+            )
+            assert menu_de(inter) is None, (
+                f"/ficha {comando.name} abriu menu com a ficha em jogo ({status})"
+            )
+            agora = await db.buscar_personagem(conn, pid)
+            assert agora["nivel"] == antes["nivel"], (status, comando.name)
+            assert agora["escolhas"] == antes["escolhas"], (status, comando.name)
+            assert agora["pericias"] == antes["pericias"], (status, comando.name)
+    assert pid not in ficha._fluxo, "a recusa deixou um fluxo aberto"
+
+    # A trava e da FICHA, e nao do jogador: a que ficou em casa sobe.
+    livre = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, livre, "Kaelen")
+    assert "esta na run" not in leu(livre), leu(livre)
+    await resolver_fluxo(canal, dono, livre)
+    assert tier((await db.buscar_personagem(conn, em_casa))["nivel"]) == 2, (
+        "a ficha que nao esta na run deveria subir"
+    )
+
+    # E a run acabar devolve a ficha ao dono.
+    await db.atualizar_run(conn, run_id, status="sucesso")
+    depois = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, depois, "Vhalor")
+    assert "esta na run" not in leu(depois), leu(depois)
+    await resolver_fluxo(canal, dono, depois)
+    assert tier((await db.buscar_personagem(conn, pid))["nivel"]) == 3, (
+        "com a run encerrada o upar volta a valer"
+    )
+    print("  a ficha em jogo nao muda; a de casa e a de depois, sim: ok")
+
+
+async def caso_menu_velho_nao_muda_a_ficha_em_jogo():
+    """Abrir o menu, entrar na run e so entao responder: a resposta nao vale.
+
+    O menu de decisao fica na tela por minutos. O `/ficha upar` confere a run
+    ao abrir, mas quem abrisse o menu ANTES de entrar na incursao e
+    respondesse depois passava por esse cheque — e subia de tier no meio
+    dela. Todo cheque que abre um menu precisa valer de novo no clique.
+
+    Sao dois menus, e os dois gravam: o da decisao e o das proficiencias.
+    """
+    conn, canal, ficha = await preparar()
+    dono = JOGADORES[0]
+
+    # 1. o menu da DECISAO (o Primal Knowledge do barbaro, no tier 2)
+    pid = await db.criar_personagem(
+        conn, GUILD, dono, "Vhalor", "barbaro",
+        pericias_cheias("barbaro"),
+    )
+    inter = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, inter, "Vhalor")
+    assert menu_de(inter) is not None, leu(inter)
+
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", dono)
+    await db.adicionar_participante(conn, run_id, dono, pid, tier=1)
+
+    menu_de(inter).menu._values = ["Furtividade", "Acrobacia"]
+    tarde = FakeInteraction(canal, dono)
+    await menu_de(inter)._escolher(tarde)
+    assert f"esta na run #{run_id}" in (tarde.resposta or ""), tarde.resposta
+    intacto = await db.buscar_personagem(conn, pid)
+    assert tier(intacto["nivel"]) == 1, "o menu velho subiu a ficha em jogo"
+    assert intacto["escolhas"] == {}, intacto["escolhas"]
+    await db.atualizar_run(conn, run_id, status="sucesso")
+
+    # 2. o menu das PROFICIENCIAS (a 6a pericia do monge, no tier 3)
+    monge = await db.criar_personagem(
+        conn, GUILD, dono, "Kaelen", "monge", ["Acrobacia", "Atletismo"], nivel=4
+    )
+    inter = FakeInteraction(canal, dono)
+    await ficha.upar.callback(ficha, inter, "Kaelen")
+    # O upar encadeia: responde as decisoes ate sobrar o menu de pericias.
+    atual = inter
+    for _ in range(8):
+        view = menu_de(atual)
+        assert view is not None, "o fluxo fechou antes do menu de pericias"
+        if view.__class__.__name__ == "SeletorPericiasDoTier":
+            break
+        quantas = max(1, view.menu.min_values or 1)
+        view.menu._values = [o.value for o in view.menu.options[:quantas]]
+        seguinte = FakeInteraction(canal, dono)
+        await view._escolher(seguinte)
+        atual = seguinte
+    antes = await db.buscar_personagem(conn, monge)
+
+    outra = await db.criar_run(conn, GUILD, CANAL, "t", dono)
+    await db.adicionar_participante(conn, outra, dono, monge, tier=2)
+
+    view.menu._values = [o.value for o in view.menu.options[: view.menu.max_values]]
+    tarde = FakeInteraction(canal, dono)
+    await view._escolher(tarde)
+    assert f"esta na run #{outra}" in (tarde.resposta or ""), tarde.resposta
+    intacto = await db.buscar_personagem(conn, monge)
+    assert intacto["nivel"] == antes["nivel"], "o menu velho subiu a ficha em jogo"
+    assert intacto["pericias"] == antes["pericias"], intacto["pericias"]
+    print("  o menu aberto antes da run nao muda a ficha depois: ok")
 
 
 async def caso_alterar_abre_as_pericias_no_tier_que_as_da():
@@ -617,6 +754,8 @@ async def main():
         await caso_a_run_sem_tier_nao_trava()
         await caso_remover_apaga_a_ficha_de_outro()
         await caso_remover_respeita_run_viva()
+        await caso_a_ficha_em_jogo_nao_muda()
+        await caso_menu_velho_nao_muda_a_ficha_em_jogo()
         await caso_alterar_abre_as_pericias_no_tier_que_as_da()
         await caso_alterar_nao_abre_pericia_em_tier_que_nao_da()
         await caso_menu_limita_as_proficiencias()

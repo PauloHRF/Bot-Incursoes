@@ -672,6 +672,13 @@ Por isso nada disso fica gravado na ficha: o bot guarda classe, tier, proficiên
 expertises e retrato, e deriva o resto na leitura. Uma ficha nunca fica desatualizada em
 relação à tabela — mudar um número em `classes.py` muda todo mundo daquela classe.
 
+**A ficha que está em jogo não muda.** É o outro lado de derivar na leitura: o combate lê a
+ficha a cada golpe, então um `/ficha upar` no meio da incursão valeria na mesma hora — e o
+tier só é conferido na entrada. `upar`, `voltar` e `alterar` recusam o personagem que está
+numa run viva, do recrutamento ao fim, e a recusa vale também no menu que já estava aberto
+quando ele entrou. A trava é do **personagem**, não do jogador: a ficha que ficou em casa
+sobe quando ele quiser. O mercado já fechava durante a incursão pelo mesmo motivo.
+
 **Classes prontas** (as do documento de fichas): Bárbaro, Guerreiro, Ladino, Monge,
 Paladino, Patrulheiro e Xamã. **Previstas, ainda sem tabela**: Artífice, Bardo, Bruxo,
 Clérigo, Druida, Feiticeiro e Mago — aparecem na lista de classes, mas o bot recusa o

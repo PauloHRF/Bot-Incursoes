@@ -171,9 +171,12 @@ class ViewVotacao(discord.ui.View):
 class ViewTrocaDoDescanso(discord.ui.View):
     """As trocas do descanso duro. Uma por botao, votadas pela maioria.
 
-    Reusa o caminho do voto de sala: as trocas sorteadas ficam em `run_mapa`
-    como as salas, o voto em `run_votos`, e a maioria fecha. Nada de tabela
-    nova — o que muda e o que o id significa.
+    Reusa o caminho do voto de sala: o voto fica em `run_votos`, e a maioria
+    fecha. Nada de tabela nova — o que muda e o que o id significa.
+
+    As trocas da mesa NAO sao gravadas: saem da semente `run:parada`, em
+    `_trocas_da_parada`. Quem remonta este cartao depois de um restart
+    (`_view_do_estado`) tem de pedir a mesa la, e nao em `run_mapa`.
     """
 
     def __init__(self, cog: "Incursoes", run_id: int, parada: int, trocas: list):
@@ -723,6 +726,18 @@ class Incursoes(commands.Cog):
         if run["status"] == "recrutando":
             return ViewRecrutamento(self, run["id"])
         if run["status"] == "escolhendo":
+            # A Ultima Vigilia tambem espera em 'escolhendo', mas a mesa dela
+            # NAO esta em `run_mapa`: as trocas saem da semente `run:parada`
+            # (`_trocas_da_parada`). Procurando so no mapa, este ramo devolvia
+            # None para ela — depois de um restart o cartao ficava no canal
+            # com tres botoes mortos, e a run sem saida.
+            if incursao.descanso_da_parada(run["linha_atual"]) == incursoes.DESCANSO_DURO:
+                trocas = self._trocas_da_parada(run["id"], run["linha_atual"])
+                return (
+                    ViewTrocaDoDescanso(self, run["id"], run["linha_atual"], trocas)
+                    if trocas
+                    else None
+                )
             opcoes = await self._opcoes(run, run["linha_atual"])
             return ViewVotacao(self, run["id"], run["linha_atual"], opcoes) if opcoes else None
         if run["status"] in ("em_sala", "objetivo") and run["sala_atual"]:
@@ -1266,12 +1281,21 @@ class Incursoes(commands.Cog):
             # na hora no caso comum, mas ela le e decide com um `await` no
             # meio: dois cliques no mesmo instante passavam os dois por ela.
             # Aqui so se traduz o "nao deu" em motivo.
-            await interaction.response.send_message(
-                "Você já está no grupo."
-                if await db.esta_na_run(self.bot.db, run_id, interaction.user.id)
-                else "O grupo encheu antes de você: a última vaga foi de outra pessoa.",
-                ephemeral=True,
-            )
+            #
+            # Sao tres motivos no mesmo `rowcount` zero, e a ordem importa: o
+            # grupo que encheu COMECA em seguida, entao quem perdeu a ultima
+            # vaga tambem encontra a run fora do recrutamento. Lotacao vem
+            # antes para ele ler o que de fato o barrou.
+            if await db.esta_na_run(self.bot.db, run_id, interaction.user.id):
+                motivo = "Você já está no grupo."
+            elif (
+                len(await db.participantes(self.bot.db, run_id))
+                >= config.TAMANHO_GRUPO
+            ):
+                motivo = "O grupo encheu antes de você: a última vaga foi de outra pessoa."
+            else:
+                motivo = "A incursão começou antes de você entrar: o grupo já partiu."
+            await interaction.response.send_message(motivo, ephemeral=True)
             return
         await interaction.response.send_message(
             f"Voce entrou com **{personagem['nome']}** (tier {tier(personagem['nivel'])}).",
@@ -1377,9 +1401,18 @@ class Incursoes(commands.Cog):
                     "então não dá para sortear o caminho. Avise quem administra o bot."
                 )
             return
+        # A run e tomada ANTES de qualquer outra coisa, e depois das recusas
+        # acima — que precisam deixa-la em 'recrutando' para o grupo tentar de
+        # novo. Dois caminhos chegam aqui (o grupo encheu, ou quem abriu clicou
+        # em "Comecar") e os dois conferem o status com `await` no meio: sem a
+        # reivindicacao, um clique duplo abria a run duas vezes.
+        if not await db.tomar_o_inicio(self.bot.db, run["id"]):
+            return
+        # Relido depois da trava: quem entrou enquanto este clique esperava ja
+        # esta no grupo, e a lista de cima foi lida antes disso.
+        participantes = await db.participantes(self.bot.db, run["id"])
         await db.marcar_ultima_incursao(self.bot.db, run["guild_id"], participantes)
         await db.inicializar_hp(self.bot.db, run["id"])
-        await db.atualizar_run(self.bot.db, run["id"], status="escolhendo", linha_atual=1)
 
         if canal:
             if run["mensagem_id"]:
@@ -5840,10 +5873,12 @@ class Incursoes(commands.Cog):
     async def _abrir_descanso_duro(self, run: dict[str, Any], parada: int) -> None:
         """O descanso da Longa depois da sexta sala: três trocas, uma escolha.
 
-        Reusa o caminho do voto de sala inteiro: as trocas sorteadas ficam em
-        `run_mapa` como as salas ficariam, o voto em `run_votos`, e a maioria
-        fecha. O que muda é o que o id guardado significa — e por isso não há
-        tabela nova nem um segundo jeito de votar.
+        Reusa o caminho do voto de sala: o voto fica em `run_votos`, e a
+        maioria fecha. O que muda é o que o id guardado significa — e por isso
+        não há tabela nova nem um segundo jeito de votar.
+
+        A mesa não é gravada em `run_mapa`, como as salas são: ela sai da
+        semente (`_trocas_da_parada`), e é de lá que o restart a remonta.
         """
         incursao = self._incursao_da_run(run)
         canal = await self._canal(run)
@@ -6129,6 +6164,7 @@ class Incursoes(commands.Cog):
 
         minhas = await db.condicoes_de(self.bot.db, run_id, user_id)
         tipos = self.TIPOS_DE_LIMPEZA.get(chave)
+        cid = None
         if tipos:
             candidatas = consequencias.a_limpar(minhas, tipos)
             if not candidatas:
@@ -6139,6 +6175,28 @@ class Incursoes(commands.Cog):
                 )
                 return
             cid = candidatas[0]
+
+        # A escolha e reivindicada ANTES de valer, e nao depois. A conferencia
+        # la em cima le e decide com `await` no meio: os dois botoes clicados
+        # juntos passavam os dois por ela, e o mesmo personagem saia do
+        # descanso sem um debuff E sem um ponto de Exaustao — a regra e uma
+        # coisa por personagem. O INSERT de `marcar_descanso` e quem decide:
+        # quem leva o True limpa, o outro le que ja escolheu.
+        #
+        # Vem depois da recusa de cima de proposito, para a categoria que ele
+        # nao carrega continuar nao gastando a escolha.
+        #
+        # A ordem escolhe um lado, como em `db.resolver_turno`: se o processo
+        # morrer entre a marca e a limpeza, a escolha se perde em vez de valer
+        # duas vezes.
+        if not await db.marcar_descanso(self.bot.db, run_id, passo, user_id):
+            await interaction.response.send_message(
+                "Você já escolheu neste descanso — é uma por personagem.",
+                ephemeral=True,
+            )
+            return
+
+        if cid is not None:
             sobrou = await db.reduzir_condicao(self.bot.db, run_id, user_id, cid)
             resto = f" (ainda ×{sobrou})" if sobrou else ""
             publico = (
@@ -6150,7 +6208,6 @@ class Incursoes(commands.Cog):
             publico = f"**{await self._nome_na_run(run, user_id)}** descansa sem limpar nada"
             privado = "Você segue sem limpar nada."
 
-        await db.marcar_descanso(self.bot.db, run_id, passo, user_id)
         await interaction.response.send_message(privado, ephemeral=True)
         self._guardar_efemera(run_id, interaction)
         canal = await self._canal(run)

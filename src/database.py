@@ -978,11 +978,17 @@ async def adicionar_participante(
     tier: Optional[int] = None,
     limite: Optional[int] = None,
 ) -> bool:
-    """False se o jogador ja estava na run, ou se ela ja esta cheia.
+    """False se o jogador ja estava na run, se ela ja esta cheia, ou se ja comecou.
 
     `tier` e o do personagem AGORA, gravado na entrada: e com ele que o
     `/ficha alterar` sabe se aquele tier ja foi jogado. Sem ele a coluna
     fica NULL e nao trava nada.
+
+    **So se entra numa run que ainda esta recrutando**, e isso tambem e
+    conferido DENTRO do INSERT. E o par de `tomar_o_inicio`: quem abriu pode
+    clicar em "Comecar" no instante em que alguem entra, e a entrada que
+    chegasse depois do inicio punha no grupo um personagem sem HP gravado e
+    sem a semana marcada — ele nao estava na lista quando a run abriu.
 
     **A lotacao e conferida DENTRO do INSERT**, e nao antes dele. O cog
     tambem olha o tamanho do grupo antes de chamar aqui, mas aquela
@@ -1004,8 +1010,13 @@ async def adicionar_participante(
         " SELECT ?, ?, ?, ?"
         " WHERE (SELECT COUNT(*) FROM run_participantes WHERE run_id = ?) < ?"
         "   AND NOT EXISTS (SELECT 1 FROM run_participantes"
-        "                   WHERE run_id = ? AND user_id = ?)",
-        (run_id, user_id, personagem_id, tier, run_id, teto, run_id, user_id),
+        "                   WHERE run_id = ? AND user_id = ?)"
+        "   AND EXISTS (SELECT 1 FROM runs"
+        "               WHERE id = ? AND status = 'recrutando')",
+        (
+            run_id, user_id, personagem_id, tier,
+            run_id, teto, run_id, user_id, run_id,
+        ),
     )
     if not cur.rowcount:
         await conn.commit()
@@ -1081,6 +1092,30 @@ async def personagens_da_run(conn: aiosqlite.Connection, run_id: int) -> list[di
         linhas = await cur.fetchall()
     vestido = await _equipados_de(conn, [r["id"] for r in linhas])
     return [_desserializar(r, vestido.get(r["id"], ())) for r in linhas]
+
+
+async def tomar_o_inicio(conn: aiosqlite.Connection, run_id: int) -> bool:
+    """Tira a run do recrutamento — e so UM chamador consegue.
+
+    Dois caminhos comecam uma run: o grupo encher e quem abriu clicar em
+    "Comecar". Os dois conferem o status antes, mas conferem com `await` no
+    meio — um clique duplo em "Comecar", ou o quinto jogador entrando no
+    instante em que o criador clica, passavam os dois pela conferencia. A run
+    abria duas vezes: a lore de abertura e o cartao de votacao saiam
+    duplicados no canal, e so o ultimo cartao era o que o banco conhecia.
+
+    E a mesma trava de `tomar_a_sala`, uma etapa antes: o UPDATE so acerta
+    linha se a run ainda esta em 'recrutando'. Quem levou a linha abre a run;
+    o outro volta de maos vazias e nao faz nada.
+    """
+    cur = await conn.execute(
+        "UPDATE runs SET status = 'escolhendo', linha_atual = 1,"
+        " atualizada_em = datetime('now')"
+        " WHERE id = ? AND status = 'recrutando'",
+        (run_id,),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
 
 
 async def tomar_a_sala(
@@ -1231,6 +1266,29 @@ async def run_viva_do_jogador(
         "SELECT r.* FROM runs r JOIN run_participantes p ON p.run_id = r.id"
         f" WHERE r.guild_id = ? AND p.user_id = ? AND r.status IN ({marcadores})",
         (guild_id, user_id, *STATUS_VIVOS),
+    ) as cur:
+        row = await cur.fetchone()
+    return dict(row) if row else None
+
+
+async def run_viva_do_personagem(
+    conn: aiosqlite.Connection, personagem_id: int
+) -> Optional[dict[str, Any]]:
+    """A run viva em que ESTE personagem esta, se houver.
+
+    Por personagem, e nao por jogador como `run_viva_do_jogador`: e a
+    pergunta de quem quer mexer na FICHA. A ficha que esta em jogo nao pode
+    mudar; a outra ficha do mesmo jogador, que ficou em casa, pode.
+
+    'recrutando' conta como viva de proposito: o tier e conferido na ENTRADA,
+    entao subir de tier com o personagem ja no grupo, antes de a run comecar,
+    furaria a mesma conferencia.
+    """
+    marcadores = ", ".join("?" * len(STATUS_VIVOS))
+    async with conn.execute(
+        "SELECT r.* FROM runs r JOIN run_participantes p ON p.run_id = r.id"
+        f" WHERE p.personagem_id = ? AND r.status IN ({marcadores})",
+        (personagem_id, *STATUS_VIVOS),
     ) as cur:
         row = await cur.fetchone()
     return dict(row) if row else None

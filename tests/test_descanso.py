@@ -27,7 +27,7 @@ from src import (  # noqa: E402
     mercado,
 )
 from src import embeds as E  # noqa: E402
-from src.cogs.incursao import Incursoes  # noqa: E402
+from src.cogs.incursao import Incursoes, ViewTrocaDoDescanso  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     CLASSE_PADRAO,
@@ -232,6 +232,75 @@ async def caso_o_normal_chega_sem_votacao():
     print("  o descanso fixo chega sem votação e ainda limpa: ok")
 
 
+async def caso_o_descanso_limpa_uma_coisa_por_personagem():
+    """Os dois botões clicados JUNTOS pelo mesmo jogador limpam uma coisa só.
+
+    O descanso deixa cada personagem tirar UMA condição: um stack de debuff,
+    ou um ponto de Exaustão. A conferência de "já escolheu" vinha antes da
+    limpeza e a marca vinha depois, com `await` entre as duas — então os dois
+    cliques passavam pela conferência, e o mesmo personagem saía sem o
+    debuff E sem a Exaustão, que é a condição mais cara de tirar do jogo.
+
+    Clicar em sequência não prova nada: o segundo já encontra a marca do
+    primeiro. O `gather` é o teste.
+    """
+    conn, canal, cog, incursao = await preparar("Média")
+    run = await montar_run(conn, canal, cog)
+    apressado, outro = JOGADORES[0], JOGADORES[1]
+    await db.aplicar_condicao(conn, run["id"], apressado, "medo", 2)
+    await db.aplicar_condicao(conn, run["id"], apressado, "exaustao", 2)
+    # Mais alguém carregando algo, para o descanso não fechar no primeiro
+    # clique — e para o botão de debuff existir para quem não tem debuff.
+    await db.aplicar_condicao(conn, run["id"], outro, "exaustao", 1)
+
+    run = await abrir_o_descanso(cog, conn, canal, run["id"])
+    sala_id = run["sala_atual"]
+    cartao = await canal.fetch_message(run["mensagem_id"])
+
+    # A categoria que ele NÃO carrega continua não gastando a escolha: o
+    # botão existe por causa de outra pessoa. É a regra que a trava nova
+    # tinha de preservar — reivindicar antes de conferir a gastaria.
+    engano = FakeInteraction(canal, outro, cartao)
+    await cog.limpar_no_descanso(engano, run["id"], sala_id, "debuff")
+    assert "não carrega" in (engano.resposta or ""), engano.resposta
+    assert outro in await cog._descanso_pendente(run), (
+        "clicar na categoria errada gastou a escolha"
+    )
+
+    antes = await db.condicoes_de(conn, run["id"], apressado)
+    cliques = [
+        FakeInteraction(canal, apressado, cartao),
+        FakeInteraction(canal, apressado, cartao),
+    ]
+    await asyncio.gather(
+        cog.limpar_no_descanso(cliques[0], run["id"], sala_id, "debuff"),
+        cog.limpar_no_descanso(cliques[1], run["id"], sala_id, "exaustao"),
+    )
+    depois = await db.condicoes_de(conn, run["id"], apressado)
+    limpos = sum(antes.values()) - sum(depois.values())
+    assert limpos == 1, (
+        f"o descanso limpou {limpos} coisas de um personagem só: "
+        f"{antes} -> {depois}"
+    )
+    recusados = [
+        i for i in cliques if "já escolheu" in (i.resposta or "")
+    ]
+    assert len(recusados) == 1, [i.resposta for i in cliques]
+
+    # E quem errou o botão ainda tem a escolha dele, e ela vale.
+    certo = FakeInteraction(canal, outro, cartao)
+    await cog.limpar_no_descanso(certo, run["id"], sala_id, "exaustao")
+    assert not await db.condicoes_de(conn, run["id"], outro), (
+        "a Exaustão de quem escolheu certo deveria ter saído"
+    )
+    assert (await db.buscar_run(conn, run["id"]))["linha_atual"] == run["linha_atual"] + 1, (
+        "com todos tendo escolhido, a parada fecha"
+    )
+    await conn.close()
+    fechar(conn)
+    print("  dois botões juntos limpam uma coisa só, e o engano não custa: ok")
+
+
 async def caso_a_sala_de_descanso_sai_do_sorteio():
     """A sala de Descanso do banco não é mais oferecida na votação."""
     conn, canal, cog, incursao = await preparar("Longa")
@@ -416,6 +485,56 @@ async def caso_a_vigilia_aplica_uma_vez_so():
     await conn.close()
     fechar(conn)
     print("  a vigília aplica a troca uma vez só: ok")
+
+
+async def caso_a_vigilia_sobrevive_a_um_restart():
+    """Depois de um restart, os botões da vigília voltam a funcionar.
+
+    A vigília espera em `escolhendo`, como a votação de sala — e quem
+    remonta os botões procurava as opções em `run_mapa`, que é onde as SALAS
+    sorteadas ficam. A mesa da vigília não está lá: ela sai da semente
+    `run:parada`. O remontador não achava nada, não registrava view nenhuma,
+    e o cartão ficava no canal com três botões que respondiam "esta
+    interação falhou". Sem comando que reenvie o cartão, a run parava ali.
+
+    A mesa NÃO é forçada aqui, de propósito: o caso é justamente o cog novo
+    chegar à mesma mesa sozinho, pela semente.
+    """
+    conn, canal, cog, incursao = await preparar("Longa")
+    run = await na_vigilia(conn, canal, cog)
+    parada = run["linha_atual"]
+    cartao = await canal.fetch_message(run["mensagem_id"])
+    no_cartao = [b.custom_id for b in cartao.view.children]
+
+    # Um cog novo, como se o processo tivesse reiniciado.
+    bot2 = FakeBot(conn, canal)
+    cog2 = Incursoes(bot2)
+    montar_conteudo(cog2, tamanho="Longa", tier=TIER, salas=salas_sem_combate(12))
+    await cog2.restaurar_views()
+
+    assert bot2.views_registradas, "nenhuma view foi restaurada para a vigília"
+    view, mensagem_id = bot2.views_registradas[0]
+    assert isinstance(view, ViewTrocaDoDescanso), type(view).__name__
+    assert mensagem_id == run["mensagem_id"], (mensagem_id, run["mensagem_id"])
+    # Os MESMOS botões do cartão que está no canal: é pelo `custom_id` que o
+    # Discord entrega o clique, e uma mesa diferente não receberia nenhum.
+    assert [b.custom_id for b in view.children] == no_cartao, (
+        [b.custom_id for b in view.children], no_cartao
+    )
+
+    # E o voto pelo cog novo fecha a parada, como fecharia sem o restart.
+    escolhida = cog2._trocas_da_parada(run["id"], parada)[0].id
+    for user_id in JOGADORES[:3]:
+        await cog2.votar_troca(
+            FakeInteraction(canal, user_id, cartao), run["id"], parada, escolhida
+        )
+    atual = await db.buscar_run(conn, run["id"])
+    assert atual["linha_atual"] == parada + 1, (
+        f"a vigília não fechou pelo cog novo: ficou em {atual['linha_atual']}"
+    )
+    await conn.close()
+    fechar(conn)
+    print("  os botões da vigília sobrevivem a um restart: ok")
 
 async def caso_folego_cura_e_da_thp():
     """Recuperar o fôlego: 20% de cura, 10% de temporária, e nada cobrado."""
@@ -693,11 +812,13 @@ async def main() -> None:
     caso_as_trocas_do_catalogo()
     caso_o_cartao_de_abertura_conta_os_descansos()
     await caso_o_normal_chega_sem_votacao()
+    await caso_o_descanso_limpa_uma_coisa_por_personagem()
     await caso_a_sala_de_descanso_sai_do_sorteio()
     await caso_a_vigilia_poe_tres_trocas_na_mesa()
     await caso_a_vigilia_recusa_voto_de_fora()
     await caso_a_maioria_fecha_a_vigilia()
     await caso_a_vigilia_aplica_uma_vez_so()
+    await caso_a_vigilia_sobrevive_a_um_restart()
     await caso_folego_cura_e_da_thp()
     await caso_reservas_cobra_dois_pontos()
     await caso_feridas_limpa_debuff_e_deixa_exaustao()

@@ -158,6 +158,10 @@ class SeletorPericiasDoTier(DonoDaFicha):
         self.add_item(self.menu)
 
     async def _escolher(self, interaction: discord.Interaction) -> None:
+        # O menu velho: aberto antes de o personagem entrar numa incursao e
+        # respondido depois. Ver `Ficha._em_jogo`.
+        if await self.cog._em_jogo(interaction, self.personagem_id):
+            return
         self.stop()
         await db.atualizar_pericias(
             self.cog.bot.db, self.personagem_id, list(self.menu.values)
@@ -417,6 +421,38 @@ class Ficha(commands.Cog):
         self, interaction: discord.Interaction, atual: str
     ) -> list[app_commands.Choice[str]]:
         return await sugerir_personagens(self.bot.db, interaction, atual)
+
+    async def _em_jogo(
+        self, interaction: discord.Interaction, personagem_id: int
+    ) -> bool:
+        """True, e ja recusou, se esta ficha esta numa run viva.
+
+        **A ficha que esta em jogo nao muda.** Os numeros nao sao gravados na
+        run: o combate le a ficha a cada golpe (`database._desserializar`),
+        entao o que muda aqui muda la na mesma hora. Um guerreiro de tier 1
+        entrava numa incursao de tier 1, subia ate o tier 5 no meio dela e
+        seguia com 93 de HP e dois golpes por rodada, contra criatura escrita
+        para quem tem 21. O tier so e conferido na entrada.
+
+        O mercado ja fecha durante a incursao pelo mesmo motivo; faltava a
+        ficha. A trava e do PERSONAGEM, e nao do jogador: a ficha que ficou em
+        casa nao esta em mesa nenhuma, e sobe quando ele quiser.
+
+        Vale no comando E no clique do menu. O menu de decisao fica na tela
+        por minutos depois de aberto — abrir o `/ficha upar`, entrar na run e
+        so entao responder passava por qualquer cheque feito antes de abrir.
+        """
+        viva = await db.run_viva_do_personagem(self.bot.db, personagem_id)
+        if not viva:
+            return False
+        personagem = await db.buscar_personagem(self.bot.db, personagem_id)
+        nome = (personagem or {}).get("nome", "Este personagem")
+        await interaction.response.send_message(
+            f"**{nome}** esta na run #{viva['id']}, e a ficha nao muda no "
+            f"meio da incursao. Termine ou desista dela antes.",
+            ephemeral=True,
+        )
+        return True
 
     async def _resolver(
         self, interaction: discord.Interaction, nome: Optional[str]
@@ -736,6 +772,8 @@ class Ficha(commands.Cog):
         escolhido = await self._resolver(interaction, personagem)
         if not escolhido:
             return
+        if await self._em_jogo(interaction, escolhido["id"]):
+            return
         antes = tier(escolhido["nivel"])
         if antes >= TIER_MAXIMO:
             await interaction.response.send_message(
@@ -804,6 +842,8 @@ class Ficha(commands.Cog):
         """Desce um tier e esquece as decisoes do tier perdido, para refaze-las."""
         escolhido = await self._resolver(interaction, personagem)
         if not escolhido:
+            return
+        if await self._em_jogo(interaction, escolhido["id"]):
             return
         antes = tier(escolhido["nivel"])
         if antes <= 1:
@@ -1075,7 +1115,13 @@ class Ficha(commands.Cog):
         o menu pode ter envelhecido na tela do jogador, e um menu velho nao
         pode gravar a metamagia que ele ja tem. Esconder no menu e metade do
         trabalho; a outra metade e recusar aqui.
+
+        E confere de novo se a ficha esta em jogo, pela mesma razao: o
+        comando que abriu este menu ja conferiu, mas o menu fica na tela, e
+        entre abrir e responder cabe entrar numa incursao.
         """
+        if await self._em_jogo(interaction, personagem_id):
+            return
         antes_de_gravar = await db.buscar_personagem(self.bot.db, personagem_id)
         feitas = (antes_de_gravar or {}).get("escolhas") or {}
         if (habilidade.escolha or {}).get("tipo") == "opcao" and isinstance(valor, str):
@@ -1154,6 +1200,11 @@ class Ficha(commands.Cog):
                 f"para refazer. Elas voltam a abrir quando ele subir de tier.",
                 ephemeral=True,
             )
+            return
+        # Depois da trava de cima, e nao antes: quem entrou NESTE tier le o
+        # motivo que nao passa quando a run acabar. Esta pega o que sobra — a
+        # run antiga sem tier gravado que ainda esteja aberta.
+        if await self._em_jogo(interaction, escolhido["id"]):
             return
 
         classe = cl.classe(escolhido.get("classe"))

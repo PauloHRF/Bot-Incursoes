@@ -37,7 +37,7 @@ from src import (  # noqa: E402
     config, consumiveis as K, database as db, itens, mercado,
 )
 from src.cogs.mercado import tentar_comprar  # noqa: E402
-from src.cogs.incursao import Incursoes  # noqa: E402
+from src.cogs.incursao import Incursoes, ViewVotacao  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     CLASSE_PADRAO,
@@ -467,6 +467,113 @@ async def caso_entrar_duas_vezes_na_mesma_run_nao_duplica():
     print("  clicar duas vezes entra uma vez, e a frase e a certa: ok")
 
 
+# ------------------------------------------------------------ o começo
+
+
+def _o_que_abriu(canal, desde: int):
+    """O que foi ao canal a partir dali: (cartões de votação, o resto)."""
+    novas = canal.enviadas[desde:]
+    votacoes = [m for m in novas if isinstance(m.view, ViewVotacao)]
+    return votacoes, [m for m in novas if m not in votacoes]
+
+
+async def caso_dois_cliques_em_comecar_abrem_a_run_uma_vez():
+    """Clique duplo em "Começar": a run abre uma vez, com um cartão só.
+
+    `recrutar` confere `status == 'recrutando'` no começo, e daí até a run
+    mudar de status há `await` — o segundo clique chegava com ela ainda
+    recrutando e seguia também. A abertura e o cartão de votação saíam em
+    dobro, e só o último cartão era o que o banco conhecia: o primeiro ficava
+    no canal para sempre, com botões que votavam como os do outro.
+
+    A trava é `db.tomar_o_inicio`, o mesmo desenho de `tomar_a_sala`.
+    """
+    conn, canal, cog, users = await preparar()
+    await cog.entrar.callback(
+        cog, FakeInteraction(canal, users[0]), cog.incursoes["t"].tier, "t"
+    )
+    run = await db.run_do_canal(conn, CANAL)
+    msg = await canal.fetch_message(run["mensagem_id"])
+    await cog.recrutar(FakeInteraction(canal, users[1], msg), run["id"], "entrar")
+
+    desde = len(canal.enviadas)
+    await asyncio.gather(
+        cog.recrutar(FakeInteraction(canal, users[0], msg), run["id"], "comecar"),
+        cog.recrutar(FakeInteraction(canal, users[0], msg), run["id"], "comecar"),
+    )
+
+    votacoes, resto = _o_que_abriu(canal, desde)
+    assert len(votacoes) == 1, (
+        f"a run abriu {len(votacoes)} cartoes de votacao com dois cliques"
+    )
+    # O resto e a abertura — a lore com o grupo —, e ela tambem sai uma vez.
+    assert len(resto) == 1, [m.content or m.embeds[0].title for m in resto]
+    atual = await db.buscar_run(conn, run["id"])
+    assert atual["status"] == "escolhendo" and atual["linha_atual"] == 1, atual
+    assert atual["mensagem_id"] == votacoes[0].id, (
+        "o cartao que o banco conhece nao e o que esta no canal"
+    )
+
+    # E no banco a porta fecha dos dois lados: ninguem comeca de novo, e
+    # ninguem entra numa run que ja partiu.
+    assert await db.tomar_o_inicio(conn, run["id"]) is False
+    assert await db.adicionar_participante(
+        conn, run["id"], users[2], await _pid(conn, users[2])
+    ) is False, "entrou numa run que ja tinha comecado"
+    assert len(await db.participantes(conn, run["id"])) == 2
+
+    await _fechar(conn)
+    print("  dois cliques em Comecar abrem a run uma vez so: ok")
+
+
+async def caso_entrar_no_instante_do_comecar_nao_deixa_ninguem_pela_metade():
+    """Quem abriu clica em "Começar" enquanto alguém entra: um desfecho só.
+
+    São os dois caminhos que começam uma run chegando juntos. Antes a run
+    abria duas vezes — uma pelo "Começar", outra pela entrada que completou o
+    grupo. Travar só o começo não bastava: a entrada que chegasse DEPOIS dele
+    punha no grupo um personagem sem HP gravado e sem a semana marcada. Por
+    isso a entrada também confere, dentro do próprio INSERT, que a run ainda
+    está recrutando.
+
+    Quem leva a corrida depende de quantos `await` cada caminho tem, e isso
+    não é contrato de ninguém. O caso afirma o que vale nos dois desfechos:
+    a run abre uma vez, e quem está nela está inteiro.
+    """
+    conn, canal, cog, users = await preparar()
+    run, msg = await _run_com_quatro(conn, canal, cog, users)
+
+    desde = len(canal.enviadas)
+    quinto = FakeInteraction(canal, users[4], msg)
+    await asyncio.gather(
+        cog.efetivar_entrada(quinto, run["id"], await _pid(conn, users[4])),
+        cog.recrutar(FakeInteraction(canal, users[0], msg), run["id"], "comecar"),
+    )
+
+    votacoes, _resto = _o_que_abriu(canal, desde)
+    assert len(votacoes) == 1, f"a run abriu {len(votacoes)} vezes"
+
+    dentro = await db.participantes(conn, run["id"])
+    hps = await db.hp_dos_participantes(conn, run["id"])
+    for user_id in dentro:
+        assert hps[user_id] is not None, f"{user_id} entrou sem HP gravado"
+        assert await db.ultima_incursao(conn, GUILD, user_id) is not None, (
+            f"{user_id} esta na run sem a semana marcada"
+        )
+    if users[4] not in dentro:
+        # Perdeu a corrida: tem de saber disso, e nao pode ficar na lista de
+        # quem recebe o ouro de uma incursao em que nao entrou.
+        assert "começou antes" in (leu(quinto) or ""), leu(quinto)
+        recebem = {p["user_id"] for p in await db.quem_recebe_da_run(conn, run["id"])}
+        assert users[4] not in recebem, recebem
+        assert await db.ultima_incursao(conn, GUILD, users[4]) is None, (
+            "ficou de fora e ainda assim gastou a semana"
+        )
+
+    await _fechar(conn)
+    print("  entrar no instante do Comecar: a run abre uma vez, inteira: ok")
+
+
 # ------------------------------------------------------- o menu velho
 
 
@@ -545,6 +652,8 @@ async def main():
         await caso_o_grupo_nao_passa_do_teto()
         await caso_quem_perde_a_vaga_nao_ganha_o_ouro()
         await caso_entrar_duas_vezes_na_mesma_run_nao_duplica()
+        await caso_dois_cliques_em_comecar_abrem_a_run_uma_vez()
+        await caso_entrar_no_instante_do_comecar_nao_deixa_ninguem_pela_metade()
         await caso_menu_velho_nao_deixa_entrar_em_duas_runs()
         await caso_quem_esta_livre_continua_entrando()
     finally:
