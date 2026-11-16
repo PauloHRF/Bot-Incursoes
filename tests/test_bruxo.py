@@ -226,8 +226,15 @@ async def caso_hunger_of_hadar_da_dano_e_tira_a_vez():
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
                                        incursao.objetivo)
     levaram = [antes[i.indice] - i.hp_atual for i in estado.inimigos]
-    # 6d6: minimo 6, maximo 36. Todos falharam, entao todos levaram.
-    assert all(6 <= d <= 36 for d in levaram), levaram
+    # A faixa sai do DADO DECLARADO, e nao de um literal: ela estava presa em
+    # "6 a 36" do 6d6 antigo e continuou passando depois de a magia virar
+    # 3d6, porque 3d6 cai abaixo de 6 em so 4,6% das rolagens. O caso quebrava
+    # sozinho uma vez a cada vinte e tantas, e por um numero velho.
+    dado = hb.POR_ID["hunger_of_hadar"].acao["dano"]
+    quantos, _, faces = dado.partition("d")
+    piso, teto = int(quantos), int(quantos) * int(faces)
+    # Todos falharam (a criatura nao tem defesa), entao todos levaram.
+    assert all(piso <= d <= teto for d in levaram), (dado, piso, teto, levaram)
     # e os mesmos perderam a vez: o dano e o atordoamento andam juntos
     assert all(i.atordoado for i in estado.inimigos), [
         (i.nome, i.atordoado) for i in estado.inimigos

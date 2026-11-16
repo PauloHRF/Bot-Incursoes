@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import random
 import sys
 from pathlib import Path
 
@@ -9,6 +10,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from src import (  # noqa: E402
+    aleatorio,
     ameaca,
     classes as cl,
     config,
@@ -502,24 +504,32 @@ async def caso_a_furtividade_congela_a_ameaca():
             and e["efeito"] == ameaca.efeito_da_rodada(rodada)
         )
 
-    # um ataque normal: a conta da rodada dele sobe
-    primeira = await rodada_agora()
-    await cog.atacar(FakeInteraction(canal, dono, msg), run["id"], "OBJ")
-    assert await conta_da(primeira) > 0, primeira
-
-    # a Furtividade: o ataque dela também conta, e o Stealth começa depois
-    da_ativa = await rodada_agora()
-    await cog.usar_habilidade(FakeInteraction(canal, dono, msg), run["id"], "OBJ", "furtividade")
-    assert await conta_da(da_ativa) > 0, "o ataque que abre o Stealth conta"
-    assert await cog._escondido(run, dono, 99) is False, "o stealth tem prazo"
-
-    # e os ataques seguintes não escrevem conta nenhuma
-    for _ in range(2):
-        escondido = await rodada_agora()
+    # DADO PRESO. Desde que a ameaça virou "o HP que a ação moveu", um golpe
+    # que ERRA não gera nada — e o boneco tem CA 1, então errar é o 1 natural,
+    # 5% por volta. O caso quebrava sozinho uma vez a cada vinte, dizendo "o
+    # ataque que abre o Stealth conta" quando o ataque simplesmente passou
+    # longe. O que se mede aqui é a Furtividade, não a sorte.
+    with aleatorio.usar(random.Random(4)):
+        # um ataque normal: a conta da rodada dele sobe
+        primeira = await rodada_agora()
         await cog.atacar(FakeInteraction(canal, dono, msg), run["id"], "OBJ")
-        assert await conta_da(escondido) == 0, (
-            f"a ameaça subiu na rodada {escondido}, durante o Stealth"
+        assert await conta_da(primeira) > 0, primeira
+
+        # a Furtividade: o ataque dela também conta, e o Stealth começa depois
+        da_ativa = await rodada_agora()
+        await cog.usar_habilidade(
+            FakeInteraction(canal, dono, msg), run["id"], "OBJ", "furtividade"
         )
+        assert await conta_da(da_ativa) > 0, "o ataque que abre o Stealth conta"
+        assert await cog._escondido(run, dono, 99) is False, "o stealth tem prazo"
+
+        # e os ataques seguintes não escrevem conta nenhuma
+        for _ in range(2):
+            escondido = await rodada_agora()
+            await cog.atacar(FakeInteraction(canal, dono, msg), run["id"], "OBJ")
+            assert await conta_da(escondido) == 0, (
+                f"a ameaça subiu na rodada {escondido}, durante o Stealth"
+            )
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)

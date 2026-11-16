@@ -12,6 +12,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
 from src import (  # noqa: E402
+    aleatorio,
     ameaca,
     incursoes,
     classes as cl,
@@ -619,8 +620,16 @@ async def caso_ameaca_acumula_no_combate():
     assert estado.rodada == 1
     assert inicial.ameaca_gerada == 0, "na rodada 1 ninguem fez nada ainda"
 
-    # Rodada 1: os dois batem, e a iniciativa da a volta para a rodada 2.
+    # DADO PRESO daqui para baixo. A ameaca e o HP que a acao MOVEU, entao um
+    # golpe que erra nao gera nada — e o saco tem CA 1, logo errar e o 1
+    # natural. Sem semente, este caso quebrava sozinho uma vez a cada vinte
+    # dizendo "o dano da rodada passada tem de pesar" quando o golpe passou
+    # longe. O que se mede e a JANELA, nao a sorte.
     msg = await canal.fetch_message(run["mensagem_id"])
+    dado = aleatorio.usar(random.Random(11))
+    dado.__enter__()
+
+    # Rodada 1: os dois batem, e a iniciativa da a volta para a rodada 2.
     for user_id in JOGADORES[:2]:
         await cog.atacar(FakeInteraction(canal, user_id, msg), run["id"], "OBJ")
 
@@ -693,6 +702,8 @@ async def caso_ameaca_acumula_no_combate():
     assert de_novo == quente, (
         f"a conta da rodada 1 entrou na rodada 3: {de_novo} em vez de {quente}"
     )
+
+    dado.__exit__(None, None, None)
 
     # E a conta morre com a sala: a chave em `run_efeitos` tem o `passo`.
     assert await db.efeitos_ativos(conn, run_id, passo + 1, 1) == []
