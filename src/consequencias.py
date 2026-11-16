@@ -81,17 +81,17 @@ NOME_DO_MIMICO = "Mímico"
 A_EMBOSCADA: dict[int, tuple[tuple[str, int], ...]] = {
     1: ((NOME_DO_MIMICO, 3),),
     2: ((NOME_DO_MIMICO, 5),),
-    # O 1+4 saiu de calibragem quando o multiataque passou a cair todo no
-    # mesmo alvo: o Xorn tem DOIS golpes (Garra 1d6+3 e Mordida 3d6+3, uns 20
-    # de média juntos), e concentrados eles dizimavam a mesa azarada — o
-    # percentil caiu de 87% para 75%. O Mímico tem um golpe só e não sentiu
-    # nada, então a correção é trocar Xorn por Mímico.
+    # Este 1+4 já foi trocado por 2+3 e voltou, e a história vale o espaço:
+    # a troca foi decidida por RUÍDO DE MEDIÇÃO. O calibrador pedia quarenta
+    # mesas e recebia vinte (o piso de lutas por mesa mordia, e o banner
+    # anunciava as quarenta pedidas), e com vinte o percentil deste elenco
+    # mediu 75% — abaixo do piso de 80, o que o reprovou. Com as quarenta de
+    # verdade ele mede 87%, e os três critérios fecham: 97,0% de vitória,
+    # 73,9% de HP restante, 87% na mesa azarada.
     #
-    # Não existe elenco que acerte a faixa inteira aqui: medidos com as mesmas
-    # 40 mesas, 1+3 e 4+2 deixam 82% do HP, 1+4 deixa 71,7% com percentil 75,
-    # e 2+4 mata. O 2+3 passa 4 pontos do teto de HP e acerta todo o resto, e
-    # é para esse lado que se erra: o alvo escrito é cobrar sem matar.
-    3: ((NOME_DO_MIMICO, 2), ("Xorn", 3)),
+    # A lição não é sobre o Mímico: é que um número medido com amostra menor
+    # do que a anunciada reprova conteúdo que estava certo.
+    3: ((NOME_DO_MIMICO, 1), ("Xorn", 4)),
     4: ((NOME_DO_MIMICO, 1), ("Golem de Argila", 3)),
     5: ((NOME_DO_MIMICO, 1), ("Golem de Argila", 5)),
 }

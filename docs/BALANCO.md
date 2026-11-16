@@ -38,28 +38,28 @@ nota — nunca como "fraca".
 |---|---|---|---|---|---|
 | Guerreiro | 6.7 | 10.4 | 19.5 | 21.2 | 23.9 |
 | Bárbaro | 6.9 | 9.7 | 19.6 | 18.3 | 20.9 |
-| Mago | 4.1 | 8.8 | 8.3 | 14.7 | 18.4 |
+| Bruxo | 4.1 | 6.7 | 10.3 | 12.8 | 16.7 |
 | Ladino | 7.3 | 10.6 | 12.4 | 14.2 | 16.7 |
-| Bruxo | 4.2 | 6.7 | 10.3 | 12.9 | 16.7 |
-| Feiticeiro | 4.2 | 8.9 | 8.2 | 11.5 | 15.4 |
+| Feiticeiro | 4.1 | 4.4 | 8.3 | 7.7 | 15.5 |
+| Mago | 4.1 | 4.4 | 8.3 | 14.7 | 14.8 |
 | Artífice | 4.1 | 4.4 | 11.6 | 10.9 | 14.7 |
-| Xamã | 4.7 | 5.1 | 10.9 | 12.6 | 14.3 |
 | Monge | 4.7 | 5.8 | 12.3 | 12.8 | 14.2 |
-| Patrulheiro | 5.9 | 7.4 | 14.0 | 14.8 | 12.8 |
-| Druida | 3.4 | 5.1 | 8.2 | 10.8 | 10.6 |
-| Clérigo | 3.3 | 3.6 | 6.8 | 9.5 | 9.5 |
-| Paladino | 6.6 | 9.5 | 8.9 | 8.4 | 9.0 |
-| Bardo | 2.6 | 3.6 | 3.4 | 6.3 | 6.3 |
+| Xamã | 4.7 | 5.0 | 11.0 | 12.7 | 14.2 |
+| Clérigo | 3.4 | 3.6 | 6.8 | 9.5 | 12.7 |
+| Patrulheiro | 5.9 | 6.6 | 12.3 | 12.8 | 11.8 |
+| Druida | 3.4 | 5.1 | 8.2 | 10.9 | 10.7 |
+| Paladino | 6.6 | 9.6 | 8.9 | 8.4 | 9.0 |
+| Bardo | 2.6 | 2.8 | 5.2 | 4.9 | 7.3 |
 
 Espalhamento por tier:
 
 | Tier | Piso | Teto | Razão |
 |---|---|---|---|
 | T1 | 2.6 (Bardo) | 7.3 (Ladino) | 2.8x |
-| T2 | 3.6 (Bardo) | 10.6 (Ladino) | 3.0x |
-| T3 | 3.4 (Bardo) | 19.6 (Bárbaro) | 5.8x |
-| T4 | 6.3 (Bardo) | 21.2 (Guerreiro) | 3.4x |
-| T5 | 6.3 (Bardo) | 23.9 (Guerreiro) | 3.8x |
+| T2 | 2.8 (Bardo) | 10.6 (Ladino) | 3.8x |
+| T3 | 5.2 (Bardo) | 19.6 (Bárbaro) | 3.8x |
+| T4 | 4.9 (Bardo) | 21.2 (Guerreiro) | 4.3x |
+| T5 | 7.3 (Bardo) | 23.9 (Guerreiro) | 3.3x |
 
 ## Durabilidade: rodadas de pé sob a criatura de referência
 
@@ -68,15 +68,15 @@ Espalhamento por tier:
 | Guerreiro | 8.7 | 11.1 | 11.0 | 8.8 | 8.1 |
 | Paladino | 8.7 | 9.8 | 9.7 | 8.0 | 7.4 |
 | Bárbaro | 7.7 | 8.6 | 8.8 | 7.5 | 7.0 |
-| Patrulheiro | 7.0 | 7.8 | 7.8 | 6.6 | 6.1 |
 | Clérigo | 6.3 | 7.8 | 7.7 | 6.3 | 5.8 |
 | Monge | 6.3 | 6.9 | 6.9 | 5.8 | 5.3 |
 | Xamã | 6.3 | 6.9 | 6.9 | 5.8 | 5.3 |
 | Artífice | 7.0 | 6.9 | 6.9 | 5.8 | 5.3 |
 | Druida | 6.3 | 6.2 | 6.3 | 5.3 | 5.0 |
+| Patrulheiro | 6.3 | 6.4 | 6.5 | 5.3 | 4.9 |
 | Ladino | 5.7 | 6.2 | 5.8 | 5.0 | 4.6 |
 | Bruxo | 5.8 | 5.6 | 5.8 | 5.0 | 4.6 |
-| Bardo | 5.8 | 5.8 | 5.8 | 4.9 | 4.5 |
+| Bardo | 5.8 | 5.3 | 5.3 | 4.3 | 4.0 |
 | Mago | 4.2 | 4.5 | 4.6 | 4.0 | 3.8 |
 | Feiticeiro | 4.2 | 4.5 | 4.6 | 4.0 | 3.8 |
 
@@ -138,6 +138,9 @@ Os `+5` e `+9` saem da medição de 2026-11-14
 (8135 ações): a ação média move 8.2%
 da poça do lado afetado e a de p90 move 17.2%, que a
 escala (55) converte nesses pontos.
+
+> A medição é de um código anterior a este. Rode
+> `tools/medir_ameaca.py` para saber se ela continua valendo.
 
 ## Perícia: melhor modificador por tier
 
@@ -301,12 +304,7 @@ Mesmo nome, mesmo efeito, escopo de recarga diferente entre classes:
 
 ## Tier que não melhora nada ofensivo
 
-Só HP e CA sobem. Como a CA da criatura de referência sobe junto, o
-dano por rodada **cai** nessa passagem.
-
-| Classe | Passagem | Acerto (igual) | Dano (igual) |
-|---|---|---|---|
-| Patrulheiro | T4 → T5 | +11 | 1d8+5 |
+Nenhum: toda passagem de tier melhora acerto ou dano.
 
 ## Testes de sala
 
@@ -329,7 +327,7 @@ Chance de um grupo de cinco superar a sala, cada um rolando uma vez:
 | Tier | Mod típico | Base 12 | Base 15 | Base 18 |
 |---|---|---|---|---|
 | T1 | +5 | CD 12 · 91% | CD 15 · 69% | CD 18 · 29% |
-| T2 | +7 | CD 14 · 91% | CD 17 · 69% | CD 20 · 29% |
+| T2 | +7 | CD 14 · 90% | CD 17 · 69% | CD 20 · 29% |
 | T3 | +8 | CD 15 · 91% | CD 18 · 69% | CD 21 · 29% |
-| T4 | +10 | CD 17 · 91% | CD 20 · 69% | CD 23 · 29% |
-| T5 | +11 | CD 18 · 90% | CD 21 · 69% | CD 24 · 29% |
+| T4 | +10 | CD 17 · 91% | CD 20 · 68% | CD 23 · 29% |
+| T5 | +11 | CD 18 · 91% | CD 21 · 69% | CD 24 · 29% |

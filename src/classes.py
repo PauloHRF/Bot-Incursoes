@@ -194,13 +194,17 @@ CLASSES: dict[str, Classe] = {
         Classe(
             "patrulheiro",
             "Patrulheiro",
-            "O melhor acerto e perícias de exploração.",
+            # Era "o melhor acerto", e deixou de ser: a CA e o acerto desceram
+            # (o T4 perdeu tres de CA e dois de acerto), e no tier 5 ele fica
+            # em +10 contra os +11 de meia tabela. O que sobrou dele sem
+            # rival e a largura de pericias — oito no tier 5, a maior do jogo.
+            "As perícias de exploração mais largas do jogo.",
             _tabela([
-                (19, 16, 6, 3, 5, 6, "1d8+3"),
-                (35, 17, 6, 4, 7, 9, "1d8+4"),
-                (51, 18, 7, 4, 8, 10, "1d8+4"),
-                (67, 19, 7, 5, 10, 11, "1d8+5"),
-                (83, 20, 8, 5, 11, 11, "1d8+5"),
+                (19, 15, 6, 3, 5, 6, "1d8+3"),
+                (35, 15, 6, 4, 7, 7, "1d8+4"),
+                (51, 16, 7, 4, 8, 8, "1d8+4"),
+                (67, 16, 7, 5, 10, 9, "1d8+5"),
+                (83, 17, 8, 5, 11, 10, "1d8+5"),
             ]),
         ),
         Classe(
@@ -236,7 +240,7 @@ CLASSES: dict[str, Classe] = {
                 (31, 16, 4, 4, 7, 7, "1d8"),
                 (45, 17, 5, 4, 8, 8, "2d8"),
                 (59, 18, 5, 5, 10, 9, "2d8"),
-                (73, 19, 6, 5, 11, 11, "2d8"),
+                (73, 19, 6, 5, 11, 11, "3d8"),
             ]),
         ),
         # O HP é o do Clérigo porque os dois são classes de d8. O dado de dano
@@ -268,10 +272,10 @@ CLASSES: dict[str, Classe] = {
             "Apaga a sala com uma magia e cai em dois golpes.",
             _tabela([
                 (15, 13, 4, 3, 5, 5, "1d10"),
-                (27, 14, 4, 4, 7, 7, "2d10"),
+                (27, 14, 4, 4, 7, 7, "1d10"),
                 (39, 15, 5, 4, 8, 8, "2d10"),
                 (51, 16, 5, 5, 10, 9, "3d10"),
-                (63, 17, 6, 5, 11, 11, "4d10"),
+                (63, 17, 6, 5, 11, 11, "3d10"),
             ]),
         ),
         # Classe de d8, então o HP é o do Clérigo e do Artífice. A CA fica
@@ -318,9 +322,9 @@ CLASSES: dict[str, Classe] = {
             "A magia vem de dentro, e ele a torce: cada feitico sai melhorado.",
             _tabela([
                 (15, 13, 4, 3, 5, 5, "1d10"),
-                (27, 14, 4, 4, 7, 7, "2d10"),
+                (27, 14, 4, 4, 7, 7, "1d10"),
                 (39, 15, 5, 4, 8, 8, "2d10"),
-                (51, 16, 5, 5, 10, 9, "3d10"),
+                (51, 16, 5, 5, 10, 9, "2d10"),
                 (63, 17, 6, 5, 11, 11, "4d10"),
             ]),
         ),
@@ -336,10 +340,10 @@ CLASSES: dict[str, Classe] = {
             # classe com o passo parelho, por pedido do grupo.
             _tabela([
                 (19, 14, 4, 3, 5, 5, "1d6"),
-                (32, 15, 4, 4, 7, 7, "1d8"),
-                (45, 16, 5, 4, 8, 8, "1d8"),
-                (58, 17, 5, 5, 10, 9, "2d8"),
-                (71, 18, 6, 5, 11, 11, "2d8"),
+                (32, 14, 4, 4, 7, 7, "1d6"),
+                (45, 15, 5, 4, 8, 8, "2d6"),
+                (58, 15, 5, 5, 10, 9, "2d6"),
+                (71, 16, 6, 5, 11, 11, "3d6"),
             ]),
         ),
     )

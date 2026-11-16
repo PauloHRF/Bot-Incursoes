@@ -96,18 +96,21 @@ def caso_tabela_de_suporte():
     assert vida == [19, 32, 45, 58, 71], vida
     passos = [vida[i + 1] - vida[i] for i in range(4)]
     assert passos == [13, 13, 13, 13], passos
-    assert [bardo.tiers[t].ca for t in range(1, 6)] == [14, 15, 16, 17, 18]
-    assert bardo.tiers[1].dano == "1d6" and bardo.tiers[5].dano == "2d8"
+    assert [bardo.tiers[t].ca for t in range(1, 6)] == [14, 14, 15, 15, 16]
+    assert bardo.tiers[1].dano == "1d6" and bardo.tiers[5].dano == "3d6"
     assert bardo.saves == ("DES", "CAR")
-    # e o dano dele empata com o piso do jogo
+    # E o dano dele vive no FUNDO da tabela. Empatava com o piso exato (2d8,
+    # 9,0, junto do druida); com os 3d6 que o grupo pediu ele subiu para 10,5
+    # e passou o druida, mas continua entre os tres menores do jogo — que e o
+    # que a frase quer dizer: ele nao esta ali para bater.
     from src.habilidades import media_do_dado
-    meu = media_do_dado(bardo.tiers[5].dano)
-    piso = min(
-        media_do_dado(c.tiers[5].dano) * cl.efeitos(cid, 10, {}).get("ataques", 1)
-        for cid, c in cl.CLASSES.items()
-    )
-    assert meu == piso, (meu, piso)
-    print("  d8 de couro, e o dano no piso do jogo: ele nao esta ali para bater: ok")
+    def por_rodada(cid, c):
+        return media_do_dado(c.tiers[5].dano) * cl.efeitos(cid, 10, {}).get("ataques", 1)
+    meu = por_rodada("bardo", bardo)
+    todos = sorted(por_rodada(cid, c) for cid, c in cl.CLASSES.items())
+    assert meu <= todos[2], (meu, todos[:4])
+    print(f"  couro leve, e o dano ({meu:.1f}) no fundo do jogo: "
+          f"ele nao esta ali para bater: ok")
 
 
 def caso_todas_as_catorze_entraram():

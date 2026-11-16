@@ -423,7 +423,7 @@ Um ataque que acerta e já sai crítico.
 
 # **PATRULHEIRO**
 
-*O melhor acerto e perícias de exploração.*
+*As perícias de exploração mais largas do jogo.*
 
 **Vida:** 19 a 83, +16 por tier  
 **Saves fortes:** Destreza e Constituição  
@@ -434,7 +434,7 @@ Um ataque que acerta e já sai crítico.
 ## **Tier 1**
 
 **HP:** 19  
-**AC:** 16  
+**AC:** 15  
 **Skills:** 6  
 **Bônus de Skills:** +3 / +5 com Prof.  
 **Acerto:** +6  
@@ -451,10 +451,10 @@ Marca um inimigo por 3 turnos, com +1d6 de dano nele — e ataca na mesma rodada
 ## **Tier 2**
 
 **HP:** 35  
-**AC:** 17  
+**AC:** 15  
 **Skills:** 6  
 **Bônus de Skills:** +4 / +7 com Prof.  
-**Acerto:** +9  
+**Acerto:** +7  
 **Dano:** 1d8+4
 
 ### **Passiva — Predador**
@@ -466,10 +466,10 @@ Marca um inimigo por 3 turnos, com +1d6 de dano nele — e ataca na mesma rodada
 ## **Tier 3**
 
 **HP:** 51  
-**AC:** 18  
+**AC:** 16  
 **Skills:** 7  
 **Bônus de Skills:** +4 / +8 com Prof.  
-**Acerto:** +10  
+**Acerto:** +8  
 **Dano:** 1d8+4
 
 ### **Passiva — Multiattack**
@@ -487,10 +487,10 @@ Um ataque em até 3 inimigos diferentes.
 ## **Tier 4**
 
 **HP:** 67  
-**AC:** 19  
+**AC:** 16  
 **Skills:** 7  
 **Bônus de Skills:** +5 / +10 com Prof.  
-**Acerto:** +11  
+**Acerto:** +9  
 **Dano:** 1d8+5
 
 ### **Passiva — Sobrevivente**
@@ -508,10 +508,10 @@ Quando alguém falha o teste da sala, soma +5 — e só dispara se o +5 fizer pa
 ## **Tier 5**
 
 **HP:** 83  
-**AC:** 20  
+**AC:** 17  
 **Skills:** 8  
 **Bônus de Skills:** +5 / +11 com Prof.  
-**Acerto:** +11  
+**Acerto:** +10  
 **Dano:** 1d8+5
 
 ### **Ativa — Caçador Supremo**
@@ -820,7 +820,7 @@ Escolhe um: Ataques abençoados, Especialista em cura ou Restauração.
 **Skills:** 6  
 **Bônus de Skills:** +5 / +11 com Prof.  
 **Acerto:** +11  
-**Dano:** 2d8
+**Dano:** 3d8
 
 ### **Escolha — Magia de 3º círculo**
 
@@ -979,7 +979,7 @@ Escolhe uma: Magic Missile, Sleep ou Thunderwave.
 **Skills:** 4  
 **Bônus de Skills:** +4 / +7 com Prof.  
 **Acerto:** +7  
-**Dano:** 2d10
+**Dano:** 1d10
 
 ### **Passiva — Scholar**
 
@@ -1032,7 +1032,7 @@ Escolhe uma: Evocação Potente, Escudo Arcano ou Sabedoria Arcana.
 **Skills:** 6  
 **Bônus de Skills:** +5 / +11 com Prof.  
 **Acerto:** +11  
-**Dano:** 4d10
+**Dano:** 3d10
 
 ### **Escolha — Magia de 5º círculo**
 
@@ -1290,7 +1290,7 @@ Escolhe uma: Chromatic Orb, Burning Hands ou Dissonant Whispers.
 **Skills:** 4  
 **Bônus de Skills:** +4 / +7 com Prof.  
 **Acerto:** +7  
-**Dano:** 2d10
+**Dano:** 1d10
 
 ### **Escolha — Metamagia**
 
@@ -1328,7 +1328,7 @@ Escolhe uma: Lightning Bolt, Haste ou Grilhões Planares.
 **Skills:** 5  
 **Bônus de Skills:** +5 / +10 com Prof.  
 **Acerto:** +9  
-**Dano:** 3d10
+**Dano:** 2d10
 
 ### **Escolha — Segunda metamagia**
 
@@ -1392,11 +1392,11 @@ Escolhe uma: Healing Word, Dissonant Whispers ou Charm Person.
 ## **Tier 2**
 
 **HP:** 32  
-**AC:** 15  
+**AC:** 14  
 **Skills:** 4  
 **Bônus de Skills:** +4 / +7 com Prof.  
 **Acerto:** +7  
-**Dano:** 1d8
+**Dano:** 1d6
 
 ### **Escolha — Inspiração Bárdica**
 
@@ -1411,11 +1411,11 @@ O dado que ele sopra em quem falha. Escolhe em que rolagem ele entra: ataque, re
 ## **Tier 3**
 
 **HP:** 45  
-**AC:** 16  
+**AC:** 15  
 **Skills:** 5  
 **Bônus de Skills:** +4 / +8 com Prof.  
 **Acerto:** +8  
-**Dano:** 1d8
+**Dano:** 2d6
 
 ### **Escolha — Canção da faculdade**
 
@@ -1430,11 +1430,11 @@ Escolhe uma: Hypnotic Pattern, Aid ou Invisibility.
 ## **Tier 4**
 
 **HP:** 58  
-**AC:** 17  
+**AC:** 15  
 **Skills:** 5  
 **Bônus de Skills:** +5 / +10 com Prof.  
 **Acerto:** +9  
-**Dano:** 2d8
+**Dano:** 2d6
 
 ### **Passiva — Inspiração maior**
 
@@ -1453,11 +1453,11 @@ Escolhe uma: Expertise, Jack of All Trades ou Versatilidade.
 ## **Tier 5**
 
 **HP:** 71  
-**AC:** 18  
+**AC:** 16  
 **Skills:** 6  
 **Bônus de Skills:** +5 / +11 com Prof.  
 **Acerto:** +11  
-**Dano:** 2d8
+**Dano:** 3d6
 
 ### **Escolha — Canção maior**
 

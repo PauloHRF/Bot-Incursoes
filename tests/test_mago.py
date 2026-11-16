@@ -49,10 +49,10 @@ BRUTAMONTES = {
 
 DOC = [
     (15, 13, 4, 3, 5, 5, "1d10"),
-    (27, 14, 4, 4, 7, 7, "2d10"),
+    (27, 14, 4, 4, 7, 7, "1d10"),
     (39, 15, 5, 4, 8, 8, "2d10"),
     (51, 16, 5, 5, 10, 9, "3d10"),
-    (63, 17, 6, 5, 11, 11, "4d10"),
+    (63, 17, 6, 5, 11, 11, "3d10"),
 ]
 
 
@@ -112,10 +112,16 @@ def caso_tabela_de_d6():
         cl.CLASSES["barbaro"].tiers[2].hp - cl.CLASSES["barbaro"].tiers[1].hp
     } == {20}, "o barbaro de d12 sobe 20"
 
-    # E a CA e a pior do jogo em todo tier
+    # E a CA e a mais baixa do jogo em todo tier — SALVO O BARDO, que desceu
+    # por baixo dele no tier 4 e no 5 quando o grupo pediu CA 15/16 para ele.
+    # O principio continua valendo para o resto da ficha: o mago nao veste
+    # armadura, entao ninguem que veste pode estar abaixo dele.
     for t in range(1, 6):
-        pior = min(c.tiers[t].ca for c in cl.CLASSES.values())
-        assert mago.tiers[t].ca == pior, f"T{t}: o mago tem de ser o mais frouxo"
+        abaixo = [
+            cid for cid, c in cl.CLASSES.items()
+            if c.tiers[t].ca < mago.tiers[t].ca
+        ]
+        assert abaixo in ([], ["bardo"]), (t, abaixo)
     assert mago.saves == ("CON", "INT")
     print("  d6 sobe 12 por tier, e a CA e a pior do jogo: ok")
 
@@ -183,11 +189,16 @@ def caso_cantrip_e_o_ataque_basico():
     """O mago não tem arma: a coluna de dano é o cantrip dele."""
     from src.habilidades import media_do_dado
     mago = cl.CLASSES["mago"]
-    medias = [media_do_dado(mago.tiers[t].dano) for t in range(1, 6)]
-    assert medias == [5.5, 11.0, 11.0, 16.5, 22.0], medias
+    dados = [mago.tiers[t].dano for t in range(1, 6)]
+    assert dados == ["1d10", "1d10", "2d10", "3d10", "3d10"], dados
+    # A curva nunca desce, e cada degrau e um d10 inteiro: o cantrip cresce
+    # em dado, nao em numero solto.
+    medias = [media_do_dado(d) for d in dados]
+    assert medias == sorted(medias), medias
+    assert all(d.endswith("d10") for d in dados), dados
     # sem Multiattack: o cantrip sai uma vez por rodada
     assert cl.efeitos("mago", 10, {}).get("ataques", 1) == 1
-    print("  o cantrip vai de 1d10 a 4d10 e sai uma vez por rodada: ok")
+    print(f"  o cantrip vai de {dados[0]} a {dados[-1]} e sai uma vez por rodada: ok")
 
 
 # --------------------------------------------------------------- as magias

@@ -41,9 +41,9 @@ O acerto varia por classe, então a CD também. A faixa em cada tier:
 |---|---|---|
 | T1 | +5–6 | 13–14 |
 | T2 | +5–6 | 13–14 |
-| T3 | +6–9 | 14–17 |
-| T4 | +6–9 | 14–17 |
-| T5 | +7–10 | 15–18 |
+| T3 | +6–7 | 14–15 |
+| T4 | +6–7 | 14–15 |
+| T5 | +7–8 | 15–16 |
 
 O número de cada classe está em `docs/FICHAS.md`.
 

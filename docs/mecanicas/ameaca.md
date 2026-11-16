@@ -50,6 +50,8 @@ A fração vira pontos pela escala, que é **55** pontos por 100% da poça. Medi
 | boa (p90) | 17,2% | 9 |
 | excepcional (p99) | 35,1% | 19 |
 
+> A medição é de um código anterior a este. Rode `tools/medir_ameaca.py` para saber se ela continua valendo.
+
 **O que conta como controle** é o que tira a vez: atordoamento e prisão. É a leitura literal de "não foi dado" — atrapalhar o ataque da criatura ou virá-la contra os seus seriam palpites sobre dano que ainda pode acontecer. E o que ela daria é o dado **dela** vezes a chance de passar da armadura de quem está na frente, porque o dano real também erra. Prender um Troll por três rodadas numa mesa de tier 5 rende uns 13 pontos: mais que a rodada de p90 de quem bate, e é de propósito — é uma ativa de tier 5, uma vez por descanso.
 
 Conta o **ganho**, não o prazo: estender uma prisão de uma rodada para três vale duas, e renovar uma que já ia até lá vale zero.

@@ -73,14 +73,27 @@ async def preparar(nivel=9, escolhas=None, quantos=3, monstros=2, monstro=None):
 
 
 def caso_mesmo_corpo_do_mago():
-    """De propósito: o que separa os dois é o Metamagic, não a tabela."""
+    """O MESMO CORPO do mago — e a partir do tier 4, outro dado.
+
+    Os dois dividiam a tabela inteira, de proposito: o que separava era o
+    Metamagic. O corpo continua igual (HP e CA), mas o dado passou a desenhar
+    curvas diferentes a pedido do grupo: o feiticeiro fica em 2d10 no tier 4,
+    onde o mago sobe para 3d10, e devolve no tier 5 com 4d10 contra os 3d10
+    dele. Ele chega depois e chega mais alto.
+    """
     feiticeiro, mago = cl.CLASSES["feiticeiro"], cl.CLASSES["mago"]
     for t in range(1, 6):
         meu, dele = feiticeiro.tiers[t], mago.tiers[t]
-        assert (meu.hp, meu.ca, meu.dano) == (dele.hp, dele.ca, dele.dano), t
+        assert (meu.hp, meu.ca) == (dele.hp, dele.ca), t
+    # Ate o tier 3 o dado tambem e o mesmo; do 4 em diante eles se cruzam.
+    for t in (1, 2, 3):
+        assert feiticeiro.tiers[t].dano == mago.tiers[t].dano, t
+    from src.habilidades import media_do_dado
+    assert media_do_dado(feiticeiro.tiers[4].dano) < media_do_dado(mago.tiers[4].dano)
+    assert media_do_dado(feiticeiro.tiers[5].dano) > media_do_dado(mago.tiers[5].dano)
     assert feiticeiro.saves == ("DES", "CON")
     assert "Feiticeiro" not in cl.CLASSES_PENDENTES
-    print("  tabela identica a do mago; o Metamagic e que separa: ok")
+    print("  mesmo corpo do mago; o dado se cruza no tier 4 e no 5: ok")
 
 
 def caso_metamagia_nos_dois_tiers():
