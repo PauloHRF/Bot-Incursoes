@@ -1116,10 +1116,11 @@ backup online do SQLite, e não por um `cp`, que pode pegar uma escrita no meio
 dispara todo dia às 4h **no fuso do grupo**, e as 14 cópias mais novas também
 ficam no disco.
 
-O fuso vai escrito na unidade de propósito: a máquina da Oracle roda em UTC, e
-sem ele as "4h" disparavam à 1h de quem joga — com o arquivo saindo marcado
-`01:0x`, porque o nome usa o `FUSO` do projeto. Quem procurasse o backup das
-4h acharia um de uma da manhã.
+A hora vai escrita como `07:00 UTC` na unidade, que é 4h em São Paulo. Sem
+isso, as "4h" disparavam à 1h de quem joga — com o arquivo saindo marcado
+`01:0x`, porque o nome usa o `FUSO` do projeto. Está em UTC, e não com o nome
+do fuso, porque o sufixo de fuso no `OnCalendar` exige systemd 252 e a
+instância roda o 249; ver `deploy/README.md`.
 
 Webhook e não o próprio bot por três razões: funciona com o bot **parado**,
 que é exatamente quando se quer um backup (antes de uma atualização); dá para

@@ -101,6 +101,14 @@ arquivo encostaria no limite de upload do Discord. Não há nada a podar.
    systemctl list-timers incursoes-backup.timer
    ```
 
+   O `NEXT` sai em **UTC**. O timer está escrito em `07:00:00 UTC`, que é
+   **4h da manhã em São Paulo** — e não `04:00:00 America/Sao_Paulo`, que
+   seria o óbvio, porque o sufixo de fuso no `OnCalendar` só existe do
+   **systemd 252** em diante e o leeroy roda o 249 (Ubuntu 22.04). Nele a
+   linha com o nome do fuso faz a unidade falhar a carregar. Se um dia a
+   máquina subir de versão (`systemctl --version`), dá para trocar — a linha
+   está comentada dentro do próprio `.timer`.
+
 ### Restaurar
 
 ```bash

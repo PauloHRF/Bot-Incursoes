@@ -11,13 +11,16 @@ Description=Backup diario do banco do Bot de Incursoes
 # nome, porque o nome usa o FUSO do projeto (`config.FUSO`, UTC-3). Quem
 # procurasse "o backup das 4h" acharia um de uma da manha.
 #
-# PRECISA DE systemd >= 252, que e quando o sufixo de fuso entrou no
-# OnCalendar. Confira com `systemctl --version` antes de copiar: no Ubuntu
-# 24.04 (systemd 255) funciona; no 22.04 (249) nao. Se for mais velho, apague
-# a linha de baixo e use a seguinte, que da no mesmo enquanto o Brasil nao
-# voltar com horario de verao — 07:00 UTC e 04:00 em Sao Paulo desde 2019:
-#   OnCalendar=*-*-* 07:00:00 UTC
-OnCalendar=*-*-* 04:00:00 America/Sao_Paulo
+# Esta escrito em UTC, e nao como `04:00:00 America/Sao_Paulo`, porque o
+# sufixo de fuso no OnCalendar so existe do systemd 252 em diante e o leeroy
+# roda o 249 (Ubuntu 22.04). Nele, a linha com o nome do fuso faz a unidade
+# falhar a carregar — nao e questao de gosto.
+#
+# 07:00 UTC e 04:00 em Sao Paulo, e segue sendo enquanto o Brasil nao voltar
+# com horario de verao (abolido em 2019). Se voltar, ou se a maquina subir
+# para systemd >= 252, troque por:
+#   OnCalendar=*-*-* 04:00:00 America/Sao_Paulo
+OnCalendar=*-*-* 07:00:00 UTC
 # Se a maquina estava desligada na hora, roda ao voltar — Always Free da
 # Oracle reinicia instancia sem avisar.
 Persistent=true
