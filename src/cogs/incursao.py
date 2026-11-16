@@ -2378,7 +2378,9 @@ class Incursoes(commands.Cog):
                     pilha,
                     golpe.acertou,
                     sequencia.get("por_acerto", 1),
-                    sequencia.get("teto", 2),
+                    # Sem `teto` na passiva, a pilha nao tem teto: o freio e o
+                    # prazo, e nao um numero.
+                    sequencia.get("teto"),
                 )
             golpes.append((golpe, atual))
             await db.registrar_ataque(
@@ -2755,6 +2757,11 @@ class Incursoes(commands.Cog):
     # parte da chave em `run_efeitos`. A ameaca gerada NAO usa mais este
     # prazo — ela tem janela de uma rodada (ver `somar_ameaca_da_rodada`).
     PRAZO_DO_COMBATE = 10 ** 6
+
+    # A chave de uso da Heightened Spell. Nao e uma habilidade do catalogo —
+    # e uma metamagia passiva que passou a ter conta —, entao ela precisa de
+    # uma chave propria em `run_usos`.
+    CHAVE_DA_HEIGHTENED = "heightened_spell"
 
     EFEITO_DA_MARCA = "marca_fatal"
     EFEITO_DA_FURTIVIDADE = "furtividade"
@@ -3247,6 +3254,15 @@ class Incursoes(commands.Cog):
         # que a escolha reservou. Vale vencendo e perdendo — a acao nao
         # aconteceu nos dois casos.
         await self._devolver_pendentes(run)
+        # A pilha do Martial Arts morre AQUI, explicitamente. Ela já morria
+        # pela chave (`run_efeitos` tem o `passo`, e cada sala é um passo),
+        # mas desde que a pilha perdeu o teto o prazo dela deixou de ser um
+        # detalhe e virou o único freio: um monge que emendou oito acertos
+        # carrega +8, e isso não pode atravessar porta nenhuma por acidente
+        # de encanamento.
+        await db.limpar_efeito(
+            self.bot.db, run["id"], self._passo(run), "martial_arts"
+        )
         await self._atualizar_painel(run, sala, estado, encerrado=True)
         await self._limpar_efemeras(run["id"])
         await self._apagar_chamada(run["id"])
@@ -4111,13 +4127,31 @@ class Incursoes(commands.Cog):
         # resiste com desvantagem. Vem das passivas dele, nao da acao.
         meta = (quem or {}).get("efeitos") or {}
         cd += meta.get("cd_magia", 0)
-        desvantagem = bool(meta.get("save_com_desvantagem"))
+        # Heightened Spell: UMA por descanso, e gasta sozinha na primeira
+        # magia de save que sair. Ela era passiva ligada para sempre — toda
+        # magia do feiticeiro saía com a criatura resistindo em desvantagem.
+        #
+        # Gasta AQUI, e não na hora de lançar: `_resolver_save` é o único
+        # caminho em que a desvantagem pesa, então ela nunca é desperdiçada
+        # num lançamento que não força save. Quem não tem a metamagia nem
+        # chega a consultar o uso.
+        desvantagem = bool(meta.get("save_com_desvantagem")) and await db.gastar_uso(
+            self.bot.db, run["id"], user_id, self.CHAVE_DA_HEIGHTENED,
+            f"descanso:{run['descansos']}", 1,
+        )
         dado_extra = meta.get("dano_magia") or ""
 
         if acao.get("alvos") == "todos":
             mirados = list(estado.inimigos_vivos)
         else:
-            quantos = 1 + meta.get("alvos_extra", 0)
+            # Quantos a MAGIA pega, mais o alvo extra do feiticeiro. O número
+            # da ação era ignorado aqui: `alvos: 2` mirava um só, e nenhuma
+            # magia tinha dois até o Synaptic Static passar a ter. O menu já
+            # lia o número certo (`_alvos_possiveis`), então o jogador
+            # escolhia dois e via um levar.
+            declarados = acao.get("alvos", 1)
+            quantos = (declarados if isinstance(declarados, int) else 1)
+            quantos = max(1, quantos) + meta.get("alvos_extra", 0)
             escolhidos = [
                 i for i in estado.inimigos_vivos if i.indice in set(alvos or ())
             ]
@@ -4681,7 +4715,19 @@ class Incursoes(commands.Cog):
         ligar um buff de 3 turnos, e na prática o buff rendia dois.
         """
         passo = self._passo(run)
-        expira = estado.rodada + acao.get("turnos", 1)
+        # `ate_morrer`: a marca vale enquanto a criatura estiver de pé, e não
+        # por um número de rodadas. É o Hex — a maldição é sobre AQUELA
+        # criatura, e não tem por que soltar antes de ela cair. Com prazo em
+        # rodadas o jogador marcava tarde de propósito, para a marca não
+        # vencer antes do alvo.
+        #
+        # Não precisa de limpeza: o efeito mora em `run_efeitos` com o índice
+        # daquele inimigo e o `passo` da sala, então ele morre com o combate
+        # e não alcança criatura nenhuma depois.
+        expira = (
+            self.PRAZO_DO_COMBATE if acao.get("ate_morrer")
+            else estado.rodada + acao.get("turnos", 1)
+        )
         # Os alvos dos golpes, quando a ação carrega golpes. Vazio = quem o
         # motor escolher (o primeiro inimigo de pé), que é o certo para um
         # buff no próprio: a fúria não aponta ninguém.
@@ -4749,10 +4795,11 @@ class Incursoes(commands.Cog):
         quem = estado.combatente(user_id)
         turnos = acao.get("turnos", 1)
         alvo_texto = f" em **{alvo_nome}**" if alvo_nome else ""
-        cabeca = (
-            f"✨ **{habilidade.nome}**{alvo_texto} — vale por "
-            f"{turnos} turno(s), ate a rodada {expira - 1}."
+        prazo = (
+            "vale enquanto ele estiver de pé" if acao.get("ate_morrer")
+            else f"vale por {turnos} turno(s), ate a rodada {expira - 1}"
         )
+        cabeca = f"✨ **{habilidade.nome}**{alvo_texto} — {prazo}."
 
         # Ligar e bater na MESMA rodada. Duas coisas têm de acontecer antes
         # dos golpes:

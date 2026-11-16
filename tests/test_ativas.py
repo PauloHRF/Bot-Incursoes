@@ -564,11 +564,78 @@ async def caso_brutal_strike_soma_ao_ataque_em_vez_de_substituir():
         assert ganho == 0, ganho
     print(f"  o Brutal Strike sai com {len(ataques)} golpes e {ganho} de THP: ok")
 
+async def caso_o_golpe_do_reckless_sai_com_a_vantagem_ligada():
+    """Ativar e bater na mesma rodada so vale se o golpe LEVA o buff.
+
+    O Reckless ja batia ao ativar (ver
+    `caso_quem_marca_ou_se_prepara_bate_no_mesmo_turno`), mas ninguem cobrava
+    que a vantagem estivesse valendo NAQUELE golpe. E ela e todo o ponto: o
+    que vai ao banco so chega ao combatente quando o estado e remontado, e
+    sem o espelho na memoria o barbaro trocaria o turno por um buff que so
+    comeca a valer na rodada seguinte — exatamente o que a mudanca quis tirar.
+    """
+    conn, canal, cog, incursao = await preparar(classe="barbaro", nivel=6)
+    run = await abrir_combate(conn, canal, cog, incursao)
+    dono = JOGADORES[0]
+
+    # Espiao no golpe: anota se o atacante estava com vantagem na hora.
+    vistos: list[bool] = []
+    verdadeiro = motor.atacar_inimigo
+
+    def espiao(combatente, inimigo, *a, **kw):
+        vistos.append(
+            bool(combatente.vantagem)
+            or inimigo.indice in combatente.vantagem_contra
+        )
+        return verdadeiro(combatente, inimigo, *a, **kw)
+
+    motor.atacar_inimigo = espiao
+    try:
+        await usar(cog, canal, run, dono, "reckless_attack")
+    finally:
+        motor.atacar_inimigo = verdadeiro
+
+    assert vistos, "o Reckless nao bateu ao ativar"
+    assert all(vistos), f"golpe sem vantagem na rodada em que ligou: {vistos}"
+    print(f"  o Reckless bate ao ativar, e os {len(vistos)} golpes saem com "
+          f"vantagem: ok")
+
+
+async def caso_o_paladino_cura_a_si_mesmo():
+    """A Cura pelas Maos alcanca ele proprio, e o texto passou a dizer isso.
+
+    O comportamento sempre foi esse: o menu de alvos de `tipo: cura` lista a
+    run inteira, e quem usa esta nela. O que mentia era a frase — "cura um
+    aliado" —, e o jogador lia como proibicao. Caso aqui para a lista nunca
+    passar a excluir quem lanca por "arrumacao".
+    """
+    conn, canal, cog, incursao = await preparar(classe="paladino", nivel=2)
+    run = await abrir_combate(conn, canal, cog, incursao)
+    dono = JOGADORES[0]
+
+    personagem = await cog._personagem_na_run(run, dono)
+    habilidade = next(
+        h for _t, h in personagem["habilidades"] if h.id == "cura_pelas_maos"
+    )
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    opcoes = await cog._alvos_possiveis(run, habilidade, estado)
+    assert any(int(v) == dono for v, _n, _d in opcoes or []), opcoes
+    assert "si mesmo" in habilidade.texto, habilidade.texto
+
+    await db.definir_hp(conn, run["id"], dono, 5)
+    inter = await usar(cog, canal, run, dono, "cura_pelas_maos", [dono])
+    hp = (await db.hp_dos_participantes(conn, run["id"]))[dono]
+    assert hp > 5, (hp, leu(inter))
+    print(f"  o paladino cura a si mesmo (5 -> {hp} de HP): ok")
+
+
 async def main():
     try:
         caso_catalogo_das_ativas()
         caso_quem_marca_ou_se_prepara_bate_no_mesmo_turno()
+        await caso_o_golpe_do_reckless_sai_com_a_vantagem_ligada()
         await caso_cura_em_si_mesmo()
+        await caso_o_paladino_cura_a_si_mesmo()
         await caso_a_habilidade_aparece_uma_vez_so()
         await caso_as_habilidades_somem_quando_o_combate_acaba()
         await caso_uso_volta_no_proximo_combate()

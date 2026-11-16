@@ -11,7 +11,13 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
-from src import classes as cl, config, database as db, motor  # noqa: E402
+from src import (  # noqa: E402
+    classes as cl,
+    config,
+    database as db,
+    habilidades as H,
+    motor,
+)
 from src.cogs.incursao import Incursoes  # noqa: E402
 from fakes import (  # noqa: E402
     leu,
@@ -163,15 +169,65 @@ async def caso_twinned_pega_um_alvo_a_mais():
     print("  Twinned faz a magia de um alvo pegar dois: ok")
 
 
+def caso_a_mesma_metamagia_nao_entra_duas_vezes():
+    """A do tier 4 nao oferece a que ele ja pegou no tier 2.
+
+    As quatro do tier 4 repetem tres do tier 2 com outro id, entao dava para
+    pegar Empowered duas vezes — e os efeitos consolidam com `max()`, ou
+    seja, a segunda decisao era gasta para nao ganhar nada.
+
+    O corte e pelo NOME, e nao pelo id (`empowered` e `empowered_2`): o que o
+    personagem tem e a metamagia, nao a linha da tabela.
+    """
+    t4 = H.POR_ID["metamagia_t4"]
+    todas = {o["nome"] for o in t4.escolha["opcoes"]}
+    assert len(todas) == 4, todas
+    assert {o["nome"] for o in cl.opcoes_disponiveis(t4, {})} == todas
+
+    for pegou, some in (("empowered", "Empowered Spell"),
+                        ("twinned", "Twinned Spell"),
+                        ("heightened", "Heightened Spell")):
+        sobram = {o["nome"] for o in cl.opcoes_disponiveis(t4, {"metamagia_t2": pegou})}
+        assert sobram == todas - {some}, (pegou, sobram)
+        assert "Quickened Spell" in sobram, "a do tier 4 nunca sai da lista"
+
+    # E a do tier 2 nao filtra nada: ela e a primeira, nao tem o que repetir.
+    t2 = H.POR_ID["metamagia_t2"]
+    assert len(cl.opcoes_disponiveis(t2, {"metamagia_t2": "empowered"})) == 3
+    print("  a metamagia do tier 2 nao reaparece no tier 4: ok")
+
+
 async def caso_heightened_poe_desvantagem_no_save():
+    """E UMA por descanso: a primeira magia de save leva, as outras nao.
+
+    Ela era passiva ligada para sempre — toda magia do feiticeiro saia com a
+    criatura resistindo em desvantagem. A pedido do grupo virou recurso, e o
+    uso e cobrado em `_resolver_save`, que e o unico caminho em que a
+    desvantagem pesa: assim ela nunca e desperdicada num lancamento que nao
+    forca save.
+    """
     conn, canal, cog, incursao, run = await preparar(
         escolhas={"magia_feit_t1": "burning_hands", "metamagia_t2": "heightened"},
         monstros=2,
     )
-    inter = FakeInteraction(canal, JOGADORES[0])
+    dono = JOGADORES[0]
+    inter = FakeInteraction(canal, dono)
     await cog.usar_habilidade(inter, run["id"], "OBJ", "burning_hands")
     assert "desvantagem" in leu(inter), leu(inter)
-    print("  Heightened mostra e aplica a desvantagem no save do inimigo: ok")
+
+    # O uso ficou gasto para este descanso.
+    gastos = await db.usos_da_run(conn, run["id"], dono)
+    chave = (cog.CHAVE_DA_HEIGHTENED, f"descanso:{run['descansos']}")
+    assert gastos.get(chave) == 1, gastos
+
+    # A segunda magia de save sai SEM desvantagem — e a prova nao e o texto,
+    # que some junto: e o uso nao subir para dois.
+    de_novo = FakeInteraction(canal, dono)
+    await cog.usar_habilidade(de_novo, run["id"], "OBJ", "burning_hands")
+    gastos = await db.usos_da_run(conn, run["id"], dono)
+    assert gastos.get(chave) == 1, ("gastou duas vezes no mesmo descanso", gastos)
+    assert "desvantagem" not in leu(de_novo), leu(de_novo)
+    print("  Heightened poe desvantagem UMA vez por descanso: ok")
 
 
 async def caso_quickened_deixa_o_turno_livre():
@@ -389,6 +445,7 @@ async def main():
     try:
         caso_mesmo_corpo_do_mago()
         caso_metamagia_nos_dois_tiers()
+        caso_a_mesma_metamagia_nao_entra_duas_vezes()
         caso_desvantagem_existe_e_e_pior()
         await caso_empowered_soma_dado_na_magia()
         await caso_twinned_pega_um_alvo_a_mais()

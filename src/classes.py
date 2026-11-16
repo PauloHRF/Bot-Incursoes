@@ -448,6 +448,36 @@ def efeitos(
     return juntos
 
 
+def opcoes_disponiveis(habilidade: Habilidade, feitas: Optional[dict] = None) -> list:
+    """As opções que o personagem ainda pode escolher nesta decisão.
+
+    Hoje serve a uma regra só: **a mesma metamagia não entra duas vezes**. O
+    feiticeiro escolhe uma no tier 2 e outra no 4, e as quatro do tier 4
+    repetem três do tier 2 com outro id — então dava para pegar Empowered
+    duas vezes e consolidar com `max()`, isto é, gastar a segunda decisão
+    para não ganhar nada.
+
+    O corte é pelo NOME, e não pelo id, justamente porque os ids diferem
+    (`empowered` e `empowered_2`): o que o jogador tem é a metamagia, não a
+    linha da tabela. `nao_repete` lista de quais decisões anteriores olhar.
+    """
+    forma = habilidade.escolha or {}
+    opcoes = list(forma.get("opcoes", []))
+    anteriores = forma.get("nao_repete") or ()
+    if not anteriores or not feitas:
+        return opcoes
+    tomados = set()
+    for outra_id in anteriores:
+        escolhido = feitas.get(outra_id)
+        if not escolhido:
+            continue
+        for h in POR_ID.values():
+            for o in (h.escolha or {}).get("opcoes", []):
+                if o["id"] == escolhido:
+                    tomados.add(o["nome"])
+    return [o for o in opcoes if o["nome"] not in tomados]
+
+
 def juntar_escolha(juntos: dict, habilidade: Habilidade, decidido) -> None:
     """Aplica uma escolha já feita sobre os efeitos acumulados."""
     forma = habilidade.escolha or {}

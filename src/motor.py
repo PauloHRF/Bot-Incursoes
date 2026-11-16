@@ -1581,11 +1581,20 @@ def vale_esquivar(combatente: Combatente, dano: int, limiar: float) -> bool:
     return dano >= restante or dano >= max(1, int(restante * limiar))
 
 
-def proxima_sequencia(pilha: int, acertou: bool, por_acerto: int, teto: int) -> int:
-    """Martial Arts: acerto empilha até o teto, erro zera."""
+def proxima_sequencia(
+    pilha: int, acertou: bool, por_acerto: int, teto: Optional[int] = None
+) -> int:
+    """Martial Arts: acerto empilha, erro zera.
+
+    `teto` em None é SEM TETO, que é como o Martial Arts ficou. Com o teto em
+    2 a pilha chegava lá no segundo acerto e não saía mais: o monge tinha +2
+    fixo e a mecânica de emendar não emendava nada. Sem teto ela volta a ser
+    uma aposta, e o freio passa a ser o prazo — a pilha morre com o combate.
+    """
     if not acertou:
         return 0
-    return min(teto, pilha + por_acerto)
+    somada = pilha + por_acerto
+    return somada if teto is None else min(teto, somada)
 
 
 def cura_liquida(combatente: Combatente, bruta: int) -> int:

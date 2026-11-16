@@ -87,13 +87,13 @@ Espalhamento por tier:
 | Classe | HP por masmorra |
 |---|---|
 | Clérigo | 67 |
+| Bruxo | 55 |
 | Xamã | 51 |
 | Bardo | 45 |
 | Guerreiro | 42 |
 | Paladino | 19 |
 | Artífice | 19 |
 | Druida | 19 |
-| Bruxo | 18 |
 
 **Tier 5:**
 
@@ -103,10 +103,10 @@ Espalhamento por tier:
 | Druida | 213 |
 | Clérigo | 213 |
 | Xamã | 119 |
+| Bruxo | 90 |
 | Guerreiro | 67 |
 | Artífice | 65 |
 | Paladino | 42 |
-| Bruxo | 29 |
 
 ## Ameaça: fatia da atenção das criaturas
 
@@ -171,6 +171,7 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
 | >> | Bárbaro | Rage | 46 | 15 × 3.08 | 9 de dano cortado; dano extra enquanto dura |
+|  | Bruxo | Arms of Hadar | 33 | 11 × 3.08 | 11 de dano |
 |  | Patrulheiro | Marca do Cacador | 32 | 10 × 3.08 | 10 de dado extra enquanto dura |
 |  | Feiticeiro | Chromatic Orb | 26 | 18 × 1.42 | 18 de dano |
 |  | Feiticeiro | Burning Hands | 23 | 16 × 1.42 | 16 de dano |
@@ -178,6 +179,7 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Clérigo | Guiding Bolt | 20 | 14 × 1.42 | 14 de dano |
 |  | Mago | Thunderwave | 20 | 14 × 1.42 | 14 de dano |
 |  | Artífice | Thunderwave | 20 | 14 × 1.42 | 14 de dano |
+|  | Bruxo | Charm Person | 18 | 6 × 3.08 | 6 de dano negado (1 turno(s) de criatura) |
 |  | Guerreiro | Second Wind | 18 | 6 × 3.08 | 6 de cura |
 |  | Xamã | Tradicao xamanica — espiritual | 17 | 12 × 1.42 | 6 de cura; 6 de THP |
 |  | Mago | Sleep | 17 | 12 × 1.42 | 12 de dano negado (2 turno(s) de criatura) |
@@ -187,14 +189,12 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Mago | Magic Missile | 15 | 10 × 1.42 | 10 de dano |
 |  | Druida | Wild Shape — Urso | 15 | 10 × 1.42 | 10 da forma em 3 rodadas; inclui ataque ao transformar |
 |  | Druida | Wild Shape — Aranha | 13 | 10 × 1.42 | 10 da forma em 3 rodadas; inclui ataque ao transformar |
-|  | Bruxo | Arms of Hadar | 11 | 11 × 1.00 | 11 de dano |
-|  | Bruxo | Hex | 10 | 10 × 1.00 | 10 de dado extra enquanto dura |
+|  | Bruxo | Hex | 11 | 4 × 3.08 | 4 de dado extra enquanto dura |
 |  | Xamã | Tradicao xamanica — marcial | 10 | 7 × 1.42 | 4 de golpe a mais; 4 de THP |
 |  | Clérigo | Command | 9 | 6 × 1.42 | 6 de dano negado (1 turno(s) de criatura) |
 |  | Paladino | Cura pelas Maos | 8 | 6 × 1.42 | 6 de cura |
 |  | Clérigo | Cure Wounds | 8 | 6 × 1.42 | 6 de cura |
 |  | Artífice | Cure Wounds | 8 | 6 × 1.42 | 6 de cura |
-| << | Bruxo | Charm Person | 6 | 6 × 1.00 | 6 de dano negado (1 turno(s) de criatura) |
 | << | Bardo | Healing Word | 5 | 4 × 1.42 | 4 de cura |
 | << | Monge | Flurry of Blows | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 | << | Artífice | Faerie Fire | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
@@ -208,18 +208,19 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Bardo | Inspiracao — na resistencia | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Bardo | Inspiracao — na pericia | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |
 
-### Tier 3 — mediana 39 HP-eq, 25 ativas
+### Tier 3 — mediana 40 HP-eq, 25 ativas
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
+| >> | Bruxo | Hypnotic Pattern | 240 | 78 × 3.08 | 78 de dano negado (6 turno(s) de criatura) |
+| >> | Bruxo | Hunger of Hadar | 173 | 56 × 3.08 | 17 de dano; 39 de dano negado (3 turno(s) de criatura) |
 | >> | Xamã | Danca totemica | 131 | 92 × 1.42 | 22 de cura no grupo; 70 de THP |
 | >> | Druida | Call Lightning | 109 | 77 × 1.42 | 77 de dano |
 |  | Bardo | Aid | 96 | 68 × 1.42 | 22 de cura no grupo; 45 de THP |
 |  | Mago | Fireball | 92 | 65 × 1.42 | 65 de dano |
 |  | Feiticeiro | Lightning Bolt | 92 | 65 × 1.42 | 65 de dano |
-|  | Bruxo | Hypnotic Pattern | 78 | 78 × 1.00 | 78 de dano negado (6 turno(s) de criatura) |
 |  | Bardo | Hypnotic Pattern | 78 | 78 × 1.00 | 78 de dano negado (6 turno(s) de criatura) |
-|  | Bruxo | Hunger of Hadar | 74 | 74 × 1.00 | 35 de dano; 39 de dano negado (3 turno(s) de criatura) |
+|  | Bruxo | Healing Light | 55 | 18 × 3.08 | 18 de cura |
 |  | Clérigo | Mass Healing Word | 48 | 34 × 1.42 | 34 de cura no grupo |
 |  | Guerreiro | Action Surge | 43 | 14 × 3.08 | 14 de golpe a mais |
 |  | Paladino | Golpe Divino | 42 | 14 × 3.08 | 14 de golpe a mais |
@@ -232,7 +233,6 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Clérigo | Spirit Guardians | 22 | 22 × 1.00 | 22 de dano |
 |  | Druida | Aura of Vitality | 19 | 14 × 1.42 | 14 de regeneração |
 |  | Monge | Stunning Strike | 18 | 13 × 1.42 | 13 de dano negado (1 turno(s) de criatura) |
-|  | Bruxo | Healing Light | 18 | 18 × 1.00 | 18 de cura |
 | << | Bardo | Invisibility | 11 | 8 × 1.42 | 8 de mira desviada |
 | << | Patrulheiro | Rajada do Cacador | 7 | 5 × 1.42 | 5 de golpe a mais |
 | << | Ladino | Furtividade | 0 | 0 × 3.08 | efeito que esta conta não cobre (reação, vantagem) |
@@ -243,36 +243,36 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
 | >> | Bárbaro | Relentless | 42 | 14 × 3.08 | 14 de THP |
+|  | Bruxo | Dark One's Own Luck | 0 | 0 × 3.08 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Druida | Pressagio | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Artífice | Flash of Genius | 0 | 0 × 1.42 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Patrulheiro | Sobrevivente — socorro | 0 | 0 × 1.00 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Paladino | Lider Sagrado — socorro | 0 | 0 × 1.00 | efeito que esta conta não cobre (reação, vantagem) |
-|  | Bruxo | Dark One's Own Luck | 0 | 0 × 1.00 | efeito que esta conta não cobre (reação, vantagem) |
 
-### Tier 5 — mediana 57 HP-eq, 26 ativas
+### Tier 5 — mediana 66 HP-eq, 26 ativas
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
+| >> | Bruxo | Hold Monster | 194 | 63 × 3.08 | 63 de dano negado (3 turno(s) de criatura) |
 | >> | Druida | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
 | >> | Clérigo | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
 | >> | Bardo | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
-| >> | Mago | Cone of Cold | 158 | 112 × 1.42 | 112 de dano |
-| >> | Feiticeiro | Cone of Cold | 158 | 112 × 1.42 | 112 de dano |
+|  | Mago | Cone of Cold | 158 | 112 × 1.42 | 112 de dano |
+|  | Feiticeiro | Cone of Cold | 158 | 112 × 1.42 | 112 de dano |
+|  | Bruxo | Synaptic Static | 134 | 43 × 3.08 | 43 de dano |
 |  | Clérigo | Flame Strike | 108 | 108 × 1.00 | 108 de dano |
+|  | Bruxo | Summon Greater Demon | 103 | 33 × 3.08 | 33 de aliado conjurado |
 |  | Mago | Hold Monster | 89 | 63 × 1.42 | 63 de dano negado (3 turno(s) de criatura) |
 |  | Bardo | Otto's Irresistible Dance | 89 | 63 × 1.42 | 63 de dano negado (3 turno(s) de criatura) |
-|  | Bruxo | Synaptic Static | 87 | 87 × 1.00 | 87 de dano |
 |  | Patrulheiro | Cacador Supremo | 77 | 54 × 1.42 | 54 de dado extra enquanto dura |
 |  | Druida | Conjure Elemental | 66 | 46 × 1.42 | 46 de aliado conjurado |
-|  | Bruxo | Hold Monster | 63 | 63 × 1.00 | 63 de dano negado (3 turno(s) de criatura) |
 |  | Guerreiro | Action Mastery | 57 | 19 × 3.08 | 19 de golpe a mais |
 |  | Bardo | Animate Objects | 53 | 38 × 1.42 | 38 de aliado conjurado |
 |  | Xamã | Guerreiros ancioes | 36 | 36 × 1.00 | 36 de cura no grupo |
 |  | Artífice | Arcane Jolt — restaurador | 34 | 11 × 3.08 | 11 de cura |
-|  | Bruxo | Summon Greater Demon | 33 | 33 × 1.00 | 33 de aliado conjurado |
-|  | Paladino | Avatar da Luz | 26 | 26 × 1.00 | 11 de regeneração; dano extra enquanto dura |
-|  | Feiticeiro | Dimension Door | 24 | 17 × 1.42 | 17 de mira desviada |
-|  | Druida | Antilife Shell | 24 | 17 × 1.42 | 17 de mira desviada |
+| << | Paladino | Avatar da Luz | 26 | 26 × 1.00 | 11 de regeneração; dano extra enquanto dura |
+| << | Feiticeiro | Dimension Door | 24 | 17 × 1.42 | 17 de mira desviada |
+| << | Druida | Antilife Shell | 24 | 17 × 1.42 | 17 de mira desviada |
 | << | Artífice | Arcane Jolt — destrutivo | 22 | 7 × 3.08 | 7 de golpe a mais |
 | << | Feiticeiro | Polymorph | 21 | 15 × 1.42 | 15 da forma em 3 rodadas |
 | << | Monge | Perfect Strike | 19 | 6 × 3.08 | 6 de golpe a mais |
@@ -287,9 +287,9 @@ frequência, os três escopos encostam. Isto é desenho funcionando.
 
 | Escopo | Ativas | Mediana por uso | Usos/masmorra | Mediana por masmorra |
 |---|---|---|---|---|
-| combate | 9 | 11 | 3.08 | 34 |
+| combate | 18 | 14 | 3.08 | 42 |
 | descanso | 47 | 16 | 1.42 | 23 |
-| incursao | 17 | 36 | 1.00 | 36 |
+| incursao | 8 | 38 | 1.00 | 38 |
 
 ### A mesma magia com disponibilidade diferente
 
@@ -297,10 +297,14 @@ Mesmo nome, mesmo efeito, escopo de recarga diferente entre classes:
 
 | Magia | Classe | Tier | Recarga | Usos/masmorra |
 |---|---|---|---|---|
+| Charm Person | Bruxo | T1 | 1x por combate | 3.08 |
 | Charm Person | Bardo | T1 | 1x por descanso | 1.42 |
-| Charm Person | Bruxo | T1 | 1x por incursao | 1.00 |
+| Hold Monster | Bruxo | T5 | 1x por combate | 3.08 |
 | Hold Monster | Mago | T5 | 1x por descanso | 1.42 |
-| Hold Monster | Bruxo | T5 | 1x por incursao | 1.00 |
+| Hypnotic Pattern | Bruxo | T3 | 1x por combate | 3.08 |
+| Hypnotic Pattern | Clérigo | T3 | 1x por incursao | 1.00 |
+| Hypnotic Pattern | Mago | T3 | 1x por incursao | 1.00 |
+| Hypnotic Pattern | Bardo | T3 | 1x por incursao | 1.00 |
 
 ## Tier que não melhora nada ofensivo
 

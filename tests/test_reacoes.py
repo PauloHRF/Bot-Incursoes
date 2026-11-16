@@ -84,11 +84,32 @@ def caso_quando_vale_esquivar():
 
 
 def caso_sequencia_do_monge():
-    assert motor.proxima_sequencia(0, True, 1, 2) == 1
+    """SEM TETO, a pedido do grupo — e por isso errar passou a doer.
+
+    Com o teto em 2 a pilha chegava la no segundo acerto e nao saia mais: o
+    monge tinha +2 fixo, e a mecanica de emendar nao emendava nada. Sem teto
+    ela vira aposta: quanto mais alta, mais cara a queda. O freio deixou de
+    ser um numero e passou a ser o prazo — a pilha morre com o combate.
+    """
+    # O teto ainda existe como PARAMETRO, para quem quiser um: o que mudou foi
+    # o Martial Arts deixar de passar um.
     assert motor.proxima_sequencia(1, True, 1, 2) == 2
-    assert motor.proxima_sequencia(2, True, 1, 2) == 2, "nao passa do teto"
-    assert motor.proxima_sequencia(2, False, 1, 2) == 0, "errar zera"
-    print("  a sequencia do Martial Arts empilha ate o teto e zera no erro: ok")
+    assert motor.proxima_sequencia(2, True, 1, 2) == 2, "com teto, nao passa"
+
+    # Sem teto, ela sobe enquanto acertar.
+    pilha = 0
+    for esperado in range(1, 9):
+        pilha = motor.proxima_sequencia(pilha, True, 1)
+        assert pilha == esperado, (pilha, esperado)
+    assert motor.proxima_sequencia(pilha, False, 1) == 0, "errar zera, de qualquer altura"
+
+    # E a passiva do monge nao declara teto nenhum.
+    monge = cl.CLASSES["monge"]
+    passiva = next(
+        h for _t, h in monge.habilidades_ate(10) if h.id == "martial_arts"
+    )
+    assert "teto" not in passiva.efeito["sequencia"], passiva.efeito
+    print("  a sequencia do Martial Arts sobe sem teto e zera no erro: ok")
 
 
 def caso_atordoado_perde_a_vez():
@@ -189,6 +210,31 @@ async def caso_martial_arts_sobe_dentro_do_turno():
     print("  Martial Arts soma no golpe seguinte, dentro do mesmo turno: ok")
 
 
+async def caso_a_pilha_do_monge_morre_com_o_combate():
+    """Sem teto, o prazo e o unico freio — entao ele precisa de caso.
+
+    Um monge que emendou oito acertos carrega +8, e isso nao pode atravessar
+    porta nenhuma por acidente de encanamento. A pilha ja morria pela chave
+    (cada sala e um `passo`), e agora morre tambem por quem encerra o combate,
+    explicitamente.
+    """
+    conn, canal, cog, incursao, run = await preparar(classe="monge", nivel=6)
+    dono = JOGADORES[0]
+    passo = cog._passo(run)
+
+    await cog._guardar_sequencia(run, dono, passo, 8)
+    assert await cog._pilha_de_sequencia(run, dono, passo) == 8
+
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    for inimigo in estado.inimigos:
+        inimigo.hp_atual = 0
+    await cog._encerrar_combate(run, incursao.objetivo, estado)
+    assert await cog._pilha_de_sequencia(run, dono, passo) == 0, (
+        "a pilha atravessou o fim do combate"
+    )
+    print("  a pilha do Martial Arts morre quando o combate acaba: ok")
+
+
 async def main():
     try:
         caso_quando_vale_esquivar()
@@ -197,6 +243,7 @@ async def main():
         caso_as_habilidades_sem_dono_seguem_no_catalogo()
         await caso_stunning_strike_atordoa_ou_devolve()
         await caso_martial_arts_sobe_dentro_do_turno()
+        await caso_a_pilha_do_monge_morre_com_o_combate()
     finally:
         for conn in _ABERTAS:
             try:

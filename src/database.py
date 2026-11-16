@@ -2280,6 +2280,22 @@ async def remover_efeito(
     await conn.commit()
 
 
+async def limpar_efeito(
+    conn: aiosqlite.Connection, run_id: int, passo: int, efeito: str
+) -> None:
+    """Apaga um efeito daquele combate, de todos os alvos.
+
+    Existe para o que não tem prazo em rodadas e sim em ACONTECIMENTO: a
+    pilha do Martial Arts vale enquanto o combate durar, e quem a encerra é o
+    fim do combate — não um número de rodadas que alguém teria de adivinhar.
+    """
+    await conn.execute(
+        "DELETE FROM run_efeitos WHERE run_id = ? AND passo = ? AND efeito = ?",
+        (run_id, passo, efeito),
+    )
+    await conn.commit()
+
+
 async def limpar_efeitos_vencidos(
     conn: aiosqlite.Connection, run_id: int, passo: int, rodada: int
 ) -> None:

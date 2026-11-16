@@ -13,6 +13,7 @@ sys.path.insert(0, str(RAIZ))
 from src import (  # noqa: E402
     ameaca,
     classes as cl,
+    habilidades as hb,
     habilidades as H,
     config,
     database as db,
@@ -114,8 +115,18 @@ def caso_tabela_e_forma():
     print("  d8 como o clerigo, CA entre o mago e ele, saves SAB e CAR: ok")
 
 
-def caso_tudo_e_uma_vez_por_incursao():
-    """O pacto cobra: cada favor sai uma vez por dungeon, e só."""
+def caso_tudo_e_uma_vez_por_combate():
+    """O pacto cobra uma vez por COMBATE — era por incursão, e sufocava.
+
+    Uma dungeon tem até três combates; com um uso por incursão, o bruxo
+    gastava o favor na primeira sala e atravessava o resto batendo com o
+    cantrip. O pacto do livro é justamente o contrário: poucos usos que
+    voltam DEPRESSA. Por combate, a escolha passa a ser "qual favor nesta
+    sala" em vez de "qual favor nesta dungeon inteira".
+
+    O que não mudou é o resto da forma: continua UM uso, e continua igual em
+    toda a classe — é isso que separa o bruxo do mago, que mistura escopos.
+    """
     # Da tabela crua, e nao da lista filtrada: aqui interessa TODA ativa que a
     # classe pode destravar, nao so a de uma escolha ja feita.
     ativas = [
@@ -126,8 +137,9 @@ def caso_tudo_e_uma_vez_por_incursao():
     ]
     assert len(ativas) >= 9, f"uma por opcao dos tres tiers impares, nao {len(ativas)}"
     for h in ativas:
-        assert h.escopo == "incursao", (h.nome, h.escopo)
+        assert h.escopo == "combate", (h.nome, h.escopo)
         assert h.vezes == 1, (h.nome, h.vezes)
+        assert "1x por combate" in h.texto, h.nome
     # e nenhuma outra classe tem isso: o mago e o clerigo misturam escopos
     do_mago = {
         h.escopo
@@ -135,8 +147,8 @@ def caso_tudo_e_uma_vez_por_incursao():
         for h in lista
         if h.tipo == cl.ATIVA
     }
-    assert do_mago != {"incursao"}, "o mago nao e 1x por incursao em tudo"
-    print(f"  as {len(ativas)} ativas do bruxo sao todas 1x por incursao: ok")
+    assert do_mago != {"combate"}, "o mago nao e 1x por combate em tudo"
+    print(f"  as {len(ativas)} ativas do bruxo sao todas 1x por combate: ok")
 
 
 def caso_forma_das_classes():
@@ -178,7 +190,20 @@ async def caso_hex_marca_o_alvo():
                                        incursao.objetivo)
     dono = estado.combatente(JOGADORES[0])
     assert dono.dano_por_alvo.get(alvo) == ("Hex", "1d6"), dono.dano_por_alvo
-    print("  Hex marca o inimigo e todo golpe nele leva +1d6: ok")
+
+    # E a marca vale ATE A CRIATURA CAIR, nao por tres rodadas. Com prazo em
+    # rodadas o jogador marcava tarde de proposito, para a marca nao vencer
+    # antes do alvo — a maldicao do bruxo e sobre AQUELA criatura.
+    marcas = [
+        e for e in await db.efeitos_ativos(conn, run["id"], cog._passo(run), 0)
+        if e["alvo_tipo"] == "inimigo" and e["efeito"] == "hex"
+    ]
+    assert len(marcas) == 1, marcas
+    assert marcas[0]["expira"] >= cog.PRAZO_DO_COMBATE, marcas[0]["expira"]
+    assert "ate_morrer" in (hb.POR_ID["hex"].acao or {}), hb.POR_ID["hex"].acao
+    assert "turnos" not in (hb.POR_ID["hex"].acao or {}), "voltou o prazo em rodadas"
+    assert "de pé" in leu(inter), leu(inter)
+    print("  Hex marca o inimigo ate ele cair, e todo golpe nele leva +1d6: ok")
 
 
 async def caso_hunger_of_hadar_da_dano_e_tira_a_vez():
@@ -223,12 +248,16 @@ async def caso_synaptic_static_atrapalha_o_ataque():
         escolhas={"pacto_t5": "synaptic_static"}, monstros=2,
         monstro=SEM_DEFESA,
     )
+    # Agora ela pega DOIS, e nao a sala inteira: os dois sao escolhidos.
+    estado = await cog._estado_combate(run, incursao.objetivo)
+    alvos = [i.indice for i in estado.inimigos_vivos][:2]
+    assert len(alvos) == 2, alvos
     inter = FakeInteraction(canal, JOGADORES[0])
-    await cog.usar_habilidade(inter, run["id"], "OBJ", "synaptic_static")
+    await cog.usar_habilidade(inter, run["id"], "OBJ", "synaptic_static", alvos)
     estado = await cog._estado_combate(await db.buscar_run(conn, run["id"]),
                                        incursao.objetivo)
     atrapalhados = [i for i in estado.inimigos if i.penalidade_ataque > 0]
-    assert len(atrapalhados) == len(estado.inimigos), [
+    assert len(atrapalhados) == 2, [
         (i.nome, i.penalidade_ataque) for i in estado.inimigos
     ]
     assert all(i.penalidade_ataque == 3 for i in atrapalhados)
@@ -377,7 +406,7 @@ async def caso_conjurar_de_novo_troca_o_demonio():
 async def main():
     try:
         caso_tabela_e_forma()
-        caso_tudo_e_uma_vez_por_incursao()
+        caso_tudo_e_uma_vez_por_combate()
         caso_forma_das_classes()
         caso_devils_sight_virou_pericia()
         await caso_hex_marca_o_alvo()

@@ -364,7 +364,7 @@ Ataca normalmente e ainda golpeia mais duas vezes.
 
 ### **Passiva — Martial Arts**
 
-Ao acertar, o próximo ataque ganha +1 acerto, até +2; errar zera.
+Ao acertar, o próximo ataque ganha +1 acerto; errar zera. A sequencia não tem teto, e some quando o combate acaba.
 
 ---
 
@@ -545,7 +545,7 @@ Uma presa por 3 turnos, com +2d8 e vantagem — e ataca na mesma rodada, já com
 
 **1x por descanso.**
 
-Cura um aliado em 30% do HP máximo dele.
+Cura um aliado — ou a si mesmo — em 30% do HP máximo dele.
 
 ---
 
@@ -1067,9 +1067,9 @@ Escolhe uma: Cone of Cold, Hold Monster ou Circle of Power.
 
 Escolhe uma: Hex, Arms of Hadar ou Charm Person.
 
-* **Hex** (1x por incursão) — marca um inimigo por 3 rodadas; todo golpe nele causa +1d6 de dano.
-* **Arms of Hadar** (1x por incursão) — todos os inimigos fazem save de FOR; quem falha leva 2d6, quem passa leva metade.
-* **Charm Person** (1x por incursão) — um inimigo faz save de SAB; falhando, perde a próxima vez.
+* **Hex** (1x por combate) — marca um inimigo até ele cair; todo golpe nele causa +1d6 de dano.
+* **Arms of Hadar** (1x por combate) — todos os inimigos fazem save de FOR; quem falha leva 2d6, quem passa leva metade.
+* **Charm Person** (1x por combate) — um inimigo faz save de SAB; falhando, perde a próxima vez.
 
 ---
 
@@ -1105,9 +1105,9 @@ Conhecimento proibido que fica ligado. Escolhe uma: Agonizing Blast, Fiendish Vi
 
 Escolhe uma: Hunger of Hadar, Healing Light ou Hypnotic Pattern.
 
-* **Hunger of Hadar** (1x por incursão) — todos os inimigos fazem save de DES; quem falha leva 6d6 e perde a próxima vez.
-* **Healing Light** (1x por incursão) — cura um aliado em 40% do HP máximo dele.
-* **Hypnotic Pattern** (1x por incursão) — todos os inimigos fazem save de SAB; quem falha perde as duas próximas vezes.
+* **Hunger of Hadar** (1x por combate) — todos os inimigos fazem save de DES; quem falha leva 3d6 e perde a próxima vez.
+* **Healing Light** (1x por combate) — cura um aliado em 40% do HP máximo dele.
+* **Hypnotic Pattern** (1x por combate) — todos os inimigos fazem save de SAB; quem falha perde as duas próximas vezes.
 
 ---
 
@@ -1124,7 +1124,7 @@ Escolhe uma: Hunger of Hadar, Healing Light ou Hypnotic Pattern.
 
 Escolhe uma: Dark One's Own Luck, Dark One's Blessing ou Radiant Soul.
 
-* **Dark One's Own Luck** (1x por incursão) — quando VOCÊ falha o teste da sala, o patrono soma +10 — e só dispara se o +10 fizer passar.
+* **Dark One's Own Luck** (1x por combate) — quando VOCÊ falha o teste da sala, o patrono soma +10 — e só dispara se o +10 fizer passar.
 * **Dark One's Blessing** — Vida temporária ao derrubar um inimigo
 * **Radiant Soul** — +1d8 de dano em tudo que ele lança
 
@@ -1143,9 +1143,9 @@ Escolhe uma: Dark One's Own Luck, Dark One's Blessing ou Radiant Soul.
 
 Escolhe uma: Hold Monster, Synaptic Static ou Summon Greater Demon.
 
-* **Hold Monster** (1x por incursão) — um inimigo faz save de SAB; falhando, perde três vezes seguidas.
-* **Synaptic Static** (1x por incursão) — todos os inimigos fazem save de INT; quem falha leva 8d6 e perde 3 de ataque por 3 rodadas.
-* **Summon Greater Demon** (1x por incursão) — um demônio entra na sala com HP próprio, age na vez dele e bate no inimigo mais ferido. Sai quando o grupo troca de sala.
+* **Hold Monster** (1x por combate) — um inimigo faz save de SAB; falhando, perde três vezes seguidas.
+* **Synaptic Static** (1x por combate) — dois inimigos fazem save de INT; quem falha leva 8d6 e perde 3 de ataque por 2 rodadas.
+* **Summon Greater Demon** (1x por combate) — um demônio entra na sala com HP próprio, age na vez dele e bate no inimigo mais ferido. Sai quando o grupo troca de sala.
 
 ---
 
@@ -1298,7 +1298,7 @@ Ele torce as próprias magias, para sempre. Escolhe uma: Empowered, Twinned ou H
 
 * **Empowered Spell** — +1d8 de dano em toda magia dele
 * **Twinned Spell** — As magias de um alvo pegam dois
-* **Heightened Spell** — A criatura resiste com desvantagem
+* **Heightened Spell** — 1x por descanso: a criatura resiste com desvantagem
 
 ---
 
@@ -1332,12 +1332,12 @@ Escolhe uma: Lightning Bolt, Haste ou Grilhões Planares.
 
 ### **Escolha — Segunda metamagia**
 
-Mais um jeito de torcer as magias. Escolhe uma: Quickened, Empowered, Twinned ou Heightened.
+Mais um jeito de torcer as magias, e tem de ser OUTRO: Quickened, Empowered, Twinned ou Heightened.
 
 * **Quickened Spell** — Lança a magia E ataca no mesmo turno
 * **Empowered Spell** — +1d8 de dano em toda magia dele
 * **Twinned Spell** — As magias de um alvo pegam dois
-* **Heightened Spell** — A criatura resiste com desvantagem
+* **Heightened Spell** — 1x por descanso: a criatura resiste com desvantagem
 
 ---
 

@@ -258,8 +258,17 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        # turno por duas acoes em vez de ganhar algo a mais.
                        acao={"tipo": "golpes", "acoes": 1, "golpes_extras": 2})],
         2: [Habilidade("martial_arts", "Martial Arts", PASSIVA,
-                       "Ao acertar, o proximo ataque ganha +1 acerto, ate +2; errar zera.",
-                       {"sequencia": {"por_acerto": 1, "teto": 2}})],
+                       "Ao acertar, o proximo ataque ganha +1 acerto; errar zera. "
+                       "A sequencia nao tem teto, e some quando o combate acaba.",
+                       # SEM `teto`, a pedido do grupo. O +2 era um teto que a
+                       # sequencia batia no segundo acerto e nunca mais saia
+                       # de la: na pratica o monge tinha +2 fixo depois do
+                       # primeiro acerto, e a mecanica de "emendar" nao
+                       # emendava nada. Sem teto ela volta a ser uma aposta —
+                       # errar zera, e quanto mais alta a pilha, mais cara a
+                       # queda. O freio deixa de ser um numero e passa a ser o
+                       # prazo: a pilha morre com o combate.
+                       {"sequencia": {"por_acerto": 1}})],
         3: [MULTIATAQUE,
             Habilidade("stunning_strike", "Stunning Strike", ATIVA,
                        "1x por descanso: um ataque que, se acertar, atordoa por 1 rodada. "
@@ -320,8 +329,13 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
     },
     "paladino": {
         1: [Habilidade("cura_pelas_maos", "Cura pelas Maos", ATIVA,
-                       "1x por descanso: cura um aliado em 30% do HP maximo dele.",
+                       "1x por descanso: cura um aliado — ou a si mesmo — em "
+                       "30% do HP maximo dele.",
                        usos=_usos("descanso"),
+                       # O paladino SEMPRE pode curar a si mesmo: o menu de
+                       # alvos de `tipo: cura` lista a run inteira, e ele esta
+                       # nela. O texto e que dizia so "um aliado", e o jogador
+                       # lia como proibicao. Ha caso prendendo isso.
                        acao={"tipo": "cura", "fracao": 0.3, "alvo": "aliado"})],
         2: [Habilidade("golpe_consagrado", "Golpe Consagrado", PASSIVA,
                        "Os ataques causam +2 de dano radiante.", {"dano_extra": 2})],
@@ -791,7 +805,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "Escolhe uma: Hex, Arms of Hadar ou Charm Person.",
                        escolha={"tipo": "opcao", "opcoes": [
                            {"id": "hex", "nome": "Hex",
-                            "texto": "Marca um inimigo: +1d6 de dano nele"},
+                            "texto": "Marca um inimigo ate ele cair: +1d6 de dano nele"},
                            {"id": "arms_of_hadar", "nome": "Arms of Hadar",
                             "texto": "2d6 em todos, save de FOR"},
                            {"id": "charm_person", "nome": "Charm Person",
@@ -800,27 +814,33 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
             # Hex e a magia do bruxo: a marca que faz todo golpe no alvo doer
             # mais. Mesmo caminho da Marca do Cacador do patrulheiro.
             Habilidade("hex", "Hex", ATIVA,
-                       "1x por incursao: marca um inimigo por 3 rodadas; todo "
+                       "1x por combate: marca um inimigo ate ele cair; todo "
                        "golpe nele causa +1d6 de dano.",
-                       usos=_usos("incursao"),
+                       usos=_usos("combate"),
                        # `acoes: 1` pelo mesmo motivo da Marca do Cacador, que
                        # e a mesma habilidade com outro nome: marcar o alvo e
                        # bater nele no mesmo turno.
-                       acao={"tipo": "duracao", "turnos": 3, "alvo": "inimigo",
-                             "acoes": 1,
+                       #
+                       # `ate_morrer` no lugar das tres rodadas: a maldicao do
+                       # bruxo e sobre AQUELA criatura, e ela nao tem por que
+                       # soltar enquanto a criatura estiver de pe. O prazo em
+                       # rodadas fazia o jogador marcar tarde de proposito,
+                       # para a marca nao vencer antes de o alvo cair.
+                       acao={"tipo": "duracao", "ate_morrer": True,
+                             "alvo": "inimigo", "acoes": 1,
                              "efeitos": {"dano_bonus": "1d6"}},
                        exige_escolha=("pacto_t1", "hex")),
             Habilidade("arms_of_hadar", "Arms of Hadar", ATIVA,
-                       "1x por incursao: todos os inimigos fazem save de FOR; "
+                       "1x por combate: todos os inimigos fazem save de FOR; "
                        "quem falha leva 2d6, quem passa leva metade.",
-                       usos=_usos("incursao"),
+                       usos=_usos("combate"),
                        acao={"tipo": "save", "save": "FOR", "alvos": "todos",
                              "dano": "2d6", "metade": True},
                        exige_escolha=("pacto_t1", "arms_of_hadar")),
             Habilidade("charm_person", "Charm Person", ATIVA,
-                       "1x por incursao: um inimigo faz save de SAB; falhando, "
+                       "1x por combate: um inimigo faz save de SAB; falhando, "
                        "perde a proxima vez.",
-                       usos=_usos("incursao"),
+                       usos=_usos("combate"),
                        acao={"tipo": "save", "save": "SAB", "alvos": 1,
                              "atordoa": 1},
                        exige_escolha=("pacto_t1", "charm_person"))],
@@ -848,7 +868,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                        "Hypnotic Pattern.",
                        escolha={"tipo": "opcao", "opcoes": [
                            {"id": "hunger_of_hadar", "nome": "Hunger of Hadar",
-                            "texto": "6d6 em todos E os que falharem perdem a vez"},
+                            "texto": "3d6 em todos E os que falharem perdem a vez"},
                            {"id": "healing_light", "nome": "Healing Light",
                             "texto": "Cura 6d6 de um aliado"},
                            {"id": "hypnotic_pattern_bruxo", "nome": "Hypnotic Pattern",
@@ -857,21 +877,21 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
             # O vazio do Great Old One: dano E controle no mesmo lance, que e o
             # que justifica gastar o unico uso da incursao nele.
             Habilidade("hunger_of_hadar", "Hunger of Hadar", ATIVA,
-                       "1x por incursao: todos os inimigos fazem save de DES; "
-                       "quem falha leva 6d6 e perde a proxima vez.",
-                       usos=_usos("incursao"),
+                       "1x por combate: todos os inimigos fazem save de DES; "
+                       "quem falha leva 3d6 e perde a proxima vez.",
+                       usos=_usos("combate"),
                        acao={"tipo": "save", "save": "DES", "alvos": "todos",
-                             "dano": "6d6", "atordoa": 1},
+                             "dano": "3d6", "atordoa": 1},
                        exige_escolha=("pacto_t3", "hunger_of_hadar")),
             Habilidade("healing_light", "Healing Light", ATIVA,
-                       "1x por incursao: cura um aliado em 40% do HP maximo dele.",
-                       usos=_usos("incursao"),
+                       "1x por combate: cura um aliado em 40% do HP maximo dele.",
+                       usos=_usos("combate"),
                        acao={"tipo": "cura", "fracao": 0.4, "alvo": "aliado"},
                        exige_escolha=("pacto_t3", "healing_light")),
             Habilidade("hypnotic_pattern_bruxo", "Hypnotic Pattern", ATIVA,
-                       "1x por incursao: todos os inimigos fazem save de SAB; "
+                       "1x por combate: todos os inimigos fazem save de SAB; "
                        "quem falha perde as duas proximas vezes.",
-                       usos=_usos("incursao"),
+                       usos=_usos("combate"),
                        acao={"tipo": "save", "save": "SAB", "alvos": "todos",
                              "atordoa": 2},
                        exige_escolha=("pacto_t3", "hypnotic_pattern_bruxo"))],
@@ -892,9 +912,9 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
             # A Own Luck e reacao, nao numero: usa a maquina do Flash of Genius
             # do artifice, so que o patrono socorre o proprio bruxo.
             Habilidade("own_luck", "Dark One's Own Luck", ATIVA,
-                       "1x por incursao: quando VOCE falha o teste da sala, o "
+                       "1x por combate: quando VOCE falha o teste da sala, o "
                        "patrono soma +10 — e so dispara se o +10 fizer passar.",
-                       usos=_usos("incursao"),
+                       usos=_usos("combate"),
                        acao={"tipo": "reacao", "quando": "falhou_teste",
                              "bonus": 10, "so_em_si": True},
                        exige_escolha=("patrono_t4", "own_luck"))],
@@ -905,32 +925,35 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                            {"id": "hold_monster_bruxo", "nome": "Hold Monster",
                             "texto": "Um inimigo perde tres vezes seguidas"},
                            {"id": "synaptic_static", "nome": "Synaptic Static",
-                            "texto": "8d6 em todos, e eles passam a errar mais"},
+                            "texto": "8d6 em dois, e eles passam a errar mais"},
                            {"id": "summon_greater_demon", "nome": "Summon Greater Demon",
                             "texto": "Um demonio entra na luta e bate sozinho"},
                        ]}),
             Habilidade("hold_monster_bruxo", "Hold Monster", ATIVA,
-                       "1x por incursao: um inimigo faz save de SAB; falhando, "
+                       "1x por combate: um inimigo faz save de SAB; falhando, "
                        "perde tres vezes seguidas.",
-                       usos=_usos("incursao"),
+                       usos=_usos("combate"),
                        acao={"tipo": "save", "save": "SAB", "alvos": 1,
                              "atordoa": 3},
                        exige_escolha=("pacto_t5", "hold_monster_bruxo")),
             # O -1d6 do livro vira -3 no ataque da criatura: o bot nao rola
             # dado de penalidade, e -3 e a media de 1d6 arredondada.
             Habilidade("synaptic_static", "Synaptic Static", ATIVA,
-                       "1x por incursao: todos os inimigos fazem save de INT; "
-                       "quem falha leva 8d6 e perde 3 de ataque por 3 rodadas.",
-                       usos=_usos("incursao"),
-                       acao={"tipo": "save", "save": "INT", "alvos": "todos",
-                             "dano": "8d6", "metade": True, "turnos": 3,
+                       "1x por combate: dois inimigos fazem save de INT; "
+                       "quem falha leva 8d6 e perde 3 de ataque por 2 rodadas.",
+                       usos=_usos("combate"),
+                       # Dois alvos, e nao a sala inteira: com `alvos: todos`
+                       # ela era dano de area E controle de area no mesmo
+                       # lance, por um uso que agora volta a cada combate.
+                       acao={"tipo": "save", "save": "INT", "alvos": 2,
+                             "dano": "8d6", "metade": True, "turnos": 2,
                              "penalidade_ataque": 3},
                        exige_escolha=("pacto_t5", "synaptic_static")),
             Habilidade("summon_greater_demon", "Summon Greater Demon", ATIVA,
-                       "1x por incursao: um demonio entra na sala com HP "
+                       "1x por combate: um demonio entra na sala com HP "
                        "proprio, age na vez dele e bate no inimigo mais "
                        "ferido. Sai quando o grupo troca de sala.",
-                       usos=_usos("incursao"),
+                       usos=_usos("combate"),
                        acao={"tipo": "invocar", "nome": "Demonio do pacto",
                              "ca": 15, "ataque": 8, "dano": "2d6+4", "hp": 45,
                              "ameaca": 8, "iniciativa": 2},
@@ -1157,7 +1180,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "As magias de um alvo pegam dois",
                             "efeito": {"alvos_extra": 1}},
                            {"id": "heightened", "nome": "Heightened Spell",
-                            "texto": "A criatura resiste com desvantagem",
+                            "texto": "1x por descanso: a criatura resiste com desvantagem",
                             "efeito": {"save_com_desvantagem": True}},
                        ]})],
         3: [Habilidade("magia_feit_t3", "Magia da origem", ESCOLHA,
@@ -1200,9 +1223,17 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                              "dano_por_rodada": "2d8"},
                        exige_escolha=("magia_feit_t3", "grilhoes_planares"))],
         4: [Habilidade("metamagia_t4", "Segunda metamagia", ESCOLHA,
-                       "Mais um jeito de torcer as magias. Escolhe uma: "
+                       "Mais um jeito de torcer as magias, e tem de ser OUTRO: "
                        "Quickened, Empowered, Twinned ou Heightened.",
-                       escolha={"tipo": "opcao", "opcoes": [
+                       # `nao_repete`: a que ele pegou no tier 2 nao aparece
+                       # aqui. As quatro de baixo repetem tres daquelas com
+                       # outro id, e pegar a mesma duas vezes consolidava com
+                       # `max()` — ou seja, gastava a segunda decisao para nao
+                       # ganhar nada. O corte e pelo NOME, porque e a
+                       # metamagia que o personagem tem, nao a linha da tabela.
+                       escolha={"tipo": "opcao",
+                                "nao_repete": ("metamagia_t2",),
+                                "opcoes": [
                            {"id": "quickened", "nome": "Quickened Spell",
                             "texto": "Lanca a magia E ataca no mesmo turno",
                             "efeito": {"magia_rapida": 1}},
@@ -1213,7 +1244,7 @@ HABILIDADES: dict[str, dict[int, list[Habilidade]]] = {
                             "texto": "As magias de um alvo pegam dois",
                             "efeito": {"alvos_extra": 1}},
                            {"id": "heightened_2", "nome": "Heightened Spell",
-                            "texto": "A criatura resiste com desvantagem",
+                            "texto": "1x por descanso: a criatura resiste com desvantagem",
                             "efeito": {"save_com_desvantagem": True}},
                        ]})],
         5: [Habilidade("magia_feit_t5", "Magia maior", ESCOLHA,

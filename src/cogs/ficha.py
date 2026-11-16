@@ -73,18 +73,22 @@ class SeletorPericias(DonoDaFicha):
 class SeletorOpcao(DonoDaFicha):
     """Uma decisao de caminho unico: Fighting Style, a do Xama."""
 
-    def __init__(self, cog: "Ficha", personagem_id: int, habilidade, dono_id: int = 0):
+    def __init__(self, cog: "Ficha", personagem_id: int, habilidade,
+                 dono_id: int = 0, feitas: dict | None = None):
         super().__init__(dono_id)
         self.cog = cog
         self.personagem_id = personagem_id
         self.habilidade = habilidade
+        # `feitas` sao as decisoes que ele ja tomou: e por elas que a mesma
+        # metamagia nao aparece duas vezes (ver `cl.opcoes_disponiveis`).
+        self.feitas = feitas or {}
         menu = discord.ui.Select(
             placeholder=f"{habilidade.nome}: escolha um",
             options=[
                 discord.SelectOption(
                     label=o["nome"][:100], value=o["id"], description=o["texto"][:100]
                 )
-                for o in habilidade.escolha["opcoes"]
+                for o in cl.opcoes_disponiveis(habilidade, self.feitas)
             ],
         )
         menu.callback = self._escolher
@@ -992,7 +996,8 @@ class Ficha(commands.Cog):
         cabeca = f"**{habilidade.nome}** — {habilidade.texto}"
         if forma["tipo"] == "opcao":
             return cabeca, SeletorOpcao(
-                self, personagem["id"], habilidade, personagem["user_id"]
+                self, personagem["id"], habilidade, personagem["user_id"],
+                personagem.get("escolhas") or {},
             )
 
         if forma.get("entre") == "proficientes":
@@ -1064,7 +1069,24 @@ class Ficha(commands.Cog):
     async def gravar_escolha(
         self, interaction: discord.Interaction, personagem_id: int, habilidade, valor
     ) -> None:
-        """Ultimo passo: grava e mostra a ficha ja com a decisao valendo."""
+        """Ultimo passo: grava e mostra a ficha ja com a decisao valendo.
+
+        Confere a opcao contra as DISPONIVEIS, e nao contra a lista inteira:
+        o menu pode ter envelhecido na tela do jogador, e um menu velho nao
+        pode gravar a metamagia que ele ja tem. Esconder no menu e metade do
+        trabalho; a outra metade e recusar aqui.
+        """
+        antes_de_gravar = await db.buscar_personagem(self.bot.db, personagem_id)
+        feitas = (antes_de_gravar or {}).get("escolhas") or {}
+        if (habilidade.escolha or {}).get("tipo") == "opcao" and isinstance(valor, str):
+            permitidas = {o["id"] for o in cl.opcoes_disponiveis(habilidade, feitas)}
+            if valor not in permitidas:
+                await interaction.response.send_message(
+                    f"Essa opção não está disponível para **{habilidade.nome}** "
+                    f"— você já tem essa. Abra o menu de novo.",
+                    ephemeral=True,
+                )
+                return
         await db.definir_escolha(self.bot.db, personagem_id, habilidade.id, valor)
         atualizado = await db.buscar_personagem(self.bot.db, personagem_id)
         escrito = valor if isinstance(valor, str) else ", ".join(valor)

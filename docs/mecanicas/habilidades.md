@@ -35,9 +35,9 @@ Não há uma forma só, e a tabela é gerada do catálogo em vez de afirmada: as
 
 | Escopo | Zera | Ativas com ele | Usos por masmorra Média |
 |---|---|---|---|
-| `combate` | a cada sala de combate | 13 | 3,08 |
+| `combate` | a cada sala de combate | 23 | 3,08 |
 | `descanso` | a cada sala de Descanso, e no começo da run | 56 | 1,42 |
-| `incursao` | uma vez por run | 20 | 1 |
+| `incursao` | uma vez por run | 10 | 1 |
 
 Os números da direita vêm de `tools/balanco.py`, que é quem os mede — importados de lá, e não copiados, para os dois documentos não poderem discordar. É o que torna os escopos comparáveis: uma habilidade `por incursao` precisa bater **3,1x mais forte** que uma `por combate` para valer o mesmo. Ver `docs/BALANCO.md`.
 
