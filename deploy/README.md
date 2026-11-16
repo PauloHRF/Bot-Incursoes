@@ -150,7 +150,31 @@ consideradas ociosas: ela avisa por e-mail e, se nada mudar, desliga e remove a
 VM. Um bot de Discord fica quase todo o tempo parado esperando evento, que é o
 perfil exato que o critério dela pega. Fazer o upgrade para Pay As You Go
 **tira a instância da fila de reciclagem** e *mantém os recursos Always Free
-gratuitos* — você passa a pagar só o que exceder a cota, e o bot não excede.
+gratuitos* — você passa a pagar só o que exceder a cota, e o bot não excede
+(desde que o formato da instância esteja na cota; ver abaixo).
+
+**Antes de clicar, confira o formato da instância.** Em 2026 a Oracle cortou
+a cota grátis de **ARM** pela metade — de 4 OCPU / 24 GB para 2 OCPU / 12 GB,
+com prazo até 18/08/2026 — e as fontes se contradizem sobre se o corte vale
+para contas Pay As You Go. Isso **inverte o risco**: numa conta Always Free,
+estar acima do limite faz a instância ser reciclada; depois do upgrade, faz
+ela ser *cobrada*.
+
+```bash
+uname -m && nproc && free -g | head -2 && df -h / | tail -1
+```
+
+- `x86_64`, 2 vCPU, menos de 1 GB → é a `VM.Standard.E2.1.Micro`, a AMD. São
+  duas grátis e o corte de ARM não a alcança. **É o caso do leeroy** (medido
+  em 16/11/2026: boot volume de 47 GB dos 200 GB grátis).
+- `aarch64` com até 2 OCPU / 12 GB → Ampere dentro do limite novo.
+- `aarch64` com 4 OCPU / 24 GB → **pare**. Encolha para 2/12 antes do upgrade,
+  senão a parte excedente passa a virar fatura mensal.
+
+E um volume ÓRFÃO não aparece de dentro da VM: boot volume de instância
+apagada fica desanexado, continua contando nos 200 GB e, depois do PAYG,
+continua sendo cobrado com nada rodando nele. Confira em *Storage → Block
+Volumes* e *Boot Volumes* que só existe o da instância que você usa.
 
 **O passo a passo:**
 
@@ -162,7 +186,7 @@ gratuitos* — você passa a pagar só o que exceder a cota, e o bot não excede
 
 **Depois, os dois cuidados que valem o tempo:**
 
-- **Um alerta de orçamento**, para dormir tranquilo: *Billing & Cost
+- **Um alerta de orçamento ANTES do upgrade**, não depois: *Billing & Cost
   Management → Budgets → Create Budget*, com alvo na raiz do tenancy, valor
   baixo (US$ 1 já serve) e alerta em 100% do previsto. Se algo sair da cota
   gratuita, você sabe por e-mail no mesmo dia em vez de no fim do mês.
