@@ -1113,7 +1113,13 @@ banco e o passo a passo do **Pay As You Go** estão em
 `tools/backup.py` tira uma cópia do banco **sem parar o bot** — pela API de
 backup online do SQLite, e não por um `cp`, que pode pegar uma escrita no meio
 —, comprime e manda para um canal privado do Discord por webhook. O `systemd`
-dispara todo dia às 4h, e as 14 cópias mais novas também ficam no disco.
+dispara todo dia às 4h **no fuso do grupo**, e as 14 cópias mais novas também
+ficam no disco.
+
+O fuso vai escrito na unidade de propósito: a máquina da Oracle roda em UTC, e
+sem ele as "4h" disparavam à 1h de quem joga — com o arquivo saindo marcado
+`01:0x`, porque o nome usa o `FUSO` do projeto. Quem procurasse o backup das
+4h acharia um de uma da manhã.
 
 Webhook e não o próprio bot por três razões: funciona com o bot **parado**,
 que é exatamente quando se quer um backup (antes de uma atualização); dá para

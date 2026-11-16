@@ -2,10 +2,22 @@
 Description=Backup diario do banco do Bot de Incursoes
 
 [Timer]
-# Todo dia as 4h da manha no fuso da maquina. Diario e nao semanal porque o
-# arquivo tem 35 KB comprimido: o custo de guardar e nenhum, e a perda de um
-# dia de jogo doi muito mais que a de 14 arquivos no disco.
-OnCalendar=*-*-* 04:00:00
+# Todo dia as 4h da manha NO FUSO DO GRUPO, e nao no da maquina. Diario e nao
+# semanal porque o arquivo tem 35 KB comprimido: o custo de guardar e nenhum,
+# e a perda de um dia de jogo doi muito mais que a de 14 arquivos no disco.
+#
+# O fuso vem escrito porque a maquina da Oracle roda em UTC: sem ele, as "4h"
+# disparavam as 01:0x do horario de quem joga — e o arquivo saia com 01:0x no
+# nome, porque o nome usa o FUSO do projeto (`config.FUSO`, UTC-3). Quem
+# procurasse "o backup das 4h" acharia um de uma da manha.
+#
+# PRECISA DE systemd >= 252, que e quando o sufixo de fuso entrou no
+# OnCalendar. Confira com `systemctl --version` antes de copiar: no Ubuntu
+# 24.04 (systemd 255) funciona; no 22.04 (249) nao. Se for mais velho, apague
+# a linha de baixo e use a seguinte, que da no mesmo enquanto o Brasil nao
+# voltar com horario de verao — 07:00 UTC e 04:00 em Sao Paulo desde 2019:
+#   OnCalendar=*-*-* 07:00:00 UTC
+OnCalendar=*-*-* 04:00:00 America/Sao_Paulo
 # Se a maquina estava desligada na hora, roda ao voltar — Always Free da
 # Oracle reinicia instancia sem avisar.
 Persistent=true
