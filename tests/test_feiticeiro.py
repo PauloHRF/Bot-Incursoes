@@ -302,8 +302,13 @@ async def caso_quickened_que_mata_o_ultimo_encerra_o_combate():
         f"a run ficou em `{atual['status']}` sem inimigo vivo: e o travamento"
     )
     assert atual["status"] == "sucesso", atual["status"]
-    # E o fecho foi reivindicado: e ele que paga o ouro e segue a run.
-    assert (run["id"], passo) in cog._encerrados, cog._encerrados
+    # E o fecho rodou de verdade: e ele que paga o ouro da conclusao. A
+    # reivindicacao dele, que e de memoria, sai junto com a run encerrada — o
+    # status ja mudou, e nenhum caminho volta a fechar combate de run morta.
+    pagos = await db.ouro_da_run(conn, run["id"])
+    assert pagos and all(ouro > 0 for _nome, ouro in pagos), pagos
+    assert (run["id"], passo) not in cog._encerrados, cog._encerrados
+    assert run["id"] not in cog._travas, "a fila da run encerrada ficou na memoria"
 
     await conn.close()
     config.DB_PATH.unlink(missing_ok=True)

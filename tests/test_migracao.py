@@ -223,18 +223,47 @@ async def caso_abrir_duas_vezes_nao_muda_nada():
     print("  abrir o mesmo banco duas vezes nao migra de novo: ok")
 
 
+async def caso_o_banco_abre_em_wal_e_um_antigo_vira_wal():
+    """O banco do bot abre em WAL — inclusive o que existia antes, em DELETE.
+
+    O modo fica gravado no arquivo: o banco do servidor, criado em DELETE,
+    passa a WAL na primeira subida desta versão, sem passo à mão.
+    """
+    ANTIGO.unlink(missing_ok=True)
+    cru = sqlite3.connect(ANTIGO)
+    assert cru.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
+    cru.execute("CREATE TABLE x (y)")
+    cru.commit()
+    cru.close()
+
+    config.DB_PATH = ANTIGO
+    conn = await db.conectar()
+    async with conn.execute("PRAGMA journal_mode") as cur:
+        assert (await cur.fetchone())[0] == "wal"
+    async with conn.execute("PRAGMA synchronous") as cur:
+        assert (await cur.fetchone())[0] == 1, "synchronous devia ser NORMAL (1)"
+    await conn.close()
+    # Fechado direito, o -wal e o -shm somem: o banco volta a ser um arquivo so,
+    # que e o que o backup copia e o que a restauracao troca.
+    assert not Path(f"{ANTIGO}-wal").exists() and not Path(f"{ANTIGO}-shm").exists()
+    assert sqlite3.connect(ANTIGO).execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+    print("  o banco abre em WAL, e o antigo em DELETE vira WAL sozinho: ok")
+
+
 async def main():
     try:
         await caso_um_banco_antigo_abre_e_mantem_o_que_tinha()
         await caso_o_banco_migrado_tem_a_forma_do_banco_novo()
         await caso_abrir_duas_vezes_nao_muda_nada()
+        await caso_o_banco_abre_em_wal_e_um_antigo_vira_wal()
     finally:
         await _fechar_tudo()
         for arquivo in (NOVO, ANTIGO):
-            try:
-                arquivo.unlink(missing_ok=True)
-            except OSError:
-                pass
+            for sufixo in ("", "-wal", "-shm"):
+                try:
+                    Path(f"{arquivo}{sufixo}").unlink(missing_ok=True)
+                except OSError:
+                    pass
 
 
 asyncio.run(main())

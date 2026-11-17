@@ -19,10 +19,22 @@ COGS = (
 )
 
 
+# Só as guildas: é o que preenche o cache de servidores e canais, e é tudo que o
+# bot lê do gateway. Comando de barra, botão e menu chegam como interação, que não
+# depende de intent nenhum; mandar, editar e buscar mensagem é HTTP.
+#
+# O `Intents.default()` de antes assinava também as mensagens de todo canal que o
+# bot enxerga, a digitação, as reações, a voz: nos dois servidores, cada mensagem
+# de qualquer pessoa virava um evento parseado e guardado numa fila de mil — numa
+# máquina de um oitavo de OCPU, para nada. Os dois `get_member` do código já têm
+# saída quando o membro não está no cache, que sem o intent de membros já vinha
+# quase sempre vazio.
+INTENTS = discord.Intents(guilds=True)
+
+
 class IncursoesBot(commands.Bot):
     def __init__(self) -> None:
-        # Comandos de barra nao precisam de message_content.
-        super().__init__(command_prefix="!", intents=discord.Intents.default())
+        super().__init__(command_prefix="!", intents=INTENTS)
         self.db = None
         # Comando de barra que quebra fecha a interacao com um aviso, em vez de
         # deixar o jogador com "o aplicativo nao respondeu". Os botoes tem a

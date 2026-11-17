@@ -831,6 +831,25 @@ class Incursoes(commands.Cog):
         # ligado por semanas acumularia uma entrada por run encerrada.
         self._recuperacao.pop(run["id"], None)
         self._registros.pop(run["id"], None)
+        self._publicado.pop(run["id"], None)
+        # As mensagens e interacoes guardadas para limpar o canal: com a run
+        # encerrada ninguem mais as limpa, e elas so ocupariam memoria.
+        self._efemeras.pop(run["id"], None)
+        self._usadas.pop(run["id"], None)
+        self._chamadas.pop(run["id"], None)
+        # Os fechos de combate reivindicados e a fila da run. Sair daqui e
+        # seguro porque o status ja mudou, logo acima: todo caminho que fecha
+        # combate ou entra na fila confere o status antes, e recusa run que
+        # nao esta viva — nenhum deles volta a reivindicar o que sai aqui.
+        self._encerrados = {
+            chave for chave in self._encerrados if chave[0] != run["id"]
+        }
+        trava = self._travas.get(run["id"])
+        if trava is not None and not trava.locked():
+            # Ocupada, ela e de quem ainda esta terminando a ultima volta da
+            # fila; esse sai sozinho pela conferencia de status, e a trava
+            # fica para a proxima limpeza nao ter de adivinhar.
+            self._travas.pop(run["id"], None)
 
     async def _membros(self, run: dict[str, Any]) -> list[discord.abc.User]:
         return [

@@ -260,6 +260,12 @@ async def main():
     from src.main import COGS, IncursoesBot
 
     bot = IncursoesBot()
+    # So as guildas no gateway: o resto (mensagens de todo canal, digitacao,
+    # reacoes) era evento parseado para nada numa maquina pequena. E nada que
+    # pede intent privilegiado, que o portal recusaria sem ser ligado la.
+    assert bot.intents.guilds, "sem o intent de guildas o cache de canais vem vazio"
+    ligados = {nome for nome, valor in bot.intents if valor}
+    assert ligados == {"guilds"}, f"intents a mais: {sorted(ligados - {'guilds'})}"
     bot.db = conn  # o setup_hook faria isso ao conectar
     for cog in COGS:
         await bot.load_extension(cog)

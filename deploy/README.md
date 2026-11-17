@@ -219,11 +219,20 @@ sqlite3 /tmp/restaurado.db "PRAGMA integrity_check; SELECT COUNT(*) FROM persona
 ```
 
 ```bash
-mv data/incursoes.db data/incursoes.db.ruim && mv /tmp/restaurado.db data/incursoes.db
+cd ~/Bot-Incursoes/data && for f in incursoes.db incursoes.db-wal incursoes.db-shm; do [ -e "$f" ] && mv "$f" "$f.ruim"; done; mv /tmp/restaurado.db incursoes.db
 ```
 
 O banco antigo vira `.ruim` em vez de desaparecer: se o backup estiver mais
 velho do que você pensava, ele ainda está ali.
+
+**O `-wal` e o `-shm` vão junto com ele**, e não é detalhe. O banco é em WAL: as
+últimas escritas moram no `-wal` até o SQLite as passar para o banco. Com o bot
+parado direito os dois nem existem; depois de uma queda, existem — e pertencem ao
+banco **antigo**. Deixados ao lado do restaurado, o SQLite os aplicaria em cima dele.
+O bot apaga os dois sozinho quando sobe sem banco nenhum, mas aqui há banco: quem
+tira é a restauração.
+
+Se o `DB_PATH` do `.env` aponta para outro lugar, troque a pasta acima por ela.
 
 ### O que fica no disco
 

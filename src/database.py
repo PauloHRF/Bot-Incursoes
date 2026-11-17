@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -430,11 +431,42 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_run_viva_por_canal
 """
 
 
+# O `RETURNING`, que as escritas atomicas usam, existe do SQLite 3.35 em
+# diante. O Ubuntu 22.04 do servidor traz o 3.37; o Python de Windows, o 3.40.
+SQLITE_MINIMO = (3, 35, 0)
+
+
 async def conectar() -> aiosqlite.Connection:
+    """Abre o banco do bot, em WAL.
+
+    **WAL**, e `synchronous = NORMAL`: cada commit vira um acréscimo no
+    arquivo `-wal`, sem esperar o disco confirmar duas gravações. Um clique
+    de combate faz uns oito commits, e sem WAL cada um custava ~2,6 ms
+    medidos na máquina de quem escreve — no disco de rede do servidor, mais.
+    O WAL também deixa o backup ler o banco enquanto o bot grava, sem um
+    travar o outro. É a combinação que o próprio SQLite recomenda: não
+    corrompe numa queda de energia; o que pode se perder é o último commit.
+
+    O modo fica gravado no arquivo, então basta abrir uma vez com ele.
+
+    **O `-wal` ao lado do banco pertence a ele**, e é isso que a restauração
+    precisa saber: trocar o banco e deixar o `-wal` do antigo faz o SQLite
+    aplicar as escritas do antigo em cima do restaurado, sem erro nenhum — o
+    `integrity_check` diz "ok" e o banco que volta é o velho. Medido. Por isso
+    o passo a passo de restaurar (`deploy/README.md`) leva os dois junto.
+    """
+    if sqlite3.sqlite_version_info < SQLITE_MINIMO:
+        raise RuntimeError(
+            f"o bot precisa do SQLite {'.'.join(map(str, SQLITE_MINIMO))} ou mais"
+            f" novo (por causa do RETURNING), e este Python tem o"
+            f" {sqlite3.sqlite_version}"
+        )
     config.DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = await aiosqlite.connect(config.DB_PATH)
     conn.row_factory = aiosqlite.Row
     await conn.execute("PRAGMA foreign_keys = ON")
+    await conn.execute("PRAGMA journal_mode = WAL")
+    await conn.execute("PRAGMA synchronous = NORMAL")
     return conn
 
 
@@ -864,19 +896,23 @@ async def atualizar_pericias(
 async def definir_escolha(
     conn: aiosqlite.Connection, personagem_id: int, habilidade: str, valor: Any
 ) -> None:
-    """Grava o que o jogador decidiu numa habilidade de escolha."""
-    async with conn.execute(
-        "SELECT escolhas FROM personagens WHERE id = ?", (personagem_id,)
-    ) as cur:
-        linha = await cur.fetchone()
-    if not linha:
-        return
-    escolhas = json.loads(linha["escolhas"] or "{}")
-    escolhas[habilidade] = valor
+    """Grava o que o jogador decidiu numa habilidade de escolha.
+
+    **Uma chave so, mexida dentro do banco** (`json_set`), e nao o
+    dicionario inteiro lido e regravado. Lendo e regravando, duas decisoes do
+    mesmo personagem gravadas no mesmo instante — dois menus respondidos em
+    sequencia rapida — liam o mesmo dicionario, e a segunda apagava a
+    primeira.
+
+    O caminho entre aspas porque o id da habilidade e uma chave do JSON, e
+    nao um caminho: `$."fighting_style"`.
+    """
     await conn.execute(
-        "UPDATE personagens SET escolhas = ?, atualizado_em = datetime('now')"
+        "UPDATE personagens"
+        " SET escolhas = json_set(COALESCE(NULLIF(escolhas, ''), '{}'), ?, json(?)),"
+        " atualizado_em = datetime('now')"
         " WHERE id = ?",
-        (json.dumps(escolhas, ensure_ascii=False), personagem_id),
+        (f'$."{habilidade}"', json.dumps(valor, ensure_ascii=False), personagem_id),
     )
     await conn.commit()
 
@@ -2415,21 +2451,28 @@ async def aplicar_condicao(
     O teto e por condicao e esta no catalogo: a Deterioracao para em 10 e a
     Exaustao em 5, que e onde elas tiram o personagem da incursao; as outras
     nao tem teto, porque decaem 1 por combate e nao disparam sozinhas.
+
+    **A soma e o teto sao feitos DENTRO do banco**, num statement so, e o
+    `RETURNING` devolve o que ficou. Antes eram dois passos — ler os stacks e
+    gravar a conta —, com um `await` no meio: cinco Medos aplicados no mesmo
+    instante liam todos o mesmo zero e gravavam todos 1. O personagem saia
+    com ×1 de cinco.
     """
-    atual = await stacks_da_condicao(conn, run_id, user_id, condicao)
-    novo = atual + max(1, quantos)
+    quantos = max(1, quantos)
     teto = (condicoes.POR_ID.get(condicao) or condicoes.Condicao("", "", "", "", "")).teto
-    if teto is not None:
-        novo = min(teto, novo)
-    await conn.execute(
+    # Sem teto, um numero que stack nenhum alcanca: o MIN do SQL fica neutro.
+    limite = teto if teto is not None else 1_000_000_000
+    async with conn.execute(
         "INSERT INTO run_condicoes (run_id, user_id, condicao, stacks)"
-        " VALUES (?, ?, ?, ?)"
+        " VALUES (?, ?, ?, MIN(?, ?))"
         " ON CONFLICT(run_id, user_id, condicao)"
-        " DO UPDATE SET stacks = excluded.stacks",
-        (run_id, user_id, condicao, novo),
-    )
+        " DO UPDATE SET stacks = MIN(run_condicoes.stacks + ?, ?)"
+        " RETURNING stacks",
+        (run_id, user_id, condicao, quantos, limite, quantos, limite),
+    ) as cur:
+        linhas = await cur.fetchall()
     await conn.commit()
-    return novo
+    return int(linhas[0]["stacks"])
 
 
 async def stacks_da_condicao(
@@ -2472,26 +2515,40 @@ async def condicoes_da_run(
 async def reduzir_condicao(
     conn: aiosqlite.Connection, run_id: int, user_id: int, condicao: str, quanto: int = 1
 ) -> int:
-    """Tira `quanto` stacks. Chegando a zero, a condicao sai da tabela."""
-    atual = await stacks_da_condicao(conn, run_id, user_id, condicao)
-    if atual <= 0:
-        return 0
-    novo = atual - quanto
-    if novo <= 0:
-        await conn.execute(
+    """Tira `quanto` stacks. Chegando a zero, a condicao sai da tabela.
+
+    **Cada passo confere no proprio `WHERE`** o que antes era lido antes: o
+    UPDATE so desconta de quem tem MAIS do que sai, e o DELETE so apaga quem
+    tem no maximo isso. Lendo primeiro e gravando a conta depois, tres
+    reducoes no mesmo instante liam todas ×4 e gravavam todas ×3 — duas se
+    perdiam.
+
+    Sao dois statements, e entre eles cabe outra escrita: se a linha mudou de
+    um para o outro, nenhum dos dois acerta, e a volta tenta de novo com o
+    valor de agora.
+    """
+    quanto = max(1, quanto)
+    chave = (run_id, user_id, condicao)
+    for _ in range(3):
+        async with conn.execute(
+            "UPDATE run_condicoes SET stacks = stacks - ?"
+            " WHERE run_id = ? AND user_id = ? AND condicao = ? AND stacks > ?"
+            " RETURNING stacks",
+            (quanto, *chave, quanto),
+        ) as cur:
+            linhas = await cur.fetchall()
+        if linhas:
+            await conn.commit()
+            return int(linhas[0]["stacks"])
+        apagou = await conn.execute(
             "DELETE FROM run_condicoes"
-            " WHERE run_id = ? AND user_id = ? AND condicao = ?",
-            (run_id, user_id, condicao),
+            " WHERE run_id = ? AND user_id = ? AND condicao = ? AND stacks <= ?",
+            (*chave, quanto),
         )
         await conn.commit()
-        return 0
-    await conn.execute(
-        "UPDATE run_condicoes SET stacks = ?"
-        " WHERE run_id = ? AND user_id = ? AND condicao = ?",
-        (novo, run_id, user_id, condicao),
-    )
-    await conn.commit()
-    return novo
+        if apagou.rowcount or not await stacks_da_condicao(conn, *chave):
+            return 0
+    return await stacks_da_condicao(conn, *chave)
 
 
 async def decair_condicoes(

@@ -7,6 +7,12 @@ data/*.db
 data/*.db-journal
 tests/*.db
 tests/*.db-journal
+# O banco e em WAL: o -wal e o -shm moram ao lado dele enquanto ele esta
+# aberto, e pertencem a ele. Sao dado do grupo, como o .db.
+data/*.db-wal
+data/*.db-shm
+tests/*.db-wal
+tests/*.db-shm
 
 # As copias que tools/backup.py deixa no disco. O backup e dado do grupo, e
 # o repositorio e publico: ele vai para o canal privado do Discord, nunca

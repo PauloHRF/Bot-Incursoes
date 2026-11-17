@@ -127,6 +127,74 @@ def caso_o_atualizar_copia_o_banco_antes_de_tudo():
     print("  o atualizar.sh copia o banco antes do pull e do restart: ok")
 
 
+def caso_a_restauracao_leva_o_wal_do_banco_antigo():
+    """O comando de restaurar do `deploy/README.md`, rodado de verdade.
+
+    O banco é em WAL, e depois de uma queda o `-wal` do banco antigo fica ao
+    lado dele. Trocar só o `.db` e deixar o `-wal` faz o SQLite aplicar as
+    escritas do antigo em cima do restaurado, sem erro nenhum: o
+    `integrity_check` diz "ok", e o banco que volta é o velho. O comando tem de
+    levar os três arquivos — e o caso roda o comando que está no README, e não
+    uma cópia dele, com a casa apontada para uma pasta temporária.
+    """
+    import sqlite3
+    import tempfile
+
+    bash = shutil.which("bash")
+    if bash is None:
+        print("  sem bash nesta maquina: a restauracao nao foi rodada")
+        return
+    readme = (DEPLOY / "README.md").read_text(encoding="utf-8")
+    comando = next(
+        linha for linha in readme.splitlines()
+        if linha.startswith("cd ~/Bot-Incursoes/data && for f in")
+    )
+    assert "incursoes.db-wal" in comando and "incursoes.db-shm" in comando, comando
+
+    with tempfile.TemporaryDirectory() as tmp:
+        casa = Path(tmp)
+        dados = casa / "Bot-Incursoes" / "data"
+        dados.mkdir(parents=True)
+        banco = dados / "incursoes.db"
+
+        # O banco antigo, que caiu com escritas ainda no -wal.
+        antigo = sqlite3.connect(banco)
+        antigo.execute("PRAGMA journal_mode = WAL")
+        antigo.execute("PRAGMA wal_autocheckpoint = 0")
+        antigo.execute("CREATE TABLE origem (de TEXT)")
+        antigo.execute("INSERT INTO origem VALUES ('antigo')")
+        antigo.commit()
+        wal_do_antigo = Path(f"{banco}-wal").read_bytes()
+        antigo.close()
+        Path(f"{banco}-wal").write_bytes(wal_do_antigo)  # a queda
+
+        # O backup a restaurar, tambem em WAL, como sai do backup.py.
+        restaurado = casa / "restaurado.db"
+        novo = sqlite3.connect(restaurado)
+        novo.execute("PRAGMA journal_mode = WAL")
+        novo.execute("CREATE TABLE origem (de TEXT)")
+        novo.execute("INSERT INTO origem VALUES ('backup')")
+        novo.commit()
+        novo.close()
+
+        rodado = comando.replace("/tmp/restaurado.db", restaurado.as_posix())
+        feito = subprocess.run(
+            [bash, "-c", rodado], capture_output=True, text=True,
+            env={**__import__("os").environ, "HOME": casa.as_posix()},
+        )
+        assert feito.returncode == 0, feito.stderr
+
+        lido = sqlite3.connect(banco)
+        try:
+            de = lido.execute("SELECT de FROM origem").fetchone()[0]
+        finally:
+            lido.close()
+        assert de == "backup", f"o banco que voltou e o {de!r}: o -wal antigo entrou"
+        for sufixo in ("", "-wal"):
+            assert Path(f"{banco}{sufixo}.ruim").exists(), f"incursoes.db{sufixo}.ruim"
+    print("  a restauracao do README leva o -wal antigo e o banco que volta e o backup: ok")
+
+
 def caso_nada_do_deploy_vai_com_crlf():
     """Unidade com CRLF o systemd recusa a carregar; script com CRLF não roda.
 
@@ -188,6 +256,7 @@ def main():
     caso_o_atualizar_mexe_no_bot_certo()
     caso_o_atualizar_sobrevive_ao_proprio_git_pull()
     caso_o_atualizar_copia_o_banco_antes_de_tudo()
+    caso_a_restauracao_leva_o_wal_do_banco_antigo()
     caso_nada_do_deploy_vai_com_crlf()
     caso_toda_dependencia_do_bot_tem_versao_travada()
 

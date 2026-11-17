@@ -467,6 +467,94 @@ async def caso_entrar_duas_vezes_na_mesma_run_nao_duplica():
     print("  clicar duas vezes entra uma vez, e a frase e a certa: ok")
 
 
+# -------------------------------------------------- condições e escolhas
+
+
+async def _run_com_um(conn, users):
+    run_id = await db.criar_run(conn, GUILD, CANAL, "t", users[0])
+    await db.adicionar_participante(conn, run_id, users[0], await _pid(conn, users[0]))
+    return run_id
+
+
+async def caso_condicoes_juntas_somam_todas():
+    """Cinco Medos no mesmo instante dão ×5, e não ×1 — e o teto vale junto.
+
+    `aplicar_condicao` lia os stacks e gravava a conta, com `await` no meio:
+    as cinco liam o mesmo zero e gravavam todas 1. A soma desceu para dentro
+    do banco, com o teto no mesmo statement.
+    """
+    conn, _canal, _cog, users = await preparar(quantos=1)
+    run_id = await _run_com_um(conn, users)
+    quem = users[0]
+
+    devolvidos = await asyncio.gather(
+        *(db.aplicar_condicao(conn, run_id, quem, "medo") for _ in range(5))
+    )
+    assert (await db.condicoes_de(conn, run_id, quem))["medo"] == 5
+    # Cada um le o valor que ELE deixou: os cinco numeros sao 1 a 5.
+    assert sorted(devolvidos) == [1, 2, 3, 4, 5], devolvidos
+
+    # E o teto da Exaustao (5) segura mesmo com quatro chegando juntas no 3.
+    await db.aplicar_condicao(conn, run_id, quem, "exaustao", 3)
+    await asyncio.gather(
+        *(db.aplicar_condicao(conn, run_id, quem, "exaustao") for _ in range(4))
+    )
+    assert (await db.condicoes_de(conn, run_id, quem))["exaustao"] == 5
+
+    await _fechar(conn)
+    print("  cinco condicoes juntas somam cinco, e o teto vale junto: ok")
+
+
+async def caso_reducoes_juntas_tiram_todas():
+    """Três reduções juntas de ×4 deixam ×1; e as que passam de zero apagam."""
+    conn, _canal, _cog, users = await preparar(quantos=1)
+    run_id = await _run_com_um(conn, users)
+    quem = users[0]
+    await db.aplicar_condicao(conn, run_id, quem, "perdicao", 4)
+
+    await asyncio.gather(
+        *(db.reduzir_condicao(conn, run_id, quem, "perdicao") for _ in range(3))
+    )
+    assert (await db.condicoes_de(conn, run_id, quem)).get("perdicao") == 1
+
+    # Mais redução do que stack: a condição sai, e ninguém fica negativo.
+    devolvidos = await asyncio.gather(
+        *(db.reduzir_condicao(conn, run_id, quem, "perdicao") for _ in range(3))
+    )
+    assert "perdicao" not in await db.condicoes_de(conn, run_id, quem)
+    assert all(d == 0 for d in devolvidos), devolvidos
+
+    await _fechar(conn)
+    print("  reducoes juntas tiram todas, e passar de zero apaga: ok")
+
+
+async def caso_duas_escolhas_juntas_ficam_as_duas():
+    """Duas decisões do mesmo personagem gravadas juntas: as duas ficam.
+
+    `definir_escolha` lia o dicionário inteiro e regravava, e a segunda
+    apagava a primeira. Agora cada uma mexe na própria chave, no banco.
+    """
+    conn, _canal, _cog, users = await preparar(quantos=1)
+    pid = await _pid(conn, users[0])
+    await asyncio.gather(
+        db.definir_escolha(conn, pid, "fighting_style", "defensivo"),
+        db.definir_escolha(conn, pid, "expertise_t2", ["Furtividade", "Acrobacia"]),
+    )
+    escolhas = (await db.buscar_personagem(conn, pid))["escolhas"]
+    assert escolhas == {
+        "fighting_style": "defensivo",
+        "expertise_t2": ["Furtividade", "Acrobacia"],
+    }, escolhas
+    # E regravar uma troca o valor, sem mexer na outra.
+    await db.definir_escolha(conn, pid, "fighting_style", "duelo")
+    escolhas = (await db.buscar_personagem(conn, pid))["escolhas"]
+    assert escolhas["fighting_style"] == "duelo"
+    assert escolhas["expertise_t2"] == ["Furtividade", "Acrobacia"]
+
+    await _fechar(conn)
+    print("  duas escolhas gravadas juntas ficam as duas: ok")
+
+
 # ------------------------------------------------------------ o começo
 
 
@@ -652,6 +740,9 @@ async def main():
         await caso_o_grupo_nao_passa_do_teto()
         await caso_quem_perde_a_vaga_nao_ganha_o_ouro()
         await caso_entrar_duas_vezes_na_mesma_run_nao_duplica()
+        await caso_condicoes_juntas_somam_todas()
+        await caso_reducoes_juntas_tiram_todas()
+        await caso_duas_escolhas_juntas_ficam_as_duas()
         await caso_dois_cliques_em_comecar_abrem_a_run_uma_vez()
         await caso_entrar_no_instante_do_comecar_nao_deixa_ninguem_pela_metade()
         await caso_menu_velho_nao_deixa_entrar_em_duas_runs()
