@@ -27,7 +27,7 @@ from src import (  # noqa: E402
     mercado,
 )
 from src import embeds as E  # noqa: E402
-from src.cogs.incursao import Incursoes, ViewTrocaDoDescanso  # noqa: E402
+from src.cogs.incursao import Incursoes, ViewTrocaDoDescanso, ViewVotacao  # noqa: E402
 from fakes import (  # noqa: E402
     CANAL,
     CLASSE_PADRAO,
@@ -749,6 +749,43 @@ async def caso_a_exaustao_da_vigilia_tira_da_incursao():
     print("  a Exaustão da vigília tira quem chega nos cinco pontos: ok")
 
 
+async def caso_o_grupo_inteiro_estourado_encerra_a_run():
+    """A vigília que tira TODO MUNDO da incursão encerra a run — e ela fica encerrada.
+
+    A expulsão marcava a run como fracasso, e o fecho da vigília seguia para a
+    parada seguinte mesmo assim. Quem abre a parada não olha o status: a run
+    voltava a `escolhendo` sem ninguém dentro, com um cartão de votação em que
+    ninguém podia votar, e o canal recusava run nova até um admin encerrar.
+    """
+    conn, canal, cog, incursao = await preparar("Longa")
+    run = await na_vigilia(conn, canal, cog, mesa=_mesa_com("reservas"))
+    for user_id in JOGADORES:  # todos com três: as reservas cobram dois
+        for _ in range(3):
+            await db.aplicar_condicao(conn, run["id"], user_id, "exaustao")
+
+    msg = await canal.fetch_message(run["mensagem_id"])
+    parada = run["linha_atual"]
+    for user_id in JOGADORES:
+        if (await db.buscar_run(conn, run["id"]))["linha_atual"] != parada:
+            break
+        await cog.votar_troca(
+            FakeInteraction(canal, user_id, msg), run["id"], parada, "reservas"
+        )
+
+    atual = await db.buscar_run(conn, run["id"])
+    assert not await db.participantes(conn, run["id"]), "alguém ficou no grupo"
+    assert atual["status"] == "fracasso", (
+        f"a run sem ninguém voltou a `{atual['status']}`, na parada {atual['linha_atual']}"
+    )
+    assert not [m for m in canal.mensagens if isinstance(m.view, ViewVotacao)], (
+        "abriu uma votação para um grupo vazio"
+    )
+    assert await db.run_do_canal(conn, CANAL) is None, "o canal ficou preso na run"
+    await conn.close()
+    fechar(conn)
+    print("  o grupo inteiro estourado encerra a run, e ela fica encerrada: ok")
+
+
 async def caso_o_caminho_da_longa_inteiro():
     """A Longa de ponta a ponta: nove paradas, sete salas, dois descansos."""
     conn, canal, cog, incursao = await preparar("Longa")
@@ -828,6 +865,7 @@ async def main() -> None:
     await caso_a_vigilia_recarrega_as_habilidades()
     await caso_descansar_nao_paga_ouro_de_sala()
     await caso_a_exaustao_da_vigilia_tira_da_incursao()
+    await caso_o_grupo_inteiro_estourado_encerra_a_run()
     await caso_o_caminho_da_longa_inteiro()
     print("descanso: ok")
 

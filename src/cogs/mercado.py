@@ -19,6 +19,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .. import config, consumiveis, database as db, itens, mercado
+from ..falhas import ViewDoBot
 from .ficha import sugerir_personagens
 
 COR = 0xC8743A
@@ -289,7 +290,7 @@ class BotaoDeCompra(discord.ui.Button):
         await self.dona.comprar(interaction, self.peca.id)
 
 
-class ViewDaVitrine(discord.ui.View):
+class ViewDaVitrine(ViewDoBot):
     """A prateleira com um botão por peça, e o estado redesenhado a cada compra.
 
     A view não guarda a prateleira nem o saldo: ela relê os dois do banco a

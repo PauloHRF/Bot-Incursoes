@@ -26,6 +26,16 @@ ALTURA_NOME = 44
 MAX_RETRATOS = 6
 
 MAX_BYTES = 8 * 1024 * 1024
+# Teto em PIXELS, e não em bytes: o que pesa na memória é a imagem aberta, e um
+# PNG de uma cor só com 20.000×20.000 cabe em poucos KB e abre em 1,6 GB. O
+# limite de bytes acima não pega isso, e a Pillow só RECUSA a partir de ~179
+# milhões de pixels — abaixo disso ela só avisa e decodifica, numa máquina que
+# tem 1 GB para tudo.
+#
+# É conferido no cabeçalho, antes de decodificar, e DEPOIS do `draft` (ver
+# `_encolher`): uma foto de celular em JPEG, de 48 MP, abre encolhida e passa.
+# Quem esbarra no teto é a imagem que não sabe abrir pequena — o PNG enorme.
+MAX_PIXELS = 16_000_000
 TIMEOUT = 8
 MAX_REDIRECIONAMENTOS = 3
 PEDACO = 64 * 1024
@@ -101,13 +111,32 @@ def _quadrado(imagem):
     return recorte.resize((LARGURA_TILE, ALTURA_RETRATO), Image.LANCZOS)
 
 
+def _encolher(imagem) -> tuple[int, int]:
+    """Pede a versão menor que ainda serve ao tile, e devolve o tamanho dela.
+
+    Só o JPEG sabe decodificar encolhido (`draft`, em 1/2, 1/4 ou 1/8 do
+    tamanho), e é o formato da foto de celular: ela abre com uma fração da
+    memória e do tempo, e o tile, que tem 200 px, não perde nada. Os outros
+    formatos ignoram o pedido e devolvem o tamanho cheio — é neles que o
+    `MAX_PIXELS` pega.
+
+    Lê só o cabeçalho: nada é decodificado aqui.
+    """
+    imagem.draft("RGB", (LARGURA_TILE * 2, ALTURA_RETRATO * 2))
+    return imagem.size
+
+
 def _tile(nome: str, dados: Optional[bytes]):
     tile = Image.new("RGB", (LARGURA_TILE, ALTURA_RETRATO + ALTURA_NOME), FUNDO)
     retrato = None
     if dados:
         try:
             with Image.open(BytesIO(dados)) as bruta:
-                retrato = _quadrado(bruta.convert("RGB"))
+                largura, altura = _encolher(bruta)
+                # O download já recusa o que passa do teto; aqui é o cinto de
+                # quem chama `montar_faixa` com bytes de outro lugar.
+                if largura * altura <= MAX_PIXELS:
+                    retrato = _quadrado(bruta.convert("RGB"))
         except Exception:
             retrato = None  # link quebrado ou arquivo estranho: vai a inicial
 
@@ -134,7 +163,13 @@ def _tile(nome: str, dados: Optional[bytes]):
 
 
 def montar_faixa(itens: Sequence[tuple[str, Optional[bytes]]]) -> Optional[bytes]:
-    """PNG com um tile por personagem, em fila. None se não dá para montar."""
+    """PNG com um tile por personagem, em fila. None se não dá para montar.
+
+    É trabalho de CPU puro, e pesado: abrir, recortar e reamostrar até seis
+    imagens. Quem chama de dentro do bot chama por `faixa`, que roda isto numa
+    thread — rodando no loop de eventos, o bot inteiro parava enquanto a faixa
+    era montada, e numa máquina de um oitavo de OCPU isso são segundos.
+    """
     if not disponivel() or not itens:
         return None
     tiles = [_tile(nome, dados) for nome, dados in list(itens)[:MAX_RETRATOS]]
@@ -224,8 +259,11 @@ async def _buscar(sessao, loop, url: Optional[str]) -> tuple[Optional[bytes], st
                 dados = bytes(dados)
                 if not dados:
                     return None, "veio vazio"
-                if not _abre(dados):
-                    return None, "o arquivo não abre como imagem"
+                # Numa thread, como a montagem: abrir e conferir 8 MB é CPU, e
+                # no loop de eventos isso para o bot.
+                problema = await loop.run_in_executor(None, _problema_da_imagem, dados)
+                if problema:
+                    return None, problema
                 return dados, "ok"
     except asyncio.TimeoutError:
         return None, f"não respondeu em {TIMEOUT}s"
@@ -234,16 +272,34 @@ async def _buscar(sessao, loop, url: Optional[str]) -> tuple[Optional[bytes], st
         return None, f"falhou ({type(erro).__name__})"
 
 
-def _abre(dados: bytes) -> bool:
-    """Se a Pillow reconhece os bytes como imagem. Sem Pillow, confia no site."""
+def _problema_da_imagem(dados: bytes) -> Optional[str]:
+    """Por que estes bytes não servem de retrato — ou None, quando servem.
+
+    Sem Pillow, confia no site: não há como abrir, e quem decide é o Discord.
+
+    O motivo vai para o jogador pelo `/ficha imagem`, e por isso o teto diz o
+    tamanho que veio: "não abre" para uma imagem que abre na tela dele seria
+    mentira, e ele ficaria sem saber o que trocar.
+    """
     if Image is None:
-        return True
+        return None
     try:
         with Image.open(BytesIO(dados)) as imagem:
+            cheia = imagem.size
+            largura, altura = _encolher(imagem)
+            if largura * altura > MAX_PIXELS:
+                return (
+                    f"a imagem é grande demais ({cheia[0]}×{cheia[1]}; o teto é "
+                    f"{MAX_PIXELS // 1_000_000} milhões de pixels)"
+                )
             imagem.verify()
-        return True
+    except Image.DecompressionBombError:
+        # A Pillow recusa sozinha a partir de ~179 MP, antes de chegar ao
+        # nosso teto. É o mesmo caso, e merece a mesma frase.
+        return "a imagem é grande demais"
     except Exception:
-        return False
+        return "o arquivo não abre como imagem"
+    return None
 
 
 async def diagnosticar(url: Optional[str]) -> tuple[bool, str]:
@@ -281,4 +337,7 @@ async def faixa(itens: Sequence[tuple[str, Optional[str]]]) -> Optional[bytes]:
     if not any(dados):
         # Todos os links falharam: uma faixa só de iniciais não vale o anexo.
         return None
-    return montar_faixa([(nome, d) for (nome, _), d in zip(itens, dados)])
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        None, montar_faixa, [(nome, d) for (nome, _), d in zip(itens, dados)]
+    )

@@ -157,6 +157,11 @@ CREATE TABLE IF NOT EXISTS run_combate (
     -- viu porque todos nascem de um banco vazio. Quem grava a data e
     -- `iniciar_combate`, `definir_vez` e `atualizar_rodada`.
     vez_desde TEXT,
+    -- As condicoes do grupo ja perderam o stack deste combate. E a unica
+    -- parte do fecho que nao pode rodar duas vezes, e o fecho pode: ele e
+    -- retomado depois de um restart quando parou no meio. Ver
+    -- `tomar_o_decaimento`.
+    decaiu  INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (run_id, passo)
 );
 
@@ -612,6 +617,15 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
         await conn.execute(
             "UPDATE run_combate SET vez_desde = datetime('now')"
             " WHERE vez_desde IS NULL"
+        )
+    # O fecho do combate passou a poder ser retomado, e o decaimento das
+    # condicoes e a parte dele que nao pode rodar duas vezes. Default
+    # constante, entao o banco novo e o migrado saem com a mesma forma. Os
+    # combates que ja fecharam ficam com 0, e nao importa: nenhum deles e
+    # retomado.
+    if "decaiu" not in await _colunas(conn, "run_combate"):
+        await conn.execute(
+            "ALTER TABLE run_combate ADD COLUMN decaiu INTEGER NOT NULL DEFAULT 0"
         )
     if "substituto" not in await _colunas(conn, "run_turnos"):
         # Sem default: NULL quer dizer "foi ele mesmo", e todo turno que ja
@@ -1679,6 +1693,30 @@ async def vez_aberta_desde(
         return None
     marcado = datetime.strptime(row["vez_desde"], "%Y-%m-%d %H:%M:%S")
     return marcado.replace(tzinfo=timezone.utc).astimezone(config.FUSO)
+
+
+async def tomar_o_decaimento(
+    conn: aiosqlite.Connection, run_id: int, passo: int
+) -> bool:
+    """Reivindica o decaimento das condicoes deste combate. Uma vez por passo.
+
+    O fecho de um combate pode ser retomado: se ele parou no meio (o bot
+    reiniciou, ou o Discord recusou o cartao da votacao seguinte), quem sobe
+    de novo refaz o fecho a partir do banco. Quase tudo nele ja e idempotente
+    — pontos e ouro tem chave, a sala superada e uma marca —, mas o
+    decaimento tira um stack de cada condicao a cada chamada: retomado, o
+    grupo perderia dois stacks por um combate.
+
+    Marca ANTES de decair, como `resolver_turno`: se o processo morrer entre
+    as duas coisas, o decaimento se perde em vez de valer duas vezes.
+    """
+    cur = await conn.execute(
+        "UPDATE run_combate SET decaiu = 1"
+        " WHERE run_id = ? AND passo = ? AND decaiu = 0",
+        (run_id, passo),
+    )
+    await conn.commit()
+    return cur.rowcount > 0
 
 
 async def atualizar_rodada(

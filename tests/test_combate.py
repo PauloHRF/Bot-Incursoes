@@ -12,8 +12,10 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 
+import discord  # noqa: E402
+
 from src import classes, config, database as db, embeds, motor  # noqa: E402
-from src.cogs.incursao import Incursoes, ViewCombate  # noqa: E402
+from src.cogs.incursao import Incursoes, ViewCombate, ViewVotacao  # noqa: E402
 from fakes import (  # noqa: E402
     CLASSE_PADRAO,
     CANAL,
@@ -24,10 +26,12 @@ from fakes import (  # noqa: E402
     FakeBot,
     FakeCanal,
     FakeInteraction,
+    _RespostaFalsa,
     abrir_o_descanso,
     atacar_ate_cair,
     parada_de_descanso,
     criar_grupo,
+    leu,
     passar_o_descanso,
     montar_conteudo,
     sala,
@@ -752,6 +756,205 @@ async def caso_o_ataque_adia_antes_de_resolver():
     print("  o ataque adia a interacao e nao sacrifica o painel: ok")
 
 
+# ----------------------------------------------- o fecho que para no meio
+
+
+class CanalQueRecusa(FakeCanal):
+    """O canal que recusa os envios que o caso pedir — cada regra, uma vez."""
+
+    def __init__(self, canal_id):
+        super().__init__(canal_id)
+        self.recusar: list = []
+
+    async def send(self, content=None, **kw):
+        for regra in list(self.recusar):
+            if regra(content, kw):
+                self.recusar.remove(regra)
+                raise discord.HTTPException(_RespostaFalsa(), "recusado pelo caso")
+        return await super().send(content, **kw)
+
+
+def _o_resumo_do_combate(content, kw):
+    embed = kw.get("embed")
+    return embed is not None and "supera" in (embed.description or "")
+
+
+def _a_votacao_seguinte(content, kw):
+    return bool(content) and "escolham por onde seguir" in content
+
+
+async def _no_combate_do_meio(medo=2):
+    """Um grupo dentro de uma sala de combate da linha 1, num canal que recusa.
+
+    O primeiro jogador entra com Medo ×2: é por ele que se vê se o
+    decaimento das condições aconteceu uma vez, nenhuma, ou duas.
+    """
+    while _ABERTAS:
+        try:
+            await _ABERTAS.pop().close()
+        except Exception:
+            pass
+    config.DB_PATH = Path(__file__).resolve().parent / "teste_combate.db"
+    config.DB_PATH.unlink(missing_ok=True)
+    config.TAMANHO_GRUPO = 5
+    conn = await db.conectar()
+    _ABERTAS.append(conn)
+    await db.criar_schema(conn)
+    await criar_grupo(conn, nivel=8)
+    canal = CanalQueRecusa(CANAL)
+    cog = Incursoes(FakeBot(conn, canal))
+    montar_conteudo(cog, incursao_id="meio", salas=salas_de_combate(INDEFESO))
+    run = await montar_run(conn, canal, cog, "meio")
+    await db.aplicar_condicao(conn, run["id"], JOGADORES[0], "medo", medo)
+    msg = await canal.fetch_message(run["mensagem_id"])
+    alvo = (await cog._opcoes(run, 1))[0]
+    for user_id in JOGADORES:
+        await cog.votar(FakeInteraction(canal, user_id, msg), run["id"], 1, alvo.id)
+    return conn, canal, cog, await db.buscar_run(conn, run["id"]), alvo
+
+
+async def _medo(conn, run_id):
+    return (await db.condicoes_de(conn, run_id, JOGADORES[0])).get("medo", 0)
+
+
+async def caso_aviso_recusado_nao_para_a_run():
+    """O cartão do combate vencido recusado não segura o grupo na sala.
+
+    O fecho manda o resumo do combate no meio do caminho entre o último golpe
+    e a parada seguinte. Se o Discord o recusava, a exceção abortava o fecho
+    ali — antes do decaimento, antes da votação — e a run ficava parada por
+    causa de um cartão que não decide nada.
+    """
+    conn, canal, cog, run, alvo = await _no_combate_do_meio()
+    canal.recusar.append(_o_resumo_do_combate)
+
+    await atacar_ate_cair(conn, canal, cog, run["id"], alvo.id)
+
+    assert not canal.recusar, "o caso nao chegou a recusar o resumo"
+    atual = await db.buscar_run(conn, run["id"])
+    assert atual["status"] == "escolhendo" and atual["linha_atual"] == 2, (
+        f"o aviso recusado parou a run: {atual['status']}, linha {atual['linha_atual']}"
+    )
+    assert await _medo(conn, run["id"]) == 1, "o decaimento nao aconteceu"
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  um aviso recusado no fecho nao para a run: ok")
+
+
+async def caso_o_fecho_que_quebrou_volta_na_subida():
+    """O fecho parou no meio; o bot reinicia; a run anda sozinha.
+
+    O cartão da votação seguinte é o envio que importa, e quando ele era
+    recusado a run ficava em `em_sala` com o inimigo no chão e o painel sem
+    botões. Nem um restart soltava: os botões voltavam para uma mensagem que
+    já não tinha nenhum, e clicar não fechava nada.
+
+    E o fecho refeito não decai as condições de novo: o Medo ×2 sai ×1 do
+    combate, e não ×0.
+    """
+    conn, canal, cog, run, alvo = await _no_combate_do_meio()
+    # Combate aberto e vivo não é assunto da retomada.
+    assert await cog.retomar_combates_decididos() == []
+
+    canal.recusar.append(_a_votacao_seguinte)
+    try:
+        await atacar_ate_cair(conn, canal, cog, run["id"], alvo.id)
+    except discord.HTTPException:
+        pass
+    assert not canal.recusar, "o caso nao chegou a recusar a votacao"
+
+    parada = await db.buscar_run(conn, run["id"])
+    estado = await cog._estado_combate(parada, alvo)
+    assert parada["status"] == "em_sala" and estado.encerrado, parada
+    assert await _medo(conn, run["id"]) == 1
+    assert (run["id"], cog._passo(parada)) not in cog._encerrados, (
+        "o fecho que quebrou ficou reivindicado: ninguem mais o refaria"
+    )
+
+    # O restart: um cog novo, que nao sabe nada do que o outro tinha em memoria.
+    cog2 = Incursoes(FakeBot(conn, canal))
+    montar_conteudo(cog2, incursao_id="meio", salas=salas_de_combate(INDEFESO))
+    assert await cog2.retomar_combates_decididos() == [run["id"]]
+
+    atual = await db.buscar_run(conn, run["id"])
+    assert atual["status"] == "escolhendo" and atual["linha_atual"] == 2, (
+        f"a retomada nao seguiu a run: {atual['status']}, linha {atual['linha_atual']}"
+    )
+    assert await _medo(conn, run["id"]) == 1, (
+        "o fecho refeito decaiu as condicoes de novo"
+    )
+    votacoes = [
+        m for m in canal.mensagens
+        if isinstance(m.view, ViewVotacao) and m.id == atual["mensagem_id"]
+    ]
+    assert len(votacoes) == 1, "a votacao da linha 2 nao esta no canal"
+    # E retomar de novo nao faz nada: a run ja andou.
+    assert await cog2.retomar_combates_decididos() == []
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o fecho que quebrou volta na subida, sem decair duas vezes: ok")
+
+
+async def caso_clicar_no_combate_decidido_fecha_o_que_faltou():
+    """Sem restart: o próximo clique no combate decidido fecha o que faltou.
+
+    E enquanto o fecho é de outro clique, quem clica lê que o combate acabou
+    — e não "ação guardada", que prometia uma vez que não vinha.
+    """
+    conn, canal, cog, run, alvo = await _no_combate_do_meio()
+    canal.recusar.append(_a_votacao_seguinte)
+    try:
+        await atacar_ate_cair(conn, canal, cog, run["id"], alvo.id)
+    except discord.HTTPException:
+        pass
+    parada = await db.buscar_run(conn, run["id"])
+    chave = (run["id"], cog._passo(parada))
+
+    # O fecho tomado por outro clique: quem chega le que acabou, e nada anda.
+    cog._encerrados.add(chave)
+    tarde = FakeInteraction(canal, JOGADORES[1])
+    await cog.atacar(tarde, run["id"], alvo.id)
+    assert "acabou" in leu(tarde) and "guardada" not in leu(tarde), leu(tarde)
+    assert (await db.buscar_run(conn, run["id"]))["status"] == "em_sala"
+
+    # Solto, o clique seguinte fecha.
+    cog._encerrados.discard(chave)
+    clique = FakeInteraction(canal, JOGADORES[1])
+    await cog.atacar(clique, run["id"], alvo.id)
+    assert "acabou" in leu(clique), leu(clique)
+    atual = await db.buscar_run(conn, run["id"])
+    assert atual["status"] == "escolhendo" and atual["linha_atual"] == 2, atual
+    assert await _medo(conn, run["id"]) == 1
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  clicar no combate decidido fecha o que faltou: ok")
+
+
+async def caso_o_grupo_inteiro_estourado_no_combate_encerra_a_run():
+    """O combate vencido com o grupo inteiro no teto da Exaustão: a run acaba.
+
+    O fecho expulsava todo mundo, marcava a run como fracasso — e seguia para a
+    votação seguinte, que a trazia de volta a `escolhendo` sem ninguém dentro.
+    """
+    conn, canal, cog, run, alvo = await _no_combate_do_meio()
+    for user_id in JOGADORES:
+        await db.aplicar_condicao(conn, run["id"], user_id, "exaustao", 5)
+
+    await atacar_ate_cair(conn, canal, cog, run["id"], alvo.id)
+
+    atual = await db.buscar_run(conn, run["id"])
+    assert atual["status"] == "fracasso", (
+        f"a run sem ninguém voltou a `{atual['status']}`, linha {atual['linha_atual']}"
+    )
+    assert not [m for m in canal.mensagens if isinstance(m.view, ViewVotacao)], (
+        "abriu uma votação para um grupo vazio"
+    )
+    assert await db.run_do_canal(conn, CANAL) is None, "o canal ficou preso na run"
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  o combate que esvazia o grupo encerra a run, e ela fica encerrada: ok")
+
+
 async def _casos():
     await caso_motor_puro()
     await caso_o_resumo_abre_a_conta_do_dano()
@@ -768,6 +971,10 @@ async def _casos():
     await caso_marcar_o_turno_e_reivindicar()
     await caso_uma_queda_do_bot_nao_repete_a_acao_guardada()
     await caso_o_ataque_adia_antes_de_resolver()
+    await caso_aviso_recusado_nao_para_a_run()
+    await caso_o_fecho_que_quebrou_volta_na_subida()
+    await caso_clicar_no_combate_decidido_fecha_o_que_faltou()
+    await caso_o_grupo_inteiro_estourado_no_combate_encerra_a_run()
 
 
 asyncio.run(main())

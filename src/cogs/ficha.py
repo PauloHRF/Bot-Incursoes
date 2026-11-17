@@ -15,6 +15,7 @@ from discord.ext import commands
 
 from .. import classes as cl, database as db, motor, retratos
 from ..embeds import url_de_imagem
+from ..falhas import ViewDoBot
 from ..rules import (
     ATRIBUTOS,
     PERICIAS,
@@ -28,7 +29,7 @@ from ..rules import (
 LIMITE_PERSONAGENS = 25  # o seletor do Discord nao mostra mais que isso
 
 
-class DonoDaFicha(discord.ui.View):
+class DonoDaFicha(ViewDoBot):
     """Base das views de ficha: so o dono mexe."""
 
     def __init__(self, dono_id: int, timeout: int = 300):
@@ -1318,20 +1319,33 @@ class Ficha(commands.Cog):
         else:
             aviso = f"🖼️ {interaction.user.mention} tirou o retrato de **{escolhido['nome']}**."
 
-        # A ficha mostra o que o Discord consegue buscar; a faixa da incursao
-        # mostra o que ESTE bot consegue baixar. Sao coisas diferentes, entao o
-        # link e testado aqui para ninguem descobrir a diferenca no meio da run.
-        if retrato:
-            deu, motivo = await retratos.diagnosticar(retrato)
-            if not deu:
-                aviso += (
-                    f"\n⚠️ A ficha mostra, mas o bot nao conseguiu baixar a imagem "
-                    f"({motivo}) — na incursao vai aparecer a inicial no lugar. "
-                    f"Um link direto que termine em .png ou .jpg costuma resolver."
-                )
+        # A resposta sai ANTES do teste do link, e nao depois. Baixar a imagem
+        # leva ate `retratos.TIMEOUT` (8 s) num site lento, e o Discord da 3 s
+        # para a primeira resposta: passando disso o jogador via "esta
+        # interacao falhou" — com o retrato JA gravado e o canal sem aviso
+        # nenhum. A ficha nao depende do teste para sair; so o aviso depende.
         await interaction.response.send_message(
             aviso, embed=embed_ficha(atualizado, interaction.user)
         )
+
+        # A ficha mostra o que o Discord consegue buscar; a faixa da incursao
+        # mostra o que ESTE bot consegue baixar. Sao coisas diferentes, entao o
+        # link e testado aqui para ninguem descobrir a diferenca no meio da run.
+        # O aviso entra na mesma mensagem, editada, como antes entrava junto.
+        if retrato:
+            deu, motivo = await retratos.diagnosticar(retrato)
+            if not deu:
+                try:
+                    await interaction.edit_original_response(
+                        content=(
+                            f"{aviso}\n⚠️ A ficha mostra, mas o bot nao conseguiu "
+                            f"baixar a imagem ({motivo}) — na incursao vai aparecer "
+                            f"a inicial no lugar. Um link direto que termine em "
+                            f".png ou .jpg costuma resolver."
+                        )
+                    )
+                except discord.HTTPException:
+                    pass
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Ficha(bot))

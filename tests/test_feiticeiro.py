@@ -310,6 +310,88 @@ async def caso_quickened_que_mata_o_ultimo_encerra_o_combate():
     print("  Quickened que mata o ultimo inimigo encerra o combate: ok")
 
 
+async def caso_quickened_e_golpe_juntos_nao_perdem_dano():
+    """A magia rápida e um golpe no mesmo instante: o dano dos dois fica.
+
+    A magia rápida resolvia FORA da trava da run, a partir do estado lido no
+    começo do clique — e as magias de save gravam o HP de todos os inimigos
+    de uma vez. Com outro jogador resolvendo um golpe ao mesmo tempo, um
+    gravava por cima do outro, e o dano de um deles sumia: nas cinco vezes
+    que a sonda tentou, o Orbe Cromático não deixou marca no alvo.
+
+    O primeiro da iniciativa ataca (a vez é dele, então o golpe resolve na
+    hora) e o segundo lança. Em sequência não prova nada: o `gather` é o
+    teste.
+    """
+    import re
+
+    conn, canal, cog, incursao, run = await preparar(
+        escolhas={"magia_feit_t1": "chromatic_orb", "metamagia_t4": "quickened"},
+        monstros=1, quantos=2,
+    )
+    passo = cog._passo(run)
+    antes = (await db.inimigos_do_combate(conn, run["id"], passo))[0]["hp_atual"]
+
+    magia = FakeInteraction(canal, JOGADORES[1])
+    await asyncio.gather(
+        cog.atacar(FakeInteraction(canal, JOGADORES[0]), run["id"], "OBJ", 0),
+        cog.usar_habilidade(magia, run["id"], "OBJ", "chromatic_orb", [0]),
+    )
+
+    golpe = sum(
+        a["dano"] for a in await db.ataques_da_rodada(conn, run["id"], passo, 1)
+    )
+    achado = re.search(r"\*\*(\d+)\*\* de dano", leu(magia))
+    assert achado, f"a magia nao disse quanto deu: {leu(magia)!r}"
+    orbe = int(achado.group(1))
+    depois = (await db.inimigos_do_combate(conn, run["id"], passo))[0]["hp_atual"]
+    assert depois == antes - golpe - orbe, (
+        f"o dano se perdeu: {antes} - {golpe} (golpe) - {orbe} (orbe) "
+        f"devia dar {antes - golpe - orbe}, e o inimigo ficou com {depois}"
+    )
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print(f"  magia rapida e golpe juntos: os dois danos ficam ({golpe}+{orbe}): ok")
+
+
+async def caso_quickened_que_chega_tarde_devolve_o_uso():
+    """O combate acabou enquanto a magia esperava a fila: o uso volta.
+
+    Ela agora espera a trava da run, e o mundo pode mudar nesse meio — o
+    último inimigo cair no golpe de outro, por exemplo. O uso já foi gasto
+    quando ela entra na fila, e a magia que não aconteceu não pode custar.
+    """
+    conn, canal, cog, incursao, run = await preparar(
+        escolhas={"magia_feit_t1": "chromatic_orb", "metamagia_t4": "quickened"},
+        monstros=1,
+    )
+    passo = cog._passo(run)
+    orbe = next(
+        h for _t, h in
+        (await cog._personagem_na_run(run, JOGADORES[0]))["habilidades"]
+        if h.id == "chromatic_orb"
+    )
+    chave = cog._chave_de_recarga(orbe, run, passo)
+    assert await db.gastar_uso(
+        conn, run["id"], JOGADORES[0], orbe.chave_de_uso, chave, orbe.vezes
+    )
+    # O inimigo cai antes de a magia sair.
+    await db.definir_hp_inimigos(conn, run["id"], passo, {0: 0})
+
+    tarde = FakeInteraction(canal, JOGADORES[0])
+    await tarde.response.defer(ephemeral=True, thinking=True)
+    await cog._magia_rapida(tarde, run, incursao.objetivo, orbe, [0])
+
+    assert "acabou antes" in leu(tarde), leu(tarde)
+    gastos = await db.usos_da_run(conn, run["id"], JOGADORES[0])
+    assert gastos.get((orbe.chave_de_uso, chave), 0) == 0, (
+        f"a magia que nao saiu ficou cobrada: {gastos}"
+    )
+    await conn.close()
+    config.DB_PATH.unlink(missing_ok=True)
+    print("  a magia rapida que chega tarde devolve o uso: ok")
+
+
 def caso_o_fecho_do_combate_e_tomado_uma_vez():
     """Dois caminhos chegam ao fim do mesmo combate; só um o encerra.
 
@@ -452,6 +534,8 @@ async def main():
         await caso_heightened_poe_desvantagem_no_save()
         await caso_quickened_deixa_o_turno_livre()
         await caso_quickened_que_mata_o_ultimo_encerra_o_combate()
+        await caso_quickened_e_golpe_juntos_nao_perdem_dano()
+        await caso_quickened_que_chega_tarde_devolve_o_uso()
         caso_o_fecho_do_combate_e_tomado_uma_vez()
         await caso_grilhoes_acorrenta_e_sangra()
         caso_a_corrente_tem_escape()

@@ -330,6 +330,20 @@ limpar uma condição.
 A run é assíncrona: o estado vive no banco, então o grupo pode levar dias e o bot pode
 reiniciar no meio — os botões das mensagens abertas voltam a funcionar sozinhos.
 
+Isso vale também para o **fecho de um combate que parou no meio**: o bot reiniciou entre o
+último golpe e a parada seguinte, ou o Discord recusou o cartão da votação. A run ficava em
+`em_sala` com o inimigo no chão e o painel sem botões, e nem um restart a soltava. Agora, ao
+subir, o bot procura combate decidido em run que não andou e termina o fecho; sem restart, o
+próximo clique no combate faz o mesmo. Refazer o fecho é seguro: pontos e ouro têm chave, e o
+decaimento das condições é reivindicado por combate, então ninguém perde dois stacks por um.
+Os cartões que só avisam (o resumo do combate, as condições que passaram, quem saiu da
+incursão) também deixaram de poder parar a run: recusado, o aviso vai para o log e o grupo
+segue.
+
+Quando o bot quebra no meio de um clique, o jogador fica sabendo: comando ou botão, a
+interação fecha com um aviso privado, em vez de "o aplicativo não respondeu" ou de um
+"pensando…" pendurado para sempre. O erro inteiro continua indo para o log.
+
 **Para testar à vontade**, rode `/config intervalo 0` uma vez: sem isso, quem entra numa run
 fica bloqueado até a virada da semana assim que ela começa. Para recomeçar, encerre a run
 atual com `/incursao desistir` (precisa da maioria do grupo) e abra outra com `/incursao entrar`.
@@ -828,8 +842,15 @@ funcionar numa e não na outra: em `/ficha ver` quem busca é o Discord, e na fa
 bot. Por isso o download manda User-Agent de navegador (sem ele muito site responde 403),
 aceita `application/octet-stream` (quem valida de verdade é a Pillow, abrindo os bytes) e
 segue redirecionamento na mão, checando cada salto — um link público não pode saltar para a
-rede interna de quem hospeda. `/ficha imagem` testa o link na hora e avisa, com o motivo, se
-o bot não conseguir baixá-lo.
+rede interna de quem hospeda. `/ficha imagem` testa o link logo depois de responder e acrescenta
+o aviso, com o motivo, se o bot não conseguir baixá-lo — antes ele testava primeiro, e um site
+lento estourava os 3 segundos que o Discord dá para a resposta.
+
+O teto do retrato é de **pixels**, e não só de bytes: um PNG de uma cor só com 20.000 × 20.000
+cabe em poucos KB e abre em mais de 1 GB, que é a memória inteira do servidor. Acima de
+16 milhões de pixels a imagem é recusada pelo tamanho, e `/ficha imagem` diz qual era. A foto de
+celular em JPEG passa por baixo do teto mesmo com 48 MP, porque o JPEG abre já encolhido. E
+abrir e montar a faixa roda numa thread: no loop de eventos, isso parava o bot inteiro.
 Os comandos de ficha aceitam o nome no campo `personagem`, com autocompletar; quem só tem
 um personagem pode omitir. Dois personagens do mesmo jogador não podem ter o mesmo nome.
 
@@ -1217,6 +1238,7 @@ tests/
   test_tier.py     quem pode entrar em cada incursão
   test_bestiario.py  criatura pelo nome, golpes, teste no golpe, matilha e regeneração
   test_condicoes.py  os pares buff/debuff da planilha, decaimento, Mímico e descanso
+  test_falhas.py   o aviso ao jogador quando um comando ou botão quebra
   fakes.py      dublês do Discord usados pelos testes
 ```
 

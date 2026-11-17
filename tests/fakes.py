@@ -95,6 +95,11 @@ class FakeMensagem:
             self.embeds = [kw["embed"]] if kw["embed"] else []
         if "view" in kw:
             self.view = kw["view"]
+        # O texto tambem muda na edicao, como no Discord. O duble ignorava, e
+        # isso so nao aparecia porque quase nada edita o texto de uma mensagem
+        # do canal: a resposta adiada que vira texto depois e o primeiro caso.
+        if kw.get("content") is not None:
+            self.content = kw["content"]
         return self
 
     async def delete(self):
@@ -156,6 +161,10 @@ class _RespostaFalsa:
 class FakeResposta:
     def __init__(self, interacao):
         self.interacao = interacao
+        # O tipo da primeira resposta, como `InteractionResponse.type` no
+        # discord.py. E por ele que quem fecha uma interacao com erro sabe se
+        # ha um "pensando..." esperando ser preenchido.
+        self.type = None
 
     async def send_message(self, content=None, *, embed=None, view=None, ephemeral=False,
                            file=discord.utils.MISSING):
@@ -166,6 +175,7 @@ class FakeResposta:
         # pendurado para sempre.
         if self.is_done():
             raise discord.InteractionResponded(self.interacao)
+        self.type = discord.InteractionResponseType.channel_message
         self.interacao.resposta = content or (embed.title if embed else None)
         self.interacao.view_enviada = view
         if ephemeral:
@@ -201,11 +211,23 @@ class FakeResposta:
         """
         self.interacao.adiado = True
         de_componente = self.interacao.message is not None
-        if ephemeral and (thinking or not de_componente):
+        nova = thinking or not de_componente
+        self.type = (
+            discord.InteractionResponseType.deferred_channel_message
+            if nova
+            else discord.InteractionResponseType.deferred_message_update
+        )
+        if ephemeral and nova:
             self.interacao._mensagem_resposta = FakeMensagem(
                 self.interacao.canal, -1, content=None
             )
             self.interacao._original_e_efemera = True
+        elif nova:
+            # O "pensando..." PUBLICO: uma mensagem nova no canal, que vira a
+            # original e e preenchida depois por `edit_original_response`. O
+            # duble nao tinha este caso porque nenhum comando publico adiava.
+            self.interacao._mensagem_resposta = await self.interacao.canal.send(None)
+            self.interacao._original_e_nova = True
 
     async def edit_message(self, content=None, *, embed=None, view=None):
         """A resposta de um clique de botao: edita a mensagem da propria view."""
@@ -295,6 +317,8 @@ class FakeInteraction:
         # o send_message criaram, ou — quando nao houve efemera — a
         # mensagem da view que foi clicada.
         self._original_e_efemera = False
+        # A original e um "pensando..." publico, aberto por `defer`.
+        self._original_e_nova = False
         self.efemera_apagada = False
         self._mensagem_resposta = None
         # O que um clique de botao deixou: a edicao e o aviso privado.
@@ -321,7 +345,7 @@ class FakeInteraction:
 
     def _original(self):
         """A mensagem que `edit_original_response` alcanca."""
-        if self._original_e_efemera:
+        if self._original_e_efemera or self._original_e_nova:
             return self._mensagem_resposta
         return self.message or self._mensagem_resposta
 
@@ -350,6 +374,15 @@ class FakeInteraction:
             self.resposta_atual = kw["content"]
             if self.resposta is None:
                 self.resposta = kw["content"]
+        elif self._original_e_nova and kw.get("embed") is not None:
+            # O "pensando..." preenchido so com embed E a resposta, como o
+            # `send_message(embed=...)` seria sem o defer: os casos de antes
+            # continuam lendo o titulo em `resposta`. Editar o PAINEL so com
+            # embed continua nao contando — ali a original e a mensagem do
+            # botao, e nao uma resposta.
+            self.resposta_atual = kw["embed"].title
+            if self.resposta is None:
+                self.resposta = kw["embed"].title
         return alvo
 
 

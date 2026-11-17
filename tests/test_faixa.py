@@ -340,9 +340,91 @@ async def caso_redirecionamento_passa_pela_mesma_checagem():
         retratos.endereco_publico = publico
 
 
+def jpeg(cor=(30, 120, 200), tamanho=(400, 600)) -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", tamanho, cor).save(buffer, format="JPEG", quality=85)
+    return buffer.getvalue()
+
+
+async def caso_imagem_grande_demais_e_recusada_com_motivo():
+    """O teto é de PIXELS, e a foto de celular em JPEG passa por baixo dele.
+
+    O limite de bytes não pega o PNG enorme de uma cor só, que cabe em
+    poucos KB e abre em gigabytes; a Pillow só recusa sozinha muito acima do
+    que a máquina do bot aguenta. O teto é conferido no cabeçalho, antes de
+    decodificar — e depois do `draft`, que faz o JPEG abrir encolhido.
+
+    O caso abaixa o teto em vez de fabricar uma imagem de 16 MP: o que ele
+    afirma é a regra, e uma imagem dessas custaria à suíte o que ela protege.
+    """
+    teto, publico = retratos.MAX_PIXELS, retratos.endereco_publico
+    retratos.MAX_PIXELS = 200_000
+    retratos.endereco_publico = lambda url: True
+    try:
+        # 3200x3200 são 10 MP: o PNG não sabe abrir pequeno e esbarra no teto.
+        grande_png = png(tamanho=(3200, 3200))
+        dados, motivo, _ = await buscar({LINK: RespostaFalsa(corpo=grande_png)}, LINK)
+        assert dados is None and "grande demais" in motivo, motivo
+        assert "3200×3200" in motivo, motivo
+
+        # O mesmo tamanho em JPEG abre em 1/8: 400x400, abaixo do teto.
+        grande_jpeg = jpeg(tamanho=(3200, 3200))
+        dados, motivo, _ = await buscar(
+            {LINK: RespostaFalsa(tipo="image/jpeg", corpo=grande_jpeg)}, LINK
+        )
+        assert dados == grande_jpeg, motivo
+
+        # E na faixa: o JPEG vira retrato, o PNG grande vira a inicial.
+        canto = (5, 5)  # dentro da moldura, fora da letra
+        assert retratos._tile("Ana", grande_jpeg).getpixel(canto) != retratos.VAZIO
+        assert retratos._tile("Ana", grande_png).getpixel(canto) == retratos.VAZIO
+    finally:
+        retratos.MAX_PIXELS, retratos.endereco_publico = teto, publico
+    print("  imagem grande demais e recusada com motivo; o JPEG abre encolhido: ok")
+
+
+async def caso_a_faixa_e_montada_fora_do_loop():
+    """Abrir e montar imagem é CPU: roda numa thread, e não no loop do bot.
+
+    No loop de eventos, montar a faixa parava o bot inteiro — os cliques dos
+    outros grupos, o heartbeat com o Discord — enquanto seis retratos eram
+    decodificados e reamostrados.
+    """
+    import threading
+
+    vistas: dict[str, bool] = {}
+    montar, conferir = retratos.montar_faixa, retratos._problema_da_imagem
+    baixar, publico = retratos.baixar, retratos.endereco_publico
+
+    def montar_espiao(itens):
+        vistas["montar"] = threading.current_thread() is threading.main_thread()
+        return montar(itens)
+
+    def conferir_espiao(dados):
+        vistas["conferir"] = threading.current_thread() is threading.main_thread()
+        return conferir(dados)
+
+    retratos.montar_faixa = montar_espiao
+    retratos._problema_da_imagem = conferir_espiao
+    retratos.baixar = _baixa_fake
+    retratos.endereco_publico = lambda url: True
+    try:
+        assert await retratos.faixa([("Ana", LINK), ("Bia", LINK)]) is not None
+        await buscar({LINK: RespostaFalsa(corpo=png())}, LINK)
+    finally:
+        retratos.montar_faixa, retratos._problema_da_imagem = montar, conferir
+        retratos.baixar, retratos.endereco_publico = baixar, publico
+    assert vistas == {"montar": False, "conferir": False}, (
+        f"rodou no loop de eventos: {vistas}"
+    )
+    print("  abrir e montar os retratos sai do loop de eventos: ok")
+
+
 async def main():
     try:
         caso_montagem_lado_a_lado()
+        await caso_imagem_grande_demais_e_recusada_com_motivo()
+        await caso_a_faixa_e_montada_fora_do_loop()
         caso_link_para_rede_interna_e_recusado()
         await caso_download_aceita_o_que_o_discord_aceita()
         await caso_redirecionamento_passa_pela_mesma_checagem()

@@ -374,6 +374,54 @@ async def caso_retrato_do_personagem():
     print("  retrato: guardado, na ficha e na abertura da run: ok")
 
 
+async def caso_o_retrato_responde_antes_de_testar_o_link():
+    """O `/ficha imagem` responde dentro do prazo, e o aviso do link vem depois.
+
+    Testar o link é baixar a imagem, e isso leva até 8 s num site lento. O
+    Discord dá 3 s para a primeira resposta: o comando que testava antes de
+    responder estourava o prazo, e o jogador via "esta interação falhou" com
+    o retrato já gravado e o canal sem aviso nenhum.
+
+    O teste do link continua acontecendo — e o aviso continua na mesma
+    mensagem, editada quando ele chega.
+    """
+    from src import retratos
+    from src.cogs.ficha import Ficha
+
+    conn, canal, _cog = await preparar()
+    ficha_cog = Ficha(FakeBot(conn, canal))
+    await criar_grupo(conn)
+    dono = JOGADORES[0]
+    personagem = await db.personagem_por_nome(conn, GUILD, dono, f"Heroi{dono}")
+
+    inter = FakeInteraction(canal, dono)
+    visto: dict[str, bool] = {}
+
+    async def diagnostico_lento(url):
+        visto["respondido"] = inter.response.is_done()
+        return False, "o site respondeu 403"
+
+    original = retratos.diagnosticar
+    retratos.diagnosticar = diagnostico_lento
+    try:
+        await ficha_cog.imagem.callback(
+            ficha_cog, inter, personagem["nome"], "https://exemplo.invalid/a.png"
+        )
+    finally:
+        retratos.diagnosticar = original
+
+    assert visto == {"respondido": True}, (
+        f"o link foi testado antes de responder ao Discord: {visto}"
+    )
+    assert "rosto" in (inter.resposta or ""), inter.resposta
+    assert "403" in (inter.resposta_atual or ""), (
+        f"o aviso do link nao chegou na mensagem: {inter.resposta_atual!r}"
+    )
+    salvo = await db.buscar_personagem(conn, personagem["id"])
+    assert salvo["imagem"] == "https://exemplo.invalid/a.png"
+    print("  o retrato responde no prazo, e o aviso do link chega depois: ok")
+
+
 async def main():
     try:
         await caso_migracao_do_banco_antigo()
@@ -383,6 +431,7 @@ async def main():
         await caso_intervalo_e_por_jogador()
         await caso_comandos_de_ficha()
         await caso_retrato_do_personagem()
+        await caso_o_retrato_responde_antes_de_testar_o_link()
     finally:
         for conn in _ABERTAS:
             try:

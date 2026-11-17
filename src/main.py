@@ -6,7 +6,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from . import config, database
+from . import config, database, falhas
 
 log = logging.getLogger("incursoes")
 
@@ -24,6 +24,15 @@ class IncursoesBot(commands.Bot):
         # Comandos de barra nao precisam de message_content.
         super().__init__(command_prefix="!", intents=discord.Intents.default())
         self.db = None
+        # Comando de barra que quebra fecha a interacao com um aviso, em vez de
+        # deixar o jogador com "o aplicativo nao respondeu". Os botoes tem a
+        # porta deles, em `falhas.ViewDoBot`.
+        self.tree.error(self._falha_de_comando)
+
+    async def _falha_de_comando(
+        self, interaction: discord.Interaction, erro: discord.app_commands.AppCommandError
+    ) -> None:
+        await falhas.avisar(interaction, erro)
 
     async def setup_hook(self) -> None:
         self.db = await database.conectar()

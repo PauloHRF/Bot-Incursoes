@@ -43,6 +43,7 @@ from ..incursoes import (
 )
 from ..motor import Combatente, EstadoCombate, ResolucaoSala, ResultadoTeste
 from ..rules import TIER_MAXIMO, fmt, tier
+from ..falhas import ViewDoBot
 from .ficha import sugerir_personagens
 
 log = logging.getLogger("incursoes.run")
@@ -161,14 +162,14 @@ class BotaoVoto(discord.ui.Button):
         await self.cog.votar(interaction, self.run_id, self.linha, self.sala_id)
 
 
-class ViewVotacao(discord.ui.View):
+class ViewVotacao(ViewDoBot):
     def __init__(self, cog: "Incursoes", run_id: int, linha: int, opcoes: list[Sala]):
         super().__init__(timeout=None)
         for i, sala in enumerate(opcoes):
             self.add_item(BotaoVoto(cog, run_id, linha, i, sala))
 
 
-class ViewTrocaDoDescanso(discord.ui.View):
+class ViewTrocaDoDescanso(ViewDoBot):
     """As trocas do descanso duro. Uma por botao, votadas pela maioria.
 
     Reusa o caminho do voto de sala: o voto fica em `run_votos`, e a maioria
@@ -199,7 +200,7 @@ class ViewTrocaDoDescanso(discord.ui.View):
         return votar
 
 
-class ViewSala(discord.ui.View):
+class ViewSala(ViewDoBot):
     def __init__(self, cog: "Incursoes", run_id: int, sala_id: str):
         super().__init__(timeout=None)
         self.cog = cog
@@ -218,7 +219,7 @@ class ViewSala(discord.ui.View):
         await self.cog.rolar(interaction, self.run_id, self.sala_id)
 
 
-class ViewDescanso(discord.ui.View):
+class ViewDescanso(ViewDoBot):
     """O descanso cura e deixa **cada um** limpar uma condição sua.
 
     Os botões são a união do que o grupo carrega, porque a mensagem é uma só;
@@ -273,7 +274,7 @@ class ViewDescanso(discord.ui.View):
         return callback
 
 
-class ViewMarcaOrfa(discord.ui.View):
+class ViewMarcaOrfa(ViewDoBot):
     """Para onde vão as marcas do inimigo que caiu antes de elas explodirem.
 
     Mensagem **pública** com botões, e não efêmera. O Discord só manda
@@ -314,7 +315,7 @@ class ViewMarcaOrfa(discord.ui.View):
         return callback
 
 
-class ViewCombate(discord.ui.View):
+class ViewCombate(ViewDoBot):
     """Botao de atacar; com mais de um inimigo de pe, vira escolha de alvo."""
 
     def __init__(
@@ -401,7 +402,7 @@ class ViewCombate(discord.ui.View):
         )
 
 
-class SeletorHabilidade(discord.ui.View):
+class SeletorHabilidade(ViewDoBot):
     """As ativas que o jogador pode usar agora, so para quem clicou."""
 
     def __init__(self, cog: "Incursoes", run_id: int, sala_id: str, opcoes: list[tuple]):
@@ -427,7 +428,7 @@ class SeletorHabilidade(discord.ui.View):
         )
 
 
-class SeletorPocao(discord.ui.View):
+class SeletorPocao(ViewDoBot):
     """O que a bolsa tem para beber agora, só para quem clicou."""
 
     def __init__(self, cog: "Incursoes", run_id: int, sala_id: str, opcoes: list[tuple]):
@@ -456,7 +457,7 @@ class SeletorPocao(discord.ui.View):
         )
 
 
-class SeletorRecarga(discord.ui.View):
+class SeletorRecarga(ViewDoBot):
     """Qual uso a Poção de Mana devolve, entre os que já foram gastos."""
 
     def __init__(
@@ -487,7 +488,7 @@ class SeletorRecarga(discord.ui.View):
         )
 
 
-class SeletorAlvoHabilidade(discord.ui.View):
+class SeletorAlvoHabilidade(ViewDoBot):
     """Em quem a habilidade cai: um inimigo, varios, ou um aliado."""
 
     def __init__(
@@ -528,7 +529,7 @@ class SeletorAlvoHabilidade(discord.ui.View):
         )
 
 
-class SeletorPersonagemEntrada(discord.ui.View):
+class SeletorPersonagemEntrada(ViewDoBot):
     """Escolha de qual personagem levar para a run, mostrada só a quem clicou."""
 
     def __init__(self, cog: "Incursoes", run_id: int, personagens: list[dict[str, Any]]):
@@ -558,7 +559,7 @@ class SeletorPersonagemEntrada(discord.ui.View):
         await self.cog.efetivar_entrada(interaction, self.run_id, int(self.menu.values[0]))
 
 
-class ViewRecrutamento(discord.ui.View):
+class ViewRecrutamento(ViewDoBot):
     def __init__(self, cog: "Incursoes", run_id: int):
         super().__init__(timeout=None)
         self.cog = cog
@@ -627,10 +628,43 @@ class Incursoes(commands.Cog):
         self._registros: dict[int, dict[str, Any]] = {}
         self._travas: dict[int, asyncio.Lock] = {}
         self._encerrados: set[tuple[int, int]] = set()
+        # A retomada dos combates decididos, guardada para o loop nao a soltar.
+        self._retomada: Optional[asyncio.Task] = None
 
     async def cog_load(self) -> None:
         self._carregar_tolerante()
         await self.restaurar_views()
+        # Numa tarefa, e so depois de conectar: o `cog_load` roda dentro do
+        # `setup_hook`, antes do gateway, e fechar um combate manda mensagem e
+        # abre a parada seguinte. Esperar aqui atrasaria a subida do bot.
+        self._retomada = asyncio.create_task(self._retomar_quando_pronto())
+
+    async def cog_unload(self) -> None:
+        # Descarregar no meio da espera — o teste de fumaça carrega e
+        # descarrega os cogs num bot que nunca conecta — cancela a retomada em
+        # vez de deixá-la órfã.
+        if self._retomada is not None:
+            self._retomada.cancel()
+
+    async def _retomar_quando_pronto(self) -> None:
+        try:
+            await self.bot.wait_until_ready()
+        except RuntimeError:
+            # So acontece num bot que nao fez login — o teste de fumaca, que
+            # carrega os cogs sem conectar. Nao ha Discord onde retomar nada.
+            return
+        try:
+            retomadas = await self.retomar_combates_decididos()
+        except Exception:
+            # Numa tarefa solta, a exceção sairia só como "Task exception was
+            # never retrieved", sem dizer de onde. O bot segue de pé.
+            log.exception("a retomada dos combates decididos falhou na subida")
+            return
+        if retomadas:
+            log.warning(
+                "combate decidido e run parada, retomados na subida: run(s) %s",
+                ", ".join(map(str, retomadas)),
+            )
 
     def recarregar_incursoes(self) -> list[str]:
         """Relê o disco e devolve os problemas dos arquivos que ficaram de fora.
@@ -1157,10 +1191,13 @@ class Incursoes(commands.Cog):
             tier=tier(escolhido["nivel"]),
         )
 
-        run = await db.buscar_run(self.bot.db, run_id)
         view = ViewRecrutamento(self, run_id)
+        # O grupo, aqui, e so quem abriu — e ele ja vem na interacao. Montar a
+        # lista por `_membros` ia a rede buscar esse mesmo membro (sem o intent
+        # de membros o cache vem vazio), antes da primeira resposta, que tem 3 s.
         await interaction.response.send_message(
-            embed=E.recrutamento(incursao, await self._membros(run), interaction.user), view=view
+            embed=E.recrutamento(incursao, [interaction.user], interaction.user),
+            view=view,
         )
         mensagem = await interaction.original_response()
         await db.atualizar_run(self.bot.db, run_id, mensagem_id=mensagem.id)
@@ -2338,6 +2375,13 @@ class Incursoes(commands.Cog):
         if estado is None:
             await self._dizer(interaction, "Este combate já terminou.")
             return
+        if estado.encerrado:
+            # Um lado já caiu, e a run não andou: o fecho parou no meio. Antes
+            # o clique respondia "esse inimigo já caiu — escolha outro alvo",
+            # e não havia outro para escolher. `_avancar` é quem repara no fim
+            # do combate, e é por ele que este clique fecha o que faltou.
+            await self._avancar(run, sala, interaction)
+            return
 
         atacante = estado.combatente(interaction.user.id)
         if atacante is None:
@@ -2567,6 +2611,9 @@ class Incursoes(commands.Cog):
 
         esperando: Optional[str] = None
         ativo = True
+        # O combate ja estava decidido quando este clique entrou na fila —
+        # quer o fecho seja dele, quer outro clique o tenha levado antes.
+        decidido = False
         # O fim do combate roda fora da trava: vencer pode abrir o combate do
         # objetivo, que entra de novo aqui, e a trava nao e reentrante.
         encerrar = None
@@ -2588,6 +2635,7 @@ class Incursoes(commands.Cog):
                 passo = self._passo(run)
                 if estado.encerrado:
                     ativo = False
+                    decidido = True
                     # Quem chegar aqui depois nao encerra o mesmo combate de novo.
                     if self._tomar_o_fecho_do_combate(run["id"], passo):
                         encerrar = (run, estado)
@@ -2665,6 +2713,12 @@ class Incursoes(commands.Cog):
         if encerrar:
             await responder("O combate acabou antes da sua vez.")
             await self._encerrar_combate(encerrar[0], sala, encerrar[1])
+            return
+        if decidido:
+            # O fecho ja era de outro clique, ou ja tinha corrido. A acao nao
+            # ficou guardada para nada — dizer "Ação guardada" seria
+            # prometer uma vez que nao vem.
+            await responder("O combate acabou antes da sua vez.")
             return
         aviso = f"🔁 Trocou {trocada} por esta. " if trocada else ""
         if esperando:
@@ -3282,7 +3336,81 @@ class Incursoes(commands.Cog):
         return True
 
     async def _encerrar_combate(self, run: dict[str, Any], sala: Sala, estado) -> None:
-        """Um dos lados caiu: fecha o painel e segue a run (ou a encerra)."""
+        """Um dos lados caiu: fecha o painel e segue a run (ou a encerra).
+
+        **Se o fecho quebrar no meio, a reivindicação volta.** Ela é de
+        memória (`_tomar_o_fecho_do_combate`), e ficava tomada: o combate
+        decidido não podia mais ser fechado por ninguém neste processo, e a
+        run parava em `em_sala` com um lado inteiro no chão. Devolvida, o
+        próximo clique — ou a retomada da subida do bot — fecha o que faltou.
+
+        Refazer o fecho é seguro porque quase tudo nele já é idempotente
+        (pontos e ouro têm chave, a sala superada é uma marca), e a única
+        parte que não era — o decaimento das condições — é reivindicada no
+        banco, por passo.
+        """
+        try:
+            await self._fechar_o_combate(run, sala, estado)
+        except Exception:
+            self._encerrados.discard((run["id"], self._passo(run)))
+            raise
+
+    async def retomar_combates_decididos(self) -> list[int]:
+        """Fecha os combates que se decidiram e cuja run não andou. Devolve as runs.
+
+        É a outra metade de `_encerrar_combate` devolver a reivindicação: um
+        fecho que parou no meio — o bot reiniciou durante ele, ou o Discord
+        recusou o cartão do passo seguinte — deixava a run em `em_sala` com um
+        lado inteiro no chão, e o painel, que perde os botões antes do resto
+        do fecho, não tinha mais onde clicar. Nem um restart soltava: os
+        botões voltavam para uma mensagem que já não tinha botão nenhum.
+
+        Roda na subida do bot (`cog_load`), e não espera clique: quem decide
+        que o combate acabou é o banco, e o banco já diz. Uma run que falhar
+        de novo fica registrada no log e não segura as outras.
+        """
+        retomadas: list[int] = []
+        for run in await db.runs_vivas(self.bot.db):
+            if run["status"] not in ("em_sala", "objetivo") or not run["sala_atual"]:
+                continue
+            sala = await self._sala_corrente(run)
+            if sala is None or not sala.e_combate:
+                continue
+            estado = await self._estado_combate(run, sala)
+            if estado is None or not estado.encerrado:
+                continue
+            try:
+                await self._avancar(run, sala)
+            except Exception:
+                log.exception(
+                    "a run %s tem um combate decidido e o fecho falhou de novo",
+                    run["id"],
+                )
+                continue
+            retomadas.append(run["id"])
+        return retomadas
+
+    async def _avisar_no_canal(self, canal, *args, **kw) -> Optional[Any]:
+        """Manda um aviso que não decide nada — e não deixa a falha dele parar a run.
+
+        O fecho de um combate manda cartões no meio do caminho entre o último
+        golpe e a parada seguinte: o resumo do combate, as condições que
+        passaram, quem saiu da incursão. Se um deles fosse recusado (um embed
+        acima do limite, uma queda do Discord), a exceção abortava o fecho ali
+        — antes do decaimento, antes de abrir a parada seguinte — e a run
+        ficava parada por causa de um enfeite. O que muda o jogo já foi para o
+        banco antes de cada um destes envios; o aviso perdido vai para o log.
+        """
+        try:
+            return await canal.send(*args, **kw)
+        except discord.HTTPException as erro:
+            log.warning(
+                "um aviso nao saiu no canal %s, e a run segue: %s",
+                getattr(canal, "id", "?"), erro,
+            )
+            return None
+
+    async def _fechar_o_combate(self, run: dict[str, Any], sala: Sala, estado) -> None:
         # Antes de tudo: quem escolheu e nao chegou a agir recebe de volta o
         # que a escolha reservou. Vale vencendo e perdendo — a acao nao
         # aconteceu nos dois casos.
@@ -3571,14 +3699,19 @@ class Incursoes(commands.Cog):
     ) -> None:
         """Mostra, so para quem clicou, o que ele pode usar agora."""
         self._guardar_efemera(run_id, interaction)
+        # Adiado antes de qualquer leitura: `_estado_combate` monta a sala
+        # inteira, e no servidor (um oitavo de OCPU) isso disputa os 3 s que o
+        # Discord da para a primeira resposta. O `thinking=True` e o que faz o
+        # `ephemeral` valer num clique de botao — ver `atacar`.
+        await interaction.response.defer(ephemeral=True, thinking=True)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo"):
-            await interaction.response.send_message("Esta sala ja terminou.", ephemeral=True)
+            await self._dizer(interaction, "Esta sala ja terminou.")
             return
         personagem = await self._personagem_na_run(run, interaction.user.id)
         if personagem is None:
-            await interaction.response.send_message(
-                "Voce nao faz parte desta run.", ephemeral=True
+            await self._dizer(interaction,
+                "Voce nao faz parte desta run."
             )
             return
 
@@ -3593,8 +3726,8 @@ class Incursoes(commands.Cog):
                     run_id, self._passo(run), estado.rodada, interaction.user.id,
                 )
                 if gasto:
-                    await interaction.response.send_message(
-                        self._turno_gasto(gasto), ephemeral=True
+                    await self._dizer(interaction,
+                        self._turno_gasto(gasto)
                     )
                     return
 
@@ -3602,11 +3735,10 @@ class Incursoes(commands.Cog):
             run, personagem, self._passo(run)
         )
         if not disponiveis:
-            await interaction.response.send_message(
+            await self._dizer(interaction,
                 "Voce nao tem habilidade para usar agora. Veja `/ficha ver`: as ativas "
                 "marcadas *(em breve)* ainda nao estao prontas, e as outras podem ter "
-                "acabado os usos.",
-                ephemeral=True,
+                "acabado os usos."
             )
             return
 
@@ -3614,10 +3746,9 @@ class Incursoes(commands.Cog):
             (h.id, h.nome, f"{restantes} uso(s) — {h.texto}")
             for h, restantes in disponiveis
         ]
-        await interaction.response.send_message(
+        await self._dizer(interaction,
             "O que voce usa?",
-            view=SeletorHabilidade(self, run_id, sala_id, opcoes),
-            ephemeral=True,
+            view=SeletorHabilidade(self, run_id, sala_id, opcoes)
         )
 
     async def _dizer_ou_apagar(
@@ -3660,22 +3791,26 @@ class Incursoes(commands.Cog):
     ) -> None:
         """Mostra, só para quem clicou, o que ele tem para beber agora."""
         self._guardar_efemera(run_id, interaction)
+        # Adiado antes de qualquer leitura: `_estado_combate` monta a sala
+        # inteira, e no servidor (um oitavo de OCPU) isso disputa os 3 s que o
+        # Discord da para a primeira resposta. O `thinking=True` e o que faz o
+        # `ephemeral` valer num clique de botao — ver `atacar`.
+        await interaction.response.defer(ephemeral=True, thinking=True)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] not in ("em_sala", "objetivo"):
-            await interaction.response.send_message("Esta sala já terminou.", ephemeral=True)
+            await self._dizer(interaction, "Esta sala já terminou.")
             return
         personagem = await self._personagem_na_run(run, interaction.user.id)
         if personagem is None:
-            await interaction.response.send_message(
-                "Você não faz parte desta run.", ephemeral=True
+            await self._dizer(interaction,
+                "Você não faz parte desta run."
             )
             return
 
         carregadas = await self._pocoes_na_bolsa(personagem)
         if not carregadas:
-            await interaction.response.send_message(
-                "Sua bolsa não tem poção nenhuma. Compre no `/mercado vitrine`.",
-                ephemeral=True,
+            await self._dizer(interaction,
+                "Sua bolsa não tem poção nenhuma. Compre no `/mercado vitrine`."
             )
             return
 
@@ -3694,18 +3829,16 @@ class Incursoes(commands.Cog):
         if gasto:
             carregadas = [(p, q) for p, q in carregadas if not p.gasta_turno]
             if not carregadas:
-                await interaction.response.send_message(
+                await self._dizer(interaction,
                     f"{self._turno_gasto(gasto)} Só a Poção da Aceleração não "
-                    f"custa a ação da rodada.",
-                    ephemeral=True,
+                    f"custa a ação da rodada."
                 )
                 return
 
         opcoes = [(p.id, p.nome, q, p.texto) for p, q in carregadas]
-        await interaction.response.send_message(
+        await self._dizer(interaction,
             "O que você bebe?",
-            view=SeletorPocao(self, run_id, sala_id, opcoes),
-            ephemeral=True,
+            view=SeletorPocao(self, run_id, sala_id, opcoes)
         )
 
     async def usar_pocao(
@@ -3981,26 +4114,7 @@ class Incursoes(commands.Cog):
         # de esperar a vez na iniciativa — senao ela nao seria "rapida".
         personagem = await self._personagem_na_run(run, interaction.user.id)
         if ((personagem or {}).get("efeitos") or {}).get("magia_rapida"):
-            texto = await self._resolver_habilidade(
-                run, estado, interaction.user.id, habilidade, alvos or []
-            )
-            await self._dizer(interaction, texto)
-            self._guardar_efemera(run_id, interaction)
-            # A magia rapida resolve AQUI e nao passa por `_avancar`, que e o
-            # unico lugar que repara no fim do combate. Matando o ultimo
-            # inimigo com ela, a run ficava em `objetivo` sem inimigo vivo:
-            # atacar respondia "esse inimigo ja caiu, escolha outro alvo" e
-            # nao havia outro para escolher. A incursao nao tinha saida.
-            #
-            # O estado e relido do banco, como `_avancar` faz: a magia pode ter
-            # mexido em mais do que o objeto em maos sabe.
-            atual = await db.buscar_run(self.bot.db, run_id) or run
-            depois = await self._estado_combate(atual, sala)
-            if depois is not None and depois.encerrado:
-                if self._tomar_o_fecho_do_combate(run_id, passo):
-                    await self._encerrar_combate(atual, sala, depois)
-                return
-            await self._atualizar_painel(atual, sala, depois or estado)
+            await self._magia_rapida(interaction, run, sala, habilidade, alvos or [])
             return
 
         # Depois de o uso estar gasto, e nao antes: se os usos tivessem
@@ -4019,6 +4133,73 @@ class Incursoes(commands.Cog):
             await self._dizer(interaction, self._turno_gasto("ataque"))
             return
         await self._avancar(run, sala, interaction, trocada)
+
+    async def _magia_rapida(
+        self, interaction: discord.Interaction, run: dict[str, Any], sala: Sala,
+        habilidade, alvos: list[int],
+    ) -> None:
+        """Quickened Spell: a magia sai na hora, fora da vez — mas na fila da run.
+
+        Fora da VEZ, e nao fora da FILA. Ela resolvia sem a trava de
+        `_avancar`, a partir do estado lido no começo do clique, e as magias
+        de save gravam o HP de TODOS os inimigos de uma vez. Com outro jogador
+        resolvendo um golpe no mesmo instante, um dos dois gravava por cima do
+        outro: o dano de um deles sumia da sala, em todas as vezes que a sonda
+        tentou. Dentro da trava, as duas ações se enfileiram como quaisquer
+        outras.
+
+        O estado é relido DENTRO da trava, e não reaproveitado de quem chamou:
+        enquanto este clique esperava a vez dele na fila, o combate pode ter
+        andado — e até acabado. Acabado, ou com quem lançou no chão, o uso
+        volta: a magia não aconteceu.
+
+        O fim do combate fica FORA da trava, pelo mesmo motivo de `_avancar`:
+        vencer pode abrir o combate do objetivo, que entra de novo na trava, e
+        ela não é reentrante. A magia rápida não passa por `_avancar`, e era
+        por isso que matar o último inimigo com ela deixava a run sem saída —
+        então ela repara no fim do combate aqui mesmo.
+        """
+        run_id, user_id = run["id"], interaction.user.id
+        passo = self._passo(run)
+        encerrar = None
+        async with self._trava(run_id):
+            atual = await db.buscar_run(self.bot.db, run_id)
+            estado = (
+                await self._estado_combate(atual, sala)
+                if atual
+                and atual["status"] in ("em_sala", "objetivo")
+                and atual["sala_atual"] == sala.id
+                else None
+            )
+            quem = estado.combatente(user_id) if estado else None
+            recusa = None
+            if estado is None or estado.encerrado:
+                recusa = "O combate acabou antes da sua magia sair."
+            elif quem is None or quem.caido:
+                recusa = AVISO_CAIDO
+            elif quem.atordoado:
+                recusa = "Você está atordoado e perde esta rodada."
+            if recusa:
+                await db.devolver_uso(
+                    self.bot.db, run_id, user_id, habilidade.chave_de_uso,
+                    self._chave_de_recarga(habilidade, run, passo),
+                )
+                await self._dizer(interaction, recusa)
+                return
+            texto = await self._resolver_habilidade(
+                atual, estado, user_id, habilidade, alvos
+            )
+            # Relido do banco, como `_avancar` faz: a magia pode ter mexido em
+            # mais do que o objeto em mãos sabe.
+            depois = await self._estado_combate(atual, sala)
+            if depois is not None and depois.encerrado:
+                if self._tomar_o_fecho_do_combate(run_id, passo):
+                    encerrar = (atual, depois)
+            else:
+                await self._atualizar_painel(atual, sala, depois or estado)
+        await self._dizer(interaction, texto)
+        if encerrar:
+            await self._encerrar_combate(encerrar[0], sala, encerrar[1])
 
     async def _resolver_habilidade(
         self, run: dict[str, Any], estado, user_id: int, habilidade, alvos: list[int]
@@ -5618,16 +5799,23 @@ class Incursoes(commands.Cog):
             return
 
         if canal and estado is not None:
-            await canal.send(embed=E.combate_vencido(sala, estado))
+            # Aviso, e nao passo do jogo: recusado, a run segue mesmo assim.
+            await self._avisar_no_canal(canal, embed=E.combate_vencido(sala, estado))
 
         # Antes de decair: quem a criatura levou ao teto sai agora. Na outra
         # ordem o decaimento tiraria o stack que estourou, e o teto de uma
         # condicao que decai nunca pegaria ninguem.
-        await self._expulsar_estourados(run)
+        if await self._expulsar_estourados(run):
+            return
 
         # Um combate a menos no prazo dos debuffs e dos buffs. As maldicoes e a
         # Exaustao tem prazo NULL e nao sao tocadas: duram a incursao.
-        await self._vencer_prazo_das_condicoes(run)
+        #
+        # Reivindicado por passo, e so ele: e a unica parte deste fecho que
+        # nao pode rodar duas vezes, e o fecho pode ser retomado
+        # (`retomar_combates_decididos`).
+        if await db.tomar_o_decaimento(self.bot.db, run["id"], self._passo(run)):
+            await self._vencer_prazo_das_condicoes(run)
 
         await self._seguir_do_descanso(
             await db.buscar_run(self.bot.db, run["id"]), run["linha_atual"]
@@ -5647,12 +5835,17 @@ class Incursoes(commands.Cog):
             f"**{nomes.get(user_id) or f'<@{user_id}>'}**"
             for user_id, cid in acabaram
         ]
-        await canal.send("⏳ " + "; ".join(linhas) + ".")
+        await self._avisar_no_canal(canal, "⏳ " + "; ".join(linhas) + ".")
 
     async def rolar(self, interaction: discord.Interaction, run_id: int, sala_id: str) -> None:
+        # Adiado antes de tudo: o socorro de teste (`_socorrer_o_teste`) pode
+        # anunciar no CANAL antes de a rolagem responder — uma ida a rede
+        # dentro dos 3 s que o Discord da para a primeira resposta. Ver `atacar`
+        # para o `thinking=True`, que e o que faz o `ephemeral` valer.
+        await interaction.response.defer(ephemeral=True, thinking=True)
         run = await db.buscar_run(self.bot.db, run_id)
         if not run or run["status"] != "em_sala" or run["sala_atual"] != sala_id:
-            await interaction.response.send_message("Esta sala já foi resolvida.", ephemeral=True)
+            await self._dizer(interaction, "Esta sala já foi resolvida.")
             return
         # A sala pode estar FECHADA com a run ainda nela: a emboscada do
         # Mimico reusa o id e o status da sala do Tesouro, e o combate corre
@@ -5660,32 +5853,31 @@ class Incursoes(commands.Cog):
         # rolagem, e ela reabria o fecho da sala — a votacao do passo
         # seguinte aparecia no meio do combate.
         if await db.sala_fechada(self.bot.db, run_id, self._passo(run)):
-            await interaction.response.send_message(
-                "Esta sala já foi resolvida.", ephemeral=True
+            await self._dizer(interaction,
+                "Esta sala já foi resolvida."
             )
             return
         if not await db.esta_na_run(self.bot.db, run_id, interaction.user.id):
-            await interaction.response.send_message("Você não faz parte desta run.", ephemeral=True)
+            await self._dizer(interaction, "Você não faz parte desta run.")
             return
 
         incursao = self._incursao_da_run(run)
         sala = await self._sala_corrente(run)
         if sala is None or sala.e_combate:
             # O baú acordou entre o clique e a chegada: não há mais teste aqui.
-            await interaction.response.send_message(
-                "Esta sala virou combate — não há teste para rolar.", ephemeral=True
+            await self._dizer(interaction,
+                "Esta sala virou combate — não há teste para rolar."
             )
             return
         if not await db.esta_de_pe(self.bot.db, run_id, interaction.user.id):
-            await interaction.response.send_message(
-                "Você está caído — quem está no chão não encara a sala. Espere o Descanso.",
-                ephemeral=True,
+            await self._dizer(interaction,
+                "Você está caído — quem está no chão não encara a sala. Espere o Descanso."
             )
             return
         personagem = await db.personagem_da_run(self.bot.db, run_id, interaction.user.id)
         if not personagem:
-            await interaction.response.send_message(
-                "Não achei o personagem com que você entrou nesta run.", ephemeral=True
+            await self._dizer(interaction,
+                "Não achei o personagem com que você entrou nesta run."
             )
             return
 
@@ -5712,8 +5904,8 @@ class Incursoes(commands.Cog):
             resultado.cd,
         )
         if not novo:
-            await interaction.response.send_message(
-                "Você já rolou nesta sala — cada um rola uma vez.", ephemeral=True
+            await self._dizer(interaction,
+                "Você já rolou nesta sala — cada um rola uma vez."
             )
             return
 
@@ -5731,11 +5923,10 @@ class Incursoes(commands.Cog):
             if resultado.ajuda
             else ""
         )
-        await interaction.response.send_message(
+        await self._dizer(interaction,
             f"🎲 **{resultado.d20}** {resultado.modificador:+d}{socorro} = "
             f"**{resultado.total}** em {resultado.pericia} (CD {resultado.cd}) "
-            f"— {veredito}.",
-            ephemeral=True,
+            f"— {veredito}."
         )
 
         registros = await db.testes_da_sala(self.bot.db, run_id, self._passo(run))
@@ -5791,7 +5982,8 @@ class Incursoes(commands.Cog):
                 )
             if resolucao.superada:
                 await self._marcar_sala_superada(run, sala)
-            await self._expulsar_estourados(run)
+            if await self._expulsar_estourados(run):
+                return
 
         if sala.tipo == "Descanso":
             # Pelo TIPO, e nao por `resolucao is None`: sala sem rolagem e o
@@ -6086,7 +6278,8 @@ class Incursoes(commands.Cog):
         await db.contar_descanso(self.bot.db, run["id"])
         if canal:
             await canal.send(embed=E.descanso_duro_feito(troca, linhas))
-        await self._expulsar_estourados(await db.buscar_run(self.bot.db, run["id"]))
+        if await self._expulsar_estourados(await db.buscar_run(self.bot.db, run["id"])):
+            return
         await self._seguir_do_descanso(
             await db.buscar_run(self.bot.db, run["id"]), parada
         )
@@ -6487,12 +6680,20 @@ class Incursoes(commands.Cog):
         desfecho.linhas.append("O evento sai pela culatra para o grupo.")
         desfecho.condicao = caiu
 
-    async def _expulsar_estourados(self, run: dict[str, Any]) -> None:
-        """Quem bateu no teto de uma condição sai da incursão.
+    async def _expulsar_estourados(self, run: dict[str, Any]) -> bool:
+        """Quem bateu no teto de uma condição sai da incursão. True se a run acabou.
 
         O teto é por condição, como na planilha: Deterioração em 10 (que é
         -100% do HP máximo) e Exaustão em 5. As outras não tiram ninguém.
         Esvaziando o grupo, a run fracassa.
+
+        **Quem chama tem de parar quando ela devolve True.** Os três que
+        chamam (o fecho do combate, o da sala de teste e o da vigília)
+        seguiam para a parada seguinte depois dela — e `_abrir_votacao` não
+        olha o status: a run marcada como fracasso voltava a `escolhendo`,
+        sem ninguém dentro, com um cartão de votação em que ninguém podia
+        votar. O canal ficava preso nela, recusando run nova, até um admin
+        rodar `/incursao encerrar`.
         """
         tier_atual = self._tier_da_run(run)
         carregadas = await db.condicoes_da_run(self.bot.db, run["id"])
@@ -6509,9 +6710,12 @@ class Incursoes(commands.Cog):
             saiu = True
             motivos = ", ".join(condicoes.POR_ID[c].nome for c in saldo.estourou)
             if canal:
-                await canal.send(
+                # A saida ja foi gravada acima. Recusado, este aviso nao pode
+                # abortar o laco: os outros estourados ficariam no grupo.
+                await self._avisar_no_canal(
+                    canal,
                     f"<@{user_id}> — **{nome}** não consegue seguir: {motivos} chegou "
-                    f"ao limite. O personagem sai da incursão."
+                    f"ao limite. O personagem sai da incursão.",
                 )
         if saiu and not await db.participantes(self.bot.db, run["id"]):
             # Sem ninguem de pe a run termina aqui. Nao ha combate, entao nao ha
@@ -6522,10 +6726,13 @@ class Incursoes(commands.Cog):
                 run, config.PONTOS_PARTICIPACAO, "Participação na incursão", "participacao"
             )
             if canal:
-                await canal.send(
+                await self._avisar_no_canal(
+                    canal,
                     "A incursão termina aqui: não sobrou ninguém em condições de "
-                    "seguir."
+                    "seguir.",
                 )
+            return True
+        return False
 
     async def _soltar_mimicos(self, run: dict[str, Any], sala: Sala) -> None:
         """A falha no Tesouro acordou o baú: a sala vira um combate.
@@ -6579,12 +6786,17 @@ class Incursoes(commands.Cog):
         run = await self._run_do_contexto(interaction, exigir_participante=False)
         if not run:
             return
+        # Adiado DEPOIS de achar a run, para a recusa de cima continuar
+        # privada. Daqui em diante `_membros` vai a rede uma vez por jogador
+        # (sem o intent de membros o cache vem vazio): cinco idas ao Discord
+        # antes da primeira resposta, que tem 3 s.
+        await interaction.response.defer(thinking=True)
         incursao = self._incursao_da_run(run)
         sala = await self._sala_corrente(run)
         registros = (
             await db.testes_da_sala(self.bot.db, run["id"], self._passo(run)) if sala else []
         )
-        await interaction.response.send_message(
+        await interaction.edit_original_response(
             embed=E.status(
                 run,
                 incursao,
@@ -6615,13 +6827,16 @@ class Incursoes(commands.Cog):
         run = await self._run_do_contexto(interaction, exigir_participante=False)
         if not run:
             return
+        # Adiado depois de achar a run, como o `status`: montar o estado do
+        # combate e o trabalho mais pesado de leitura do bot.
+        await interaction.response.defer(thinking=True)
         sala = await self._sala_corrente(run)
         estado = (
             await self._estado_combate(run, sala)
             if sala is not None and sala.e_combate
             else None
         )
-        await interaction.response.send_message(
+        await interaction.edit_original_response(
             embed=E.buffs(
                 await db.condicoes_da_run(self.bot.db, run["id"]),
                 # Nomes de PERSONAGEM: a legenda fala do que cada ficha tem.
@@ -6642,6 +6857,10 @@ class Incursoes(commands.Cog):
         necessarios = maioria_de(total)
 
         if len(votos) >= necessarios:
+            # Adiado so no voto que FECHA: encerrar vai a rede (achar a
+            # mensagem do passo e tirar os botoes dela) antes da resposta. O
+            # voto que so conta e banco puro, e responde na hora como sempre.
+            await interaction.response.defer(thinking=True)
             # A sala onde o grupo parou, LIDA ANTES de encerrar: o encerramento
             # tira os botoes e nao quero depender da ordem para saber onde foi.
             onde = await self._sala_corrente(run)
@@ -6651,9 +6870,11 @@ class Incursoes(commands.Cog):
             # atravessou — o que ele nao fez foi terminar.
             await self._pagar_as_salas(run)
             incursao = self._incursao_da_run(run)
-            await interaction.response.send_message(
-                f"A run #{run['id']} foi abandonada por decisão do grupo "
-                f"({len(votos)}/{total})."
+            await interaction.edit_original_response(
+                content=(
+                    f"A run #{run['id']} foi abandonada por decisão do grupo "
+                    f"({len(votos)}/{total})."
+                )
             )
             canal = await self._canal(run)
             if not (canal and incursao):
@@ -7067,6 +7288,9 @@ class Incursoes(commands.Cog):
         run = await self._run_do_contexto(interaction, exigir_participante=False)
         if not run:
             return
+        # Adiado antes de encerrar: o encerramento vai a rede (a mensagem do
+        # passo perde os botoes) antes de a resposta sair, e o Discord da 3 s.
+        await interaction.response.defer(ephemeral=True, thinking=True)
 
         # Lidos ANTES de encerrar: o encerramento tira os botoes e muda o
         # status, e o cartao fala de onde o grupo PAROU.
@@ -7091,7 +7315,8 @@ class Incursoes(commands.Cog):
                 self.bot.db, run["guild_id"], quem_passou
             )
 
-        await interaction.response.send_message(
+        await self._dizer(
+            interaction,
             f"Run #{run['id']} encerrada. "
             + ("As salas vencidas pagaram. " if pagar else "Nada foi pago. ")
             + (
@@ -7099,7 +7324,6 @@ class Incursoes(commands.Cog):
                 if devolver_vaga
                 else "A vaga da semana segue gasta."
             ),
-            ephemeral=True,
         )
         canal = await self._canal(run)
         if not (canal and incursao):
