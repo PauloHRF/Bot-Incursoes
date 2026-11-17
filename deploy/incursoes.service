@@ -1,0 +1,29 @@
+# O bot, sob systemd. É a cópia da unidade que roda no leeroy
+# (/etc/systemd/system/incursoes.service), versionada para não existir só lá:
+# as diretivas são as mesmas, e só os comentários são novos.
+#
+# Instalar numa máquina nova (confira usuário e pasta antes):
+#   sudo cp ~/Bot-Incursoes/deploy/incursoes.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now incursoes
+#
+# Não há segredo aqui: o token vem do .env, que o próprio bot lê
+# (src/config.py). Por isso este arquivo pode viver no git.
+[Unit]
+Description=Bot Incursoes 2.0
+# O bot fala com o Discord desde a subida: sem rede, ele falharia e o
+# Restart abaixo entraria em laço até ela voltar.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# AJUSTE: usuário, pasta e o python do venv, se os seus forem outros. São os
+# mesmos do incursoes-backup.service, e um teste confere que os dois andam juntos.
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Bot-Incursoes
+ExecStart=/home/ubuntu/Bot-Incursoes/.venv/bin/python -m src.main
+# Caiu, volta: o systemd sobe o bot de novo 10 s depois de qualquer saída.
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

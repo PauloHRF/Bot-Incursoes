@@ -1248,7 +1248,7 @@ data/
   incursoes/    incursões em JSON — lore, tamanho, tier e sala final
   bancos/       bancos de salas por Organização — o que alimenta o sorteio
   bestiario.json  as criaturas prontas do Monster Manual, já no formato do bot
-deploy/         as unidades do systemd do backup, e o passo a passo da Oracle
+deploy/         a unidade do bot, o atualizar.sh, as do backup e o passo a passo da Oracle
 .github/        o CI: a suíte inteira a cada push, em Linux
 requirements.txt  o que o bot precisa; puxa o constraints.txt
 constraints.txt   as versões exatas em que a suíte passou

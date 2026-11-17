@@ -1,9 +1,83 @@
 # Deploy, backup e a conta da Oracle
 
 O bot roda numa instância **Always Free** da Oracle Cloud, sob `systemd`. Este
-diretório tem o que dá para versionar disso: as unidades do backup e o passo a
-passo. O que **não** está aqui, de propósito: o `.env` (que tem o token e o
-webhook) e qualquer chave.
+diretório tem o que dá para versionar disso: a unidade do bot, o script de
+atualização, as unidades do backup e o passo a passo. O que **não** está aqui, de
+propósito: o `.env` (que tem o token e o webhook) e qualquer chave.
+
+## O bot e a atualização
+
+| Arquivo | No servidor | O que é |
+|---|---|---|
+| `incursoes.service` | `/etc/systemd/system/incursoes.service` | o bot, sob `systemd`, voltando sozinho se cair |
+| `atualizar.sh` | `~/atualizar.sh` | copia o banco, puxa o código, instala as dependências, reinicia |
+
+Os dois existiam **só no servidor**: perder a instância era perder também como ela
+estava montada. A unidade daqui tem as mesmas diretivas da do servidor, e só ganhou
+comentários. O script tem os mesmos comandos, na mesma ordem, e **um a mais, no
+começo: a cópia do banco** (ver abaixo). Um teste (`tests/test_deploy.py`) confere que
+a unidade do bot e a do backup apontam para o mesmo usuário, a mesma pasta e o mesmo
+Python, e que a cópia vem antes do `git pull` e do restart.
+
+### A cópia do banco antes de atualizar
+
+A versão nova pode **migrar o banco quando sobe** — acrescentar uma coluna, recriar uma
+tabela —, e a migração não tem volta. Por isso o script tira uma cópia antes de qualquer
+coisa mudar: restaurar dela (ver *Restaurar*, abaixo) é voltar ao banco que a versão
+antiga sabia ler. O bot não para para isso; a cópia sai pela API de backup online.
+
+Três escolhas que valem saber:
+
+- **Antes do `git pull`**, e com o `backup.py` que já está na máquina: um pull que
+  trouxesse um backup quebrado não pode impedir a cópia que protege dele.
+- **`--local`**, sem mandar ao Discord: o envio depende de rede, e o `set -e` pararia o
+  deploy se o canal estivesse fora. O envio diário continua com o timer.
+- **Se a cópia falhar, o deploy para**, antes de tocar no código. Sem cópia do banco,
+  não atualizar é o certo: o que faz a cópia local falhar é problema no próprio banco.
+
+A cópia entra na rotação das 14 de `data/backups/`. Num dia de vários deploys, as
+diárias mais velhas saem antes — as do canal do Discord continuam todas lá.
+
+### Rodar o script
+
+O `~/atualizar.sh` de hoje continua funcionando — ele mora fora do repositório —, mas
+**sem a cópia do banco**. Para tê-la, rode a cópia de `deploy/` direto de dentro dele —
+
+```bash
+~/Bot-Incursoes/deploy/atualizar.sh
+```
+
+— e foi escrita para isso: o corpo está numa função, porque o `git pull` dela pode
+reescrever o próprio arquivo enquanto ele roda, e o bash leria o arquivo novo a partir da
+posição do velho. Na primeira vez depois do `git pull` que a trouxer, dê permissão de
+execução se o git não tiver dado: `chmod +x ~/Bot-Incursoes/deploy/atualizar.sh`.
+
+Ou, para continuar digitando o mesmo comando de sempre, copie-a por cima do antigo —
+e repita a cópia quando o script mudar, porque ela não acompanha o `git pull`:
+
+```bash
+cp ~/Bot-Incursoes/deploy/atualizar.sh ~/atualizar.sh
+```
+
+**O deploy que trouxer este script é um dos que migram o banco** (a coluna `decaiu`, do
+fecho de combate que volta sozinho). Nele, o `~/atualizar.sh` antigo ainda não copia
+nada: para ter a cópia já desta vez, puxe o código antes e rode o script novo — o
+`git pull` dele vira um nada, e a cópia sai antes do restart, que é quando a migração
+acontece:
+
+```bash
+cd ~/Bot-Incursoes && git pull && bash deploy/atualizar.sh
+```
+
+Numa máquina nova, a unidade entra assim (confira usuário e pasta antes):
+
+```bash
+sudo cp ~/Bot-Incursoes/deploy/incursoes.service /etc/systemd/system/
+```
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl enable --now incursoes
+```
 
 ## As versões das dependências
 
@@ -153,7 +227,8 @@ velho do que você pensava, ele ainda está ali.
 
 ### O que fica no disco
 
-As **14 cópias** mais novas, em `data/backups/` (ignorado pelo git). São o
+As **14 cópias** mais novas, em `data/backups/` (ignorado pelo git) — as do
+timer diário e as que o `atualizar.sh` tira antes de cada deploy. São o
 segundo cinto: dão para restaurar sem baixar nada e cobrem o caso de o envio
 ter falhado sem ninguém ver. Falha de envio sai com código 2 e **não** apaga a
 cópia local.
