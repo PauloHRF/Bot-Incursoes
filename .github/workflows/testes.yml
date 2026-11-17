@@ -1,0 +1,42 @@
+# A suíte inteira a cada push e a cada pull request.
+#
+# Linux e Python 3.10 de propósito: é o que o servidor roda (Ubuntu 22.04,
+# python3.10), e a suíte até aqui só rodava na máquina de quem escreve, que é
+# Windows. O que quebra só em Linux — caminho, fim de linha, fonte que não
+# existe — aparece aqui antes de aparecer no deploy.
+#
+# As versões vêm do constraints.txt, as mesmas que o servidor instala.
+name: testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            requirements*.txt
+            constraints.txt
+
+      - name: Dependências do bot e da suíte
+        run: python -m pip install -r requirements-testes.txt
+
+      # As provas da interface do estúdio abrem um Chromium de verdade.
+      - name: Navegador das provas do estúdio
+        run: python -m playwright install --with-deps chromium
+
+      # `--sem-pular`: aqui tudo está instalado, então uma suíte pulada é
+      # instalação que faltou — e tem de ficar vermelho, não verde.
+      - name: Suíte inteira
+        run: python tests/todos.py --sem-pular
+        env:
+          PYTHONIOENCODING: utf-8

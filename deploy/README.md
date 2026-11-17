@@ -5,6 +5,25 @@ diretório tem o que dá para versionar disso: as unidades do backup e o passo a
 passo. O que **não** está aqui, de propósito: o `.env` (que tem o token e o
 webhook) e qualquer chave.
 
+## As versões das dependências
+
+O `requirements.txt` puxa o `constraints.txt` (`-c constraints.txt`), que trava as versões
+**exatas** em que a suíte passou. Então o `pip install -r requirements.txt` do deploy instala
+essas, e não a mais nova que o PyPI tiver no dia — um discord.py novo não entra mais em
+produção sem ter passado por um teste.
+
+**No primeiro deploy depois desta mudança o pip pode trocar versões**, para baixo ou para
+cima, até bater com o arquivo. É esperado: são as versões que o CI e a suíte local provaram.
+Para ver o que vai mudar antes de o `atualizar.sh` instalar e reiniciar — o `git pull` dele
+vira um nada, porque o código já terá chegado:
+
+```bash
+cd ~/Bot-Incursoes && git pull && .venv/bin/python -m pip install --dry-run -r requirements.txt
+```
+
+Para subir uma versão de propósito: troque o número no `constraints.txt`, rode a suíte (o CI
+roda sozinho no push), e só então faça o deploy.
+
 ## O backup
 
 `tools/backup.py` tira uma cópia do banco, comprime e manda para um canal do

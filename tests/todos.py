@@ -1,15 +1,28 @@
 """Roda todos os testes do projeto.
 
     .venv/Scripts/python.exe tests/todos.py
+    .venv/Scripts/python.exe tests/todos.py --sem-pular   # pulada conta como falha
+
+**As suítes são achadas, e não listadas.** Toda `tests/test_*.py` entra, mais
+o `smoke.py` na frente. A lista era escrita à mão, e uma suíte inteira ficou
+fora dela: `test_estudio_interface.py`, com 20 provas, nunca rodou por aqui —
+o próprio código de "pulada" abaixo foi criado para ela, no mesmo commit que
+esqueceu de pô-la na lista. Achando pelo nome, a suíte nova entra no dia em
+que o arquivo nasce.
+
+`--sem-pular` é para o CI, que instala tudo: lá uma suíte pulada quer dizer
+que faltou instalar alguma coisa, e isso tem de ficar vermelho.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
-SUITES = ("smoke.py", "test_run.py", "test_votacao.py", "test_combate.py", "test_pontos.py", "test_personagens.py", "test_critico_expertise.py", "test_ajuda_feedback.py", "test_geracao.py", "test_faixa.py", "test_tier.py", "test_semana.py", "test_registro.py", "test_bando.py", "test_habilidades.py", "test_ativas.py", "test_duracao.py", "test_thp.py", "test_reacoes.py", "test_escolhas.py", "test_saves.py", "test_criaturas.py", "test_iniciativa.py", "test_bestiario.py", "test_condicoes.py", "test_fichas.py", "test_ameaca.py", "test_xama.py", "test_clerigo.py", "test_artifice.py", "test_mago.py", "test_bruxo.py", "test_druida.py", "test_feiticeiro.py", "test_bardo.py", "test_inspiracao_save.py", "test_ladino.py", "test_patrulheiro.py", "test_mercado.py", "test_pocoes.py", "test_telas.py", "test_backup.py", "test_descanso.py", "test_corridas.py", "test_falhas.py", "test_substituicao.py", "test_substituicao_reservas.py", "test_encerrar.py", "test_migracao.py", "test_formato.py", "test_conteudo.py", "test_estudio.py", "test_sugestor.py", "test_simulacao.py")
+# A de fumaça primeiro: se o bot nem carrega, as outras só repetiriam o erro.
+SUITES = ("smoke.py", *sorted(p.name for p in AQUI.glob("test_*.py")))
 
 
 # Codigo que uma suite devolve para dizer "nao rodei" — hoje so a da
@@ -18,14 +31,17 @@ SUITES = ("smoke.py", "test_run.py", "test_votacao.py", "test_combate.py", "test
 PULADA = 3
 
 
-def main() -> int:
+def main(argv: list[str]) -> int:
+    sem_pular = "--sem-pular" in argv
     falhas, puladas = [], []
     for suite in SUITES:
-        print(f"\n=== {suite} ===")
+        # `flush`: com a saida num arquivo ou num cano (o CI), o cabecalho
+        # ficava preso no buffer e saia depois da saida da propria suite.
+        print(f"\n=== {suite} ===", flush=True)
         try:
             processo = subprocess.run(
                 [sys.executable, str(AQUI / suite)],
-                env={**__import__("os").environ, "PYTHONIOENCODING": "utf-8"},
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
                 timeout=180,
             )
         except subprocess.TimeoutExpired:
@@ -40,6 +56,8 @@ def main() -> int:
     print()
     if puladas:
         print(f"PULADAS, nao rodaram: {', '.join(puladas)}")
+        if sem_pular:
+            falhas.extend(puladas)
     if falhas:
         print(f"FALHARAM: {', '.join(falhas)}")
         return 1
@@ -50,4 +68,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

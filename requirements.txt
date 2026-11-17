@@ -1,4 +1,11 @@
+# O que o bot precisa. As versões exatas com que ele foi testado estão em
+# constraints.txt, e valem também aqui:
+-c constraints.txt
 discord.py>=2.4.0
 aiosqlite>=0.20.0
 python-dotenv>=1.0.1
 Pillow>=10.0.0
+# Importado direto por src/retratos.py. Vinha de graça com o discord.py, mas
+# quem importa declara: o dia em que o discord.py trocar de cliente HTTP não
+# pode ser o dia em que a faixa de retratos some.
+aiohttp>=3.9

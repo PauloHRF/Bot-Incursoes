@@ -1,0 +1,38 @@
+# As versões EXATAS em que a suíte inteira passou. O `requirements.txt` puxa
+# este arquivo com `-c`, então `pip install -r requirements.txt` instala estas
+# e não "a mais nova que existir hoje".
+#
+# Sem isto, o servidor instalava o que o PyPI tivesse no dia do deploy: um
+# discord.py novo, ou um aiohttp que ele puxa, entrava em produção sem nunca
+# ter passado por um teste — e o primeiro a saber era o grupo, no meio da run.
+#
+# Para subir uma versão: troque o número aqui, rode `tests/todos.py`, e só
+# então commite. O `requirements.txt` continua dizendo o que o bot PRECISA; este
+# arquivo diz com o que ele foi PROVADO.
+#
+# Constraint não instala nada sozinho: trava a versão do que for instalado.
+# Por isso as do estúdio e dos importadores podem morar aqui sem pesar no
+# servidor, que não as instala.
+
+# --- o bot (requirements.txt) e o que ele puxa
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.3
+aiosignal==1.4.0
+aiosqlite==0.22.1
+async-timeout==5.0.1
+attrs==26.1.0
+discord.py==2.7.1
+frozenlist==1.8.0
+idna==3.20
+multidict==6.9.0
+pillow==12.3.0
+propcache==0.5.4
+python-dotenv==1.2.3
+typing-extensions==4.16.0
+yarl==1.25.1
+
+# --- só para a suíte inteira (requirements-testes.txt)
+et-xmlfile==2.0.0
+greenlet==3.5.6
+openpyxl==3.1.5
+playwright==1.65.1

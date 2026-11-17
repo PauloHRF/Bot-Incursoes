@@ -4,7 +4,11 @@ Bot de dungeon crawl assíncrono para as Incursões de Sheidrost. Grupos fixos d
 avançam sala a sala votando por botões, resolvendo testes com o modificador real da ficha.
 O caminho é sorteado a cada run, de um banco de salas por Organização.
 
-Design completo: `Incursões 2.0 — Bot de Discord (design).md`.
+O desenho original, de antes da primeira linha de código, está em
+[docs-design.md](docs-design.md). As regras de hoje estão em
+[docs/mecanicas/](docs/mecanicas/README.md) e as classes em
+[docs/FICHAS.md](docs/FICHAS.md) — os dois são **gerados do código**, e um teste
+recusa a versão que ficar para trás.
 
 ## Estado atual
 
@@ -13,7 +17,8 @@ Design completo: `Incursões 2.0 — Bot de Discord (design).md`.
 - [x] **Fase 2b** — runs, salas, votação por botões, testes de perícia
 - [x] **Fase 3** — combate por rodadas (CA / ataque / HP)
 - [x] **Fase 4** — pontuação de Organização
-- [ ] **Fase 5** — hospedagem 24/7
+- [x] **Fase 5** — hospedagem 24/7, numa instância da Oracle sob `systemd`
+  ([deploy/README.md](deploy/README.md))
 
 ## Rodando localmente
 
@@ -24,12 +29,32 @@ cp .env.example .env    # preencha DISCORD_TOKEN e GUILD_IDS
 .venv/Scripts/python.exe -m src.main
 ```
 
+O `requirements.txt` diz o que o bot precisa, e puxa o
+[constraints.txt](constraints.txt), que trava as versões **exatas** em que a suíte
+passou: o servidor instala as mesmas, e não a mais nova do dia. Para subir uma versão,
+troque o número lá, rode a suíte e só então commite.
+
 Testes, sem precisar conectar no Discord (regras, banco, schema das incursões e
 uma run inteira simulada com dublês do Discord):
 
 ```bash
+.venv/Scripts/python.exe -m pip install -r requirements-testes.txt
+.venv/Scripts/python.exe -m playwright install chromium
 .venv/Scripts/python.exe tests/todos.py
 ```
+
+O `requirements-testes.txt` traz o que só a suíte usa — o `openpyxl` dos importadores e o
+`playwright` das provas do estúdio. Sem o playwright as provas do estúdio são **puladas**, e
+o runner diz isso no fim em vez de contar como verde.
+
+O runner **acha as suítes sozinho**: toda `tests/test_*.py` entra, e a suíte nova começa a
+rodar no dia em que o arquivo nasce. A lista era escrita à mão, e uma suíte inteira — as 20
+provas do estúdio — ficou de fora dela sem ninguém ver.
+
+O **CI** ([.github/workflows/testes.yml](.github/workflows/testes.yml)) roda a suíte inteira
+a cada push, em Linux e Python 3.10, que é o que o servidor roda — a suíte até então só
+rodava em Windows. Lá ele usa `tests/todos.py --sem-pular`: com tudo instalado, uma suíte
+pulada é instalação que faltou, e fica vermelho.
 
 ## Criando a aplicação no Discord
 
@@ -123,18 +148,14 @@ O desenho de tudo isso, e do que ainda falta, está em
 | `/ficha listar` | Lista os **seus** personagens |
 | `/ficha ver [personagem]` | Mostra a **sua** ficha, com todos os modificadores calculados |
 | `/ficha upar [personagem]` | Sobe um tier, e conduz na hora a decisão que o tier trouxer |
-| `/ficha pericias [personagem]` | Reabre o menu de proficiências da classe |
 | `/ficha voltar [personagem]` | Desce um tier e esquece a decisão daquele tier, para refazer |
+| `/ficha alterar [personagem]` | Refaz as decisões e as proficiências do tier atual, enquanto o personagem não jogou nele |
 | `/ficha imagem <personagem> [link]` | Associa um retrato ao personagem (sem link, remove) |
-| `/ficha remover <personagem>` | Apaga um personagem seu |
+| `/ficha remover <personagem>` | (admin) Apaga a ficha de qualquer jogador, menos a de quem está numa run viva |
 | `/ficha conferir <membro> [personagem]` | (admin) Vê a ficha de outro jogador, em privado |
 | `/ficha personagens <membro>` | (admin) Lista os personagens de outro jogador |
 | `/incursao listar [tier]` | Mostra as incursões disponíveis, filtráveis por tier |
-| `/incursao entrar <tier> <incursão> [personagem]` | Abre o recrutamento no canal; o tier se autocompleta com o que existe e filtra a lista de incursões |
-| `/incursao sala` | Reenvia a mensagem da sala atual |
-| `/incursao teste` | Rola o teste da sala (mesmo efeito do botão) |
-| `/incursao atacar` | Ataca o primeiro inimigo de pé, na sua vez da iniciativa (mesmo efeito do botão) |
-| `/incursao habilidade` | Abre o menu das suas habilidades ativas |
+| `/incursao entrar <tier> <incursao_id> [personagem]` | Abre o recrutamento no canal; o tier se autocompleta com o que existe e filtra a lista de incursões |
 | `/incursao status` | Estado da run: linha, sala, quem já rolou |
 | `/incursao buffs` | A legenda dos emoji que o grupo tem **agora**: o que cada um faz e em quem está |
 | `/incursao substituir <jogador> [acao] [alvo]` | Age no lugar de quem travou o combate, com o acordo da maioria dos outros |
@@ -147,13 +168,18 @@ O desenho de tudo isso, e do que ainda falta, está em
 | `/mercado equipar <personagem> <item>` | Escolha o personagem e depois um item da bolsa dele |
 | `/mercado anel_do_mestre [personagem] [tirar]` | (admin) Põe ou tira o **Anel do Mestre**, para atravessar uma incursão sozinho |
 | `/organizacao placar` | Pontos das quatro Organizações no servidor |
-| `/organizacao extrato [org]` | Últimos lançamentos, com o motivo de cada um |
-| `/organizacao ajustar <org> <pontos> <motivo>` | (admin) Lança pontos na mão, para correções |
+| `/organizacao extrato [organizacao] [quantidade]` | (admin) Últimos lançamentos, com o motivo de cada um |
+| `/organizacao ajustar <organizacao> <pontos> <motivo>` | (admin) Lança pontos na mão, para correções |
 | `/config intervalo <semanas>` | (admin) Semanas entre incursões do mesmo jogador; 0 libera geral |
+
+Rolar o teste, atacar e usar habilidade são **botões** do cartão da sala e do painel do
+combate, e não comandos: os comandos que só repetiam botão saíram. A tabela acima é
+conferida por teste contra os comandos que o bot registra de verdade — comando novo sem
+linha aqui, ou linha de comando que saiu, fica vermelho.
 
 ## Como uma run acontece
 
-1. `/incursao entrar <id>` abre o recrutamento no canal, com o gancho da lore. Quem clica em **Entrar** precisa
+1. `/incursao entrar <tier> <incursão>` abre o recrutamento no canal, com o gancho da lore. Quem clica em **Entrar** precisa
    ter ao menos um personagem, não estar em outra run e ter cumprido o intervalo desde a
    última incursão.
 2. Quem tem mais de um personagem escolhe num menu com qual entra; quem só tem um entra
@@ -408,7 +434,7 @@ viver no repositório para a conta ficar presa.
 | --- | --- | --- |
 | **Armadilha** | desarmada, ninguém se machuca | **Dano** (-20% do HP) + um debuff de Armadilha |
 | **Evento** | um **prêmio** para o grupo | um debuff de Evento ou um ponto de **Exaustão** |
-| **Tesouro** | o texto de recompensa da sala | nada — e chance de acordar **Mímicos** |
+| **Tesouro** | o texto de recompensa da sala | nada — e os **Mímicos** acordam |
 | **Descanso** | cura metade do HP e cada um tira **uma** condição; não é sorteado nem votado | — |
 | **Combate** | **o dobro do ouro** de uma sala, no fecho da run | o combate perdido encerra a run |
 
@@ -616,7 +642,8 @@ três: a mesa não muda debaixo de quem está decidindo.
 
 ### O Mímico do baú
 
-Falhar num Tesouro tem 35% de chance de acordar o que fingia ser um baú, e aí a sala vira
+Falhar num Tesouro **sempre** acorda o que fingia ser um baú — já foi um sorteio de 35%, e
+saiu porque era a única falha do caminho que podia não custar nada —, e aí a sala vira
 combate no mesmo passo em vez de devolver o grupo à votação. Os números vêm do bestiário e
 ficam gravados em `run_inimigos`, então a emboscada se remonta sozinha depois de um
 restart — ela não precisa existir no banco de salas.
@@ -693,10 +720,11 @@ numa run viva, do recrutamento ao fim, e a recusa vale também no menu que já e
 quando ele entrou. A trava é do **personagem**, não do jogador: a ficha que ficou em casa
 sobe quando ele quiser. O mercado já fechava durante a incursão pelo mesmo motivo.
 
-**Classes prontas** (as do documento de fichas): Bárbaro, Guerreiro, Ladino, Monge,
-Paladino, Patrulheiro e Xamã. **Previstas, ainda sem tabela**: Artífice, Bardo, Bruxo,
-Clérigo, Druida, Feiticeiro e Mago — aparecem na lista de classes, mas o bot recusa o
-cadastro dizendo o que já dá para jogar.
+**As 14 classes têm tabela e jogam**: Artífice, Bárbaro, Bardo, Bruxo, Clérigo, Druida,
+Feiticeiro, Guerreiro, Ladino, Mago, Monge, Paladino, Patrulheiro e Xamã. Os números e as
+habilidades de cada uma, tier por tier, estão em [docs/FICHAS.md](docs/FICHAS.md), que é
+gerado de `src/classes.py` e `src/habilidades.py` — é ele, e não este README, a lista
+que acompanha o código.
 
 ### Habilidades
 
@@ -705,36 +733,23 @@ um ícone que diz o que o bot faz com elas:
 
 | Ícone | Tipo | Estado |
 | --- | --- | --- |
-| ⚙️ | passiva | já vale sozinha, sem ninguém pedir |
-| ⚡ | ativa | o jogador aciona pelo botão ou por comando |
-| ❓ | escolha | o jogador decide algo ao chegar no tier |
+| ⚙️ | passiva | já vale sozinha, sem ninguém pedir — inclusive a opção escolhida num tier |
+| ⚡ | ativa | o jogador aciona pelo botão ✨ Habilidade do painel |
 
-A legenda está **no título do campo** da ficha (`Habilidades (4) — ⚡ você aciona · ⚙️ o bot
-aplica`): o ícone sempre disse isso, mas não havia onde descobrir qual era qual — e uma
-ativa lida como passiva é uma ativa que nunca é usada.
+A **escolha** de um tier não aparece como item próprio: ela não é habilidade, é a
+pergunta. O que entra na lista é o que foi escolhido — a magia, a metamagia, o estilo.
 
-**As passivas que já valem** são as que se resolvem em número: *Reliable Talent* (+5 e
-depois +10 em todo teste), *Improved Critical* (crítico com 19), *Golpe Consagrado* (+2 de
-dano), *Predador* (+2 contra inimigo com metade ou menos do HP), *Multiattack* (2 golpes por
-rodada) e os +2 em listas de perícia do Monge, Patrulheiro, Paladino e Xamã. Quando duas
-versões da mesma passiva coexistem, vale a mais forte — o Reliable Talent do tier 5
-substitui o do tier 1, não soma.
+**Todas as habilidades do catálogo já valem.** As passivas entram como número na ficha
+e no combate; quando duas versões da mesma passiva coexistem, vale a mais forte — o
+Reliable Talent do tier 5 substitui o do tier 1, não soma.
 
-**As ativas prontas** têm botão: no painel de combate aparece **✨ Habilidade** ao lado de
-Atacar, e fora do combate existe `/incursao habilidade`. O menu mostra só o que o personagem
-pode usar naquele momento, com quantos usos restam; quem precisa de alvo (um inimigo, três
-inimigos, um aliado) recebe um segundo menu antes de gastar o uso. Usar uma delas em
-combate **é o turno** daquela rodada, no lugar do ataque. São treze:
-
-| Efeito | Habilidades |
-| --- | --- |
-| cura | *Second Wind*, *Cura pelas Mãos* |
-| golpe no lugar do ataque | *Action Surge*, *Action Mastery*, *Flurry of Blows*, *Perfect Strike*, *Rajada do Caçador*, *Golpe Divino* |
-| efeito com prazo | *Rage*, *Reckless Attack*, *Marca do Caçador*, *Caçador Supremo*, *Avatar da Luz* |
-| efeito com prazo **que ataca junto** | *Rage*, *Marca do Caçador*, *Caçador Supremo* |
-| vida temporária | *Tradição xamânica* (dois caminhos), *Dança totêmica*, *Brutal Strike* |
-| reação | *Relentless*, *Sobrevivente — socorro*, *Flash of Genius*, *Inspiração Bárdica* |
-| condição no alvo | *Stunning Strike* |
+**As ativas** têm botão: no painel de combate aparece **✨ Habilidade** ao lado de Atacar.
+O menu mostra só o que o personagem pode usar naquele momento, com quantos usos restam;
+quem precisa de alvo (um inimigo, três inimigos, um aliado) recebe um segundo menu antes
+de gastar o uso. Usar uma delas em combate **é o turno** daquela rodada, no lugar do
+ataque. O que cada uma faz está em [docs/FICHAS.md](docs/FICHAS.md); as regras de cada
+família — cura, golpe, efeito com prazo, vida temporária, reação, condição no alvo — em
+[docs/mecanicas/habilidades.md](docs/mecanicas/habilidades.md).
 
 **O que vale "ao abrir o combate"** — a cura do bichinho do Druida e o Escudo Arcano do
 Mago — acontece **uma vez, quando o combate abre**, e é gravado no banco. As duas moravam
@@ -773,10 +788,11 @@ apaga quando a rodada vira. Dá para reduzir dano recebido (Rage), rolar com **v
 dois d20, fica o melhor —, somar CA e dano, curar uma fração por turno (Avatar da Luz) ou
 marcar **um inimigo específico** para levar dano extra só dele (Marca do Caçador, Caçador
 Supremo). No painel, quem está sob efeito aparece com 🛡️ (dano reduzido), 🎯 (vantagem) ou
-✨ (abençoado), e o inimigo marcado leva 🎯 no nome.
+💠 (CA a mais ou cura por turno), e o inimigo marcado leva 🎯 no nome.
 
-Golpe de habilidade toma o turno, no lugar do ataque. Cura não levanta quem já caiu — isso
-é assunto do descanso.
+Golpe de habilidade toma o turno, no lugar do ataque. A cura levanta quem caiu, e voltar do
+chão custa 1 ponto de Exaustão — a regra inteira está em *Cura levanta quem está caído*, mais
+acima.
 
 **Ligar um efeito com prazo não custa mais a rodada** quando a ação declara `acoes`: a
 habilidade liga o efeito e **ataca na mesma rodada, já com ele valendo**. É o caso da
@@ -807,22 +823,19 @@ passar as marcas para outro inimigo quando o marcado cai antes da explosão.
 combate, *por descanso* zera quando o grupo passa por uma sala de Descanso, e *por incursão*
 vale uma vez na run inteira. O contador vive no banco, então sobrevive a reinício do bot.
 
-**Ainda não valem**: as duas que repetem um teste de perícia falhado (*Sobrevivente* do
-Patrulheiro e *Líder Sagrado* do Paladino), porque dependem do fluxo da sala e não do
-combate. Aparecem na ficha marcadas *(em breve)*.
-
 ### Escolhas de tier
 
-Quatro habilidades pedem uma decisão do jogador, e o bot conduz: **Fighting Style** (+1
-acerto, +1 CA ou +2 dano), **Expertise** do Ladino (2 perícias no tier 2 e mais 2 no tier 4,
-com o bônus de proficiência dobrado), **Primal Knowledge** (2 proficiências a mais, fora da
-cota da classe) e a do **Xamã** no tier 3 (Multiattack ou Cântico Benevolente, que soma 4 de
-THP quando ele cura).
+Boa parte dos tiers pede uma decisão do jogador, e o bot conduz: o **Fighting Style**, a
+**Expertise** do Ladino, o **Primal Knowledge**, as magias e as metamagias das classes que
+conjuram, o caminho do Xamã — a lista inteira, com as opções de cada uma, está em
+[docs/FICHAS.md](docs/FICHAS.md).
 
-A decisão é tomada **no próprio `/ficha upar`**: ele anuncia a subida no canal e abre, só
-para o dono, o menu da escolha. Se houver mais de uma pendente, uma puxa a próxima até
-acabarem. A ficha mostra o que já foi decidido e o que falta, e o
-efeito vale na hora: escolher Defensivo muda a CA que aparece no `/ficha ver` e a que o
+A decisão do tier 1 é tomada **no `/ficha registrar`**, e a dos outros **no próprio
+`/ficha upar`**: ele anuncia a subida no canal e abre, só para o dono, o menu da escolha. Se
+houver mais de uma pendente, uma puxa a próxima até acabarem, e o tier só sobe depois da
+última — fechar o menu no meio deixa o personagem no tier antigo, sem nada pela metade.
+`/ficha alterar` refaz as decisões e as proficiências do tier atual, enquanto o personagem
+não tiver jogado nele. A ficha mostra o que já foi decidido, e o efeito vale na hora: escolher Defensivo muda a CA que aparece no `/ficha ver` e a que o
 monstro enfrenta. Expertise só oferece perícias em que o personagem tem proficiência; Primal
 Knowledge só oferece as que ele ainda não tem.
 
@@ -955,9 +968,10 @@ reler tudo sem reiniciar.
 
 ### O que já está escrito
 
-As quatro Organizações têm banco. **O tier 1 tem três entradas e o tier 2 tem quatro,
-uma por Organização** — personagem novo não fica preso a uma só. O tier 3 tem uma e o
-tier 4 tem duas:
+As quatro Organizações têm banco, e há **15 incursões**, do tier 1 ao 5. O tier 1 tem três
+entradas e o tier 2 tem quatro, uma por Organização — personagem novo não fica preso a
+uma só. O tier 3 tem duas, o 4 tem quatro e o 5 tem duas. Um teste confere esta tabela
+contra `data/incursoes/`: a incursão nova sem linha aqui fica vermelho.
 
 | Incursão | Tier | Tamanho | Organização | Objetivo |
 | --- | --- | --- | --- | --- |
@@ -969,10 +983,17 @@ tier 4 tem duas:
 | *O Ossuário de Vael* | 2 | Média | Guilda dos Mortos | Múmia + 2 Ogros Zumbi + Carniçal |
 | *O Poço dos Olhos* | 2 | Média | Vórtice Oculto | 2 Nothics + Devorador de Intelecto + *o que estava na água* |
 | *O Segundo Enterro* | 3 | Média | Guilda dos Mortos | 2 Revenantes + 3 Espectros + Carniçal |
+| *Ninho do Behir* | 3 | Média | Guilda dos Mortos | Behir |
 | *A Cripta do Vórtice* | 4 | Média | Vórtice Oculto | Observador + 2 Nothics |
 | *A Brecha de Fogo Pálido* | 4 | Longa | Sentinelas do Alvorecer | Diabo Ósseo + Vrock + 2 Diabos Barbados |
+| *A Maré Sonhadora* | 4 | Longa | Vórtice Oculto | Aboleth |
+| *O Sino de Ferro* | 4 | Longa | Sentinelas do Alvorecer | Golem de Ferro |
+| *A Coroa em Chamas* | 5 | Longa | Sentinelas do Alvorecer | Balor |
+| *O Último Trovão* | 5 | Longa | Vórtice Oculto | Dracolich Azul Adulto |
 
-**Os dez objetivos medidos**, com `tools/simular_combate.py` contra um grupo misto de 5
+**Os dez primeiros objetivos medidos** — as cinco incursões mais novas, do *Ninho do
+Behir* em diante, ainda não passaram por esta medição —, com `tools/simular_combate.py`
+contra um grupo misto de 5
 no nível do tier e **sem nenhuma habilidade ativa** — é um piso, não um prognóstico: a
 mesa de verdade tem cura, buff e magia de dano por cima disto. As duas colunas são as duas
 maneiras de chegar: intacto (desviando dos combates) e gasto, com os 65% de HP que o
@@ -1077,8 +1098,9 @@ número vazias** (`ca`, `ataque`, `dano`, `hp`), o importador busca a criatura e
 português ou em inglês, com ou sem acento, e a criatura entra com o nome em português.
 Preenchendo os números, a criatura é a da planilha, feita à mão, mesmo que o nome coincida.
 
-O bestiário tem **444 criaturas do Monster Manual**, de CR 0 a 30 (o CR fica registrado
-em cada uma), geradas a partir do arquivo do 5etools:
+O bestiário tem **385 criaturas do Monster Manual**, de CR 1/8 a 19 (o CR fica registrado
+em cada uma, e a lista inteira está em [docs/CRIATURAS.md](docs/CRIATURAS.md)), geradas a
+partir do arquivo do 5etools:
 
 ```bash
 .venv/Scripts/python.exe tools/importar_bestiario.py bestiary-mm.json
@@ -1169,7 +1191,16 @@ src/
   classes.py    as classes jogáveis e os números de cada tier
   habilidades.py  o catálogo de habilidades por classe e tier
   database.py   SQLite (aiosqlite) — schema e acesso
+  ameaca.py     quem as criaturas miram: a ameaça de cada um e o que a move
+  itens.py      o equipamento, os slots e o que cada peça soma
+  consumiveis.py  as poções: catálogo, vitrine e o que cada uma faz
+  mercado.py    a vitrine da semana e o ouro por tier
+  retratos.py   a faixa de retratos da abertura: download seguro e montagem
+  aleatorio.py  a fonte de sorteio, que a bancada troca por uma semeada
+  falhas.py     o aviso ao jogador quando um comando ou botão quebra
+  cogs/ajuda.py o /help, montado da própria árvore de comandos
   cogs/ficha.py comandos de ficha
+  cogs/mercado.py  vitrine, bolsa, compra e equipamento
   incursoes.py  schema das incursões: salas, monstros, validação, carregamento
   bestiario.py  busca das criaturas prontas pelo nome
   condicoes.py  catalogo de debuff, maldicao, exaustao e buff, e as contas
@@ -1198,13 +1229,18 @@ tools/
   gerar_fichas_md.py         docs/FICHAS.md — o conteúdo das 14 classes
   gerar_criaturas_md.py      docs/CRIATURAS.md — as fichas do bestiário
   balanco.py                 docs/BALANCO.md — mede o jogo e aponta desequilíbrio
+  importar_fichas.py         a tabela de fichas do grupo -> data/bestiario.json
+  calibrar_emboscada.py      mede a emboscada do Mímico tier por tier
+  medir_ameaca.py            mede o HP que uma ação move, para calibrar a ameaça
+  medir_anel_do_gm.py        mede se o Anel do Mestre basta para ir sozinho
+  backup.py                  cópia do banco, comprimida e mandada ao Discord
 docs/
   formato-das-incursoes.md  o formato que quem escreve dungeon precisa saber
   temas-e-estudio.md        o desenho do tema, do filtro, do estúdio e do sugeridor
   simulacao.md              como os simuladores compartilham o combate do bot
   mecanicas/    as regras do jogo, um arquivo por mecânica
   FICHAS.md     os números e as habilidades de cada classe, tier por tier
-  CRIATURAS.md  as fichas das 385 criaturas, agrupadas por faixa de CR
+  CRIATURAS.md  as fichas das criaturas do bestiário, agrupadas por faixa de CR
   BALANCO.md    dano, durabilidade, cura e o valor de cada habilidade
 data/
   planilhas/    não versionada: onde os geradores soltam os modelos .xlsx
@@ -1213,32 +1249,16 @@ data/
   bancos/       bancos de salas por Organização — o que alimenta o sorteio
   bestiario.json  as criaturas prontas do Monster Manual, já no formato do bot
 deploy/         as unidades do systemd do backup, e o passo a passo da Oracle
+.github/        o CI: a suíte inteira a cada push, em Linux
+requirements.txt  o que o bot precisa; puxa o constraints.txt
+constraints.txt   as versões exatas em que a suíte passou
+requirements-testes.txt  o que só a suíte usa (openpyxl, playwright)
 docs-design.md  o desenho original do bot, de antes da primeira linha de código
 assets/         imagens das salas
 tests/
-  todos.py      roda todas as suítes
+  todos.py      roda todas as suítes — acha sozinho toda test_*.py
   smoke.py      regras, persistência, schema de incursão, carga dos cogs
-  test_run.py   uma run inteira simulada, do recrutamento ao objetivo
-  test_votacao.py  maioria, votos divididos, empate e restart
-  test_combate.py  rodadas, contra-ataque, vitória, derrota total e descanso
-  test_bando.py    várias criaturas na mesma sala: alvo, HP separado e revide
-  test_habilidades.py  catálogo, passivas aplicadas e multiataque
-  test_ativas.py   habilidades ativas: usos, cura e golpes extras
-  test_duracao.py  efeitos com prazo: Rage, Marca do Caçador e a virada da rodada
-  test_thp.py      vida temporária: absorção, aura totêmica e Relentless
-  test_reacoes.py  esquiva, atordoamento e a sequência do Monge
-  test_escolhas.py escolhas de tier: Fighting Style, Expertise e companhia
-  test_pontos.py   crédito de pontos, placar, extrato e ajuste manual
-  test_personagens.py  vários personagens, escolha ao entrar e migração do banco
-  test_critico_expertise.py  críticos, erro crítico e bônus por perícia
-  test_geracao.py  tamanhos, sorteio do caminho e as duas lores
-  test_faixa.py    a faixa com os retratos do grupo na abertura
-  test_semana.py   a virada do intervalo na segunda-feira
-  test_registro.py cadastro por classe, proficiências, /ficha upar e /ficha voltar
-  test_tier.py     quem pode entrar em cada incursão
-  test_bestiario.py  criatura pelo nome, golpes, teste no golpe, matilha e regeneração
-  test_condicoes.py  os pares buff/debuff da planilha, decaimento, Mímico e descanso
-  test_falhas.py   o aviso ao jogador quando um comando ou botão quebra
+  test_*.py     uma suíte por assunto: o nome diz qual (test_combate, test_mercado…)
   fakes.py      dublês do Discord usados pelos testes
 ```
 

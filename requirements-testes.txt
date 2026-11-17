@@ -1,0 +1,14 @@
+# Tudo que a suíte INTEIRA precisa (tests/todos.py), além do bot. É o que o CI
+# instala. Quem só hospeda o bot não precisa disto: fica no requirements.txt.
+#
+#   pip install -r requirements-testes.txt
+#   python -m playwright install chromium
+#
+# As versões exatas vêm do constraints.txt, pelo requirements.txt.
+-r requirements.txt
+# O playwright, para as provas da interface do estúdio.
+-r requirements-estudio.txt
+# Os importadores de planilha (tools/importar_*.py) e o test_conteudo, que
+# monta uma planilha para provar a leitura. Não estava declarado em lugar
+# nenhum: a suíte só passava em máquina que já o tinha instalado.
+openpyxl>=3.1
