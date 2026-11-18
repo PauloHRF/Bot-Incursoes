@@ -1500,6 +1500,17 @@ async def registrar_teste(
     return cur.rowcount > 0
 
 
+async def ja_rolou(
+    conn: aiosqlite.Connection, run_id: int, passo: int, user_id: int
+) -> bool:
+    """Se o jogador já tem a rolagem deste passo — a mesma chave de `registrar_teste`."""
+    async with conn.execute(
+        "SELECT 1 FROM run_testes WHERE run_id = ? AND passo = ? AND user_id = ?",
+        (run_id, passo, user_id),
+    ) as cur:
+        return await cur.fetchone() is not None
+
+
 async def testes_da_sala(
     conn: aiosqlite.Connection, run_id: int, passo: int
 ) -> list[dict[str, Any]]:

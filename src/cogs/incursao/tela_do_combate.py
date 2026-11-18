@@ -110,9 +110,6 @@ class TelaDoCombate:
             condicoes_do_grupo=await db.condicoes_da_run(self.bot.db, run["id"]),
         )
 
-    async def _niveis(self, run: dict[str, Any]) -> list[int]:
-        return [p["nivel"] for p in await db.personagens_da_run(self.bot.db, run["id"])]
-
     async def _responder_no_clique(
         self, run: dict[str, Any], interaction: Clique, texto: str
     ) -> None:

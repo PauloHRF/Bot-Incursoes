@@ -263,6 +263,49 @@ async def caso_flash_socorre_o_teste_de_outro():
     print("  o Flash gasta o uso se e so se o socorro faz o teste passar: ok")
 
 
+async def caso_o_segundo_clique_nao_gasta_o_flash():
+    """Rolar de novo não queima o Flash de ninguém — nem em dois cliques juntos.
+
+    O socorro gastava o uso ANTES de a rolagem ser gravada, e a gravação é que
+    descobria que o jogador já tinha rolado. Medido antes do conserto: com o
+    d20 preso numa falha que o Flash vira, o segundo clique — um depois do
+    outro, ou os dois no mesmo instante — gastava o Flash de outro artífice e
+    anunciava o socorro de novo no canal, para uma rolagem só.
+    """
+    salas = [
+        sala(f"S{i}", "Evento", cd=30, alvo_progresso=99, pericias=["Atletismo"])
+        for i in (1, 2, 3)
+    ]
+    for juntos in (False, True):
+        conn, canal, cog, incursao, run_id = await preparar(salas=salas)
+        await db.atualizar_run(
+            conn, run_id, status="em_sala", sala_atual="S1", linha_atual=1
+        )
+        await db.gravar_opcoes(conn, run_id, 1, ["S1", "S2", "S3"])
+        # 15 no d20 falha por pouco nesta sala: o Flash (+10) vira o teste.
+        with patch.object(motor, "rolar_d20", lambda *a, **kw: 15):
+            primeiro = FakeInteraction(canal, JOGADORES[0])
+            segundo = FakeInteraction(canal, JOGADORES[0])
+            if juntos:
+                await asyncio.gather(
+                    cog.rolar(primeiro, run_id, "S1"), cog.rolar(segundo, run_id, "S1")
+                )
+            else:
+                await cog.rolar(primeiro, run_id, "S1")
+                await cog.rolar(segundo, run_id, "S1")
+        gastos = 0
+        for user_id in JOGADORES[:3]:
+            usos = await db.usos_da_run(conn, run_id, user_id)
+            gastos += sum(v for k, v in usos.items() if k[0] == "flash_of_genius")
+        anuncios = sum("socorre" in str(m.content or "") for m in canal.enviadas)
+        jeito = "juntos" if juntos else "um depois do outro"
+        assert len(await db.testes_da_sala(conn, run_id, 1)) == 1, jeito
+        assert gastos == 1, f"{jeito}: o Flash saiu {gastos} vezes para uma rolagem so"
+        assert anuncios == 1, f"{jeito}: o socorro foi anunciado {anuncios} vezes"
+        assert "já rolou" in (segundo.resposta or ""), (jeito, segundo.resposta)
+    print("  o segundo clique em Rolar nao gasta o Flash de ninguem, nem junto: ok")
+
+
 def caso_genio_refinado_sobe_o_bonus():
     efeitos = cl.efeitos("artifice", 9, {})
     assert efeitos["flash_bonus"] == 10, "o tier 5 sobe de 5 para 10"
@@ -325,6 +368,7 @@ async def main():
         caso_vale_ajudar_so_quando_vira()
         caso_a_ajuda_entra_no_total_e_na_margem()
         await caso_flash_socorre_o_teste_de_outro()
+        await caso_o_segundo_clique_nao_gasta_o_flash()
         caso_genio_refinado_sobe_o_bonus()
         await caso_arcane_jolt_divide_o_uso()
         await caso_arcane_jolt_cura_por_dado()

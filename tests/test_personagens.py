@@ -230,9 +230,9 @@ async def caso_personagem_escolhido_e_o_que_joga():
     dele = next(c for c in combatentes if c.user_id == dono)
     assert dele.nome == "Frangote" and dele.ca == fraco.ca and dele.hp_max == fraco.hp
 
-    # e o nivel que entra na conta do objetivo e o do Frangote
-    niveis = await cog._niveis(await db.buscar_run(conn, run["id"]))
-    assert 1 in niveis, niveis
+    # e o nivel com que ele joga e o do Frangote
+    na_run = {p["user_id"]: p for p in await db.personagens_da_run(conn, run["id"])}
+    assert na_run[dono]["nivel"] == 1, na_run[dono]
     print("  a run usa a ficha do personagem escolhido: ok")
 
 

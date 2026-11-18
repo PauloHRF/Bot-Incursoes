@@ -293,19 +293,32 @@ class Salas:
         # Flash of Genius: alguem do grupo socorre a falha antes de ela virar
         # consequencia. Entra no `modificador` gravado, para a margem e o
         # progresso da sala contarem com a ajuda.
-        await self._socorrer_o_teste(run, resultado)
-        novo = await db.registrar_teste(
-            self.bot.db,
-            run_id,
-            self._passo(run),
-            sala_id,
-            interaction.user.id,
-            resultado.personagem,
-            resultado.pericia,
-            resultado.d20,
-            resultado.modificador + resultado.ajuda,
-            resultado.cd,
-        )
+        #
+        # O socorro GASTA o uso de alguem do grupo e anuncia no canal, entao
+        # ele so roda depois de conferido que esta rolagem vai contar — e na
+        # fila da run, para dois cliques nao conferirem juntos. Socorria
+        # primeiro e descobria depois, no `registrar_teste`, que o jogador ja
+        # tinha rolado: o segundo clique em Rolar, ou dois ao mesmo tempo,
+        # queimavam o Flash de mais alguem numa rolagem que nao entrava, e o
+        # canal anunciava o socorro duas vezes.
+        novo = False
+        async with self._trava(run_id):
+            if not await db.ja_rolou(
+                self.bot.db, run_id, self._passo(run), interaction.user.id
+            ):
+                await self._socorrer_o_teste(run, resultado)
+                novo = await db.registrar_teste(
+                    self.bot.db,
+                    run_id,
+                    self._passo(run),
+                    sala_id,
+                    interaction.user.id,
+                    resultado.personagem,
+                    resultado.pericia,
+                    resultado.d20,
+                    resultado.modificador + resultado.ajuda,
+                    resultado.cd,
+                )
         if not novo:
             await self._dizer(interaction,
                 "Você já rolou nesta sala — cada um rola uma vez."
