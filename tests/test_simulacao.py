@@ -32,6 +32,22 @@ from tools.simular_combate import simular
 ALVO = Monstro("Alvo", 1, 0, "1d1", 1000)
 
 
+def _grupo_age_primeiro(estado, rng=None):
+    """A iniciativa sem sorteio: o grupo inteiro, e depois as criaturas.
+
+    Para o caso que confere o que o combate deu ANTES de alguém agir. O ALVO
+    não tem como errar sempre nem como bater zero — o dano mínimo é 1 e o 20
+    natural acerta qualquer CA —, então, ganhando a iniciativa, ele tirava 1 ou
+    2 de THP do mago antes da conferência em cerca de 3% das rodadas da suíte.
+    """
+    quem = [(motor.PERSONAGEM, c.user_id, c.nome) for c in estado.combatentes]
+    quem += [(motor.INIMIGO, i.indice, i.nome) for i in estado.inimigos]
+    return [
+        motor.Iniciativa(tipo, ident, nome, len(quem) - posicao, 0)
+        for posicao, (tipo, ident, nome) in enumerate(quem)
+    ]
+
+
 class Execucao(unittest.IsolatedAsyncioTestCase):
     async def test_todas_as_classes_passam_pelo_motor_real(self):
         for cid in classes.CLASSES:
@@ -57,7 +73,10 @@ class Execucao(unittest.IsolatedAsyncioTestCase):
     async def test_abertura_do_mago_acontece_uma_vez(self):
         fichas = [Ficha("mago", 9, {"tradicao_arcana": "escudo_arcano"})]
         async with Bancada(fichas, [ALVO]) as b:
-            await b.iniciar()
+            # O mago age primeiro: a fila para nele, e o ALVO nao chega a bater
+            # antes de o THP da abertura ser conferido.
+            with patch.object(motor, "rolar_iniciativas", _grupo_age_primeiro):
+                await b.iniciar()
             estado = await b.cog._estado(b.run)
             self.assertEqual(estado.combatente(1).thp, 10)
             await db.definir_thp(b.conn, b.run_id, 1, 0)
