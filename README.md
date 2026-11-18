@@ -1223,7 +1223,9 @@ src/
     fluxo.py    o estado do combate, a vez de cada um, a criatura, reações e efeitos
     resolvedores.py  o que cada habilidade faz quando sai
   embeds.py     montagem das mensagens da run
-  cogs/incursao.py  runs: recrutamento, votação, salas, testes, combate
+  cogs/incursao/  runs, um assunto por arquivo: cog.py (os comandos de /incursao),
+                recrutamento, votacao, salas, descanso, tela_do_combate,
+                substituicao, canal e views
   cogs/organizacao.py  placar, extrato e ajuste de pontos
 tools/
   gerar_modelo_banco.py      cria a planilha do banco de salas de uma Organização

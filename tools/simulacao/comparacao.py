@@ -127,7 +127,7 @@ async def comparar(builds, cenarios, tiers, tamanhos, repeticoes, semente, *, ba
                         if progresso:
                             progresso(linha)
     return {"metodo": {
-        "motor": "resolvedores de src.cogs.incursao; SQLite em memoria", "semente": semente,
+        "motor": "src.combate, sem o cog; SQLite em memoria", "semente": semente,
         # A identidade do codigo que mediu, que era o unico lugar do projeto a
         # gravar isso. Mora no medidor agora, para todo numero medido poder
         # dizer de qual codigo saiu.

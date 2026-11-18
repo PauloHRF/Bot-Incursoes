@@ -8,8 +8,10 @@ mais isso pesa: é o par do prazo de 3 segundos.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import inspect
 import logging
+import pkgutil
 import sys
 from pathlib import Path
 
@@ -20,7 +22,8 @@ import discord  # noqa: E402
 from discord import app_commands  # noqa: E402
 
 from src import falhas  # noqa: E402
-from src.cogs import ajuda, ficha, incursao, mercado, organizacao  # noqa: E402
+import src.cogs  # noqa: E402
+from src.cogs import incursao  # noqa: E402
 from fakes import CANAL, JOGADORES, FakeCanal, FakeInteraction  # noqa: E402
 
 
@@ -39,10 +42,18 @@ def caso_toda_view_do_bot_fecha_a_interacao():
     A regra só vale se valer para TODAS: o botão que ficar de fora é o que
     vai quebrar em silêncio. Por isso a conta é por varredura, e não por
     lista — a view que alguém criar amanhã entra nela sozinha.
+
+    A varredura desce nas pastas: o cog das incursões virou uma pasta, com as
+    views em `incursao/views.py`, e uma lista de módulos escrita à mão as
+    deixou de fora na primeira vez.
     """
     soltas = []
     vistas = 0
-    for modulo in (ajuda, ficha, incursao, mercado, organizacao):
+    modulos = [
+        importlib.import_module(info.name)
+        for info in pkgutil.walk_packages(src.cogs.__path__, "src.cogs.")
+    ]
+    for modulo in modulos:
         for nome, cls in inspect.getmembers(modulo, inspect.isclass):
             if cls.__module__ != modulo.__name__:
                 continue

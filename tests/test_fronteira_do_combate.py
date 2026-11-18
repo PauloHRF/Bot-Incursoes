@@ -108,14 +108,20 @@ def caso_cada_modulo_so_pede_o_que_declarou():
     print(f"  PORTAS e a soma delas: {len(PORTAS)} portas, todas de saida: ok")
 
 
+def _lado_do_cog() -> list[type]:
+    """As classes do cog do Discord: `Incursoes` e os assuntos que ela herda."""
+    return [k for k in Incursoes.__mro__ if k.__module__.startswith("src.cogs.")]
+
+
 def caso_o_cog_e_a_bancada_implementam_as_portas():
     do_combate = _do_combate()
     dentro = sorted(set(PORTAS) & do_combate)
     assert not dentro, f"PORTAS pede {dentro}, que ja mora em src/combate"
-    # Implementada na PROPRIA classe: herdada de outro lugar nao conta, porque
-    # o combate nao define porta nenhuma — se nao esta ali, o primeiro caminho
+    # Implementada do LADO DO COG — na classe ou num dos assuntos dela. O
+    # combate nao define porta nenhuma: se ela nao esta ali, o primeiro caminho
     # que a usar levanta AttributeError no meio da fila.
-    sem_no_cog = sorted(p for p in PORTAS if p not in vars(Incursoes))
+    do_cog = set().union(*(vars(k) for k in _lado_do_cog()))
+    sem_no_cog = sorted(p for p in PORTAS if p not in do_cog)
     assert not sem_no_cog, f"o cog nao implementa as portas {sem_no_cog}"
     sem_na_bancada = sorted(p for p in PORTAS if p not in vars(Bancada))
     assert not sem_na_bancada, f"a bancada da simulacao nao implementa as portas {sem_na_bancada}"
@@ -154,7 +160,8 @@ def caso_cada_metodo_mora_num_lugar_so():
     for arquivo, classe in MODULOS.values():
         assert issubclass(Combate, classe) and issubclass(Incursoes, classe), classe
         metodos = _metodos(_no_da_classe(arquivo, classe.__name__))
-        repetidos = sorted(n for n in metodos - {"__init__"} if n in vars(Incursoes))
+        do_cog = set().union(*(vars(k) for k in _lado_do_cog()))
+        repetidos = sorted(n for n in metodos - {"__init__"} if n in do_cog)
         assert not repetidos, (
             f"o cog redefine {repetidos}: a copia dele passa por cima da de {arquivo.name}"
         )
@@ -166,6 +173,26 @@ def caso_cada_metodo_mora_num_lugar_so():
                 # O cog responde pelo nome de antes, que testes e simulacao usam.
                 assert getattr(Incursoes, nome) is getattr(classe, nome), nome
     print(f"  os {len(vistos)} metodos do combate moram num lugar so, e o cog os herda: ok")
+
+
+def caso_cada_assunto_do_cog_mora_num_arquivo_so():
+    """O cog foi dividido por assunto; um nome em dois assuntos seria mudo.
+
+    O cog herda todos, e quando dois definem o mesmo nome o Python escolhe um
+    pela ordem das bases — sem erro, e com a outra copia parada no arquivo
+    dela, parecendo viva.
+    """
+    vistos: dict[str, str] = {}
+    for k in _lado_do_cog():
+        for nome in vars(k):
+            if nome.startswith("__") and nome.endswith("__"):
+                continue
+            assert nome not in vistos, (
+                f"{nome} esta em {k.__module__}.{k.__name__} e em {vistos[nome]}"
+            )
+            vistos[nome] = f"{k.__module__}.{k.__name__}"
+    assuntos = sorted(k.__module__.rsplit(".", 1)[-1] for k in _lado_do_cog())
+    print(f"  o cog em {len(assuntos)} arquivos ({', '.join(assuntos)}), sem nome repetido: ok")
 
 
 async def caso_as_sobrescritas_sao_ouvidas():
@@ -215,6 +242,7 @@ def main():
     caso_a_bancada_nao_herda_o_cog()
     caso_os_modulos_nao_falam_com_o_discord()
     caso_cada_metodo_mora_num_lugar_so()
+    caso_cada_assunto_do_cog_mora_num_arquivo_so()
     caso_o_combate_sobe_sem_o_cog()
     asyncio.run(caso_as_sobrescritas_sao_ouvidas())
     print("TESTES DA FRONTEIRA DO COMBATE PASSARAM")
