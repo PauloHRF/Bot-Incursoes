@@ -1,7 +1,10 @@
-"""Combate real do cog em SQLite descartavel, sem rede ou mensagens.
+"""Combate real em SQLite descartavel, sem rede ou mensagens.
 
 Nao ha uma segunda implementacao de habilidades. A fila, os recursos,
-passivas, reacoes, condicoes e a iniciativa pertencem a Incursoes.
+passivas, reacoes, condicoes e a iniciativa sao os de `src/combate` — o
+mesmo `Combate` que o cog do Discord herda. A bancada herda ele tambem, e
+NAO o cog: o que o cog faz com mensagem, ela faz calada, implementando as
+portas do combate (`src.combate.PORTAS`) sem dizer nada a ninguem.
 """
 from __future__ import annotations
 
@@ -12,7 +15,7 @@ import random
 from types import SimpleNamespace
 
 from src import aleatorio, classes, database as db, incursoes as I, itens, motor, rules
-from src.cogs.incursao import Incursoes
+from src.combate import Combate
 from .memoria import Memoria
 from . import politica
 
@@ -63,7 +66,7 @@ class _LimiteDeRodadas(Exception):
     pass
 
 
-class _Combate(Incursoes):
+class _Combate(Combate):
     def __init__(self, conn):
         super().__init__(SimpleNamespace(db=conn))
         self.final = None
@@ -86,11 +89,27 @@ class _Combate(Incursoes):
             raise _LimiteDeRodadas
         return await super()._virar_rodada(run, sala, estado)
 
-    async def _canal(self, run): return None
+    # As portas do combate, caladas: a bancada nao tem canal, painel nem
+    # jogador para ler. O log da rodada (`_registrar`) tambem fica de fora —
+    # ele so alimenta o painel.
     async def _atualizar_painel(self, *a, **kw): pass
     async def _anunciar_habilidade(self, *a, **kw): pass
     async def _dizer(self, *a, **kw): pass
+    def _guardar_efemera(self, *a, **kw): pass
+    async def _responder_no_clique(self, *a, **kw): pass
+    async def _chamar_a_rodada(self, *a, **kw): pass
+    async def _avisar_fila_presa(self, *a, **kw): pass
+    async def _perguntar_pela_marca(self, *a, **kw): pass
     def _registrar(self, *a, **kw): pass
+
+    async def _pedir_alvo(self, interaction, run, sala_id, habilidade, estado):
+        """Sem menu: quem age ja passa os alvos. Responde o que o cog responde.
+
+        False quando a habilidade nao escolhe alvo, e o uso segue; True quando
+        escolheria, e o clique para ali — como para no Discord, esperando o
+        menu.
+        """
+        return await self._alvos_possiveis(run, habilidade, estado) is not None
 
     async def _abrir_combate(self, run, sala):
         await self._preparar_combate(run, sala)

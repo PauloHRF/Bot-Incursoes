@@ -15,17 +15,18 @@ sem mudar uma linha, e conferida pela mesma referência gravada
   que se refaz;
 - a **Marca Fatal** do ladino, que é estado do combate e não de uma ação.
 
-**O que ficou no cog, e por quê.** `_avancar` e `_virar_rodada` são a fila,
-mas são também onde a fila encontra o Discord: respondem a quem clicou,
-apagam as respostas privadas da rodada, chamam o grupo no canal. Separar a
-regra da mensagem nelas é reescrever, e esta fatia só move. O fecho do
-combate também ficou, porque ele é a run andando: paga a sala, abre o
+E **a fila**: `_avancar` anda a iniciativa até precisar de alguém que ainda
+não escolheu, e `_virar_rodada` passa a rodada. Elas eram onde a fila
+encontrava o Discord, e na terceira fatia a regra se separou da mensagem: o
+que era mandado no meio da fila — a resposta a quem clicou, a chamada da
+rodada nova, o aviso de fila presa, a pergunta da marca órfã — continua sendo
+mandado no mesmo ponto, por uma porta que o cog implementa (`DA_MESA`). O
+fecho do combate também é porta: ele é a run andando — paga a sala, abre o
 objetivo, encerra a incursão.
 
 Como em `resolvedores.py`, o cog HERDA esta classe — os nomes continuam os de
-antes, e a simulação, que sobrescreve sete destes métodos para medir o
-combate, continua sendo ouvida por dentro. O que ela pede do cog está em
-`DA_MESA`, e `tests/test_fronteira_do_combate.py` cobra a lista exata.
+antes, e a simulação, que sobrescreve vários destes métodos para medir o
+combate, continua sendo ouvida por dentro.
 """
 from __future__ import annotations
 
@@ -42,21 +43,20 @@ from .. import (
     motor,
 )
 from ..incursoes import Sala
+from .mesa import Clique
 from ..motor import Combatente, EstadoCombate
 from ..rules import tier
 
-# O que o fluxo usa do cog — o que não está em `src/combate`. A chave é o
-# atributo; o texto, para que ele serve aqui.
+# O que o fluxo pede de quem herda o combate: as portas de saída, todas
+# chamadas no mesmo ponto em que o cog fazia o trabalho antes da separação.
 DA_MESA = {
-    "bot": "a conexão do banco, em `bot.db`",
-    "_passo": "o passo do caminho, que é parte da chave de todo efeito",
-    "_tier_da_run": "o tier da incursão, que dimensiona condição e abertura",
-    "_tema_da_sala": "o tema que escolhe as criaturas da sala",
-    "_personagem_na_run": "a ficha montada de quem age, com as passivas",
-    "_chave_de_recarga": "quando o uso de uma habilidade volta",
-    "_registrar": "o log da rodada, no painel",
     "_anunciar_habilidade": "o canal: o grupo vê a reação e a inspiração",
-    "_marcas_orfas": "o aviso, com botão, da Marca Fatal que ficou sem dono",
+    "_responder_no_clique": "a resposta de quem clicou, quando a vez dele sai",
+    "_chamar_a_rodada": "a limpeza do canal e a chamada da rodada nova",
+    "_avisar_fila_presa": "o aviso de que o grupo inteiro segue preso",
+    "_perguntar_pela_marca": "para quem passa a Marca Fatal do inimigo que caiu",
+    "_atualizar_painel": "o painel do combate, depois que a fila para",
+    "_encerrar_combate": "o fecho do combate, que é a run andando",
 }
 
 # Teto de um efeito que so acaba quando o alvo passa no save: nao e para chegar
@@ -85,12 +85,17 @@ def nome_do_efeito(efeito_id: str) -> str:
     return efeito_id.replace('_', ' ')
 
 
-class Fluxo:
-    """A mesa do combate, menos a parte que fala com o Discord.
+# Quantas rodadas seguidas o combate pode correr sozinho quando ninguem
+# pode agir (grupo inteiro atordoado) antes de o bot avisar.
+MAX_RODADAS_SOZINHAS = 10
 
-    `_estado_combate` monta a mesa a partir do banco; `_resolver_turno` e
+
+class Fluxo:
+    """O combate andando, menos a parte que fala com o Discord.
+
+    `_estado_combate` monta o combate a partir do banco; `_resolver_turno` e
     `_vez_do_inimigo` fazem cada um agir; `_virar_efeitos` passa a rodada nos
-    efeitos. Quem chama tudo isso na ordem é o `_avancar` do cog.
+    efeitos. Quem chama tudo isso na ordem é o `_avancar`.
     """
 
     EFEITO_DA_MARCA = "marca_fatal"
@@ -1546,3 +1551,232 @@ class Fluxo:
         ):
             return None
         return user_id
+
+    async def _avancar(
+        self,
+        run: dict[str, Any],
+        sala: Sala,
+        interaction: Optional[Clique] = None,
+        trocada: Optional[str] = None,
+    ) -> None:
+        """Anda a iniciativa até precisar de alguém que ainda não escolheu.
+
+        Uma de cada vez, na ordem: a criatura age sozinha quando chega a vez
+        dela; o personagem que já escolheu tem a ação resolvida; quem está caído
+        ou atordoado perde a vez. Para no primeiro personagem sem ação escolhida.
+        Passando do último, a rodada vira e a fila recomeça do topo.
+
+        Quem clicou (`interaction`) recebe o resultado se a vez dele chegou
+        agora, ou o aviso de que a ação ficou guardada. `trocada` é o nome da
+        ação que esta substituiu, para o aviso dizer que a troca pegou — a vez
+        que chega na hora não precisa dele, porque o resultado já é a resposta.
+        """
+        respondido = False
+
+        async def responder(texto: str) -> None:
+            nonlocal respondido
+            if interaction is None or respondido:
+                return
+            respondido = True
+            await self._responder_no_clique(run, interaction, texto)
+
+        async def resolver_atrasados(estado, ordem, vez) -> bool:
+            """Faz agir quem está de pé e cuja vez já passou. True se agiu.
+
+            A vez de quem está no chão é consumida no topo da rodada, e a fila
+            não volta — então a cura que chegava depois devolvia o personagem
+            ao combate sem devolver a rodada dele. Ele clicava, lia "sai
+            quando a iniciativa chegar em você" (uma promessa que a fila já
+            não podia cumprir) e a ação era descartada na virada, levando
+            dentro dela o uso da habilidade ou a poção, que `_perder_a_vez`
+            nunca teve a chance de devolver.
+
+            Então **a vez perdida no chão não é gasta**: levantado na mesma
+            rodada, ele age na hora. Fora da ordem de propósito — devolver o
+            ponteiro faria a criatura entre ele e a cura agir duas vezes.
+            """
+            passo = self._passo(run)
+            for posicao in ordem[:vez]:
+                if posicao["tipo"] != motor.PERSONAGEM:
+                    continue
+                user_id = posicao["alvo_id"]
+                quem = estado.combatente(user_id)
+                # `caido`/`atordoado` aqui é precaução, não regra testada:
+                # quando a fila passa por alguém nesse estado, `_perder_a_vez`
+                # já marca a ação dele como resolvida, então não sobra turno
+                # pendente para este laço achar. A guarda fica para o caso de
+                # essa invariante mudar.
+                if quem is None or quem.caido or quem.atordoado:
+                    continue
+                turno = await db.turno_de(
+                    self.bot.db, run["id"], passo, estado.rodada, user_id
+                )
+                if not turno or turno["resolvida"]:
+                    continue
+                # Reivindica ANTES de resolver: ver `db.resolver_turno`.
+                if not await db.resolver_turno(
+                    self.bot.db, run["id"], passo, estado.rodada, user_id
+                ):
+                    continue
+                texto = await self._resolver_turno(run, estado, user_id, turno)
+                if interaction is not None and interaction.user.id == user_id:
+                    await responder(texto)
+                return True
+            return False
+
+        esperando: Optional[str] = None
+        ativo = True
+        # O combate ja estava decidido quando este clique entrou na fila —
+        # quer o fecho seja dele, quer outro clique o tenha levado antes.
+        decidido = False
+        # O fim do combate roda fora da trava: vencer pode abrir o combate do
+        # objetivo, que entra de novo aqui, e a trava nao e reentrante.
+        encerrar = None
+        async with self._trava(run["id"]):
+            viradas = 0
+            while True:
+                run = await db.buscar_run(self.bot.db, run["id"])
+                if (
+                    not run
+                    or run["status"] not in ("em_sala", "objetivo")
+                    or run["sala_atual"] != sala.id
+                ):
+                    ativo = False
+                    break
+                estado = await self._estado_combate(run, sala)
+                if estado is None:
+                    ativo = False
+                    break
+                passo = self._passo(run)
+                if estado.encerrado:
+                    ativo = False
+                    decidido = True
+                    # Quem chegar aqui depois nao encerra o mesmo combate de novo.
+                    if self._tomar_o_fecho_do_combate(run["id"], passo):
+                        encerrar = (run, estado)
+                    break
+                ordem = await self._garantir_iniciativa(run, estado)
+                vez = (await db.estado_combate(self.bot.db, run["id"], passo))["vez"]
+
+                # Antes de andar a fila: quem a fila já deixou atrás e voltou
+                # a ficar de pé age agora. Uma por volta do laço, para o
+                # estado ser lido de novo — a ação pode encerrar o combate.
+                if await resolver_atrasados(estado, ordem, vez):
+                    continue
+
+                if vez >= len(ordem):
+                    viradas += 1
+                    if viradas > MAX_RODADAS_SOZINHAS:
+                        # Nunca deve acontecer; se acontecer, o grupo precisa
+                        # saber por que o painel parou.
+                        await self._avisar_fila_presa(run)
+                        break
+                    await self._virar_rodada(run, sala, estado)
+                    continue
+
+                ator = ordem[vez]
+                if ator["tipo"] == motor.INIMIGO:
+                    inimigo = estado.inimigo(ator["alvo_id"])
+                    if inimigo is not None and not inimigo.caido:
+                        await self._vez_do_inimigo(run, estado, inimigo, ordem[:vez])
+                    await db.definir_vez(self.bot.db, run["id"], passo, vez + 1)
+                    continue
+
+                user_id = ator["alvo_id"]
+                combatente = estado.combatente(user_id)
+                # Aliado conjurado: ninguem clica por ele. Age sozinho, como a
+                # criatura, e a vez anda.
+                if combatente is not None and combatente.e_invocacao:
+                    if not combatente.caido and not combatente.atordoado:
+                        await self._vez_da_invocacao(run, estado, combatente)
+                    await db.definir_vez(self.bot.db, run["id"], passo, vez + 1)
+                    continue
+                turno = await db.turno_de(
+                    self.bot.db, run["id"], passo, estado.rodada, user_id
+                )
+                if combatente is None or combatente.caido or combatente.atordoado:
+                    await self._perder_a_vez(run, estado, combatente, turno)
+                    await db.definir_vez(self.bot.db, run["id"], passo, vez + 1)
+                    continue
+                if turno is None:
+                    # Combate de antes da iniciativa: o golpe gravado ja valeu.
+                    if await db.acao_do_turno(
+                        self.bot.db, run["id"], passo, estado.rodada, user_id
+                    ):
+                        await db.definir_vez(self.bot.db, run["id"], passo, vez + 1)
+                        continue
+                    esperando = ator["nome"]
+                    break
+                if not turno["resolvida"] and await db.resolver_turno(
+                    # Reivindica ANTES de resolver: ver `db.resolver_turno`.
+                    self.bot.db, run["id"], passo, estado.rodada, user_id
+                ):
+                    texto = await self._resolver_turno(run, estado, user_id, turno)
+                    if interaction is not None and interaction.user.id == user_id:
+                        await responder(texto)
+                await db.definir_vez(self.bot.db, run["id"], passo, vez + 1)
+
+            if ativo:
+                await self._atualizar_painel(run, sala, estado)
+        if encerrar:
+            await responder("O combate acabou antes da sua vez.")
+            await self._encerrar_combate(encerrar[0], sala, encerrar[1])
+            return
+        if decidido:
+            # O fecho ja era de outro clique, ou ja tinha corrido. A acao nao
+            # ficou guardada para nada — dizer "Ação guardada" seria
+            # prometer uma vez que nao vem.
+            await responder("O combate acabou antes da sua vez.")
+            return
+        aviso = f"🔁 Trocou {trocada} por esta. " if trocada else ""
+        if esperando:
+            await responder(
+                f"{aviso}Ação guardada: sai quando a iniciativa chegar em você. "
+                f"Agora é a vez de **{esperando}**."
+            )
+        else:
+            await responder(f"{aviso}Ação guardada.")
+
+    async def _marcas_orfas(self, run: dict[str, Any], estado) -> None:
+        """O inimigo marcado caiu. No tier 5 as marcas não vão com ele.
+
+        Roda no fecho do turno, que é por onde TODA ação de jogador passa:
+        o inimigo pode cair no golpe de qualquer um, e não só do ladino.
+
+        Abaixo do tier 5 as marcas se perdem com o inimigo — é o que o
+        documento diz, e a transferência é justamente o que o tier 5 traz.
+        """
+        if estado is None:
+            return
+        passo = self._passo(run)
+        for indice, marca in (await self._marcas_de(run, estado.rodada)).items():
+            inimigo = estado.inimigo(indice)
+            if inimigo is None or not inimigo.caido:
+                continue
+            # Sai do morto de um jeito ou de outro: ou ela passa, ou se perde.
+            await db.remover_efeito(
+                self.bot.db, run["id"], passo, "inimigo", indice,
+                self.EFEITO_DA_MARCA,
+            )
+            dono = marca["dono"]
+            quantas = (marca["valor"] or {}).get("marcas", 0)
+            sobraram = [i for i in estado.inimigos_vivos if i.indice != indice]
+            personagem = (
+                await self._personagem_na_run(run, dono) if dono else None
+            )
+            transfere = ((personagem or {}).get("efeitos") or {}).get(
+                "marca_fatal_transfere"
+            )
+            if not (transfere and sobraram and quantas):
+                continue
+            await self._perguntar_pela_marca(
+                run, dono, inimigo, quantas, marca["expira"], sobraram
+            )
+
+    async def _virar_rodada(self, run: dict[str, Any], sala: Sala, estado) -> None:
+        """Passou do último da iniciativa: efeitos viram e a fila volta ao topo."""
+        estado.rodada += 1
+        await db.atualizar_rodada(self.bot.db, run["id"], self._passo(run), estado.rodada)
+        await self._virar_efeitos(run, estado)
+        self._registrar(run, estado.rodada, [])
+        await self._chamar_a_rodada(run, sala)

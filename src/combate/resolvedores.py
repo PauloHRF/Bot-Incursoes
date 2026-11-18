@@ -14,12 +14,9 @@ e `_versao_da_habilidade` para medir o combate. Com um objeto à parte, a
 chamada de dentro — `_resolver_grupo` pedindo a versão da habilidade — pularia
 a sobrescrita, e o THP gasto que a bancada mede zeraria calado.
 
-**O que eles pedem do cog.** Os resolvedores não falam com o
-Discord, mas ainda não vivem sozinhos: leem o passo, o tier e a ficha montada,
-e escrevem no canal e no log da rodada. Tudo o que pedem está em `DA_MESA`, e
-`tests/test_fronteira_do_combate.py` cobra que seja exatamente isso — a lista
-não cresce sem alguém ver. É ela que a simulação vai ter de oferecer quando
-deixar de herdar o cog inteiro.
+**O que eles pedem do cog.** Só o canal: o anúncio do que foi usado, para o
+grupo ver (`DA_MESA`). O passo, o tier, a ficha montada e o log da rodada vêm
+da mesa (`mesa.py`); o ataque comum e a Marca Fatal, do fluxo.
 """
 from __future__ import annotations
 
@@ -35,17 +32,9 @@ from .. import (
 )
 from ..rules import fmt
 
-# O que os resolvedores usam do cog — o que não está em `src/combate`. A chave
-# é o atributo; o texto, para que ele serve aqui. O ataque comum, o grupo
-# montado e a Marca Fatal, que eles também usam, vêm do `fluxo.py`.
+# O que os resolvedores pedem de quem herda o combate: as portas de saída.
 DA_MESA = {
-    "bot": "a conexão do banco, em `bot.db`",
-    "_passo": "o passo do caminho, que é parte da chave de todo efeito",
-    "_tier_da_run": "o tier da incursão, que dimensiona forma e drenagem",
-    "_personagem_na_run": "a ficha montada de quem age, com as passivas",
-    "_chave_de_recarga": "quando o uso de uma habilidade volta",
     "_anunciar_habilidade": "o canal: o grupo vê o que foi usado",
-    "_registrar": "o log da rodada, no painel",
 }
 
 
