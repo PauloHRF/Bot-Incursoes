@@ -14,6 +14,10 @@ data/*.db-shm
 tests/*.db-wal
 tests/*.db-shm
 
+# O que a referencia de combate produziu quando divergiu do gravado: e para
+# abrir lado a lado com tests/referencia/, nao para versionar.
+tests/referencia/obtido/
+
 # As copias que tools/backup.py deixa no disco. O backup e dado do grupo, e
 # o repositorio e publico: ele vai para o canal privado do Discord, nunca
 # para ca.

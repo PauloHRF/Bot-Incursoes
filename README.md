@@ -56,6 +56,17 @@ a cada push, em Linux e Python 3.10, que é o que o servidor roda — a suíte a
 rodava em Windows. Lá ele usa `tests/todos.py --sem-pular`: com tudo instalado, uma suíte
 pulada é instalação que faltou, e fica vermelho.
 
+A **referência de combate** (`tests/test_referencia_combate.py`) joga seis combates de
+verdade com o sorteio preso numa semente e compara tudo o que sai — o que cada jogador leu,
+o que mudou no canal e cada linha do banco — com o que está gravado em `tests/referencia/`.
+Ela existe para mexer no cog sem mudar o jogo: qualquer desvio fica vermelho e diz em qual
+ação e em qual campo. Quando o comportamento muda **de propósito**, grava-se de novo, e o
+diff do arquivo mostra o que a mudança fez:
+
+```bash
+.venv/Scripts/python.exe tests/test_referencia_combate.py --regravar
+```
+
 ## Criando a aplicação no Discord
 
 1. https://discord.com/developers/applications → **New Application**
@@ -1260,6 +1271,7 @@ tests/
   smoke.py      regras, persistência, schema de incursão, carga dos cogs
   test_*.py     uma suíte por assunto: o nome diz qual (test_combate, test_mercado…)
   fakes.py      dublês do Discord usados pelos testes
+  referencia/   os combates gravados que test_referencia_combate compara
 ```
 
 ## Pontos a calibrar no playtest

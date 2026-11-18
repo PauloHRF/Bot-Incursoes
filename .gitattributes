@@ -8,3 +8,7 @@
 
 # O python tambem: o bot roda la, e shebang com CR nao executa.
 *.py      text eol=lf
+
+# A referencia de combate e gravada em LF, e assim fica: regravar no Windows
+# nao pode virar um diff do arquivo inteiro.
+tests/referencia/*.json text eol=lf

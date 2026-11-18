@@ -1,0 +1,5506 @@
+{
+ "cenario": {
+  "nome": "t5_linha_de_frente",
+  "semente": 5101,
+  "modo": "na_vez",
+  "grupo": [
+   {
+    "classe": "barbaro",
+    "nivel": 10,
+    "escolhas": {},
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ]
+    ]
+   },
+   {
+    "classe": "guerreiro",
+    "nivel": 10,
+    "escolhas": {
+     "fighting_style": "ofensivo"
+    },
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ],
+     [
+      "pocao_aceleracao_1",
+      1
+     ]
+    ]
+   },
+   {
+    "classe": "paladino",
+    "nivel": 10,
+    "escolhas": {},
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ],
+     [
+      "pocao_dano_1",
+      2
+     ]
+    ]
+   },
+   {
+    "classe": "clerigo",
+    "nivel": 10,
+    "escolhas": {
+     "magia_t1": "cure_wounds",
+     "dominio_t2": "protetor",
+     "magia_t3": "spirit_guardians",
+     "dominio_t4": "ataques_abencoados",
+     "magia_t5": "flame_strike"
+    },
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ],
+     [
+      "pocao_bencao_1",
+      1
+     ]
+    ]
+   },
+   {
+    "classe": "bardo",
+    "nivel": 10,
+    "escolhas": {
+     "magia_bardo_t1": "healing_word",
+     "inspiracao_t2": "inspira_ataque",
+     "magia_bardo_t3": "hypnotic_pattern_bardo",
+     "saber_t4": "expertise_bardo",
+     "magia_bardo_t5": "mass_cure_wounds_bardo"
+    },
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ]
+    ]
+   }
+  ],
+  "monstros": [
+   [
+    "Troll",
+    3
+   ],
+   [
+    "Cão Infernal",
+    3
+   ]
+  ]
+ },
+ "abertura": {
+  "canal": [
+   {
+    "mensagem": 1001,
+    "como": "nova",
+    "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+    "embeds": [
+     {
+      "footer": {
+       "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+      },
+      "fields": [
+       {
+        "inline": false,
+        "name": "Inimigos (6 de pé de 6)",
+        "value": "👹 **Troll 1** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Troll 2** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+       },
+       {
+        "inline": false,
+        "name": "Grupo",
+        "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103\n❤️ Guerreiro102 — ▰▰▰▰▰▰ 93/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+       },
+       {
+        "inline": false,
+        "name": "❗ Ameaça",
+        "value": "Barbaro101 24% · Guerreiro102 24% · Paladino103 22% · Clerigo104 17% · Bardo105 14%"
+       },
+       {
+        "inline": false,
+        "name": "Iniciativa",
+        "value": "▶️ `23` 🧝 Bardo105 — **sua vez de escolher**\n▫️ `23` 🧝 Barbaro101\n▫️ `20` 🧝 Clerigo104\n▫️ `19` 👹 Cão Infernal 3\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n▫️ ` 5` 👹 Troll 1"
+       }
+      ],
+      "flags": 0,
+      "color": 10038562,
+      "type": "rich",
+      "description": "Descrição da sala OBJ.",
+      "title": "🏁 Sala OBJ — rodada 1"
+     }
+    ],
+    "view": [
+     {
+      "menu": "Atacar quem?",
+      "id": "inc:alvo:1:OBJ",
+      "valores": [
+       1,
+       1
+      ],
+      "opcoes": [
+       [
+        "Troll 1",
+        "0",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ],
+       [
+        "Troll 2",
+        "1",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ],
+       [
+        "Troll 3",
+        "2",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ],
+       [
+        "Cão Infernal 1",
+        "3",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ],
+       [
+        "Cão Infernal 2",
+        "4",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ],
+       [
+        "Cão Infernal 3",
+        "5",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ]
+      ],
+      "desligado": false,
+      "linha": null
+     },
+     {
+      "botao": "Habilidade",
+      "id": "inc:hab:1:OBJ",
+      "estilo": "ButtonStyle.secondary",
+      "emoji": "✨",
+      "desligado": false,
+      "linha": null
+     },
+     {
+      "botao": "Poção",
+      "id": "inc:pocao:1:OBJ",
+      "estilo": "ButtonStyle.success",
+      "emoji": "⚗️",
+      "desligado": false,
+      "linha": null
+     }
+    ],
+    "arquivo": null,
+    "apagada": false
+   }
+  ],
+  "banco": {
+   "config_guilda": [],
+   "jogadores": [],
+   "ouro_lancamentos": [],
+   "personagem_equipamento": [],
+   "personagem_itens": [
+    "{\"item_id\": \"pocao_aceleracao_1\", \"personagem_id\": 2, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_bencao_1\", \"personagem_id\": 4, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_dano_1\", \"personagem_id\": 3, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 1, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 2, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 3, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 4, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 5, \"quantidade\": 1}"
+   ],
+   "personagens": [
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"barbaro\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{}\", \"guild_id\": 1, \"id\": 1, \"imagem\": null, \"nivel\": 10, \"nome\": \"Barbaro101\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 101}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"bardo\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{\\\"magia_bardo_t1\\\":\\\"healing_word\\\",\\\"inspiracao_t2\\\":\\\"inspira_ataque\\\",\\\"magia_bardo_t3\\\":\\\"hypnotic_pattern_bardo\\\",\\\"saber_t4\\\":\\\"expertise_bardo\\\",\\\"magia_bardo_t5\\\":\\\"mass_cure_wounds_bardo\\\"}\", \"guild_id\": 1, \"id\": 5, \"imagem\": null, \"nivel\": 10, \"nome\": \"Bardo105\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 105}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"clerigo\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{\\\"magia_t1\\\":\\\"cure_wounds\\\",\\\"dominio_t2\\\":\\\"protetor\\\",\\\"magia_t3\\\":\\\"spirit_guardians\\\",\\\"dominio_t4\\\":\\\"ataques_abencoados\\\",\\\"magia_t5\\\":\\\"flame_strike\\\"}\", \"guild_id\": 1, \"id\": 4, \"imagem\": null, \"nivel\": 10, \"nome\": \"Clerigo104\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 104}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"guerreiro\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{\\\"fighting_style\\\":\\\"ofensivo\\\"}\", \"guild_id\": 1, \"id\": 2, \"imagem\": null, \"nivel\": 10, \"nome\": \"Guerreiro102\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 102}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"paladino\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{}\", \"guild_id\": 1, \"id\": 3, \"imagem\": null, \"nivel\": 10, \"nome\": \"Paladino103\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 103}"
+   ],
+   "placar_organizacoes": [],
+   "pontos_lancamentos": [],
+   "run_ataques": [],
+   "run_combate": [
+    "{\"decaiu\": 0, \"passo\": 4, \"rodada\": 1, \"run_id\": 1, \"sala_id\": \"OBJ\", \"vez\": 0, \"vez_desde\": \"<relogio>\"}"
+   ],
+   "run_condicoes": [],
+   "run_descansos": [],
+   "run_efeitos": [],
+   "run_iniciativa": [
+    "{\"alvo_id\": 0, \"d20\": 4, \"modificador\": 1, \"nome\": \"Troll 1\", \"passo\": 4, \"posicao\": 10, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 1, \"d20\": 13, \"modificador\": 1, \"nome\": \"Troll 2\", \"passo\": 4, \"posicao\": 7, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 101, \"d20\": 18, \"modificador\": 5, \"nome\": \"Barbaro101\", \"passo\": 4, \"posicao\": 1, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 102, \"d20\": 11, \"modificador\": 5, \"nome\": \"Guerreiro102\", \"passo\": 4, \"posicao\": 4, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 103, \"d20\": 5, \"modificador\": 5, \"nome\": \"Paladino103\", \"passo\": 4, \"posicao\": 8, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 104, \"d20\": 15, \"modificador\": 5, \"nome\": \"Clerigo104\", \"passo\": 4, \"posicao\": 2, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 105, \"d20\": 12, \"modificador\": 11, \"nome\": \"Bardo105\", \"passo\": 4, \"posicao\": 0, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 2, \"d20\": 15, \"modificador\": 1, \"nome\": \"Troll 3\", \"passo\": 4, \"posicao\": 5, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 3, \"d20\": 7, \"modificador\": 1, \"nome\": \"Cão Infernal 1\", \"passo\": 4, \"posicao\": 9, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 4, \"d20\": 14, \"modificador\": 1, \"nome\": \"Cão Infernal 2\", \"passo\": 4, \"posicao\": 6, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 5, \"d20\": 18, \"modificador\": 1, \"nome\": \"Cão Infernal 3\", \"passo\": 4, \"posicao\": 3, \"run_id\": 1, \"tipo\": \"inimigo\"}"
+   ],
+   "run_inimigos": [
+    "{\"ataque\": 5, \"ataques\": 1, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d8+3+2d6\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 5, \\\"dano\\\": \\\"1d8+3+2d6\\\"}]\", \"habilidade\": \"{\\\"nome\\\": \\\"Sopro de Fogo\\\", \\\"save\\\": \\\"DES\\\", \\\"cd\\\": 12, \\\"texto\\\": \\\"\\\", \\\"dano\\\": \\\"6d6\\\", \\\"alvos\\\": 2, \\\"atordoa\\\": 0, \\\"debuff\\\": [], \\\"cada\\\": 2, \\\"recarga\\\": 5, \\\"save_repete\\\": false, \\\"metade\\\": true}\", \"hp_atual\": 45, \"hp_max\": 45, \"indice\": 3, \"matilha\": 1, \"nome\": \"Cão Infernal 1\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 3, \\\"DES\\\": 1, \\\"CON\\\": 2, \\\"INT\\\": -2, \\\"SAB\\\": 1, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 5, \"ataques\": 1, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d8+3+2d6\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 5, \\\"dano\\\": \\\"1d8+3+2d6\\\"}]\", \"habilidade\": \"{\\\"nome\\\": \\\"Sopro de Fogo\\\", \\\"save\\\": \\\"DES\\\", \\\"cd\\\": 12, \\\"texto\\\": \\\"\\\", \\\"dano\\\": \\\"6d6\\\", \\\"alvos\\\": 2, \\\"atordoa\\\": 0, \\\"debuff\\\": [], \\\"cada\\\": 2, \\\"recarga\\\": 5, \\\"save_repete\\\": false, \\\"metade\\\": true}\", \"hp_atual\": 45, \"hp_max\": 45, \"indice\": 4, \"matilha\": 1, \"nome\": \"Cão Infernal 2\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 3, \\\"DES\\\": 1, \\\"CON\\\": 2, \\\"INT\\\": -2, \\\"SAB\\\": 1, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 5, \"ataques\": 1, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d8+3+2d6\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 5, \\\"dano\\\": \\\"1d8+3+2d6\\\"}]\", \"habilidade\": \"{\\\"nome\\\": \\\"Sopro de Fogo\\\", \\\"save\\\": \\\"DES\\\", \\\"cd\\\": 12, \\\"texto\\\": \\\"\\\", \\\"dano\\\": \\\"6d6\\\", \\\"alvos\\\": 2, \\\"atordoa\\\": 0, \\\"debuff\\\": [], \\\"cada\\\": 2, \\\"recarga\\\": 5, \\\"save_repete\\\": false, \\\"metade\\\": true}\", \"hp_atual\": 45, \"hp_max\": 45, \"indice\": 5, \"matilha\": 1, \"nome\": \"Cão Infernal 3\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 3, \\\"DES\\\": 1, \\\"CON\\\": 2, \\\"INT\\\": -2, \\\"SAB\\\": 1, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 7, \"ataques\": 2, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d6+4\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 7, \\\"dano\\\": \\\"1d6+4\\\", \\\"efeito\\\": {\\\"nome\\\": \\\"Mordida\\\", \\\"save\\\": \\\"SAB\\\", \\\"cd\\\": 14, \\\"texto\\\": \\\"\\\", \\\"dano\\\": null, \\\"alvos\\\": 1, \\\"atordoa\\\": 0, \\\"debuff\\\": [\\\"medo\\\"], \\\"cada\\\": 2, \\\"recarga\\\": null, \\\"save_repete\\\": false, \\\"metade\\\": false}}, {\\\"nome\\\": \\\"Garra\\\", \\\"ataque\\\": 7, \\\"dano\\\": \\\"2d6+4\\\"}]\", \"habilidade\": \"{\\\"nome\\\": \\\"Golpe Poderoso\\\", \\\"save\\\": \\\"ATK\\\", \\\"cd\\\": 0, \\\"texto\\\": \\\"\\\", \\\"dano\\\": \\\"4d6\\\", \\\"alvos\\\": 3, \\\"atordoa\\\": 0, \\\"debuff\\\": [], \\\"cada\\\": 2, \\\"recarga\\\": 5, \\\"save_repete\\\": false, \\\"metade\\\": false}\", \"hp_atual\": 84, \"hp_max\": 84, \"indice\": 0, \"matilha\": 0, \"nome\": \"Troll 1\", \"passo\": 4, \"regeneracao\": 10, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 4, \\\"DES\\\": 1, \\\"CON\\\": 5, \\\"INT\\\": -2, \\\"SAB\\\": -1, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 7, \"ataques\": 2, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d6+4\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 7, \\\"dano\\\": \\\"1d6+4\\\", \\\"efeito\\\": {\\\"nome\\\": \\\"Mordida\\\", \\\"save\\\": \\\"SAB\\\", \\\"cd\\\": 14, \\\"texto\\\": \\\"\\\", \\\"dano\\\": null, \\\"alvos\\\": 1, \\\"atordoa\\\": 0, \\\"debuff\\\": [\\\"medo\\\"], \\\"cada\\\": 2, \\\"recarga\\\": null, \\\"save_repete\\\": false, \\\"metade\\\": false}}, {\\\"nome\\\": \\\"Garra\\\", \\\"ataque\\\": 7, \\\"dano\\\": \\\"2d6+4\\\"}]\", \"habilidade\": \"{\\\"nome\\\": \\\"Golpe Poderoso\\\", \\\"save\\\": \\\"ATK\\\", \\\"cd\\\": 0, \\\"texto\\\": \\\"\\\", \\\"dano\\\": \\\"4d6\\\", \\\"alvos\\\": 3, \\\"atordoa\\\": 0, \\\"debuff\\\": [], \\\"cada\\\": 2, \\\"recarga\\\": 5, \\\"save_repete\\\": false, \\\"metade\\\": false}\", \"hp_atual\": 84, \"hp_max\": 84, \"indice\": 1, \"matilha\": 0, \"nome\": \"Troll 2\", \"passo\": 4, \"regeneracao\": 10, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 4, \\\"DES\\\": 1, \\\"CON\\\": 5, \\\"INT\\\": -2, \\\"SAB\\\": -1, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 7, \"ataques\": 2, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d6+4\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 7, \\\"dano\\\": \\\"1d6+4\\\", \\\"efeito\\\": {\\\"nome\\\": \\\"Mordida\\\", \\\"save\\\": \\\"SAB\\\", \\\"cd\\\": 14, \\\"texto\\\": \\\"\\\", \\\"dano\\\": null, \\\"alvos\\\": 1, \\\"atordoa\\\": 0, \\\"debuff\\\": [\\\"medo\\\"], \\\"cada\\\": 2, \\\"recarga\\\": null, \\\"save_repete\\\": false, \\\"metade\\\": false}}, {\\\"nome\\\": \\\"Garra\\\", \\\"ataque\\\": 7, \\\"dano\\\": \\\"2d6+4\\\"}]\", \"habilidade\": \"{\\\"nome\\\": \\\"Golpe Poderoso\\\", \\\"save\\\": \\\"ATK\\\", \\\"cd\\\": 0, \\\"texto\\\": \\\"\\\", \\\"dano\\\": \\\"4d6\\\", \\\"alvos\\\": 3, \\\"atordoa\\\": 0, \\\"debuff\\\": [], \\\"cada\\\": 2, \\\"recarga\\\": 5, \\\"save_repete\\\": false, \\\"metade\\\": false}\", \"hp_atual\": 84, \"hp_max\": 84, \"indice\": 2, \"matilha\": 0, \"nome\": \"Troll 3\", \"passo\": 4, \"regeneracao\": 10, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 4, \\\"DES\\\": 1, \\\"CON\\\": 5, \\\"INT\\\": -2, \\\"SAB\\\": -1, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}"
+   ],
+   "run_invocacoes": [],
+   "run_mapa": [],
+   "run_participantes": [
+    "{\"hp_atual\": 103, \"personagem_id\": 1, \"run_id\": 1, \"thp\": 0, \"tier\": 5, \"user_id\": 101}",
+    "{\"hp_atual\": 71, \"personagem_id\": 5, \"run_id\": 1, \"thp\": 0, \"tier\": 5, \"user_id\": 105}",
+    "{\"hp_atual\": 73, \"personagem_id\": 4, \"run_id\": 1, \"thp\": 0, \"tier\": 5, \"user_id\": 104}",
+    "{\"hp_atual\": 93, \"personagem_id\": 2, \"run_id\": 1, \"thp\": 0, \"tier\": 5, \"user_id\": 102}",
+    "{\"hp_atual\": 93, \"personagem_id\": 3, \"run_id\": 1, \"thp\": 0, \"tier\": 5, \"user_id\": 103}"
+   ],
+   "run_quem_recebe": [
+    "{\"personagem_id\": 1, \"run_id\": 1, \"user_id\": 101}",
+    "{\"personagem_id\": 2, \"run_id\": 1, \"user_id\": 102}",
+    "{\"personagem_id\": 3, \"run_id\": 1, \"user_id\": 103}",
+    "{\"personagem_id\": 4, \"run_id\": 1, \"user_id\": 104}",
+    "{\"personagem_id\": 5, \"run_id\": 1, \"user_id\": 105}"
+   ],
+   "run_salas": [],
+   "run_substituicao": [],
+   "run_substituicao_apoio": [],
+   "run_testes": [],
+   "run_turnos": [],
+   "run_usos": [],
+   "run_votos": [],
+   "runs": [
+    "{\"atualizada_em\": \"<relogio>\", \"canal_id\": 99, \"criada_em\": \"<relogio>\", \"criador_id\": 101, \"descansos\": 0, \"guild_id\": 1, \"id\": 1, \"incursao_id\": \"ref\", \"linha_atual\": 4, \"mensagem_id\": 1001, \"sala_atual\": \"OBJ\", \"status\": \"objetivo\", \"votacao_expira_em\": null}"
+   ]
+  }
+ },
+ "acoes": [
+  {
+   "rodada": 1,
+   "quem": 105,
+   "faz": "habilidade:healing_word",
+   "alvos": [
+    101
+   ],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (6 de pé de 6)",
+         "value": "👹 **Troll 1** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Troll 2** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103\n❤️ Guerreiro102 — ▰▰▰▰▰▰ 93/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 24% · Guerreiro102 24% · Paladino103 22% · Clerigo104 17% · Bardo105 14%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n▶️ `23` 🧝 Barbaro101 — **sua vez de escolher**\n▫️ `20` 🧝 Clerigo104\n▫️ `19` 👹 Cão Infernal 3\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n▫️ ` 5` 👹 Troll 1"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "✨ Bardo105 usa **Healing Word**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 1",
+         "0",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1002,
+     "como": "nova",
+     "conteudo": "✨ **Healing Word**: Barbaro101 nao recupera nada (ja esta cheio, ou caido).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 0,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "healing_word",
+       "alvos": "[101]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 105
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "healing_word",
+       "run_id": 1,
+       "user_id": 105,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 101,
+   "faz": "habilidade:brutal_strike",
+   "alvos": [
+    0
+   ],
+   "leu": {
+    "resposta": "**Brutal Strike** so vale com a outra habilidade ligada."
+   },
+   "canal": [],
+   "banco": {}
+  },
+  {
+   "rodada": 1,
+   "quem": 101,
+   "faz": "habilidade:rage",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Rage** — vale por 3 turno(s), ate a rodada 3.\n⚔️ 🎲 **17** +11 = **28** vs CA 15 — acertou Troll 1, **20** de dano.\n⤷ arma 1d12+9 → **18**\n⤷ passiva +2\n⚔️ 🎲 **9** +11 = **20** vs CA 15 — acertou Troll 1, **13** de dano.\n⤷ arma 1d12+9 → **11**\n⤷ passiva +2"
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (6 de pé de 6)",
+         "value": "👹 **Troll 1** ▰▰▰▰▰▱▱▱ · CA 15 · 2 golpes\n👹 **Troll 2** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▰▰ 93/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 24% · Guerreiro102 24% · Paladino103 22% · Clerigo104 17% · Bardo105 14%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n▶️ `20` 🧝 Clerigo104 — **sua vez de escolher**\n▫️ `19` 👹 Cão Infernal 3\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n▫️ ` 5` 👹 Troll 1"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "✨ Bardo105 usa **Healing Word**\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **20** de dano\n⚔️ Barbaro101 · 🎲 9 +11 = **20** vs CA 15 → **13** de dano\n✨ Barbaro101 usa **Rage**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 1",
+         "0",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1003,
+     "como": "nova",
+     "conteudo": "✨ Barbaro101 usa **Rage**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 17,
+       "dano": 20,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 0,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 9,
+       "dano": 13,
+       "indice": 1,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "rage",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"dano_extra\": 2, \"reducao_dano\": 0.5}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 51,
+       "hp_max": 84,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Troll 1",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 84,
+       "hp_max": 84,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Troll 1",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "rage",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "rage",
+       "run_id": 1,
+       "user_id": 101,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 104,
+   "faz": "pocao:pocao_bencao_1",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (6 de pé de 6)",
+         "value": "👹 **Troll 1** ▰▰▰▰▰▱▱▱ · CA 15 · 2 golpes\n👹 **Troll 2** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 97/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▰▰ 93/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▱ 60/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 24% · Guerreiro102 24% · Paladino103 22% · Clerigo104 17% · Bardo105 14%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n✅ `20` 🧝 Clerigo104\n✅ `19` 👹 Cão Infernal 3\n▶️ `16` 🧝 Guerreiro102 — **sua vez de escolher**\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n▫️ ` 5` 👹 Troll 1"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "✨ Bardo105 usa **Healing Word**\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **20** de dano\n⚔️ Barbaro101 · 🎲 9 +11 = **20** vs CA 15 → **13** de dano\n✨ Barbaro101 usa **Rage**\n✴️ **Cão Infernal 3** · Sopro de Fogo em Bardo105 · 🎲 17 +11 = **28** vs CD 12 → resistiu: **11** de dano (metade)\n✴️ **Cão Infernal 3** · Sopro de Fogo em Barbaro101 · 🎲 13 +5 = **18** vs CD 12 → resistiu: **6** de dano (metade)"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 1",
+         "0",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1004,
+     "como": "nova",
+     "conteudo": "⚗️ **Clerigo104** bebe **Poção da Benção 1** e fica com ✨ Benção.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_bencao_1",
+       "personagem_id": 4,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_bencao_1",
+       "personagem_id": 4,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 4,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_condicoes": {
+     "+": [
+      {
+       "condicao": "bencao",
+       "run_id": 1,
+       "stacks": 1,
+       "user_id": 104
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 5,
+       "matilha": 1,
+       "nome": "Cão Infernal 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 5,
+       "matilha": 1,
+       "nome": "Cão Infernal 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 60,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 97,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 103,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 101
+      },
+      {
+       "hp_atual": 71,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "pocao_bencao_1",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 104
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 102,
+   "faz": "pocao:pocao_aceleracao_1",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Poção da Aceleração 1** — vale por 3 turno(s), ate a rodada 3."
+   },
+   "canal": [
+    {
+     "mensagem": 1005,
+     "como": "nova",
+     "conteudo": "✨ Guerreiro102 usa **Poção da Aceleração 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_aceleracao_1",
+       "personagem_id": 2,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_aceleracao_1",
+       "personagem_id": 2,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_aceleracao",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ataques_extra\": 1}"
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 102,
+   "faz": "habilidade:action_mastery",
+   "alvos": [
+    0
+   ],
+   "leu": {
+    "resposta": "✨ **Action Mastery**\n💢 🎲 **1 natural** — erro critico, o golpe passa longe.\n⚔️ 🎲 **6** +12 = **18** vs CA 15 — acertou Troll 1, **17** de dano.\n⚔️ 🎲 **15** +12 = **27** vs CA 15 — acertou Troll 1, **15** de dano.\n⚔️ 🎲 **10** +12 = **22** vs CA 15 — acertou Troll 1, **18** de dano.\n⚔️ 🎲 **16** +12 = **28** vs CA 15 — acertou Troll 1, **15** de dano.\n⚔️ 🎲 **13** +12 = **25** vs CA 15 — acertou Troll 2, **20** de dano."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▰▰▰▰▰▰▱ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▱ 89/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▱▱ 61/93\n❤️ Paladino103 — ▰▰▰▰▰▱ 81/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▱▱ 48/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 24% · Guerreiro102 24% · Paladino103 22% · Clerigo104 17% · Bardo105 14%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n✅ `20` 🧝 Clerigo104\n✅ `19` 👹 Cão Infernal 3\n✅ `16` 🧝 Guerreiro102\n✅ `16` 👹 Troll 3\n✅ `15` 👹 Cão Infernal 2\n✅ `14` 👹 Troll 2\n▶️ `10` 🧝 Paladino103 — **sua vez de escolher**\n▫️ ` 8` 👹 Cão Infernal 1\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "…\n⚔️ Guerreiro102 · 🎲 16 +12 = **28** vs CA 15 → **15** de dano\n⚔️ Guerreiro102 · 🎲 13 +12 = **25** vs CA 15 → **20** de dano\n✨ Guerreiro102 usa **Action Mastery**\n✴️ **Troll 3** · Golpe Poderoso em Paladino103 · 🎲 3 +7 = **10** vs CA 21 → errou\n✴️ **Troll 3** · Golpe Poderoso em Barbaro101 · 🎲 4 +7 = **11** vs CA 19 → errou\n✴️ **Troll 3** · Golpe Poderoso em Bardo105 · 🎲 5 +7 = **12** vs CA 16 → errou\n✴️ **Cão Infernal 2** · Sopro de Fogo em Paladino103 · 🎲 7 +5 = **12** vs CD 12 → resistiu: **12** de dano (metade)\n✴️ **Cão Infernal 2** · Sopro de Fogo em Bardo105 · 🎲 19 +11 = **30** vs CD 12 → resistiu: **12** de dano (metade)\n🩹 **Troll 2** regenera **10** HP\n✴️ **Troll 2** · Golpe Poderoso em Barbaro101 · 🎲 19 +7 = **26** vs CA 19 → **8** de dano\n✴️ **Troll 2** · Golpe Poderoso em Clerigo104 · 🎲 11 +7 = **18** vs CA 21 → errou\n✴️ **Troll 2** · Golpe Poderoso em Guerreiro102 · 🎲 20 +7 = **27** vs CA 21 → **crítico!** **32** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▰▰▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1006,
+     "como": "nova",
+     "conteudo": "✨ Guerreiro102 usa **Action Mastery**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 1,
+       "dano": 0,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 0,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 10,
+       "dano": 18,
+       "indice": 3,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 0,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 15,
+       "dano": 15,
+       "indice": 2,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 0,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 16,
+       "dano": 15,
+       "indice": 4,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 0,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 6,
+       "dano": 17,
+       "indice": 1,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 1,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 13,
+       "dano": 20,
+       "indice": 5,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 8,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 4,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":10}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 4,
+       "matilha": 1,
+       "nome": "Cão Infernal 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 74,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 84,
+       "hp_max": 84,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Troll 3",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 0,
+       "hp_max": 84,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Troll 1",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 4,
+       "matilha": 1,
+       "nome": "Cão Infernal 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 51,
+       "hp_max": 84,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Troll 1",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 84,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 84,
+       "hp_max": 84,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Troll 3",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 48,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 61,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 102
+      },
+      {
+       "hp_atual": 81,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 89,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 60,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 93,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 102
+      },
+      {
+       "hp_atual": 93,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 97,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "action_mastery",
+       "alvos": "[0]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "action_mastery",
+       "run_id": 1,
+       "user_id": 102,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 103,
+   "faz": "habilidade:avatar_da_luz",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Avatar da Luz** — vale por 3 turno(s), ate a rodada 3.",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▰▰▰▰▰▰▱ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▱ 89/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▱▱ 61/93\n❤️ Paladino103 — ▰▰▰▰▰▱ 85/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▱ 60/73  ✨\n❤️ Bardo105 — ▰▰▰▱▱▱ 35/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro102 29% · Barbaro101 25% · Paladino103 19% · Clerigo104 15% · Bardo105 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "▶️ `23` 🧝 Bardo105 — **sua vez de escolher**\n▫️ `23` 🧝 Barbaro101\n▫️ `20` 🧝 Clerigo104\n▫️ `19` 👹 Cão Infernal 3\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "…\n✴️ **Troll 3** · Golpe Poderoso em Barbaro101 · 🎲 4 +7 = **11** vs CA 19 → errou\n✴️ **Troll 3** · Golpe Poderoso em Bardo105 · 🎲 5 +7 = **12** vs CA 16 → errou\n✴️ **Cão Infernal 2** · Sopro de Fogo em Paladino103 · 🎲 7 +5 = **12** vs CD 12 → resistiu: **12** de dano (metade)\n✴️ **Cão Infernal 2** · Sopro de Fogo em Bardo105 · 🎲 19 +11 = **30** vs CD 12 → resistiu: **12** de dano (metade)\n🩹 **Troll 2** regenera **10** HP\n✴️ **Troll 2** · Golpe Poderoso em Barbaro101 · 🎲 19 +7 = **26** vs CA 19 → **8** de dano\n✴️ **Troll 2** · Golpe Poderoso em Clerigo104 · 🎲 11 +7 = **18** vs CA 21 → errou\n✴️ **Troll 2** · Golpe Poderoso em Guerreiro102 · 🎲 20 +7 = **27** vs CA 21 → **crítico!** **32** de dano\n✨ Paladino103 usa **Avatar da Luz**\n✴️ **Cão Infernal 1** · Sopro de Fogo em Clerigo104 · 🎲 13 +6 = **19** vs CD 12 → resistiu: **13** de dano (metade)\n✴️ **Cão Infernal 1** · Sopro de Fogo em Bardo105 · 🎲 4 +11 = **15** vs CD 12 → resistiu: **13** de dano (metade)"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▰▰▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1002,
+     "como": "editada",
+     "conteudo": "✨ **Healing Word**: Barbaro101 nao recupera nada (ja esta cheio, ou caido).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1003,
+     "como": "editada",
+     "conteudo": "✨ Barbaro101 usa **Rage**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1004,
+     "como": "editada",
+     "conteudo": "⚗️ **Clerigo104** bebe **Poção da Benção 1** e fica com ✨ Benção.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1005,
+     "como": "editada",
+     "conteudo": "✨ Guerreiro102 usa **Poção da Aceleração 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1006,
+     "como": "editada",
+     "conteudo": "✨ Guerreiro102 usa **Action Mastery**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1007,
+     "como": "nova",
+     "conteudo": "✨ Paladino103 usa **Avatar da Luz**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1008,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 2** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 0,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 8,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "avatar_da_luz",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ca\": 2, \"dano_extra\": 5, \"cura_por_turno\": 0.05}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 3,
+       "matilha": 1,
+       "nome": "Cão Infernal 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 3,
+       "matilha": 1,
+       "nome": "Cão Infernal 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 35,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 60,
+       "personagem_id": 4,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 104
+      },
+      {
+       "hp_atual": 85,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 103
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 48,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 73,
+       "personagem_id": 4,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 104
+      },
+      {
+       "hp_atual": 81,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 103
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "avatar_da_luz",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "incursao",
+       "habilidade": "avatar_da_luz",
+       "run_id": 1,
+       "user_id": 103,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 105,
+   "faz": "habilidade:mass_cure_wounds_bardo",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▰▰▰▰▰▰▱ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▰▰ 93/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▱ 59/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro102 29% · Barbaro101 25% · Paladino103 19% · Clerigo104 15% · Bardo105 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n▶️ `23` 🧝 Barbaro101 — **sua vez de escolher**\n▫️ `20` 🧝 Clerigo104\n▫️ `19` 👹 Cão Infernal 3\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "…\n✴️ **Troll 3** · Golpe Poderoso em Barbaro101 · 🎲 4 +7 = **11** vs CA 19 → errou\n✴️ **Troll 3** · Golpe Poderoso em Bardo105 · 🎲 5 +7 = **12** vs CA 16 → errou\n✴️ **Cão Infernal 2** · Sopro de Fogo em Paladino103 · 🎲 7 +5 = **12** vs CD 12 → resistiu: **12** de dano (metade)\n✴️ **Cão Infernal 2** · Sopro de Fogo em Bardo105 · 🎲 19 +11 = **30** vs CD 12 → resistiu: **12** de dano (metade)\n🩹 **Troll 2** regenera **10** HP\n✴️ **Troll 2** · Golpe Poderoso em Barbaro101 · 🎲 19 +7 = **26** vs CA 19 → **8** de dano\n✴️ **Troll 2** · Golpe Poderoso em Clerigo104 · 🎲 11 +7 = **18** vs CA 21 → errou\n✴️ **Troll 2** · Golpe Poderoso em Guerreiro102 · 🎲 20 +7 = **27** vs CA 21 → **crítico!** **32** de dano\n✨ Paladino103 usa **Avatar da Luz**\n✴️ **Cão Infernal 1** · Sopro de Fogo em Clerigo104 · 🎲 13 +6 = **19** vs CD 12 → resistiu: **13** de dano (metade)\n✴️ **Cão Infernal 1** · Sopro de Fogo em Bardo105 · 🎲 4 +11 = **15** vs CD 12 → resistiu: **13** de dano (metade)"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▰▰▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1009,
+     "como": "nova",
+     "conteudo": "✨ **Mass Cure Wounds**: **35%** do HP maximo de volta.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 0,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":12}"
+      }
+     ],
+     "-": []
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 103,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 101
+      },
+      {
+       "hp_atual": 59,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 73,
+       "personagem_id": 4,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 104
+      },
+      {
+       "hp_atual": 93,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 102
+      },
+      {
+       "hp_atual": 93,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 103
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 35,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 60,
+       "personagem_id": 4,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 104
+      },
+      {
+       "hp_atual": 61,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 102
+      },
+      {
+       "hp_atual": 85,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 89,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "mass_cure_wounds_bardo",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 105
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "mass_cure_wounds_bardo",
+       "run_id": 1,
+       "user_id": 105,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 101,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **11** +11 = **22** vs CA 15 — acertou Troll 2, **12** de dano.\n⤷ arma 1d12+9 → **10**\n⤷ passiva +2\n⚔️ 🎲 **19** +11 = **30** vs CA 15 — acertou Troll 2, **22** de dano.\n⤷ arma 1d12+9 → **20**\n⤷ passiva +2"
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▰▰▰▱▱▱▱ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▰▰ 93/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▱ 59/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro102 29% · Barbaro101 25% · Paladino103 19% · Clerigo104 15% · Bardo105 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n▶️ `20` 🧝 Clerigo104 — **sua vez de escolher**\n▫️ `19` 👹 Cão Infernal 3\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "…\n✴️ **Troll 3** · Golpe Poderoso em Barbaro101 · 🎲 4 +7 = **11** vs CA 19 → errou\n✴️ **Troll 3** · Golpe Poderoso em Bardo105 · 🎲 5 +7 = **12** vs CA 16 → errou\n✴️ **Cão Infernal 2** · Sopro de Fogo em Paladino103 · 🎲 7 +5 = **12** vs CD 12 → resistiu: **12** de dano (metade)\n✴️ **Cão Infernal 2** · Sopro de Fogo em Bardo105 · 🎲 19 +11 = **30** vs CD 12 → resistiu: **12** de dano (metade)\n🩹 **Troll 2** regenera **10** HP\n✴️ **Troll 2** · Golpe Poderoso em Barbaro101 · 🎲 19 +7 = **26** vs CA 19 → **8** de dano\n✴️ **Troll 2** · Golpe Poderoso em Clerigo104 · 🎲 11 +7 = **18** vs CA 21 → errou\n✴️ **Troll 2** · Golpe Poderoso em Guerreiro102 · 🎲 20 +7 = **27** vs CA 21 → **crítico!** **32** de dano\n✨ Paladino103 usa **Avatar da Luz**\n✴️ **Cão Infernal 1** · Sopro de Fogo em Clerigo104 · 🎲 13 +6 = **19** vs CD 12 → resistiu: **13** de dano (metade)\n✴️ **Cão Infernal 1** · Sopro de Fogo em Bardo105 · 🎲 4 +11 = **15** vs CD 12 → resistiu: **13** de dano (metade)"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **12** de dano\n⚔️ Barbaro101 · 🎲 19 +11 = **30** vs CA 15 → **22** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 1,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 11,
+       "dano": 12,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 1,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 19,
+       "dano": 22,
+       "indice": 1,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 40,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 74,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 104,
+   "faz": "habilidade:cure_wounds",
+   "alvos": [
+    105
+   ],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▰▰▰▱▱▱▱ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▰▰ 93/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro102 29% · Barbaro101 25% · Paladino103 19% · Clerigo104 15% · Bardo105 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n✅ `20` 🧝 Clerigo104\n✅ `19` 👹 Cão Infernal 3\n▶️ `16` 🧝 Guerreiro102 — **sua vez de escolher**\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "…\n✴️ **Troll 3** · Golpe Poderoso em Barbaro101 · 🎲 4 +7 = **11** vs CA 19 → errou\n✴️ **Troll 3** · Golpe Poderoso em Bardo105 · 🎲 5 +7 = **12** vs CA 16 → errou\n✴️ **Cão Infernal 2** · Sopro de Fogo em Paladino103 · 🎲 7 +5 = **12** vs CD 12 → resistiu: **12** de dano (metade)\n✴️ **Cão Infernal 2** · Sopro de Fogo em Bardo105 · 🎲 19 +11 = **30** vs CD 12 → resistiu: **12** de dano (metade)\n🩹 **Troll 2** regenera **10** HP\n✴️ **Troll 2** · Golpe Poderoso em Barbaro101 · 🎲 19 +7 = **26** vs CA 19 → **8** de dano\n✴️ **Troll 2** · Golpe Poderoso em Clerigo104 · 🎲 11 +7 = **18** vs CA 21 → errou\n✴️ **Troll 2** · Golpe Poderoso em Guerreiro102 · 🎲 20 +7 = **27** vs CA 21 → **crítico!** **32** de dano\n✨ Paladino103 usa **Avatar da Luz**\n✴️ **Cão Infernal 1** · Sopro de Fogo em Clerigo104 · 🎲 13 +6 = **19** vs CD 12 → resistiu: **13** de dano (metade)\n✴️ **Cão Infernal 1** · Sopro de Fogo em Bardo105 · 🎲 4 +11 = **15** vs CD 12 → resistiu: **13** de dano (metade)"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **12** de dano\n⚔️ Barbaro101 · 🎲 19 +11 = **30** vs CA 15 → **22** de dano\n✨ Clerigo104 usa **Cure Wounds**\n↩️ **Cão Infernal 3** · Mordida · 🎲 15 +5 = **20** vs CA 21 → errou Guerreiro102"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1010,
+     "como": "nova",
+     "conteudo": "✨ **Cure Wounds**: Bardo105 recupera **12** de HP (71/71).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 4,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      }
+     ],
+     "-": []
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 71,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 59,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 105
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "cure_wounds",
+       "alvos": "[105]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 104
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "cure_wounds",
+       "run_id": 1,
+       "user_id": 104,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 102,
+   "faz": "habilidade:second_wind",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▰▰▰▰▱▱▱ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro102 29% · Barbaro101 25% · Paladino103 19% · Clerigo104 15% · Bardo105 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n✅ `20` 🧝 Clerigo104\n✅ `19` 👹 Cão Infernal 3\n✅ `16` 🧝 Guerreiro102\n✅ `16` 👹 Troll 3\n✅ `15` 👹 Cão Infernal 2\n✅ `14` 👹 Troll 2\n▶️ `10` 🧝 Paladino103 — **sua vez de escolher**\n▫️ ` 8` 👹 Cão Infernal 1\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "…\n✴️ **Troll 3** · Golpe Poderoso em Barbaro101 · 🎲 4 +7 = **11** vs CA 19 → errou\n✴️ **Troll 3** · Golpe Poderoso em Bardo105 · 🎲 5 +7 = **12** vs CA 16 → errou\n✴️ **Cão Infernal 2** · Sopro de Fogo em Paladino103 · 🎲 7 +5 = **12** vs CD 12 → resistiu: **12** de dano (metade)\n✴️ **Cão Infernal 2** · Sopro de Fogo em Bardo105 · 🎲 19 +11 = **30** vs CD 12 → resistiu: **12** de dano (metade)\n🩹 **Troll 2** regenera **10** HP\n✴️ **Troll 2** · Golpe Poderoso em Barbaro101 · 🎲 19 +7 = **26** vs CA 19 → **8** de dano\n✴️ **Troll 2** · Golpe Poderoso em Clerigo104 · 🎲 11 +7 = **18** vs CA 21 → errou\n✴️ **Troll 2** · Golpe Poderoso em Guerreiro102 · 🎲 20 +7 = **27** vs CA 21 → **crítico!** **32** de dano\n✨ Paladino103 usa **Avatar da Luz**\n✴️ **Cão Infernal 1** · Sopro de Fogo em Clerigo104 · 🎲 13 +6 = **19** vs CD 12 → resistiu: **13** de dano (metade)\n✴️ **Cão Infernal 1** · Sopro de Fogo em Bardo105 · 🎲 4 +11 = **15** vs CD 12 → resistiu: **13** de dano (metade)"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **12** de dano\n⚔️ Barbaro101 · 🎲 19 +11 = **30** vs CA 15 → **22** de dano\n✨ Clerigo104 usa **Cure Wounds**\n↩️ **Cão Infernal 3** · Mordida · 🎲 15 +5 = **20** vs CA 21 → errou Guerreiro102\n✨ Guerreiro102 usa **Second Wind**\n↩️ **Troll 3** · Mordida · 🎲 10 +7 = **17** vs CA 21 → errou Clerigo104\n↩️ **Troll 3** · Garra · 🎲 12 +7 = **19** vs CA 21 → errou Clerigo104\n↩️ **Cão Infernal 2** · Mordida · 🎲 17 +5 = **22** vs CA 21 → **18** de dano em Guerreiro102\n🩹 **Troll 2** regenera **10** HP\n↩️ **Troll 2** · Mordida · 🎲 3 +7 = **10** vs CA 23 → errou Paladino103\n↩️ **Troll 2** · Garra · 🎲 6 +7 = **13** vs CA 23 → errou Paladino103"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1011,
+     "como": "nova",
+     "conteudo": "✨ **Second Wind**: Guerreiro102 nao recupera nada (ja esta cheio, ou caido).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 8,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 4,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 50,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 40,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 75,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 102
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 93,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 5,
+       "user_id": 102
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "second_wind",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "second_wind",
+       "run_id": 1,
+       "user_id": 102,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 103,
+   "faz": "pocao:pocao_dano_1",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Poção do Dano 1** — vale por 3 turno(s), ate a rodada 4.",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▰▰▰▰▱▱▱ · CA 15 · 2 golpes\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 23% · Bardo105 23% · Guerreiro102 20% · Paladino103 18% · Clerigo104 16%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "▶️ `23` 🧝 Bardo105 — **sua vez de escolher**\n▫️ `23` 🧝 Barbaro101\n▫️ `20` 🧝 Clerigo104\n▫️ `19` 👹 Cão Infernal 3\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3\n▫️ `15` 👹 Cão Infernal 2\n▫️ `14` 👹 Troll 2\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **12** de dano\n⚔️ Barbaro101 · 🎲 19 +11 = **30** vs CA 15 → **22** de dano\n✨ Clerigo104 usa **Cure Wounds**\n↩️ **Cão Infernal 3** · Mordida · 🎲 15 +5 = **20** vs CA 21 → errou Guerreiro102\n✨ Guerreiro102 usa **Second Wind**\n↩️ **Troll 3** · Mordida · 🎲 10 +7 = **17** vs CA 21 → errou Clerigo104\n↩️ **Troll 3** · Garra · 🎲 12 +7 = **19** vs CA 21 → errou Clerigo104\n↩️ **Cão Infernal 2** · Mordida · 🎲 17 +5 = **22** vs CA 21 → **18** de dano em Guerreiro102\n🩹 **Troll 2** regenera **10** HP\n↩️ **Troll 2** · Mordida · 🎲 3 +7 = **10** vs CA 23 → errou Paladino103\n↩️ **Troll 2** · Garra · 🎲 6 +7 = **13** vs CA 23 → errou Paladino103\n↩️ **Cão Infernal 1** · Mordida · 🎲 11 +5 = **16** vs CA 21 → errou Guerreiro102"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1008,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 2** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1009,
+     "como": "editada",
+     "conteudo": "✨ **Mass Cure Wounds**: **35%** do HP maximo de volta.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1010,
+     "como": "editada",
+     "conteudo": "✨ **Cure Wounds**: Bardo105 recupera **12** de HP (71/71).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1011,
+     "como": "editada",
+     "conteudo": "✨ **Second Wind**: Guerreiro102 nao recupera nada (ja esta cheio, ou caido).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1012,
+     "como": "nova",
+     "conteudo": "✨ Paladino103 usa **Poção do Dano 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1013,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 3** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_dano_1",
+       "personagem_id": 3,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_dano_1",
+       "personagem_id": 3,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 0,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 8,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_dano",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"dano_extra\": 1}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":10}"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "pocao_dano_1",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 105,
+   "faz": "habilidade:hypnotic_pattern_bardo",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▰▰▰▰▱▱▱ · CA 15 · 2 golpes 😵 *atordoado*\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes 😵 *atordoado*\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes 😵 *atordoado*\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes 😵 *atordoado*\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes 😵 *atordoado*"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 23% · Bardo105 23% · Guerreiro102 20% · Paladino103 18% · Clerigo104 16%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n▶️ `23` 🧝 Barbaro101 — **sua vez de escolher**\n▫️ `20` 🧝 Clerigo104\n▫️ `19` 👹 Cão Infernal 3 — 😵 perde a vez\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3 — 😵 perde a vez\n▫️ `15` 👹 Cão Infernal 2 — 😵 perde a vez\n▫️ `14` 👹 Troll 2 — 😵 perde a vez\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1 — 😵 perde a vez\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **12** de dano\n⚔️ Barbaro101 · 🎲 19 +11 = **30** vs CA 15 → **22** de dano\n✨ Clerigo104 usa **Cure Wounds**\n↩️ **Cão Infernal 3** · Mordida · 🎲 15 +5 = **20** vs CA 21 → errou Guerreiro102\n✨ Guerreiro102 usa **Second Wind**\n↩️ **Troll 3** · Mordida · 🎲 10 +7 = **17** vs CA 21 → errou Clerigo104\n↩️ **Troll 3** · Garra · 🎲 12 +7 = **19** vs CA 21 → errou Clerigo104\n↩️ **Cão Infernal 2** · Mordida · 🎲 17 +5 = **22** vs CA 21 → **18** de dano em Guerreiro102\n🩹 **Troll 2** regenera **10** HP\n↩️ **Troll 2** · Mordida · 🎲 3 +7 = **10** vs CA 23 → errou Paladino103\n↩️ **Troll 2** · Garra · 🎲 6 +7 = **13** vs CA 23 → errou Paladino103\n↩️ **Cão Infernal 1** · Mordida · 🎲 11 +5 = **16** vs CA 21 → errou Guerreiro102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "✨ Bardo105 usa **Hypnotic Pattern**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1014,
+     "como": "nova",
+     "conteudo": "✨ **Hypnotic Pattern** (CD 19)\n· Troll 2 · 🎲 18 -1 = **17** vs CD 19 → **perde a vez**\n· Troll 3 · 🎲 9 -1 = **8** vs CD 19 → **perde a vez**\n· Cão Infernal 1 · 🎲 12 +1 = **13** vs CD 19 → **perde a vez**\n· Cão Infernal 2 · 🎲 9 +1 = **10** vs CD 19 → **perde a vez**\n· Cão Infernal 3 · 🎲 16 +1 = **17** vs CD 19 → **perde a vez**",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 0,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 1,
+       "alvo_tipo": "inimigo",
+       "dono": 105,
+       "efeito": "atordoado",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"por\": \"Hypnotic Pattern\"}"
+      },
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":7}"
+      },
+      {
+       "alvo_id": 2,
+       "alvo_tipo": "inimigo",
+       "dono": 105,
+       "efeito": "atordoado",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"por\": \"Hypnotic Pattern\"}"
+      },
+      {
+       "alvo_id": 3,
+       "alvo_tipo": "inimigo",
+       "dono": 105,
+       "efeito": "atordoado",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"por\": \"Hypnotic Pattern\"}"
+      },
+      {
+       "alvo_id": 4,
+       "alvo_tipo": "inimigo",
+       "dono": 105,
+       "efeito": "atordoado",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"por\": \"Hypnotic Pattern\"}"
+      },
+      {
+       "alvo_id": 5,
+       "alvo_tipo": "inimigo",
+       "dono": 105,
+       "efeito": "atordoado",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"por\": \"Hypnotic Pattern\"}"
+      }
+     ],
+     "-": []
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "hypnotic_pattern_bardo",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 105
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "incursao",
+       "habilidade": "hypnotic_pattern_bardo",
+       "run_id": 1,
+       "user_id": 105,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 101,
+   "faz": "habilidade:brutal_strike",
+   "alvos": [
+    1
+   ],
+   "leu": {
+    "resposta": "**Brutal Strike** so vale com a outra habilidade ligada."
+   },
+   "canal": [],
+   "banco": {}
+  },
+  {
+   "rodada": 3,
+   "quem": 101,
+   "faz": "habilidade:reckless_attack",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Reckless Attack** — vale por 1 turno(s), ate a rodada 3.\n⚔️ 🎲 **17** +11 = **28** vs CA 15 — acertou Troll 2, **18** de dano.\n⤷ arma 1d12+9 → **16**\n⤷ passiva +2\n⚔️ 🎲 **15** +11 = **26** vs CA 15 — acertou Troll 2, **21** de dano.\n⤷ arma 1d12+9 → **19**\n⤷ passiva +2"
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n👹 **Troll 2** ▰▱▱▱▱▱▱▱ · CA 15 · 2 golpes 😵 *atordoado*\n👹 **Troll 3** ▰▰▰▰▰▰▰▰ · CA 15 · 2 golpes 😵 *atordoado*\n👹 **Cão Infernal 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes 😵 *atordoado*\n👹 **Cão Infernal 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes 😵 *atordoado*\n👹 **Cão Infernal 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes 😵 *atordoado*"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️🎯❗\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 26%❗ · Bardo105 22% · Guerreiro102 19% · Paladino103 17% · Clerigo104 15%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n▶️ `20` 🧝 Clerigo104 — **sua vez de escolher**\n▫️ `19` 👹 Cão Infernal 3 — 😵 perde a vez\n▫️ `16` 🧝 Guerreiro102\n▫️ `16` 👹 Troll 3 — 😵 perde a vez\n▫️ `15` 👹 Cão Infernal 2 — 😵 perde a vez\n▫️ `14` 👹 Troll 2 — 😵 perde a vez\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1 — 😵 perde a vez\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **12** de dano\n⚔️ Barbaro101 · 🎲 19 +11 = **30** vs CA 15 → **22** de dano\n✨ Clerigo104 usa **Cure Wounds**\n↩️ **Cão Infernal 3** · Mordida · 🎲 15 +5 = **20** vs CA 21 → errou Guerreiro102\n✨ Guerreiro102 usa **Second Wind**\n↩️ **Troll 3** · Mordida · 🎲 10 +7 = **17** vs CA 21 → errou Clerigo104\n↩️ **Troll 3** · Garra · 🎲 12 +7 = **19** vs CA 21 → errou Clerigo104\n↩️ **Cão Infernal 2** · Mordida · 🎲 17 +5 = **22** vs CA 21 → **18** de dano em Guerreiro102\n🩹 **Troll 2** regenera **10** HP\n↩️ **Troll 2** · Mordida · 🎲 3 +7 = **10** vs CA 23 → errou Paladino103\n↩️ **Troll 2** · Garra · 🎲 6 +7 = **13** vs CA 23 → errou Paladino103\n↩️ **Cão Infernal 1** · Mordida · 🎲 11 +5 = **16** vs CA 21 → errou Guerreiro102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "✨ Bardo105 usa **Hypnotic Pattern**\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **18** de dano\n⚔️ Barbaro101 · 🎲 15 +11 = **26** vs CA 15 → **21** de dano\n✨ Barbaro101 usa **Reckless Attack**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 2",
+         "1",
+         "▰▱▱▱▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1015,
+     "como": "nova",
+     "conteudo": "✨ Barbaro101 usa **Reckless Attack**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 1,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 15,
+       "dano": 21,
+       "indice": 1,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 1,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 17,
+       "dano": 18,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":6}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "reckless_attack",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"vantagem\": true, \"ameaca\": 6}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 11,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 50,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "reckless_attack",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "reckless_attack",
+       "run_id": 1,
+       "user_id": 101,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 104,
+   "faz": "habilidade:spirit_guardians",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (4 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n☠️ ~~Troll 2~~ — abatido\n👹 **Troll 3** ▰▰▰▰▰▰▱▱ · CA 15 · 2 golpes 😵 *atordoado*\n👹 **Cão Infernal 1** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes 😵 *atordoado*\n👹 **Cão Infernal 2** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes 😵 *atordoado*\n👹 **Cão Infernal 3** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes 😵 *atordoado*"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️🎯❗\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 26%❗ · Bardo105 22% · Guerreiro102 19% · Paladino103 17% · Clerigo104 15%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n✅ `20` 🧝 Clerigo104\n✅ `19` 👹 Cão Infernal 3 — 😵 perdeu a vez\n▶️ `16` 🧝 Guerreiro102 — **sua vez de escolher**\n▫️ `16` 👹 Troll 3 — 😵 perde a vez\n▫️ `15` 👹 Cão Infernal 2 — 😵 perde a vez\n☠️ `14` ~~Troll 2~~\n▫️ `10` 🧝 Paladino103\n▫️ ` 8` 👹 Cão Infernal 1 — 😵 perde a vez\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **12** de dano\n⚔️ Barbaro101 · 🎲 19 +11 = **30** vs CA 15 → **22** de dano\n✨ Clerigo104 usa **Cure Wounds**\n↩️ **Cão Infernal 3** · Mordida · 🎲 15 +5 = **20** vs CA 21 → errou Guerreiro102\n✨ Guerreiro102 usa **Second Wind**\n↩️ **Troll 3** · Mordida · 🎲 10 +7 = **17** vs CA 21 → errou Clerigo104\n↩️ **Troll 3** · Garra · 🎲 12 +7 = **19** vs CA 21 → errou Clerigo104\n↩️ **Cão Infernal 2** · Mordida · 🎲 17 +5 = **22** vs CA 21 → **18** de dano em Guerreiro102\n🩹 **Troll 2** regenera **10** HP\n↩️ **Troll 2** · Mordida · 🎲 3 +7 = **10** vs CA 23 → errou Paladino103\n↩️ **Troll 2** · Garra · 🎲 6 +7 = **13** vs CA 23 → errou Paladino103\n↩️ **Cão Infernal 1** · Mordida · 🎲 11 +5 = **16** vs CA 21 → errou Guerreiro102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "✨ Bardo105 usa **Hypnotic Pattern**\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **18** de dano\n⚔️ Barbaro101 · 🎲 15 +11 = **26** vs CA 15 → **21** de dano\n✨ Barbaro101 usa **Reckless Attack**\n✨ Clerigo104 usa **Spirit Guardians**\n😵 Cão Infernal 3 está atordoado e perde a vez"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Troll 3",
+         "2",
+         "▰▰▰▰▰▰▱▱ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 1",
+         "3",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1016,
+     "como": "nova",
+     "conteudo": "✨ **Spirit Guardians** (CD 19)\n· Troll 2 · 🎲 6 -1 = **5** vs CD 19 → **16** de dano\n· Troll 3 · 🎲 8 -1 = **7** vs CD 19 → **16** de dano\n· Cão Infernal 1 · 🎲 5 +1 = **6** vs CD 19 → **16** de dano\n· Cão Infernal 2 · 🎲 2 +1 = **3** vs CD 19 → **16** de dano\n· Cão Infernal 3 · 🎲 6 +1 = **7** vs CD 19 → **16** de dano\n☠️ caem: Troll 2",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 4,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":11}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 29,
+       "hp_max": 45,
+       "indice": 3,
+       "matilha": 1,
+       "nome": "Cão Infernal 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 29,
+       "hp_max": 45,
+       "indice": 4,
+       "matilha": 1,
+       "nome": "Cão Infernal 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 29,
+       "hp_max": 45,
+       "indice": 5,
+       "matilha": 1,
+       "nome": "Cão Infernal 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 0,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 68,
+       "hp_max": 84,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Troll 3",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 3,
+       "matilha": 1,
+       "nome": "Cão Infernal 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 4,
+       "matilha": 1,
+       "nome": "Cão Infernal 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 45,
+       "hp_max": 45,
+       "indice": 5,
+       "matilha": 1,
+       "nome": "Cão Infernal 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 11,
+       "hp_max": 84,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Troll 2",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 84,
+       "hp_max": 84,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Troll 3",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "spirit_guardians",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 104
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "incursao",
+       "habilidade": "spirit_guardians",
+       "run_id": 1,
+       "user_id": 104,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 102,
+   "faz": "habilidade:action_surge",
+   "alvos": [
+    2
+   ],
+   "leu": {
+    "resposta": "✨ **Action Surge**\n💥 🎲 **20** — **CRITICO!** **14** de dano em Troll 3.\n⚔️ 🎲 **14** +12 = **26** vs CA 15 — acertou Troll 3, **13** de dano.\n💥 🎲 **19** — **CRITICO!** **26** de dano em Troll 3.\n⚔️ 🎲 **17** +12 = **29** vs CA 15 — acertou Troll 3, **16** de dano.\n⚔️ 🎲 **8** +12 = **20** vs CA 15 — acertou Cão Infernal 1, **11** de dano.\n⚔️ 🎲 **15** +12 = **27** vs CA 15 — acertou Cão Infernal 1, **20** de dano."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (2 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n☠️ ~~Troll 2~~ — abatido\n☠️ ~~Troll 3~~ — abatido\n☠️ ~~Cão Infernal 1~~ — abatido\n👹 **Cão Infernal 2** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes 😵 *atordoado*\n👹 **Cão Infernal 3** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes 😵 *atordoado*"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103 🛡️🎯❗\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93 💠\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Barbaro101 26%❗ · Bardo105 22% · Guerreiro102 19% · Paladino103 17% · Clerigo104 15%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n✅ `23` 🧝 Barbaro101\n✅ `20` 🧝 Clerigo104\n✅ `19` 👹 Cão Infernal 3 — 😵 perdeu a vez\n✅ `16` 🧝 Guerreiro102\n☠️ `16` ~~Troll 3~~\n✅ `15` 👹 Cão Infernal 2 — 😵 perdeu a vez\n☠️ `14` ~~Troll 2~~\n▶️ `10` 🧝 Paladino103 — **sua vez de escolher**\n☠️ ` 8` ~~Cão Infernal 1~~\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "✨ Bardo105 usa **Mass Cure Wounds**\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **12** de dano\n⚔️ Barbaro101 · 🎲 19 +11 = **30** vs CA 15 → **22** de dano\n✨ Clerigo104 usa **Cure Wounds**\n↩️ **Cão Infernal 3** · Mordida · 🎲 15 +5 = **20** vs CA 21 → errou Guerreiro102\n✨ Guerreiro102 usa **Second Wind**\n↩️ **Troll 3** · Mordida · 🎲 10 +7 = **17** vs CA 21 → errou Clerigo104\n↩️ **Troll 3** · Garra · 🎲 12 +7 = **19** vs CA 21 → errou Clerigo104\n↩️ **Cão Infernal 2** · Mordida · 🎲 17 +5 = **22** vs CA 21 → **18** de dano em Guerreiro102\n🩹 **Troll 2** regenera **10** HP\n↩️ **Troll 2** · Mordida · 🎲 3 +7 = **10** vs CA 23 → errou Paladino103\n↩️ **Troll 2** · Garra · 🎲 6 +7 = **13** vs CA 23 → errou Paladino103\n↩️ **Cão Infernal 1** · Mordida · 🎲 11 +5 = **16** vs CA 21 → errou Guerreiro102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "✨ Bardo105 usa **Hypnotic Pattern**\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **18** de dano\n⚔️ Barbaro101 · 🎲 15 +11 = **26** vs CA 15 → **21** de dano\n✨ Barbaro101 usa **Reckless Attack**\n✨ Clerigo104 usa **Spirit Guardians**\n😵 Cão Infernal 3 está atordoado e perde a vez\n💥 **CRITICO!** Guerreiro102 · 🎲 **20** → **14** de dano\n⚔️ Guerreiro102 · 🎲 14 +12 = **26** vs CA 15 → **13** de dano\n💥 **CRITICO!** Guerreiro102 · 🎲 **20** → **26** de dano\n⚔️ Guerreiro102 · 🎲 17 +12 = **29** vs CA 15 → **16** de dano\n⚔️ Guerreiro102 · 🎲 8 +12 = **20** vs CA 15 → **11** de dano\n⚔️ Guerreiro102 · 🎲 15 +12 = **27** vs CA 15 → **20** de dano\n✨ Guerreiro102 usa **Action Surge**\n😵 Cão Infernal 2 está atordoado e perde a vez"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Cão Infernal 2",
+         "4",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Cão Infernal 3",
+         "5",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1017,
+     "como": "nova",
+     "conteudo": "✨ Guerreiro102 usa **Action Surge**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 2,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 14,
+       "dano": 13,
+       "indice": 1,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 2,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 17,
+       "dano": 16,
+       "indice": 3,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 2,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 19,
+       "dano": 26,
+       "indice": 2,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 2,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 20,
+       "dano": 14,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 3,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 15,
+       "dano": 20,
+       "indice": 5,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 3,
+       "bonus": 12,
+       "ca_alvo": 15,
+       "d20": 8,
+       "dano": 11,
+       "indice": 4,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 8,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 4,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":14}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 0,
+       "hp_max": 45,
+       "indice": 3,
+       "matilha": 1,
+       "nome": "Cão Infernal 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 0,
+       "hp_max": 84,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Troll 3",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 29,
+       "hp_max": 45,
+       "indice": 3,
+       "matilha": 1,
+       "nome": "Cão Infernal 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 7,
+       "ataques": 2,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d6+4",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 7, \"dano\": \"1d6+4\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"SAB\", \"cd\": 14, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"medo\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}, {\"nome\": \"Garra\", \"ataque\": 7, \"dano\": \"2d6+4\"}]",
+       "habilidade": "{\"nome\": \"Golpe Poderoso\", \"save\": \"ATK\", \"cd\": 0, \"texto\": \"\", \"dano\": \"4d6\", \"alvos\": 3, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": false}",
+       "hp_atual": 68,
+       "hp_max": 84,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Troll 3",
+       "passo": 4,
+       "regeneracao": 10,
+       "run_id": 1,
+       "saves": "{\"FOR\": 4, \"DES\": 1, \"CON\": 5, \"INT\": -2, \"SAB\": -1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "action_surge",
+       "alvos": "[2]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "action_surge",
+       "run_id": 1,
+       "user_id": 102,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 103,
+   "faz": "habilidade:golpe_divino",
+   "alvos": [
+    4
+   ],
+   "leu": {
+    "resposta": "✨ **Golpe Divino**\n⚔️ 🎲 **7** +11 = **18** vs CA 15 — acertou Cão Infernal 2, **41** de dano.\n⤷ arma 1d8+7 → **15**\n⤷ passiva +8\n⤷ Golpe Divino 3d8 → **18**",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (1 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n☠️ ~~Troll 2~~ — abatido\n☠️ ~~Troll 3~~ — abatido\n☠️ ~~Cão Infernal 1~~ — abatido\n☠️ ~~Cão Infernal 2~~ — abatido\n👹 **Cão Infernal 3** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes 😵 *atordoado*"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro102 25% · Barbaro101 21% · Clerigo104 20% · Paladino103 18% · Bardo105 16%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "▶️ `23` 🧝 Bardo105 — **sua vez de escolher**\n▫️ `23` 🧝 Barbaro101\n▫️ `20` 🧝 Clerigo104\n▫️ `19` 👹 Cão Infernal 3 — 😵 perde a vez\n▫️ `16` 🧝 Guerreiro102\n☠️ `16` ~~Troll 3~~\n☠️ `15` ~~Cão Infernal 2~~\n☠️ `14` ~~Troll 2~~\n▫️ `10` 🧝 Paladino103\n☠️ ` 8` ~~Cão Infernal 1~~\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "✨ Bardo105 usa **Hypnotic Pattern**\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **18** de dano\n⚔️ Barbaro101 · 🎲 15 +11 = **26** vs CA 15 → **21** de dano\n✨ Barbaro101 usa **Reckless Attack**\n✨ Clerigo104 usa **Spirit Guardians**\n😵 Cão Infernal 3 está atordoado e perde a vez\n💥 **CRITICO!** Guerreiro102 · 🎲 **20** → **14** de dano\n⚔️ Guerreiro102 · 🎲 14 +12 = **26** vs CA 15 → **13** de dano\n💥 **CRITICO!** Guerreiro102 · 🎲 **20** → **26** de dano\n⚔️ Guerreiro102 · 🎲 17 +12 = **29** vs CA 15 → **16** de dano\n⚔️ Guerreiro102 · 🎲 8 +12 = **20** vs CA 15 → **11** de dano\n⚔️ Guerreiro102 · 🎲 15 +12 = **27** vs CA 15 → **20** de dano\n✨ Guerreiro102 usa **Action Surge**\n😵 Cão Infernal 2 está atordoado e perde a vez\n⚔️ Paladino103 · 🎲 7 +11 = **18** vs CA 15 → **41** de dano\n✨ Paladino103 usa **Golpe Divino**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1013,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 3** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1014,
+     "como": "editada",
+     "conteudo": "✨ **Hypnotic Pattern** (CD 19)\n· Troll 2 · 🎲 18 -1 = **17** vs CD 19 → **perde a vez**\n· Troll 3 · 🎲 9 -1 = **8** vs CD 19 → **perde a vez**\n· Cão Infernal 1 · 🎲 12 +1 = **13** vs CD 19 → **perde a vez**\n· Cão Infernal 2 · 🎲 9 +1 = **10** vs CD 19 → **perde a vez**\n· Cão Infernal 3 · 🎲 16 +1 = **17** vs CD 19 → **perde a vez**",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1015,
+     "como": "editada",
+     "conteudo": "✨ Barbaro101 usa **Reckless Attack**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1016,
+     "como": "editada",
+     "conteudo": "✨ **Spirit Guardians** (CD 19)\n· Troll 2 · 🎲 6 -1 = **5** vs CD 19 → **16** de dano\n· Troll 3 · 🎲 8 -1 = **7** vs CD 19 → **16** de dano\n· Cão Infernal 1 · 🎲 5 +1 = **6** vs CD 19 → **16** de dano\n· Cão Infernal 2 · 🎲 2 +1 = **3** vs CD 19 → **16** de dano\n· Cão Infernal 3 · 🎲 6 +1 = **7** vs CD 19 → **16** de dano\n☠️ caem: Troll 2",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1017,
+     "como": "editada",
+     "conteudo": "✨ Guerreiro102 usa **Action Surge**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1018,
+     "como": "nova",
+     "conteudo": "✨ Paladino103 usa **Golpe Divino**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1019,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 4** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 4,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 7,
+       "dano": 41,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 0,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 8,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":4}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "rage",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"dano_extra\": 2, \"reducao_dano\": 0.5}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "reckless_attack",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"vantagem\": true, \"ameaca\": 6}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_aceleracao",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ataques_extra\": 1}"
+      },
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "avatar_da_luz",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ca\": 2, \"dano_extra\": 5, \"cura_por_turno\": 0.05}"
+      },
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      },
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":12}"
+      }
+     ]
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 0,
+       "hp_max": 45,
+       "indice": 4,
+       "matilha": 1,
+       "nome": "Cão Infernal 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 29,
+       "hp_max": 45,
+       "indice": 4,
+       "matilha": 1,
+       "nome": "Cão Infernal 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "golpe_divino",
+       "alvos": "[4]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "golpe_divino",
+       "run_id": 1,
+       "user_id": 103,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 105,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **17** +11 = **28** vs CA 15 — acertou Cão Infernal 3, **10** de dano."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (1 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n☠️ ~~Troll 2~~ — abatido\n☠️ ~~Troll 3~~ — abatido\n☠️ ~~Cão Infernal 1~~ — abatido\n☠️ ~~Cão Infernal 2~~ — abatido\n👹 **Cão Infernal 3** ▰▰▰▱▱▱▱▱ · CA 15 · 1 golpes 😵 *atordoado*"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro102 25% · Barbaro101 21% · Clerigo104 20% · Paladino103 18% · Bardo105 16%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `23` 🧝 Bardo105\n▶️ `23` 🧝 Barbaro101 — **sua vez de escolher**\n▫️ `20` 🧝 Clerigo104\n▫️ `19` 👹 Cão Infernal 3 — 😵 perde a vez\n▫️ `16` 🧝 Guerreiro102\n☠️ `16` ~~Troll 3~~\n☠️ `15` ~~Cão Infernal 2~~\n☠️ `14` ~~Troll 2~~\n▫️ `10` 🧝 Paladino103\n☠️ ` 8` ~~Cão Infernal 1~~\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "✨ Bardo105 usa **Hypnotic Pattern**\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **18** de dano\n⚔️ Barbaro101 · 🎲 15 +11 = **26** vs CA 15 → **21** de dano\n✨ Barbaro101 usa **Reckless Attack**\n✨ Clerigo104 usa **Spirit Guardians**\n😵 Cão Infernal 3 está atordoado e perde a vez\n💥 **CRITICO!** Guerreiro102 · 🎲 **20** → **14** de dano\n⚔️ Guerreiro102 · 🎲 14 +12 = **26** vs CA 15 → **13** de dano\n💥 **CRITICO!** Guerreiro102 · 🎲 **20** → **26** de dano\n⚔️ Guerreiro102 · 🎲 17 +12 = **29** vs CA 15 → **16** de dano\n⚔️ Guerreiro102 · 🎲 8 +12 = **20** vs CA 15 → **11** de dano\n⚔️ Guerreiro102 · 🎲 15 +12 = **27** vs CA 15 → **20** de dano\n✨ Guerreiro102 usa **Action Surge**\n😵 Cão Infernal 2 está atordoado e perde a vez\n⚔️ Paladino103 · 🎲 7 +11 = **18** vs CA 15 → **41** de dano\n✨ Paladino103 usa **Golpe Divino**"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4 (em andamento)",
+         "value": "⚔️ Bardo105 · 🎲 17 +11 = **28** vs CA 15 → **10** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 5,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 17,
+       "dano": 10,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "user_id": 105
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 0,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:4",
+       "expira": 6,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":1}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 19,
+       "hp_max": 45,
+       "indice": 5,
+       "matilha": 1,
+       "nome": "Cão Infernal 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 29,
+       "hp_max": 45,
+       "indice": 5,
+       "matilha": 1,
+       "nome": "Cão Infernal 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 105
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 101,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **17** +11 = **28** vs CA 15 — acertou Cão Infernal 3, **10** de dano.\n⚔️ 🎲 **11** +11 = **22** vs CA 15 — acertou Cão Infernal 3, **14** de dano.",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Combate encerrado."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (0 de pé de 6)",
+         "value": "☠️ ~~Troll 1~~ — abatido\n☠️ ~~Troll 2~~ — abatido\n☠️ ~~Troll 3~~ — abatido\n☠️ ~~Cão Infernal 1~~ — abatido\n☠️ ~~Cão Infernal 2~~ — abatido\n☠️ ~~Cão Infernal 3~~ — abatido"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73  ✨\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro102 25% · Barbaro101 21% · Clerigo104 20% · Paladino103 18% · Bardo105 16%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "🧝 `23` Bardo105\n🧝 `23` Barbaro101\n🧝 `20` Clerigo104\n☠️ `19` ~~Cão Infernal 3~~\n🧝 `16` Guerreiro102\n☠️ `16` ~~Troll 3~~\n☠️ `15` ~~Cão Infernal 2~~\n☠️ `14` ~~Troll 2~~\n🧝 `10` Paladino103\n☠️ ` 8` ~~Cão Infernal 1~~\n☠️ ` 5` ~~Troll 1~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "✨ Bardo105 usa **Hypnotic Pattern**\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **18** de dano\n⚔️ Barbaro101 · 🎲 15 +11 = **26** vs CA 15 → **21** de dano\n✨ Barbaro101 usa **Reckless Attack**\n✨ Clerigo104 usa **Spirit Guardians**\n😵 Cão Infernal 3 está atordoado e perde a vez\n💥 **CRITICO!** Guerreiro102 · 🎲 **20** → **14** de dano\n⚔️ Guerreiro102 · 🎲 14 +12 = **26** vs CA 15 → **13** de dano\n💥 **CRITICO!** Guerreiro102 · 🎲 **20** → **26** de dano\n⚔️ Guerreiro102 · 🎲 17 +12 = **29** vs CA 15 → **16** de dano\n⚔️ Guerreiro102 · 🎲 8 +12 = **20** vs CA 15 → **11** de dano\n⚔️ Guerreiro102 · 🎲 15 +12 = **27** vs CA 15 → **20** de dano\n✨ Guerreiro102 usa **Action Surge**\n😵 Cão Infernal 2 está atordoado e perde a vez\n⚔️ Paladino103 · 🎲 7 +11 = **18** vs CA 15 → **41** de dano\n✨ Paladino103 usa **Golpe Divino**"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4",
+         "value": "⚔️ Bardo105 · 🎲 17 +11 = **28** vs CA 15 → **10** de dano\n⚔️ Barbaro101 · 🎲 17 +11 = **28** vs CA 15 → **10** de dano\n⚔️ Barbaro101 · 🎲 11 +11 = **22** vs CA 15 → **14** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1019,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 4** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1020,
+     "como": "nova",
+     "conteudo": null,
+     "embeds": [
+      {
+       "fields": [
+        {
+         "inline": false,
+         "name": "6 inimigos foram derrotados em 4 rodada(s)",
+         "value": "❤️ Barbaro101 — ▰▰▰▰▰▰ 103/103\n❤️ Guerreiro102 — ▰▰▰▰▰▱ 75/93\n❤️ Paladino103 — ▰▰▰▰▰▰ 93/93\n❤️ Clerigo104 — ▰▰▰▰▰▰ 73/73\n❤️ Bardo105 — ▰▰▰▰▰▰ 71/71"
+        },
+        {
+         "inline": false,
+         "name": "Recompensa (10 MEs por participante)",
+         "value": "<@101> — 10 MEs\n<@102> — 10 MEs\n<@103> — 10 MEs\n<@104> — 10 MEs\n<@105> — 10 MEs"
+        },
+        {
+         "inline": false,
+         "name": "Ouro da incursao (+625)",
+         "value": "**+125** · Barbaro101\n**+125** · Bardo105\n**+125** · Clerigo104\n**+125** · Guerreiro102\n**+125** · Paladino103\nGaste com `/mercado vitrine`."
+        },
+        {
+         "inline": false,
+         "name": "Pontos de Organização (+12)",
+         "value": "**+2** · Participação na incursão\n**+10** · Objetivo cumprido\n**Vórtice Oculto** agora tem **12** ponto(s)."
+        }
+       ],
+       "flags": 0,
+       "color": 3066993,
+       "type": "rich",
+       "description": "O grupo entrega o resultado a Vórtice Oculto.",
+       "title": "🏆 Incursão de referência (tier livre) — objetivo cumprido"
+      }
+     ],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1021,
+     "como": "nova",
+     "conteudo": null,
+     "embeds": [
+      {
+       "flags": 0,
+       "color": 3066993,
+       "type": "rich",
+       "description": "Epílogo da referência.",
+       "title": "📖 Incursão de referência (tier livre) — epílogo"
+      }
+     ],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "ouro_lancamentos": {
+     "+": [
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 10,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 5,
+       "run_id": 1
+      },
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 6,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 1,
+       "run_id": 1
+      },
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 7,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 2,
+       "run_id": 1
+      },
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 8,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 3,
+       "run_id": 1
+      },
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 9,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 4,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 1,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 1,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 2,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 2,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 3,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 3,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 4,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 4,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 5,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 5,
+       "run_id": 1
+      }
+     ],
+     "-": []
+    },
+    "placar_organizacoes": {
+     "+": [
+      {
+       "guild_id": 1,
+       "organizacao": "Vórtice Oculto",
+       "pontos": 12
+      }
+     ],
+     "-": []
+    },
+    "pontos_lancamentos": {
+     "+": [
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "guild_id": 1,
+       "id": 2,
+       "motivo": "Objetivo cumprido",
+       "organizacao": "Vórtice Oculto",
+       "pontos": 10,
+       "run_id": 1
+      },
+      {
+       "chave": "participacao",
+       "criado_em": "<relogio>",
+       "guild_id": 1,
+       "id": 1,
+       "motivo": "Participação na incursão",
+       "organizacao": "Vórtice Oculto",
+       "pontos": 2,
+       "run_id": 1
+      }
+     ],
+     "-": []
+    },
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 5,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 11,
+       "dano": 14,
+       "indice": 1,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 5,
+       "bonus": 11,
+       "ca_alvo": 15,
+       "d20": 17,
+       "dano": 10,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:4",
+       "expira": 6,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":3}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 0,
+       "hp_max": 45,
+       "indice": 5,
+       "matilha": 1,
+       "nome": "Cão Infernal 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 0,
+       "dano": "1d8+3+2d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"1d8+3+2d6\"}]",
+       "habilidade": "{\"nome\": \"Sopro de Fogo\", \"save\": \"DES\", \"cd\": 12, \"texto\": \"\", \"dano\": \"6d6\", \"alvos\": 2, \"atordoa\": 0, \"debuff\": [], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 19,
+       "hp_max": 45,
+       "indice": 5,
+       "matilha": 1,
+       "nome": "Cão Infernal 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 3, \"DES\": 1, \"CON\": 2, \"INT\": -2, \"SAB\": 1, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_salas": {
+     "+": [
+      {
+       "fechada": 0,
+       "passo": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "superada": 1,
+       "visitada": 0
+      }
+     ],
+     "-": []
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "runs": {
+     "+": [
+      {
+       "atualizada_em": "<relogio>",
+       "canal_id": 99,
+       "criada_em": "<relogio>",
+       "criador_id": 101,
+       "descansos": 0,
+       "guild_id": 1,
+       "id": 1,
+       "incursao_id": "ref",
+       "linha_atual": 4,
+       "mensagem_id": 1001,
+       "sala_atual": "OBJ",
+       "status": "sucesso",
+       "votacao_expira_em": null
+      }
+     ],
+     "-": [
+      {
+       "atualizada_em": "<relogio>",
+       "canal_id": 99,
+       "criada_em": "<relogio>",
+       "criador_id": 101,
+       "descansos": 0,
+       "guild_id": 1,
+       "id": 1,
+       "incursao_id": "ref",
+       "linha_atual": 4,
+       "mensagem_id": 1001,
+       "sala_atual": "OBJ",
+       "status": "objetivo",
+       "votacao_expira_em": null
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "fim": {
+  "motivo": "a run saiu do combate: sucesso"
+ }
+}

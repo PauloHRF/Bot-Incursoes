@@ -1,0 +1,3261 @@
+{
+ "cenario": {
+  "nome": "t2_derrota",
+  "semente": 2606,
+  "modo": "na_vez",
+  "grupo": [
+   {
+    "classe": "monge",
+    "nivel": 3,
+    "escolhas": {},
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ]
+    ]
+   },
+   {
+    "classe": "xama",
+    "nivel": 3,
+    "escolhas": {},
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ],
+     [
+      "pocao_aceleracao_1",
+      1
+     ]
+    ]
+   },
+   {
+    "classe": "artifice",
+    "nivel": 3,
+    "escolhas": {
+     "ferramenta_t1": "cure_wounds_art",
+     "infusao": "armas"
+    },
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ],
+     [
+      "pocao_dano_1",
+      2
+     ]
+    ]
+   }
+  ],
+  "monstros": [
+   [
+    "Observador",
+    1
+   ]
+  ]
+ },
+ "abertura": {
+  "canal": [
+   {
+    "mensagem": 1001,
+    "como": "nova",
+    "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+    "embeds": [
+     {
+      "footer": {
+       "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+      },
+      "fields": [
+       {
+        "inline": false,
+        "name": "Observador",
+        "value": "👹 **Observador** ▰▰▰▰▰▰▰▰ · CA 18 · 4 golpes"
+       },
+       {
+        "inline": false,
+        "name": "Grupo",
+        "value": "❤️ Monge101 — ▰▰▰▰▱▱ 20/31\n❤️ Xama102 — ▰▰▰▰▱▱ 20/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+       },
+       {
+        "inline": false,
+        "name": "❗ Ameaça",
+        "value": "Xama102 39% · Monge101 34% · Artifice103 27%"
+       },
+       {
+        "inline": false,
+        "name": "Iniciativa",
+        "value": "✅ `22` 👹 Observador\n▶️ `21` 🧝 Monge101 — **sua vez de escolher**\n▫️ `16` 🧝 Artifice103\n▫️ ` 5` 🧝 Xama102"
+       },
+       {
+        "inline": false,
+        "name": "Rodada 1 (em andamento)",
+        "value": "✴️ **Observador** · Raios Oculares em Xama102 · 🎲 19 +4 = **23** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 16 +4 = **20** vs CD 17 → resistiu: **11** de dano (metade)"
+       }
+      ],
+      "flags": 0,
+      "color": 10038562,
+      "type": "rich",
+      "title": "🏁 Sala OBJ — rodada 1"
+     }
+    ],
+    "view": [
+     {
+      "botao": "Atacar",
+      "id": "inc:atacar:1:OBJ",
+      "estilo": "ButtonStyle.danger",
+      "emoji": "⚔️",
+      "desligado": false,
+      "linha": null
+     },
+     {
+      "botao": "Habilidade",
+      "id": "inc:hab:1:OBJ",
+      "estilo": "ButtonStyle.secondary",
+      "emoji": "✨",
+      "desligado": false,
+      "linha": null
+     },
+     {
+      "botao": "Poção",
+      "id": "inc:pocao:1:OBJ",
+      "estilo": "ButtonStyle.success",
+      "emoji": "⚗️",
+      "desligado": false,
+      "linha": null
+     }
+    ],
+    "arquivo": null,
+    "apagada": false
+   }
+  ],
+  "banco": {
+   "config_guilda": [],
+   "jogadores": [],
+   "ouro_lancamentos": [],
+   "personagem_equipamento": [],
+   "personagem_itens": [
+    "{\"item_id\": \"pocao_aceleracao_1\", \"personagem_id\": 2, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_dano_1\", \"personagem_id\": 3, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 1, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 2, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 3, \"quantidade\": 1}"
+   ],
+   "personagens": [
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"artifice\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{\\\"ferramenta_t1\\\":\\\"cure_wounds_art\\\",\\\"infusao\\\":\\\"armas\\\"}\", \"guild_id\": 1, \"id\": 3, \"imagem\": null, \"nivel\": 3, \"nome\": \"Artifice103\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 103}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"monge\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{}\", \"guild_id\": 1, \"id\": 1, \"imagem\": null, \"nivel\": 3, \"nome\": \"Monge101\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 101}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"xama\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{}\", \"guild_id\": 1, \"id\": 2, \"imagem\": null, \"nivel\": 3, \"nome\": \"Xama102\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 102}"
+   ],
+   "placar_organizacoes": [],
+   "pontos_lancamentos": [],
+   "run_ataques": [],
+   "run_combate": [
+    "{\"decaiu\": 0, \"passo\": 4, \"rodada\": 1, \"run_id\": 1, \"sala_id\": \"OBJ\", \"vez\": 1, \"vez_desde\": \"<relogio>\"}"
+   ],
+   "run_condicoes": [],
+   "run_descansos": [],
+   "run_efeitos": [],
+   "run_iniciativa": [
+    "{\"alvo_id\": 0, \"d20\": 20, \"modificador\": 2, \"nome\": \"Observador\", \"passo\": 4, \"posicao\": 0, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 101, \"d20\": 14, \"modificador\": 7, \"nome\": \"Monge101\", \"passo\": 4, \"posicao\": 1, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 102, \"d20\": 1, \"modificador\": 4, \"nome\": \"Xama102\", \"passo\": 4, \"posicao\": 3, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 103, \"d20\": 12, \"modificador\": 4, \"nome\": \"Artifice103\", \"passo\": 4, \"posicao\": 2, \"run_id\": 1, \"tipo\": \"personagem\"}"
+   ],
+   "run_inimigos": [
+    "{\"ataque\": 5, \"ataques\": 4, \"ca\": 18, \"carregada\": 0, \"dano\": \"4d6\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 5, \\\"dano\\\": \\\"4d6\\\"}, {\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 5, \\\"dano\\\": \\\"4d6\\\"}, {\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 5, \\\"dano\\\": \\\"4d6\\\"}, {\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 5, \\\"dano\\\": \\\"4d6\\\"}]\", \"habilidade\": \"{\\\"nome\\\": \\\"Raios Oculares\\\", \\\"save\\\": \\\"DES\\\", \\\"cd\\\": 17, \\\"texto\\\": \\\"\\\", \\\"dano\\\": \\\"5d8\\\", \\\"alvos\\\": 5, \\\"atordoa\\\": 0, \\\"debuff\\\": [\\\"medo\\\", \\\"letargia\\\"], \\\"cada\\\": 2, \\\"recarga\\\": 5, \\\"save_repete\\\": false, \\\"metade\\\": true}\", \"hp_atual\": 180, \"hp_max\": 180, \"indice\": 0, \"matilha\": 0, \"nome\": \"Observador\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 0, \\\"DES\\\": 2, \\\"CON\\\": 4, \\\"INT\\\": 8, \\\"SAB\\\": 7, \\\"CAR\\\": 8}\", \"saves_vantagem\": \"[]\"}"
+   ],
+   "run_invocacoes": [],
+   "run_mapa": [],
+   "run_participantes": [
+    "{\"hp_atual\": 20, \"personagem_id\": 1, \"run_id\": 1, \"thp\": 0, \"tier\": 2, \"user_id\": 101}",
+    "{\"hp_atual\": 20, \"personagem_id\": 2, \"run_id\": 1, \"thp\": 0, \"tier\": 2, \"user_id\": 102}",
+    "{\"hp_atual\": 20, \"personagem_id\": 3, \"run_id\": 1, \"thp\": 0, \"tier\": 2, \"user_id\": 103}"
+   ],
+   "run_quem_recebe": [
+    "{\"personagem_id\": 1, \"run_id\": 1, \"user_id\": 101}",
+    "{\"personagem_id\": 2, \"run_id\": 1, \"user_id\": 102}",
+    "{\"personagem_id\": 3, \"run_id\": 1, \"user_id\": 103}"
+   ],
+   "run_salas": [],
+   "run_substituicao": [],
+   "run_substituicao_apoio": [],
+   "run_testes": [],
+   "run_turnos": [],
+   "run_usos": [],
+   "run_votos": [],
+   "runs": [
+    "{\"atualizada_em\": \"<relogio>\", \"canal_id\": 99, \"criada_em\": \"<relogio>\", \"criador_id\": 101, \"descansos\": 0, \"guild_id\": 1, \"id\": 1, \"incursao_id\": \"ref\", \"linha_atual\": 4, \"mensagem_id\": 1001, \"sala_atual\": \"OBJ\", \"status\": \"objetivo\", \"votacao_expira_em\": null}"
+   ]
+  }
+ },
+ "acoes": [
+  {
+   "rodada": 1,
+   "quem": 101,
+   "faz": "habilidade:flurry_of_blows",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Flurry of Blows**\n💨 🎲 **8** +8 = **16** vs CA 18 — errou Observador.\n⚔️ 🎲 **14** +8 = **22** vs CA 18 — acertou Observador, **10** de dano.\n💢 🎲 **1 natural** — erro critico, o golpe passa longe."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▰▰ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▰▱▱ 20/31\n❤️ Xama102 — ▰▰▰▰▱▱ 20/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Xama102 39% · Monge101 34% · Artifice103 27%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n✅ `21` 🧝 Monge101\n▶️ `16` 🧝 Artifice103 — **sua vez de escolher**\n▫️ ` 5` 🧝 Xama102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "✴️ **Observador** · Raios Oculares em Xama102 · 🎲 19 +4 = **23** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 16 +4 = **20** vs CD 17 → resistiu: **11** de dano (metade)\n💨 Monge101 · 🎲 8 +8 = **16** vs CA 18 → errou\n⚔️ Monge101 · 🎲 14 +8 = **22** vs CA 18 → **10** de dano\n💢 Monge101 · 🎲 **1** → erro critico, passa longe\n✨ Monge101 usa **Flurry of Blows**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1002,
+     "como": "nova",
+     "conteudo": "✨ Monge101 usa **Flurry of Blows**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 8,
+       "ca_alvo": 18,
+       "d20": 1,
+       "dano": 0,
+       "indice": 2,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 0,
+       "bonus": 8,
+       "ca_alvo": 18,
+       "d20": 14,
+       "dano": 10,
+       "indice": 1,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 0,
+       "bonus": 8,
+       "ca_alvo": 18,
+       "d20": 8,
+       "dano": 0,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":3}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 170,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 180,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "flurry_of_blows",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "flurry_of_blows",
+       "run_id": 1,
+       "user_id": 101,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 103,
+   "faz": "habilidade:cure_wounds_art",
+   "alvos": [
+    101
+   ],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▰▰ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▰▰▰ 29/31\n❤️ Xama102 — ▰▰▰▰▱▱ 20/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Xama102 39% · Monge101 34% · Artifice103 27%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n✅ `21` 🧝 Monge101\n✅ `16` 🧝 Artifice103\n▶️ ` 5` 🧝 Xama102 — **sua vez de escolher**"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "✴️ **Observador** · Raios Oculares em Xama102 · 🎲 19 +4 = **23** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 16 +4 = **20** vs CD 17 → resistiu: **11** de dano (metade)\n💨 Monge101 · 🎲 8 +8 = **16** vs CA 18 → errou\n⚔️ Monge101 · 🎲 14 +8 = **22** vs CA 18 → **10** de dano\n💢 Monge101 · 🎲 **1** → erro critico, passa longe\n✨ Monge101 usa **Flurry of Blows**\n✨ Artifice103 usa **Cure Wounds**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1003,
+     "como": "nova",
+     "conteudo": "✨ **Cure Wounds**: Monge101 recupera **9** de HP (29/31).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 3,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      }
+     ],
+     "-": []
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 29,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 20,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "cure_wounds_art",
+       "alvos": "[101]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "cure_wounds_art",
+       "run_id": 1,
+       "user_id": 103,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 102,
+   "faz": "pocao:pocao_aceleracao_1",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Poção da Aceleração 1** — vale por 3 turno(s), ate a rodada 3."
+   },
+   "canal": [
+    {
+     "mensagem": 1004,
+     "como": "nova",
+     "conteudo": "✨ Xama102 usa **Poção da Aceleração 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_aceleracao_1",
+       "personagem_id": 2,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_aceleracao_1",
+       "personagem_id": 2,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_aceleracao",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ataques_extra\": 1}"
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 102,
+   "faz": "habilidade:tradicao_espiritual",
+   "alvos": [
+    102
+   ],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▰▰ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▰▰▰ 29/31\n❤️ Xama102 — ▱▱▱▱▱▱ 1/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Xama102 42% · Monge101 29% · Artifice103 29%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n▶️ `21` 🧝 Monge101 — **sua vez de escolher**\n▫️ `16` 🧝 Artifice103\n▫️ ` 5` 🧝 Xama102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "✴️ **Observador** · Raios Oculares em Xama102 · 🎲 19 +4 = **23** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 16 +4 = **20** vs CD 17 → resistiu: **11** de dano (metade)\n💨 Monge101 · 🎲 8 +8 = **16** vs CA 18 → errou\n⚔️ Monge101 · 🎲 14 +8 = **22** vs CA 18 → **10** de dano\n💢 Monge101 · 🎲 **1** → erro critico, passa longe\n✨ Monge101 usa **Flurry of Blows**\n✨ Artifice103 usa **Cure Wounds**\n✨ Xama102 usa **Tradicao xamanica — espiritual**"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "↩️ **Observador** · Mordida · 💥 **CRITICO!** 🎲 **20** → **26** de dano em Xama102\n↩️ **Observador** · Mordida · 🎲 10 +5 = **15** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 4 +5 = **9** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 15 +5 = **20** vs CA 17 → **7** de dano em Xama102"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1002,
+     "como": "editada",
+     "conteudo": "✨ Monge101 usa **Flurry of Blows**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1003,
+     "como": "editada",
+     "conteudo": "✨ **Cure Wounds**: Monge101 recupera **9** de HP (29/31).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1004,
+     "como": "editada",
+     "conteudo": "✨ Xama102 usa **Poção da Aceleração 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1005,
+     "como": "nova",
+     "conteudo": "✨ **Tradicao xamanica — espiritual**: Xama102 recupera **9** de HP (29/31).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1006,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 2** — <@101> <@102> <@103> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 3,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":8}"
+      }
+     ],
+     "-": []
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 1,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 102
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 20,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 102
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "tradicao_espiritual",
+       "alvos": "[102]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "tradicao_xamanica",
+       "run_id": 1,
+       "user_id": 102,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 101,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **16** +8 = **24** vs CA 18 — acertou Observador, **8** de dano."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▰▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▰▰▰ 29/31\n❤️ Xama102 — ▱▱▱▱▱▱ 1/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Xama102 42% · Monge101 29% · Artifice103 29%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n✅ `21` 🧝 Monge101\n▶️ `16` 🧝 Artifice103 — **sua vez de escolher**\n▫️ ` 5` 🧝 Xama102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "✴️ **Observador** · Raios Oculares em Xama102 · 🎲 19 +4 = **23** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 16 +4 = **20** vs CD 17 → resistiu: **11** de dano (metade)\n💨 Monge101 · 🎲 8 +8 = **16** vs CA 18 → errou\n⚔️ Monge101 · 🎲 14 +8 = **22** vs CA 18 → **10** de dano\n💢 Monge101 · 🎲 **1** → erro critico, passa longe\n✨ Monge101 usa **Flurry of Blows**\n✨ Artifice103 usa **Cure Wounds**\n✨ Xama102 usa **Tradicao xamanica — espiritual**"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "↩️ **Observador** · Mordida · 💥 **CRITICO!** 🎲 **20** → **26** de dano em Xama102\n↩️ **Observador** · Mordida · 🎲 10 +5 = **15** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 4 +5 = **9** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 15 +5 = **20** vs CA 17 → **7** de dano em Xama102\n⚔️ Monge101 · 🎲 16 +8 = **24** vs CA 18 → **8** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 8,
+       "ca_alvo": 18,
+       "d20": 16,
+       "dano": 8,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "martial_arts",
+       "expira": 9999,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"pilha\": 1}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 162,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 170,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 103,
+   "faz": "pocao:pocao_dano_1",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Poção do Dano 1** — vale por 3 turno(s), ate a rodada 4."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▰▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▰▰▰ 29/31\n❤️ Xama102 — ▱▱▱▱▱▱ 1/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Xama102 42% · Monge101 29% · Artifice103 29%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n✅ `21` 🧝 Monge101\n✅ `16` 🧝 Artifice103\n▶️ ` 5` 🧝 Xama102 — **sua vez de escolher**"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "✴️ **Observador** · Raios Oculares em Xama102 · 🎲 19 +4 = **23** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **11** de dano (metade)\n✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 16 +4 = **20** vs CD 17 → resistiu: **11** de dano (metade)\n💨 Monge101 · 🎲 8 +8 = **16** vs CA 18 → errou\n⚔️ Monge101 · 🎲 14 +8 = **22** vs CA 18 → **10** de dano\n💢 Monge101 · 🎲 **1** → erro critico, passa longe\n✨ Monge101 usa **Flurry of Blows**\n✨ Artifice103 usa **Cure Wounds**\n✨ Xama102 usa **Tradicao xamanica — espiritual**"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "↩️ **Observador** · Mordida · 💥 **CRITICO!** 🎲 **20** → **26** de dano em Xama102\n↩️ **Observador** · Mordida · 🎲 10 +5 = **15** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 4 +5 = **9** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 15 +5 = **20** vs CA 17 → **7** de dano em Xama102\n⚔️ Monge101 · 🎲 16 +8 = **24** vs CA 18 → **8** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1007,
+     "como": "nova",
+     "conteudo": "✨ Artifice103 usa **Poção do Dano 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_dano_1",
+       "personagem_id": 3,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_dano_1",
+       "personagem_id": 3,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 3,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_dano",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"dano_extra\": 1}"
+      }
+     ],
+     "-": []
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "pocao_dano_1",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 102,
+   "faz": "pocao:pocao_vida_menor",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▰▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▰▰▰ 29/31\n❤️ Xama102 — ▰▰▱▱▱▱ 10/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Xama102 43% · Monge101 34% · Artifice103 24%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n▶️ `21` 🧝 Monge101 — **sua vez de escolher**\n▫️ `16` 🧝 Artifice103\n▫️ ` 5` 🧝 Xama102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "↩️ **Observador** · Mordida · 💥 **CRITICO!** 🎲 **20** → **26** de dano em Xama102\n↩️ **Observador** · Mordida · 🎲 10 +5 = **15** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 4 +5 = **9** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 15 +5 = **20** vs CA 17 → **7** de dano em Xama102\n⚔️ Monge101 · 🎲 16 +8 = **24** vs CA 18 → **8** de dano"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "↩️ **Observador** · Mordida · 🎲 8 +5 = **13** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 6 +5 = **11** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 2 +5 = **7** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 9 +5 = **14** vs CA 17 → errou Artifice103"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1006,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 2** — <@101> <@102> <@103> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1007,
+     "como": "editada",
+     "conteudo": "✨ Artifice103 usa **Poção do Dano 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1008,
+     "como": "nova",
+     "conteudo": "✨ **Poção de Vida Menor**: Xama102 recupera **9** de HP (10/31).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1009,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 3** — <@101> <@102> <@103> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_vida_menor",
+       "personagem_id": 2,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_vida_menor",
+       "personagem_id": 2,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 3,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":3}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":8}"
+      },
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 10,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 102
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 1,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 102
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "pocao_vida_menor",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 101,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "💥 🎲 **20** — **CRITICO!** **9** de dano em Observador."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▰▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▰▰▰ 29/31\n❤️ Xama102 — ▰▰▱▱▱▱ 10/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Xama102 43% · Monge101 34% · Artifice103 24%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n✅ `21` 🧝 Monge101\n▶️ `16` 🧝 Artifice103 — **sua vez de escolher**\n▫️ ` 5` 🧝 Xama102"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "↩️ **Observador** · Mordida · 💥 **CRITICO!** 🎲 **20** → **26** de dano em Xama102\n↩️ **Observador** · Mordida · 🎲 10 +5 = **15** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 4 +5 = **9** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 15 +5 = **20** vs CA 17 → **7** de dano em Xama102\n⚔️ Monge101 · 🎲 16 +8 = **24** vs CA 18 → **8** de dano"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "↩️ **Observador** · Mordida · 🎲 8 +5 = **13** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 6 +5 = **11** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 2 +5 = **7** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 9 +5 = **14** vs CA 17 → errou Artifice103\n💥 **CRITICO!** Monge101 · 🎲 **20** → **9** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 9,
+       "ca_alvo": 18,
+       "d20": 20,
+       "dano": 9,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":3}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "martial_arts",
+       "expira": 9999,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"pilha\": 2}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "martial_arts",
+       "expira": 9999,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"pilha\": 1}"
+      }
+     ]
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 153,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 162,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 103,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **11** +8 = **19** vs CA 18 — acertou Observador, **8** de dano.\n⤷ arma 1d10 → **7**\n⤷ passiva +1"
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▱▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▰▰▰ 29/31\n❤️ Xama102 — ▰▰▱▱▱▱ 10/31\n❤️ Artifice103 — ▰▰▰▰▱▱ 20/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Xama102 43% · Monge101 34% · Artifice103 24%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n✅ `21` 🧝 Monge101\n✅ `16` 🧝 Artifice103\n▶️ ` 5` 🧝 Xama102 — **sua vez de escolher**"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "↩️ **Observador** · Mordida · 💥 **CRITICO!** 🎲 **20** → **26** de dano em Xama102\n↩️ **Observador** · Mordida · 🎲 10 +5 = **15** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 4 +5 = **9** vs CA 17 → errou Xama102\n↩️ **Observador** · Mordida · 🎲 15 +5 = **20** vs CA 17 → **7** de dano em Xama102\n⚔️ Monge101 · 🎲 16 +8 = **24** vs CA 18 → **8** de dano"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "↩️ **Observador** · Mordida · 🎲 8 +5 = **13** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 6 +5 = **11** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 2 +5 = **7** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 9 +5 = **14** vs CA 17 → errou Artifice103\n💥 **CRITICO!** Monge101 · 🎲 **20** → **9** de dano\n⚔️ Artifice103 · 🎲 11 +8 = **19** vs CA 18 → **8** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 8,
+       "ca_alvo": 18,
+       "d20": 11,
+       "dano": 8,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 3,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 145,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 153,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 102,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **18** +8 = **26** vs CA 18 — acertou Observador, **6** de dano.\n💨 🎲 **6** +8 = **14** vs CA 18 — errou Observador.",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▱▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▱▱▱ 16/31\n⚰️ ~~Xama102~~ — caído\n❤️ Artifice103 — ▰▱▱▱▱▱ 7/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Monge101 50% · Artifice103 50%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n▶️ `21` 🧝 Monge101 — **sua vez de escolher**\n▫️ `16` 🧝 Artifice103\n⚰️ ` 5` ~~Xama102~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "↩️ **Observador** · Mordida · 🎲 8 +5 = **13** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 6 +5 = **11** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 2 +5 = **7** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 9 +5 = **14** vs CA 17 → errou Artifice103\n💥 **CRITICO!** Monge101 · 🎲 **20** → **9** de dano\n⚔️ Artifice103 · 🎲 11 +8 = **19** vs CA 18 → **8** de dano\n⚔️ Xama102 · 🎲 18 +8 = **26** vs CA 18 → **6** de dano\n💨 Xama102 · 🎲 6 +8 = **14** vs CA 18 → errou"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4 (em andamento)",
+         "value": "✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 13 +4 = **17** vs CD 17 → resistiu: **13** de dano (metade)\n✴️ **Observador** · Raios Oculares em Xama102 · 🎲 20 +4 = **24** vs CD 17 → resistiu: **13** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **13** de dano (metade)"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1009,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 3** — <@101> <@102> <@103> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1010,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 4** — <@101> <@102> <@103> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 8,
+       "ca_alvo": 18,
+       "d20": 18,
+       "dano": 6,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 0,
+       "bonus": 8,
+       "ca_alvo": 18,
+       "d20": 6,
+       "dano": 0,
+       "indice": 1,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 3,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_aceleracao",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ataques_extra\": 1}"
+      }
+     ]
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 139,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 145,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 0,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 102
+      },
+      {
+       "hp_atual": 16,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      },
+      {
+       "hp_atual": 7,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 103
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 10,
+       "personagem_id": 2,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 102
+      },
+      {
+       "hp_atual": 20,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 29,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 101,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "💨 🎲 **5** +10 = **15** vs CA 18 — errou Observador."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▱▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▰▰▱▱▱ 16/31\n⚰️ ~~Xama102~~ — caído\n❤️ Artifice103 — ▰▱▱▱▱▱ 7/31"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Monge101 50% · Artifice103 50%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n✅ `21` 🧝 Monge101\n▶️ `16` 🧝 Artifice103 — **sua vez de escolher**\n⚰️ ` 5` ~~Xama102~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "↩️ **Observador** · Mordida · 🎲 8 +5 = **13** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 6 +5 = **11** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 2 +5 = **7** vs CA 17 → errou Artifice103\n↩️ **Observador** · Mordida · 🎲 9 +5 = **14** vs CA 17 → errou Artifice103\n💥 **CRITICO!** Monge101 · 🎲 **20** → **9** de dano\n⚔️ Artifice103 · 🎲 11 +8 = **19** vs CA 18 → **8** de dano\n⚔️ Xama102 · 🎲 18 +8 = **26** vs CA 18 → **6** de dano\n💨 Xama102 · 🎲 6 +8 = **14** vs CA 18 → errou"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4 (em andamento)",
+         "value": "✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 13 +4 = **17** vs CD 17 → resistiu: **13** de dano (metade)\n✴️ **Observador** · Raios Oculares em Xama102 · 🎲 20 +4 = **24** vs CD 17 → resistiu: **13** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **13** de dano (metade)\n💨 Monge101 · 🎲 5 +10 = **15** vs CA 18 → errou"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 10,
+       "ca_alvo": 18,
+       "d20": 5,
+       "dano": 0,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "martial_arts",
+       "expira": 9999,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"pilha\": 0}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "martial_arts",
+       "expira": 9999,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"pilha\": 2}"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 103,
+   "faz": "pocao:pocao_vida_menor",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▱▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▱▱▱▱▱▱ 2/31\n⚰️ ~~Xama102~~ — caído\n⚰️ ~~Artifice103~~ — caído"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n▶️ `21` 🧝 Monge101 — **sua vez de escolher**\n⚰️ `16` ~~Artifice103~~\n⚰️ ` 5` ~~Xama102~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4",
+         "value": "✴️ **Observador** · Raios Oculares em Artifice103 · 🎲 13 +4 = **17** vs CD 17 → resistiu: **13** de dano (metade)\n✴️ **Observador** · Raios Oculares em Xama102 · 🎲 20 +4 = **24** vs CD 17 → resistiu: **13** de dano (metade)\n✴️ **Observador** · Raios Oculares em Monge101 · 🎲 14 +7 = **21** vs CD 17 → resistiu: **13** de dano (metade)\n💨 Monge101 · 🎲 5 +10 = **15** vs CA 18 → errou"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 5 (em andamento)",
+         "value": "↩️ **Observador** · Mordida · 🎲 19 +5 = **24** vs CA 17 → **18** de dano em Artifice103\n↩️ **Observador** · Mordida · 🎲 10 +5 = **15** vs CA 17 → errou Monge101\n↩️ **Observador** · Mordida · 🎲 9 +5 = **14** vs CA 17 → errou Monge101\n↩️ **Observador** · Mordida · 🎲 17 +5 = **22** vs CA 17 → **14** de dano em Monge101"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 5"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1010,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 4** — <@101> <@102> <@103> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1011,
+     "como": "nova",
+     "conteudo": "✨ **Poção de Vida Menor**: Artifice103 recupera **9** de HP (16/31).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1012,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 5** — <@101> <@103> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_vida_menor",
+       "personagem_id": 3,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_vida_menor",
+       "personagem_id": 3,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 5,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 2,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:4",
+       "expira": 6,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":3}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      },
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      },
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_dano",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"dano_extra\": 1}"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 0,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 2,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 16,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      },
+      {
+       "hp_atual": 7,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 103
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "pocao_vida_menor",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 5,
+   "quem": 101,
+   "faz": "pocao:pocao_vida_menor",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▱▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Monge101 — ▰▱▱▱▱▱ 3/31\n⚰️ ~~Xama102~~ — caído\n⚰️ ~~Artifice103~~ — caído"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Observador\n▶️ `21` 🧝 Monge101 — **sua vez de escolher**\n⚰️ `16` ~~Artifice103~~\n⚰️ ` 5` ~~Xama102~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 5",
+         "value": "↩️ **Observador** · Mordida · 🎲 19 +5 = **24** vs CA 17 → **18** de dano em Artifice103\n↩️ **Observador** · Mordida · 🎲 10 +5 = **15** vs CA 17 → errou Monge101\n↩️ **Observador** · Mordida · 🎲 9 +5 = **14** vs CA 17 → errou Monge101\n↩️ **Observador** · Mordida · 🎲 17 +5 = **22** vs CA 17 → **14** de dano em Monge101"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 6 (em andamento)",
+         "value": "✴️ **Observador** · Raios Oculares em Monge101 · 🎲 11 +7 = **18** vs CD 17 → resistiu: **8** de dano (metade)"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 6"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1012,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 5** — <@101> <@103> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1013,
+     "como": "nova",
+     "conteudo": "✨ **Poção de Vida Menor**: Monge101 recupera **9** de HP (11/31).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1014,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 6** — <@101> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_vida_menor",
+       "personagem_id": 1,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_vida_menor",
+       "personagem_id": 1,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 6,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 5,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:5",
+       "expira": 7,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:4",
+       "expira": 6,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 3,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 2,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "pocao_vida_menor",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 5,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 6,
+   "quem": 101,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **15** +8 = **23** vs CA 18 — acertou Observador, **10** de dano.",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Combate encerrado."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Observador",
+         "value": "👹 **Observador** ▰▰▰▰▰▰▱▱ · CA 18 · 4 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "⚰️ ~~Monge101~~ — caído\n⚰️ ~~Xama102~~ — caído\n⚰️ ~~Artifice103~~ — caído"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "👹 `22` Observador\n⚰️ `21` ~~Monge101~~\n⚰️ `16` ~~Artifice103~~\n⚰️ ` 5` ~~Xama102~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 6",
+         "value": "✴️ **Observador** · Raios Oculares em Monge101 · 🎲 11 +7 = **18** vs CD 17 → resistiu: **8** de dano (metade)\n⚔️ Monge101 · 🎲 15 +8 = **23** vs CA 18 → **10** de dano"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 7",
+         "value": "✴️ **Observador** · Raios Oculares em Monge101 · 🎲 11 +7 = **18** vs CD 17 → resistiu: **13** de dano (metade)"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 7"
+      }
+     ],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1014,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 6** — <@101> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1015,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 7** — <@101> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1016,
+     "como": "nova",
+     "conteudo": null,
+     "embeds": [
+      {
+       "fields": [
+        {
+         "inline": false,
+         "name": "Ouro",
+         "value": "**Nada.** A incursao paga no fecho, e so quando e concluida — as salas do caminho nao pagam por si."
+        },
+        {
+         "inline": false,
+         "name": "Pontos de Organização (+2)",
+         "value": "**+2** · Participação na incursão\n**Vórtice Oculto** agora tem **2** ponto(s)."
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "description": "O grupo inteiro caiu em **Sala OBJ**. Ninguém volta com o objetivo.",
+       "title": "☠️ Incursão de referência (tier livre) — fracassada"
+      }
+     ],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "placar_organizacoes": {
+     "+": [
+      {
+       "guild_id": 1,
+       "organizacao": "Vórtice Oculto",
+       "pontos": 2
+      }
+     ],
+     "-": []
+    },
+    "pontos_lancamentos": {
+     "+": [
+      {
+       "chave": "participacao",
+       "criado_em": "<relogio>",
+       "guild_id": 1,
+       "id": 1,
+       "motivo": "Participação na incursão",
+       "organizacao": "Vórtice Oculto",
+       "pontos": 2,
+       "run_id": 1
+      }
+     ],
+     "-": []
+    },
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 8,
+       "ca_alvo": 18,
+       "d20": 15,
+       "dano": 10,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 6,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 7,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 6,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:6",
+       "expira": 8,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":3}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:5",
+       "expira": 7,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":5}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "martial_arts",
+       "expira": 9999,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"pilha\": 0}"
+      }
+     ]
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 129,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 5,
+       "ataques": 4,
+       "ca": 18,
+       "carregada": 0,
+       "dano": "4d6",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}, {\"nome\": \"Mordida\", \"ataque\": 5, \"dano\": \"4d6\"}]",
+       "habilidade": "{\"nome\": \"Raios Oculares\", \"save\": \"DES\", \"cd\": 17, \"texto\": \"\", \"dano\": \"5d8\", \"alvos\": 5, \"atordoa\": 0, \"debuff\": [\"medo\", \"letargia\"], \"cada\": 2, \"recarga\": 5, \"save_repete\": false, \"metade\": true}",
+       "hp_atual": 139,
+       "hp_max": 180,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Observador",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 0, \"DES\": 2, \"CON\": 4, \"INT\": 8, \"SAB\": 7, \"CAR\": 8}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 0,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 3,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 2,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 6,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "runs": {
+     "+": [
+      {
+       "atualizada_em": "<relogio>",
+       "canal_id": 99,
+       "criada_em": "<relogio>",
+       "criador_id": 101,
+       "descansos": 0,
+       "guild_id": 1,
+       "id": 1,
+       "incursao_id": "ref",
+       "linha_atual": 4,
+       "mensagem_id": 1001,
+       "sala_atual": "OBJ",
+       "status": "fracasso",
+       "votacao_expira_em": null
+      }
+     ],
+     "-": [
+      {
+       "atualizada_em": "<relogio>",
+       "canal_id": 99,
+       "criada_em": "<relogio>",
+       "criador_id": 101,
+       "descansos": 0,
+       "guild_id": 1,
+       "id": 1,
+       "incursao_id": "ref",
+       "linha_atual": 4,
+       "mensagem_id": 1001,
+       "sala_atual": "OBJ",
+       "status": "objetivo",
+       "votacao_expira_em": null
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "fim": {
+  "motivo": "a run saiu do combate: fracasso"
+ }
+}

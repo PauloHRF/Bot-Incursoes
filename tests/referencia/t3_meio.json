@@ -1,0 +1,5286 @@
+{
+ "cenario": {
+  "nome": "t3_meio",
+  "semente": 3404,
+  "modo": "adiantado",
+  "grupo": [
+   {
+    "classe": "guerreiro",
+    "nivel": 5,
+    "escolhas": {
+     "fighting_style": "ofensivo"
+    },
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ]
+    ]
+   },
+   {
+    "classe": "clerigo",
+    "nivel": 5,
+    "escolhas": {
+     "magia_t1": "cure_wounds",
+     "dominio_t2": "protetor",
+     "magia_t3": "spirit_guardians"
+    },
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ],
+     [
+      "pocao_aceleracao_1",
+      1
+     ]
+    ]
+   },
+   {
+    "classe": "ladino",
+    "nivel": 5,
+    "escolhas": {},
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ],
+     [
+      "pocao_dano_1",
+      2
+     ]
+    ]
+   },
+   {
+    "classe": "feiticeiro",
+    "nivel": 5,
+    "escolhas": {
+     "magia_feit_t1": "chromatic_orb",
+     "metamagia_t2": "empowered",
+     "magia_feit_t3": "fireball_feit"
+    },
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ],
+     [
+      "pocao_bencao_1",
+      1
+     ]
+    ]
+   },
+   {
+    "classe": "druida",
+    "nivel": 5,
+    "escolhas": {
+     "forma_t1": "urso",
+     "bichinho_t2": "bichinho_curandeiro",
+     "magia_druida_t3": "aura_of_vitality"
+    },
+    "pocoes": [
+     [
+      "pocao_vida_menor",
+      null
+     ]
+    ]
+   }
+  ],
+  "monstros": [
+   [
+    "Gárgula",
+    3
+   ],
+   [
+    "Aranha de Fase",
+    2
+   ]
+  ]
+ },
+ "abertura": {
+  "canal": [
+   {
+    "mensagem": 1001,
+    "como": "nova",
+    "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+    "embeds": [
+     {
+      "footer": {
+       "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+      },
+      "fields": [
+       {
+        "inline": false,
+        "name": "Inimigos (5 de pé de 5)",
+        "value": "👹 **Gárgula 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+       },
+       {
+        "inline": false,
+        "name": "Grupo",
+        "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45"
+       },
+       {
+        "inline": false,
+        "name": "❗ Ameaça",
+        "value": "Guerreiro101 28% · Druida105 23% · Clerigo102 20% · Feiticeiro104 16% · Ladino103 12%"
+       },
+       {
+        "inline": false,
+        "name": "Iniciativa",
+        "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+       },
+       {
+        "inline": false,
+        "name": "Rodada 1 (em andamento)",
+        "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103"
+       }
+      ],
+      "flags": 0,
+      "color": 10038562,
+      "type": "rich",
+      "title": "🏁 Sala OBJ — rodada 1"
+     }
+    ],
+    "view": [
+     {
+      "menu": "Atacar quem?",
+      "id": "inc:alvo:1:OBJ",
+      "valores": [
+       1,
+       1
+      ],
+      "opcoes": [
+       [
+        "Gárgula 1",
+        "0",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ],
+       [
+        "Gárgula 2",
+        "1",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ],
+       [
+        "Gárgula 3",
+        "2",
+        "▰▰▰▰▰▰▰▰ · CA 15",
+        false
+       ],
+       [
+        "Aranha de Fase 1",
+        "3",
+        "▰▰▰▰▰▰▰▰ · CA 13",
+        false
+       ],
+       [
+        "Aranha de Fase 2",
+        "4",
+        "▰▰▰▰▰▰▰▰ · CA 13",
+        false
+       ]
+      ],
+      "desligado": false,
+      "linha": null
+     },
+     {
+      "botao": "Habilidade",
+      "id": "inc:hab:1:OBJ",
+      "estilo": "ButtonStyle.secondary",
+      "emoji": "✨",
+      "desligado": false,
+      "linha": null
+     },
+     {
+      "botao": "Poção",
+      "id": "inc:pocao:1:OBJ",
+      "estilo": "ButtonStyle.success",
+      "emoji": "⚗️",
+      "desligado": false,
+      "linha": null
+     }
+    ],
+    "arquivo": null,
+    "apagada": false
+   }
+  ],
+  "banco": {
+   "config_guilda": [],
+   "jogadores": [],
+   "ouro_lancamentos": [],
+   "personagem_equipamento": [],
+   "personagem_itens": [
+    "{\"item_id\": \"pocao_aceleracao_1\", \"personagem_id\": 2, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_bencao_1\", \"personagem_id\": 4, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_dano_1\", \"personagem_id\": 3, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 1, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 2, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 3, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 4, \"quantidade\": 1}",
+    "{\"item_id\": \"pocao_vida_menor\", \"personagem_id\": 5, \"quantidade\": 1}"
+   ],
+   "personagens": [
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"clerigo\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{\\\"magia_t1\\\":\\\"cure_wounds\\\",\\\"dominio_t2\\\":\\\"protetor\\\",\\\"magia_t3\\\":\\\"spirit_guardians\\\"}\", \"guild_id\": 1, \"id\": 2, \"imagem\": null, \"nivel\": 5, \"nome\": \"Clerigo102\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 102}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"druida\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{\\\"forma_t1\\\":\\\"urso\\\",\\\"bichinho_t2\\\":\\\"bichinho_curandeiro\\\",\\\"magia_druida_t3\\\":\\\"aura_of_vitality\\\"}\", \"guild_id\": 1, \"id\": 5, \"imagem\": null, \"nivel\": 5, \"nome\": \"Druida105\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 105}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"feiticeiro\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{\\\"magia_feit_t1\\\":\\\"chromatic_orb\\\",\\\"metamagia_t2\\\":\\\"empowered\\\",\\\"magia_feit_t3\\\":\\\"fireball_feit\\\"}\", \"guild_id\": 1, \"id\": 4, \"imagem\": null, \"nivel\": 5, \"nome\": \"Feiticeiro104\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 104}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"guerreiro\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{\\\"fighting_style\\\":\\\"ofensivo\\\"}\", \"guild_id\": 1, \"id\": 1, \"imagem\": null, \"nivel\": 5, \"nome\": \"Guerreiro101\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 101}",
+    "{\"atualizado_em\": \"<relogio>\", \"bonus_pericias\": \"{}\", \"classe\": \"ladino\", \"criado_em\": \"<relogio>\", \"escolhas\": \"{}\", \"guild_id\": 1, \"id\": 3, \"imagem\": null, \"nivel\": 5, \"nome\": \"Ladino103\", \"pericias\": \"[\\\"Atletismo\\\", \\\"Percepção\\\", \\\"Intuição\\\"]\", \"user_id\": 103}"
+   ],
+   "placar_organizacoes": [],
+   "pontos_lancamentos": [],
+   "run_ataques": [],
+   "run_combate": [
+    "{\"decaiu\": 0, \"passo\": 4, \"rodada\": 1, \"run_id\": 1, \"sala_id\": \"OBJ\", \"vez\": 1, \"vez_desde\": \"<relogio>\"}"
+   ],
+   "run_condicoes": [],
+   "run_descansos": [],
+   "run_efeitos": [],
+   "run_iniciativa": [
+    "{\"alvo_id\": 0, \"d20\": 9, \"modificador\": 0, \"nome\": \"Gárgula 1\", \"passo\": 4, \"posicao\": 8, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 1, \"d20\": 16, \"modificador\": 0, \"nome\": \"Gárgula 2\", \"passo\": 4, \"posicao\": 7, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 101, \"d20\": 13, \"modificador\": 4, \"nome\": \"Guerreiro101\", \"passo\": 4, \"posicao\": 6, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 102, \"d20\": 16, \"modificador\": 4, \"nome\": \"Clerigo102\", \"passo\": 4, \"posicao\": 3, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 103, \"d20\": 11, \"modificador\": 8, \"nome\": \"Ladino103\", \"passo\": 4, \"posicao\": 4, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 104, \"d20\": 13, \"modificador\": 8, \"nome\": \"Feiticeiro104\", \"passo\": 4, \"posicao\": 1, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 105, \"d20\": 13, \"modificador\": 4, \"nome\": \"Druida105\", \"passo\": 4, \"posicao\": 5, \"run_id\": 1, \"tipo\": \"personagem\"}",
+    "{\"alvo_id\": 2, \"d20\": 5, \"modificador\": 0, \"nome\": \"Gárgula 3\", \"passo\": 4, \"posicao\": 9, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 3, \"d20\": 20, \"modificador\": 2, \"nome\": \"Aranha de Fase 1\", \"passo\": 4, \"posicao\": 0, \"run_id\": 1, \"tipo\": \"inimigo\"}",
+    "{\"alvo_id\": 4, \"d20\": 19, \"modificador\": 2, \"nome\": \"Aranha de Fase 2\", \"passo\": 4, \"posicao\": 2, \"run_id\": 1, \"tipo\": \"inimigo\"}"
+   ],
+   "run_inimigos": [
+    "{\"ataque\": 4, \"ataques\": 1, \"ca\": 13, \"carregada\": 1, \"dano\": \"1d10+2\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 4, \\\"dano\\\": \\\"1d10+2\\\", \\\"efeito\\\": {\\\"nome\\\": \\\"Mordida\\\", \\\"save\\\": \\\"CON\\\", \\\"cd\\\": 13, \\\"texto\\\": \\\"\\\", \\\"dano\\\": null, \\\"alvos\\\": 1, \\\"atordoa\\\": 0, \\\"debuff\\\": [\\\"envenenado\\\"], \\\"cada\\\": 2, \\\"recarga\\\": null, \\\"save_repete\\\": false, \\\"metade\\\": false}}]\", \"habilidade\": null, \"hp_atual\": 32, \"hp_max\": 32, \"indice\": 3, \"matilha\": 0, \"nome\": \"Aranha de Fase 1\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 2, \\\"DES\\\": 2, \\\"CON\\\": 1, \\\"INT\\\": -2, \\\"SAB\\\": 0, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 4, \"ataques\": 1, \"ca\": 13, \"carregada\": 1, \"dano\": \"1d10+2\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 4, \\\"dano\\\": \\\"1d10+2\\\", \\\"efeito\\\": {\\\"nome\\\": \\\"Mordida\\\", \\\"save\\\": \\\"CON\\\", \\\"cd\\\": 13, \\\"texto\\\": \\\"\\\", \\\"dano\\\": null, \\\"alvos\\\": 1, \\\"atordoa\\\": 0, \\\"debuff\\\": [\\\"envenenado\\\"], \\\"cada\\\": 2, \\\"recarga\\\": null, \\\"save_repete\\\": false, \\\"metade\\\": false}}]\", \"habilidade\": null, \"hp_atual\": 32, \"hp_max\": 32, \"indice\": 4, \"matilha\": 0, \"nome\": \"Aranha de Fase 2\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 2, \\\"DES\\\": 2, \\\"CON\\\": 1, \\\"INT\\\": -2, \\\"SAB\\\": 0, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 4, \"ataques\": 1, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d6+2\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 4, \\\"dano\\\": \\\"1d6+2\\\"}]\", \"habilidade\": null, \"hp_atual\": 52, \"hp_max\": 52, \"indice\": 0, \"matilha\": 0, \"nome\": \"Gárgula 1\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 2, \\\"DES\\\": 0, \\\"CON\\\": 3, \\\"INT\\\": -2, \\\"SAB\\\": 0, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 4, \"ataques\": 1, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d6+2\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 4, \\\"dano\\\": \\\"1d6+2\\\"}]\", \"habilidade\": null, \"hp_atual\": 52, \"hp_max\": 52, \"indice\": 1, \"matilha\": 0, \"nome\": \"Gárgula 2\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 2, \\\"DES\\\": 0, \\\"CON\\\": 3, \\\"INT\\\": -2, \\\"SAB\\\": 0, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}",
+    "{\"ataque\": 4, \"ataques\": 1, \"ca\": 15, \"carregada\": 1, \"dano\": \"1d6+2\", \"golpes\": \"[{\\\"nome\\\": \\\"Mordida\\\", \\\"ataque\\\": 4, \\\"dano\\\": \\\"1d6+2\\\"}]\", \"habilidade\": null, \"hp_atual\": 52, \"hp_max\": 52, \"indice\": 2, \"matilha\": 0, \"nome\": \"Gárgula 3\", \"passo\": 4, \"regeneracao\": 0, \"run_id\": 1, \"saves\": \"{\\\"FOR\\\": 2, \\\"DES\\\": 0, \\\"CON\\\": 3, \\\"INT\\\": -2, \\\"SAB\\\": 0, \\\"CAR\\\": -2}\", \"saves_vantagem\": \"[]\"}"
+   ],
+   "run_invocacoes": [],
+   "run_mapa": [],
+   "run_participantes": [
+    "{\"hp_atual\": 39, \"personagem_id\": 4, \"run_id\": 1, \"thp\": 0, \"tier\": 3, \"user_id\": 104}",
+    "{\"hp_atual\": 45, \"personagem_id\": 2, \"run_id\": 1, \"thp\": 0, \"tier\": 3, \"user_id\": 102}",
+    "{\"hp_atual\": 45, \"personagem_id\": 3, \"run_id\": 1, \"thp\": 0, \"tier\": 3, \"user_id\": 103}",
+    "{\"hp_atual\": 45, \"personagem_id\": 5, \"run_id\": 1, \"thp\": 0, \"tier\": 3, \"user_id\": 105}",
+    "{\"hp_atual\": 57, \"personagem_id\": 1, \"run_id\": 1, \"thp\": 0, \"tier\": 3, \"user_id\": 101}"
+   ],
+   "run_quem_recebe": [
+    "{\"personagem_id\": 1, \"run_id\": 1, \"user_id\": 101}",
+    "{\"personagem_id\": 2, \"run_id\": 1, \"user_id\": 102}",
+    "{\"personagem_id\": 3, \"run_id\": 1, \"user_id\": 103}",
+    "{\"personagem_id\": 4, \"run_id\": 1, \"user_id\": 104}",
+    "{\"personagem_id\": 5, \"run_id\": 1, \"user_id\": 105}"
+   ],
+   "run_salas": [],
+   "run_substituicao": [],
+   "run_substituicao_apoio": [],
+   "run_testes": [],
+   "run_turnos": [],
+   "run_usos": [],
+   "run_votos": [],
+   "runs": [
+    "{\"atualizada_em\": \"<relogio>\", \"canal_id\": 99, \"criada_em\": \"<relogio>\", \"criador_id\": 101, \"descansos\": 0, \"guild_id\": 1, \"id\": 1, \"incursao_id\": \"ref\", \"linha_atual\": 4, \"mensagem_id\": 1001, \"sala_atual\": \"OBJ\", \"status\": \"objetivo\", \"votacao_expira_em\": null}"
+   ]
+  }
+ },
+ "acoes": [
+  {
+   "rodada": 1,
+   "quem": 101,
+   "faz": "habilidade:action_surge",
+   "alvos": [
+    0
+   ],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 5)",
+         "value": "👹 **Gárgula 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 28% · Druida105 23% · Clerigo102 20% · Feiticeiro104 16% · Ladino103 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 1",
+         "0",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "action_surge",
+       "alvos": "[0]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "action_surge",
+       "run_id": 1,
+       "user_id": 101,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 102,
+   "faz": "pocao:pocao_aceleracao_1",
+   "alvos": [],
+   "leu": {
+    "resposta": "✨ **Poção da Aceleração 1** — vale por 3 turno(s), ate a rodada 3."
+   },
+   "canal": [
+    {
+     "mensagem": 1002,
+     "como": "nova",
+     "conteudo": "✨ Clerigo102 usa **Poção da Aceleração 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_aceleracao_1",
+       "personagem_id": 2,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_aceleracao_1",
+       "personagem_id": 2,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_aceleracao",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ataques_extra\": 1}"
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 102,
+   "faz": "habilidade:cure_wounds",
+   "alvos": [
+    101
+   ],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 5)",
+         "value": "👹 **Gárgula 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 28% · Druida105 23% · Clerigo102 20% · Feiticeiro104 16% · Ladino103 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102 — ação guardada ⏳\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 1",
+         "0",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "cure_wounds",
+       "alvos": "[101]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "cure_wounds",
+       "run_id": 1,
+       "user_id": 102,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 103,
+   "faz": "habilidade:furtividade",
+   "alvos": [
+    0
+   ],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 5)",
+         "value": "👹 **Gárgula 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 28% · Druida105 23% · Clerigo102 20% · Feiticeiro104 16% · Ladino103 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102 — ação guardada ⏳\n▫️ `19` 🧝 Ladino103 — ação guardada ⏳\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 1",
+         "0",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "furtividade",
+       "alvos": "[0]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "furtividade",
+       "run_id": 1,
+       "user_id": 103,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 104,
+   "faz": "pocao:pocao_bencao_1",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 5)",
+         "value": "👹 **Gárgula 1** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39  ✨\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 28% · Druida105 23% · Clerigo102 20% · Feiticeiro104 16% · Ladino103 12%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n✅ `21` 🧝 Feiticeiro104\n✅ `21` 👹 Aranha de Fase 2\n✅ `20` 🧝 Clerigo102\n✅ `19` 🧝 Ladino103\n▶️ `17` 🧝 Druida105 — **sua vez de escolher**\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103\n↩️ **Aranha de Fase 2** · Mordida · 🎲 12 +4 = **16** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Cure Wounds**\n💨 Ladino103 · 🎲 2 +7 = **9** vs CA 15 → errou\n✨ Ladino103 usa **Furtividade**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 1"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 1",
+         "0",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1003,
+     "como": "nova",
+     "conteudo": "⚗️ **Feiticeiro104** bebe **Poção da Benção 1** e fica com ✨ Benção.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1004,
+     "como": "nova",
+     "conteudo": "✨ **Cure Wounds**: Guerreiro101 nao recupera nada (ja esta cheio, ou caido).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1005,
+     "como": "nova",
+     "conteudo": "✨ Ladino103 usa **Furtividade**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_bencao_1",
+       "personagem_id": 4,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_bencao_1",
+       "personagem_id": 4,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 7,
+       "ca_alvo": 15,
+       "d20": 2,
+       "dano": 0,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 5,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_condicoes": {
+     "+": [
+      {
+       "condicao": "bencao",
+       "run_id": 1,
+       "stacks": 1,
+       "user_id": 104
+      }
+     ],
+     "-": []
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": 103,
+       "efeito": "furtividade",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"desde\": 2}"
+      }
+     ],
+     "-": []
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "cure_wounds",
+       "alvos": "[101]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      },
+      {
+       "acao": "furtividade",
+       "alvos": "[0]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      },
+      {
+       "acao": "pocao_bencao_1",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 104
+      }
+     ],
+     "-": [
+      {
+       "acao": "cure_wounds",
+       "alvos": "[101]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      },
+      {
+       "acao": "furtividade",
+       "alvos": "[0]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ]
+    }
+   }
+  },
+  {
+   "rodada": 1,
+   "quem": 105,
+   "faz": "habilidade:aura_of_vitality",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 5)",
+         "value": "👹 **Gárgula 1** ▰▰▰▱▱▱▱▱ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 55/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 35% · Druida105 21% · Clerigo102 18% · Feiticeiro104 15% · Ladino103 11%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103\n↩️ **Aranha de Fase 2** · Mordida · 🎲 12 +4 = **16** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Cure Wounds**\n💨 Ladino103 · 🎲 2 +7 = **9** vs CA 15 → errou\n✨ Ladino103 usa **Furtividade**\n✨ Druida105 usa **Aura of Vitality**\n⚔️ Guerreiro101 · 🎲 10 +9 = **19** vs CA 15 → **12** de dano\n💨 Guerreiro101 · 🎲 3 +9 = **12** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 19 +9 = **28** vs CA 15 → **8** de dano\n⚔️ Guerreiro101 · 🎲 14 +9 = **23** vs CA 15 → **15** de dano\n✨ Guerreiro101 usa **Action Surge**\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 19 → errou Clerigo102\n↩️ **Gárgula 1** · Mordida · 💢 🎲 **1** → erro critico, Druida105 escapa\n↩️ **Gárgula 3** · Mordida · 🎲 18 +4 = **22** vs CA 19 → **7** de dano em Guerreiro101"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 1",
+         "0",
+         "▰▰▰▱▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1002,
+     "como": "editada",
+     "conteudo": "✨ Clerigo102 usa **Poção da Aceleração 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1003,
+     "como": "editada",
+     "conteudo": "⚗️ **Feiticeiro104** bebe **Poção da Benção 1** e fica com ✨ Benção.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1004,
+     "como": "editada",
+     "conteudo": "✨ **Cure Wounds**: Guerreiro101 nao recupera nada (ja esta cheio, ou caido).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1005,
+     "como": "editada",
+     "conteudo": "✨ Ladino103 usa **Furtividade**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1006,
+     "como": "nova",
+     "conteudo": "✨ **Aura of Vitality**: e um bonus nos proximos ataques.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1007,
+     "como": "nova",
+     "conteudo": "✨ Guerreiro101 usa **Action Surge**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1008,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 2** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 0,
+       "bonus": 9,
+       "ca_alvo": 15,
+       "d20": 10,
+       "dano": 12,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 0,
+       "bonus": 9,
+       "ca_alvo": 15,
+       "d20": 14,
+       "dano": 15,
+       "indice": 3,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 0,
+       "bonus": 9,
+       "ca_alvo": 15,
+       "d20": 19,
+       "dano": 8,
+       "indice": 2,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 0,
+       "bonus": 9,
+       "ca_alvo": 15,
+       "d20": 3,
+       "dano": 0,
+       "indice": 1,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 1,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 5,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":9}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      },
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      },
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      },
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 17,
+       "hp_max": 52,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Gárgula 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 52,
+       "hp_max": 52,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Gárgula 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 55,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 57,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "action_surge",
+       "alvos": "[0]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      },
+      {
+       "acao": "aura_of_vitality",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 105
+      }
+     ],
+     "-": [
+      {
+       "acao": "action_surge",
+       "alvos": "[0]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 1,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "aura_of_vitality",
+       "run_id": 1,
+       "user_id": 105,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 101,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 5)",
+         "value": "👹 **Gárgula 1** ▰▰▰▱▱▱▱▱ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 55/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 35% · Druida105 21% · Clerigo102 18% · Feiticeiro104 15% · Ladino103 11%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103\n↩️ **Aranha de Fase 2** · Mordida · 🎲 12 +4 = **16** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Cure Wounds**\n💨 Ladino103 · 🎲 2 +7 = **9** vs CA 15 → errou\n✨ Ladino103 usa **Furtividade**\n✨ Druida105 usa **Aura of Vitality**\n⚔️ Guerreiro101 · 🎲 10 +9 = **19** vs CA 15 → **12** de dano\n💨 Guerreiro101 · 🎲 3 +9 = **12** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 19 +9 = **28** vs CA 15 → **8** de dano\n⚔️ Guerreiro101 · 🎲 14 +9 = **23** vs CA 15 → **15** de dano\n✨ Guerreiro101 usa **Action Surge**\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 19 → errou Clerigo102\n↩️ **Gárgula 1** · Mordida · 💢 🎲 **1** → erro critico, Druida105 escapa\n↩️ **Gárgula 3** · Mordida · 🎲 18 +4 = **22** vs CA 19 → **7** de dano em Guerreiro101"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 1",
+         "0",
+         "▰▰▰▱▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 102,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 5)",
+         "value": "👹 **Gárgula 1** ▰▰▰▱▱▱▱▱ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 55/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 35% · Druida105 21% · Clerigo102 18% · Feiticeiro104 15% · Ladino103 11%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102 — ação guardada ⏳\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103\n↩️ **Aranha de Fase 2** · Mordida · 🎲 12 +4 = **16** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Cure Wounds**\n💨 Ladino103 · 🎲 2 +7 = **9** vs CA 15 → errou\n✨ Ladino103 usa **Furtividade**\n✨ Druida105 usa **Aura of Vitality**\n⚔️ Guerreiro101 · 🎲 10 +9 = **19** vs CA 15 → **12** de dano\n💨 Guerreiro101 · 🎲 3 +9 = **12** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 19 +9 = **28** vs CA 15 → **8** de dano\n⚔️ Guerreiro101 · 🎲 14 +9 = **23** vs CA 15 → **15** de dano\n✨ Guerreiro101 usa **Action Surge**\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 19 → errou Clerigo102\n↩️ **Gárgula 1** · Mordida · 💢 🎲 **1** → erro critico, Druida105 escapa\n↩️ **Gárgula 3** · Mordida · 🎲 18 +4 = **22** vs CA 19 → **7** de dano em Guerreiro101"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 1",
+         "0",
+         "▰▰▰▱▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 103,
+   "faz": "pocao:pocao_dano_1",
+   "alvos": [],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (5 de pé de 5)",
+         "value": "👹 **Gárgula 1** ▰▰▰▱▱▱▱▱ · CA 15 · 1 golpes\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 55/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 35% · Druida105 21% · Clerigo102 18% · Feiticeiro104 15% · Ladino103 11%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102 — ação guardada ⏳\n▫️ `19` 🧝 Ladino103 — ação guardada ⏳\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n▫️ ` 9` 👹 Gárgula 1\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103\n↩️ **Aranha de Fase 2** · Mordida · 🎲 12 +4 = **16** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Cure Wounds**\n💨 Ladino103 · 🎲 2 +7 = **9** vs CA 15 → errou\n✨ Ladino103 usa **Furtividade**\n✨ Druida105 usa **Aura of Vitality**\n⚔️ Guerreiro101 · 🎲 10 +9 = **19** vs CA 15 → **12** de dano\n💨 Guerreiro101 · 🎲 3 +9 = **12** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 19 +9 = **28** vs CA 15 → **8** de dano\n⚔️ Guerreiro101 · 🎲 14 +9 = **23** vs CA 15 → **15** de dano\n✨ Guerreiro101 usa **Action Surge**\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 19 → errou Clerigo102\n↩️ **Gárgula 1** · Mordida · 💢 🎲 **1** → erro critico, Druida105 escapa\n↩️ **Gárgula 3** · Mordida · 🎲 18 +4 = **22** vs CA 19 → **7** de dano em Guerreiro101"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 1",
+         "0",
+         "▰▰▰▱▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "personagem_itens": {
+     "+": [
+      {
+       "item_id": "pocao_dano_1",
+       "personagem_id": 3,
+       "quantidade": 0
+      }
+     ],
+     "-": [
+      {
+       "item_id": "pocao_dano_1",
+       "personagem_id": 3,
+       "quantidade": 1
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "pocao_dano_1",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 104,
+   "faz": "habilidade:chromatic_orb",
+   "alvos": [
+    0
+   ],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (4 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n👹 **Gárgula 2** ▰▰▰▰▰▰▰▱ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 55/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▱ 37/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 39/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▰ 45/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 35% · Druida105 21% · Clerigo102 18% · Feiticeiro104 15% · Ladino103 11%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n✅ `21` 🧝 Feiticeiro104\n✅ `21` 👹 Aranha de Fase 2\n✅ `20` 🧝 Clerigo102\n✅ `19` 🧝 Ladino103\n▶️ `17` 🧝 Druida105 — **sua vez de escolher**\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 1",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 10 +4 = **14** vs CA 16 → errou Ladino103\n↩️ **Aranha de Fase 2** · Mordida · 🎲 12 +4 = **16** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Cure Wounds**\n💨 Ladino103 · 🎲 2 +7 = **9** vs CA 15 → errou\n✨ Ladino103 usa **Furtividade**\n✨ Druida105 usa **Aura of Vitality**\n⚔️ Guerreiro101 · 🎲 10 +9 = **19** vs CA 15 → **12** de dano\n💨 Guerreiro101 · 🎲 3 +9 = **12** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 19 +9 = **28** vs CA 15 → **8** de dano\n⚔️ Guerreiro101 · 🎲 14 +9 = **23** vs CA 15 → **15** de dano\n✨ Guerreiro101 usa **Action Surge**\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 19 → errou Clerigo102\n↩️ **Gárgula 1** · Mordida · 💢 🎲 **1** → erro critico, Druida105 escapa\n↩️ **Gárgula 3** · Mordida · 🎲 18 +4 = **22** vs CA 19 → **7** de dano em Guerreiro101"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105\n✨ Feiticeiro104 usa **Chromatic Orb**\n↩️ **Aranha de Fase 2** · Mordida · 🎲 19 +4 = **23** vs CA 16 → **8** de dano em Ladino103\n✴️ **Aranha de Fase 2** · Mordida em Ladino103 · 🎲 10 +4 = **14** vs CD 13 → resistiu\n💨 Clerigo102 · 🎲 6 +8 = **14** vs CA 15 → errou\n⚔️ Clerigo102 · 🎲 10 +8 = **18** vs CA 15 → **7** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 2"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▰▰▰▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1009,
+     "como": "nova",
+     "conteudo": "✨ **Chromatic Orb** (CD 16)\n· Gárgula 1 → **24** de dano\n☠️ caem: Gárgula 1",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1010,
+     "como": "nova",
+     "conteudo": "✨ Ladino103 usa **Poção do Dano 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 1,
+       "bonus": 8,
+       "ca_alvo": 15,
+       "d20": 10,
+       "dano": 7,
+       "indice": 1,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 1,
+       "bonus": 8,
+       "ca_alvo": 15,
+       "d20": 6,
+       "dano": 0,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 5,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      },
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_dano",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"dano_extra\": 1}"
+      },
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":4}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 0,
+       "hp_max": 52,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Gárgula 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 45,
+       "hp_max": 52,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Gárgula 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 17,
+       "hp_max": 52,
+       "indice": 0,
+       "matilha": 0,
+       "nome": "Gárgula 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 52,
+       "hp_max": 52,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Gárgula 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 37,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 103
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 45,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 103
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      },
+      {
+       "acao": "chromatic_orb",
+       "alvos": "[0]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 104
+      },
+      {
+       "acao": "pocao_dano_1",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      },
+      {
+       "acao": "pocao_dano_1",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ]
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "chromatic_orb",
+       "run_id": 1,
+       "user_id": 104,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 2,
+   "quem": 105,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "💨 🎲 **3** +8 = **11** vs CA 15 — errou Gárgula 2.",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (4 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n👹 **Gárgula 2** ▰▰▰▰▱▱▱▱ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▱ 41/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▱ 35/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 36/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 30% · Clerigo102 20% · Feiticeiro104 20% · Druida105 20% · Ladino103 10%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101\n▫️ `16` 👹 Gárgula 2\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105\n✨ Feiticeiro104 usa **Chromatic Orb**\n↩️ **Aranha de Fase 2** · Mordida · 🎲 19 +4 = **23** vs CA 16 → **8** de dano em Ladino103\n✴️ **Aranha de Fase 2** · Mordida em Ladino103 · 🎲 10 +4 = **14** vs CD 13 → resistiu\n💨 Clerigo102 · 🎲 6 +8 = **14** vs CA 15 → errou\n⚔️ Clerigo102 · 🎲 10 +8 = **18** vs CA 15 → **7** de dano\n💨 Druida105 · 🎲 3 +8 = **11** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 9 +9 = **18** vs CA 15 → **7** de dano\n⚔️ Guerreiro101 · 🎲 11 +9 = **20** vs CA 15 → **15** de dano\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 15 → **7** de dano em Feiticeiro104\n↩️ **Gárgula 3** · Mordida · 🎲 3 +4 = **7** vs CA 15 → errou Feiticeiro104"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1008,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 2** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1009,
+     "como": "editada",
+     "conteudo": "✨ **Chromatic Orb** (CD 16)\n· Gárgula 1 → **24** de dano\n☠️ caem: Gárgula 1",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1010,
+     "como": "editada",
+     "conteudo": "✨ Ladino103 usa **Poção do Dano 1**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1011,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 3** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 1,
+       "bonus": 8,
+       "ca_alvo": 15,
+       "d20": 3,
+       "dano": 0,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "user_id": 105
+      },
+      {
+       "alvo": 1,
+       "bonus": 9,
+       "ca_alvo": 15,
+       "d20": 11,
+       "dano": 15,
+       "indice": 1,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "user_id": 101
+      },
+      {
+       "alvo": 1,
+       "bonus": 9,
+       "ca_alvo": 15,
+       "d20": 9,
+       "dano": 7,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 2,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 5,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":6}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:1",
+       "expira": 3,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":9}"
+      }
+     ]
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 23,
+       "hp_max": 52,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Gárgula 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 45,
+       "hp_max": 52,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Gárgula 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 35,
+       "personagem_id": 4,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 104
+      },
+      {
+       "hp_atual": 36,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 41,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 57,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 37,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 39,
+       "personagem_id": 4,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 104
+      },
+      {
+       "hp_atual": 45,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 55,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      },
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 105
+      }
+     ],
+     "-": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 2,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ]
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 101,
+   "faz": "habilidade:second_wind",
+   "alvos": [],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (4 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n👹 **Gárgula 2** ▰▰▰▰▱▱▱▱ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▱ 41/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▱ 35/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 36/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 30% · Clerigo102 20% · Feiticeiro104 20% · Druida105 20% · Ladino103 10%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105\n✨ Feiticeiro104 usa **Chromatic Orb**\n↩️ **Aranha de Fase 2** · Mordida · 🎲 19 +4 = **23** vs CA 16 → **8** de dano em Ladino103\n✴️ **Aranha de Fase 2** · Mordida em Ladino103 · 🎲 10 +4 = **14** vs CD 13 → resistiu\n💨 Clerigo102 · 🎲 6 +8 = **14** vs CA 15 → errou\n⚔️ Clerigo102 · 🎲 10 +8 = **18** vs CA 15 → **7** de dano\n💨 Druida105 · 🎲 3 +8 = **11** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 9 +9 = **18** vs CA 15 → **7** de dano\n⚔️ Guerreiro101 · 🎲 11 +9 = **20** vs CA 15 → **15** de dano\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 15 → **7** de dano em Feiticeiro104\n↩️ **Gárgula 3** · Mordida · 🎲 3 +4 = **7** vs CA 15 → errou Feiticeiro104"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "second_wind",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "second_wind",
+       "run_id": 1,
+       "user_id": 101,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 102,
+   "faz": "habilidade:spirit_guardians",
+   "alvos": [],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (4 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n👹 **Gárgula 2** ▰▰▰▰▱▱▱▱ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▱ 41/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▱ 35/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 36/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 30% · Clerigo102 20% · Feiticeiro104 20% · Druida105 20% · Ladino103 10%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102 — ação guardada ⏳\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105\n✨ Feiticeiro104 usa **Chromatic Orb**\n↩️ **Aranha de Fase 2** · Mordida · 🎲 19 +4 = **23** vs CA 16 → **8** de dano em Ladino103\n✴️ **Aranha de Fase 2** · Mordida em Ladino103 · 🎲 10 +4 = **14** vs CD 13 → resistiu\n💨 Clerigo102 · 🎲 6 +8 = **14** vs CA 15 → errou\n⚔️ Clerigo102 · 🎲 10 +8 = **18** vs CA 15 → **7** de dano\n💨 Druida105 · 🎲 3 +8 = **11** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 9 +9 = **18** vs CA 15 → **7** de dano\n⚔️ Guerreiro101 · 🎲 11 +9 = **20** vs CA 15 → **15** de dano\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 15 → **7** de dano em Feiticeiro104\n↩️ **Gárgula 3** · Mordida · 🎲 3 +4 = **7** vs CA 15 → errou Feiticeiro104"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "spirit_guardians",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "incursao",
+       "habilidade": "spirit_guardians",
+       "run_id": 1,
+       "user_id": 102,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 103,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (4 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n👹 **Gárgula 2** ▰▰▰▰▱▱▱▱ · CA 15 · 1 golpes\n👹 **Gárgula 3** ▰▰▰▰▰▰▰▰ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▰▰ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▱ 41/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▱ 35/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 36/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 30% · Clerigo102 20% · Feiticeiro104 20% · Druida105 20% · Ladino103 10%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102 — ação guardada ⏳\n▫️ `19` 🧝 Ladino103 — ação guardada ⏳\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n▫️ `16` 👹 Gárgula 2\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105\n✨ Feiticeiro104 usa **Chromatic Orb**\n↩️ **Aranha de Fase 2** · Mordida · 🎲 19 +4 = **23** vs CA 16 → **8** de dano em Ladino103\n✴️ **Aranha de Fase 2** · Mordida em Ladino103 · 🎲 10 +4 = **14** vs CD 13 → resistiu\n💨 Clerigo102 · 🎲 6 +8 = **14** vs CA 15 → errou\n⚔️ Clerigo102 · 🎲 10 +8 = **18** vs CA 15 → **7** de dano\n💨 Druida105 · 🎲 3 +8 = **11** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 9 +9 = **18** vs CA 15 → **7** de dano\n⚔️ Guerreiro101 · 🎲 11 +9 = **20** vs CA 15 → **15** de dano\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 15 → **7** de dano em Feiticeiro104\n↩️ **Gárgula 3** · Mordida · 🎲 3 +4 = **7** vs CA 15 → errou Feiticeiro104"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 2",
+         "1",
+         "▰▰▰▰▱▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▰▰ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▰▰ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 104,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **13** +9 = **22** vs CA 15 — acertou Gárgula 2, **9** de dano."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (3 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n☠️ ~~Gárgula 2~~ — abatido\n👹 **Gárgula 3** ▰▰▰▰▰▰▱▱ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▰ 57/57 💠\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45 💠\n❤️ Ladino103 — ▰▰▰▰▰▱ 41/45 💠\n❤️ Feiticeiro104 — ▰▰▰▰▰▱ 35/39 💠  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 36/45 💠"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Guerreiro101 30% · Clerigo102 20% · Feiticeiro104 20% · Druida105 20% · Ladino103 10%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n✅ `21` 🧝 Feiticeiro104\n✅ `21` 👹 Aranha de Fase 2\n✅ `20` 🧝 Clerigo102\n✅ `19` 🧝 Ladino103\n▶️ `17` 🧝 Druida105 — **sua vez de escolher**\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n☠️ `16` ~~Gárgula 2~~\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 2",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 5 +4 = **9** vs CA 17 → errou Druida105\n✨ Feiticeiro104 usa **Chromatic Orb**\n↩️ **Aranha de Fase 2** · Mordida · 🎲 19 +4 = **23** vs CA 16 → **8** de dano em Ladino103\n✴️ **Aranha de Fase 2** · Mordida em Ladino103 · 🎲 10 +4 = **14** vs CD 13 → resistiu\n💨 Clerigo102 · 🎲 6 +8 = **14** vs CA 15 → errou\n⚔️ Clerigo102 · 🎲 10 +8 = **18** vs CA 15 → **7** de dano\n💨 Druida105 · 🎲 3 +8 = **11** vs CA 15 → errou\n⚔️ Guerreiro101 · 🎲 9 +9 = **18** vs CA 15 → **7** de dano\n⚔️ Guerreiro101 · 🎲 11 +9 = **20** vs CA 15 → **15** de dano\n↩️ **Gárgula 2** · Mordida · 🎲 14 +4 = **18** vs CA 15 → **7** de dano em Feiticeiro104\n↩️ **Gárgula 3** · Mordida · 🎲 3 +4 = **7** vs CA 15 → errou Feiticeiro104"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu\n⚔️ Feiticeiro104 · 🎲 13 +9 = **22** vs CA 15 → **9** de dano\n↩️ **Aranha de Fase 2** · Mordida · 🎲 9 +4 = **13** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Spirit Guardians**\n⚔️ Ladino103 · 🎲 15 +7 = **22** vs CA 15 → **19** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 3"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▰▱▱ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1012,
+     "como": "nova",
+     "conteudo": "✨ **Spirit Guardians** (CD 16)\n· Gárgula 2 · 🎲 11 +0 = **11** vs CD 16 → **10** de dano\n· Gárgula 3 · 🎲 5 +0 = **5** vs CD 16 → **10** de dano\n· Aranha de Fase 1 · 🎲 3 +0 = **3** vs CD 16 → **10** de dano\n· Aranha de Fase 2 · 🎲 10 +0 = **10** vs CD 16 → **10** de dano",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 1,
+       "bonus": 7,
+       "ca_alvo": 15,
+       "d20": 15,
+       "dano": 19,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 103
+      },
+      {
+       "alvo": 1,
+       "bonus": 9,
+       "ca_alvo": 15,
+       "d20": 13,
+       "dano": 9,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 104
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 5,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":10}"
+      },
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 22,
+       "hp_max": 32,
+       "indice": 3,
+       "matilha": 0,
+       "nome": "Aranha de Fase 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 22,
+       "hp_max": 32,
+       "indice": 4,
+       "matilha": 0,
+       "nome": "Aranha de Fase 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 0,
+       "hp_max": 52,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Gárgula 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 42,
+       "hp_max": 52,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Gárgula 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 32,
+       "hp_max": 32,
+       "indice": 3,
+       "matilha": 0,
+       "nome": "Aranha de Fase 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 32,
+       "hp_max": 32,
+       "indice": 4,
+       "matilha": 0,
+       "nome": "Aranha de Fase 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 23,
+       "hp_max": 52,
+       "indice": 1,
+       "matilha": 0,
+       "nome": "Gárgula 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 52,
+       "hp_max": 52,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Gárgula 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      },
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 104
+      },
+      {
+       "acao": "spirit_guardians",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      },
+      {
+       "acao": "spirit_guardians",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ]
+    }
+   }
+  },
+  {
+   "rodada": 3,
+   "quem": 105,
+   "faz": "habilidade:forma_urso",
+   "alvos": [],
+   "leu": {
+    "resposta": "🐾 **Wild Shape — Urso**: Druida105 vira **Urso** — dano 2d10+5, +3 de CA, +4 de ameaca, 15 de vida temporaria. Por 3 rodadas.\n⚔️ 🎲 **15** +8 = **23** vs CA 15 — acertou Gárgula 3, **10** de dano.",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (3 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n☠️ ~~Gárgula 2~~ — abatido\n👹 **Gárgula 3** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▱ 50/57  🤢\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 38/39  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 40/45 +10 THP 💠❗"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Druida105 27%❗ · Clerigo102 26% · Guerreiro101 22% · Feiticeiro104 16% · Ladino103 9%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101\n☠️ `16` ~~Gárgula 2~~\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu\n⚔️ Feiticeiro104 · 🎲 13 +9 = **22** vs CA 15 → **9** de dano\n↩️ **Aranha de Fase 2** · Mordida · 🎲 9 +4 = **13** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Spirit Guardians**\n⚔️ Ladino103 · 🎲 15 +7 = **22** vs CA 15 → **19** de dano\n⚔️ Druida105 · 🎲 15 +8 = **23** vs CA 15 → **10** de dano\n✨ Druida105 usa **Wild Shape — Urso**\n✨ Guerreiro101 usa **Second Wind**\n↩️ **Gárgula 3** · Mordida · 🎲 16 +4 = **20** vs CA 20 → **5** de dano em Druida105"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 17 +4 = **21** vs CA 19 → **7** de dano em Guerreiro101\n✴️ **Aranha de Fase 1** · Mordida em Guerreiro101 · 🎲 4 +8 = **12** vs CD 13 → falhou: **🤢 Envenenado**\n🧪 **Guerreiro101** fica com 🤢 Envenenado — -1 nos ataques e nos testes de perícia."
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1011,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 3** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1012,
+     "como": "editada",
+     "conteudo": "✨ **Spirit Guardians** (CD 16)\n· Gárgula 2 · 🎲 11 +0 = **11** vs CD 16 → **10** de dano\n· Gárgula 3 · 🎲 5 +0 = **5** vs CD 16 → **10** de dano\n· Aranha de Fase 1 · 🎲 3 +0 = **3** vs CD 16 → **10** de dano\n· Aranha de Fase 2 · 🎲 10 +0 = **10** vs CD 16 → **10** de dano",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1013,
+     "como": "nova",
+     "conteudo": "🐾 **Wild Shape — Urso**: Druida105 vira **Urso** — dano 2d10+5, +3 de CA, +4 de ameaca, 15 de vida temporaria. Por 3 rodadas.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1014,
+     "como": "nova",
+     "conteudo": "✨ **Second Wind**: Guerreiro101 nao recupera nada (ja esta cheio, ou caido).",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1015,
+     "como": "nova",
+     "conteudo": "⚔️ **Rodada 4** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 2,
+       "bonus": 8,
+       "ca_alvo": 15,
+       "d20": 15,
+       "dano": 10,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "user_id": 105
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 3,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 5,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_condicoes": {
+     "+": [
+      {
+       "condicao": "envenenado",
+       "run_id": 1,
+       "stacks": 1,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:3",
+       "expira": 5,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":6}"
+      },
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "forma_urso",
+       "expira": 6,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"dano_arma\": \"2d10+5\", \"forma\": \"Urso\", \"ca\": 3, \"ataques\": 1, \"ameaca\": 4}"
+      }
+     ],
+     "-": [
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":6}"
+      },
+      {
+       "alvo_id": 101,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      },
+      {
+       "alvo_id": 102,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "pocao_aceleracao",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ataques_extra\": 1}"
+      },
+      {
+       "alvo_id": 103,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      },
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:2",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":4}"
+      },
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      },
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "aura_of_vitality",
+       "expira": 4,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"cura_por_turno\": 0.1}"
+      }
+     ]
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 32,
+       "hp_max": 52,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Gárgula 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 42,
+       "hp_max": 52,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Gárgula 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_participantes": {
+     "+": [
+      {
+       "hp_atual": 38,
+       "personagem_id": 4,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 104
+      },
+      {
+       "hp_atual": 40,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 10,
+       "tier": 3,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 45,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 50,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "hp_atual": 35,
+       "personagem_id": 4,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 104
+      },
+      {
+       "hp_atual": 36,
+       "personagem_id": 5,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 105
+      },
+      {
+       "hp_atual": 41,
+       "personagem_id": 3,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 103
+      },
+      {
+       "hp_atual": 57,
+       "personagem_id": 1,
+       "run_id": 1,
+       "thp": 0,
+       "tier": 3,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "forma_urso",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 105
+      },
+      {
+       "acao": "second_wind",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": [
+      {
+       "acao": "second_wind",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 3,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ]
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "forma_urso",
+       "run_id": 1,
+       "user_id": 105,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 101,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (3 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n☠️ ~~Gárgula 2~~ — abatido\n👹 **Gárgula 3** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▱ 50/57  🤢\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 38/39  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 40/45 +10 THP 💠❗"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Druida105 27%❗ · Clerigo102 26% · Guerreiro101 22% · Feiticeiro104 16% · Ladino103 9%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n☠️ `16` ~~Gárgula 2~~\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu\n⚔️ Feiticeiro104 · 🎲 13 +9 = **22** vs CA 15 → **9** de dano\n↩️ **Aranha de Fase 2** · Mordida · 🎲 9 +4 = **13** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Spirit Guardians**\n⚔️ Ladino103 · 🎲 15 +7 = **22** vs CA 15 → **19** de dano\n⚔️ Druida105 · 🎲 15 +8 = **23** vs CA 15 → **10** de dano\n✨ Druida105 usa **Wild Shape — Urso**\n✨ Guerreiro101 usa **Second Wind**\n↩️ **Gárgula 3** · Mordida · 🎲 16 +4 = **20** vs CA 20 → **5** de dano em Druida105"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 17 +4 = **21** vs CA 19 → **7** de dano em Guerreiro101\n✴️ **Aranha de Fase 1** · Mordida em Guerreiro101 · 🎲 4 +8 = **12** vs CD 13 → falhou: **🤢 Envenenado**\n🧪 **Guerreiro101** fica com 🤢 Envenenado — -1 nos ataques e nos testes de perícia."
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 102,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (3 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n☠️ ~~Gárgula 2~~ — abatido\n👹 **Gárgula 3** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▱ 50/57  🤢\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 38/39  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 40/45 +10 THP 💠❗"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Druida105 27%❗ · Clerigo102 26% · Guerreiro101 22% · Feiticeiro104 16% · Ladino103 9%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102 — ação guardada ⏳\n▫️ `19` 🧝 Ladino103\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n☠️ `16` ~~Gárgula 2~~\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu\n⚔️ Feiticeiro104 · 🎲 13 +9 = **22** vs CA 15 → **9** de dano\n↩️ **Aranha de Fase 2** · Mordida · 🎲 9 +4 = **13** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Spirit Guardians**\n⚔️ Ladino103 · 🎲 15 +7 = **22** vs CA 15 → **19** de dano\n⚔️ Druida105 · 🎲 15 +8 = **23** vs CA 15 → **10** de dano\n✨ Druida105 usa **Wild Shape — Urso**\n✨ Guerreiro101 usa **Second Wind**\n↩️ **Gárgula 3** · Mordida · 🎲 16 +4 = **20** vs CA 20 → **5** de dano em Druida105"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 17 +4 = **21** vs CA 19 → **7** de dano em Guerreiro101\n✴️ **Aranha de Fase 1** · Mordida em Guerreiro101 · 🎲 4 +8 = **12** vs CD 13 → falhou: **🤢 Envenenado**\n🧪 **Guerreiro101** fica com 🤢 Envenenado — -1 nos ataques e nos testes de perícia."
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 103,
+   "faz": "habilidade:marca_fatal",
+   "alvos": [
+    2
+   ],
+   "leu": {
+    "resposta": "Ação guardada: sai quando a iniciativa chegar em você. Agora é a vez de **Feiticeiro104**."
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (3 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n☠️ ~~Gárgula 2~~ — abatido\n👹 **Gárgula 3** ▰▰▰▰▰▱▱▱ · CA 15 · 1 golpes\n👹 **Aranha de Fase 1** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes\n👹 **Aranha de Fase 2** ▰▰▰▰▰▰▱▱ · CA 13 · 1 golpes"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▱ 50/57  🤢\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 38/39  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 40/45 +10 THP 💠❗"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Druida105 27%❗ · Clerigo102 26% · Guerreiro101 22% · Feiticeiro104 16% · Ladino103 9%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n▶️ `21` 🧝 Feiticeiro104 — **sua vez de escolher**\n▫️ `21` 👹 Aranha de Fase 2\n▫️ `20` 🧝 Clerigo102 — ação guardada ⏳\n▫️ `19` 🧝 Ladino103 — ação guardada ⏳\n▫️ `17` 🧝 Druida105\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n☠️ `16` ~~Gárgula 2~~\n☠️ ` 9` ~~Gárgula 1~~\n▫️ ` 5` 👹 Gárgula 3"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu\n⚔️ Feiticeiro104 · 🎲 13 +9 = **22** vs CA 15 → **9** de dano\n↩️ **Aranha de Fase 2** · Mordida · 🎲 9 +4 = **13** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Spirit Guardians**\n⚔️ Ladino103 · 🎲 15 +7 = **22** vs CA 15 → **19** de dano\n⚔️ Druida105 · 🎲 15 +8 = **23** vs CA 15 → **10** de dano\n✨ Druida105 usa **Wild Shape — Urso**\n✨ Guerreiro101 usa **Second Wind**\n↩️ **Gárgula 3** · Mordida · 🎲 16 +4 = **20** vs CA 20 → **5** de dano em Druida105"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 17 +4 = **21** vs CA 19 → **7** de dano em Guerreiro101\n✴️ **Aranha de Fase 1** · Mordida em Guerreiro101 · 🎲 4 +8 = **12** vs CD 13 → falhou: **🤢 Envenenado**\n🧪 **Guerreiro101** fica com 🤢 Envenenado — -1 nos ataques e nos testes de perícia."
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "menu": "Atacar quem?",
+       "id": "inc:alvo:1:OBJ",
+       "valores": [
+        1,
+        1
+       ],
+       "opcoes": [
+        [
+         "Gárgula 3",
+         "2",
+         "▰▰▰▰▰▱▱▱ · CA 15",
+         false
+        ],
+        [
+         "Aranha de Fase 1",
+         "3",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ],
+        [
+         "Aranha de Fase 2",
+         "4",
+         "▰▰▰▰▰▰▱▱ · CA 13",
+         false
+        ]
+       ],
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "marca_fatal",
+       "alvos": "[2]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "combate:4",
+       "habilidade": "marca_fatal",
+       "run_id": 1,
+       "user_id": 103,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 104,
+   "faz": "habilidade:fireball_feit",
+   "alvos": [],
+   "leu": {
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Escolha ataque ou habilidade quando quiser: as ações saem uma de cada vez, na ordem da iniciativa (1d20 + Destreza). Cada criatura age na vez dela."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (1 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n☠️ ~~Gárgula 2~~ — abatido\n☠️ ~~Gárgula 3~~ — abatido\n👹 **Aranha de Fase 1** ▰▰▱▱▱▱▱▱ · CA 13 · 1 golpes\n☠️ ~~Aranha de Fase 2~~ — abatido"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▱ 50/57  🤢\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 38/39  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 40/45 +10 THP 💠❗"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Druida105 27%❗ · Clerigo102 26% · Guerreiro101 22% · Feiticeiro104 16% · Ladino103 9%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "✅ `22` 👹 Aranha de Fase 1\n✅ `21` 🧝 Feiticeiro104\n☠️ `21` ~~Aranha de Fase 2~~\n✅ `20` 🧝 Clerigo102\n✅ `19` 🧝 Ladino103\n▶️ `17` 🧝 Druida105 — **sua vez de escolher**\n▫️ `17` 🧝 Guerreiro101 — ação guardada ⏳\n☠️ `16` ~~Gárgula 2~~\n☠️ ` 9` ~~Gárgula 1~~\n☠️ ` 5` ~~Gárgula 3~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu\n⚔️ Feiticeiro104 · 🎲 13 +9 = **22** vs CA 15 → **9** de dano\n↩️ **Aranha de Fase 2** · Mordida · 🎲 9 +4 = **13** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Spirit Guardians**\n⚔️ Ladino103 · 🎲 15 +7 = **22** vs CA 15 → **19** de dano\n⚔️ Druida105 · 🎲 15 +8 = **23** vs CA 15 → **10** de dano\n✨ Druida105 usa **Wild Shape — Urso**\n✨ Guerreiro101 usa **Second Wind**\n↩️ **Gárgula 3** · Mordida · 🎲 16 +4 = **20** vs CA 20 → **5** de dano em Druida105"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4 (em andamento)",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 17 +4 = **21** vs CA 19 → **7** de dano em Guerreiro101\n✴️ **Aranha de Fase 1** · Mordida em Guerreiro101 · 🎲 4 +8 = **12** vs CD 13 → falhou: **🤢 Envenenado**\n🧪 **Guerreiro101** fica com 🤢 Envenenado — -1 nos ataques e nos testes de perícia.\n✨ Feiticeiro104 usa **Lightning Bolt**\n⚔️ Clerigo102 · 🎲 19 +8 = **27** vs CA 15 → **4** de dano\n💨 Ladino103 · 🎲 5 +7 = **12** vs CA 13 → errou\n✨ Ladino103 usa **Marca Fatal**"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": [
+      {
+       "botao": "Atacar",
+       "id": "inc:atacar:1:OBJ",
+       "estilo": "ButtonStyle.danger",
+       "emoji": "⚔️",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Habilidade",
+       "id": "inc:hab:1:OBJ",
+       "estilo": "ButtonStyle.secondary",
+       "emoji": "✨",
+       "desligado": false,
+       "linha": null
+      },
+      {
+       "botao": "Poção",
+       "id": "inc:pocao:1:OBJ",
+       "estilo": "ButtonStyle.success",
+       "emoji": "⚗️",
+       "desligado": false,
+       "linha": null
+      }
+     ],
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1016,
+     "como": "nova",
+     "conteudo": "✨ **Lightning Bolt** (CD 16)\n· Gárgula 3 · 🎲 15 +0 = **15** vs CD 16 → **30** de dano\n· Aranha de Fase 1 · 🎲 16 +2 = **18** vs CD 16 → **15** de dano\n· Aranha de Fase 2 · 🎲 11 +2 = **13** vs CD 16 → **30** de dano\n☠️ caem: Aranha de Fase 2",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1017,
+     "como": "nova",
+     "conteudo": "✨ Ladino103 usa **Marca Fatal**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 2,
+       "bonus": 8,
+       "ca_alvo": 15,
+       "d20": 19,
+       "dano": 4,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "user_id": 102
+      },
+      {
+       "alvo": 3,
+       "bonus": 7,
+       "ca_alvo": 13,
+       "d20": 5,
+       "dano": 0,
+       "indice": 0,
+       "origem": "habilidade",
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "user_id": 103
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 5,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 1,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 104,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:4",
+       "expira": 6,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":17}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 0,
+       "hp_max": 32,
+       "indice": 4,
+       "matilha": 0,
+       "nome": "Aranha de Fase 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 7,
+       "hp_max": 32,
+       "indice": 3,
+       "matilha": 0,
+       "nome": "Aranha de Fase 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 0,
+       "hp_max": 52,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Gárgula 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 22,
+       "hp_max": 32,
+       "indice": 3,
+       "matilha": 0,
+       "nome": "Aranha de Fase 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 22,
+       "hp_max": 32,
+       "indice": 4,
+       "matilha": 0,
+       "nome": "Aranha de Fase 2",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      },
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 15,
+       "carregada": 1,
+       "dano": "1d6+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d6+2\"}]",
+       "habilidade": null,
+       "hp_atual": 32,
+       "hp_max": 52,
+       "indice": 2,
+       "matilha": 0,
+       "nome": "Gárgula 3",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 0, \"CON\": 3, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      },
+      {
+       "acao": "fireball_feit",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 104
+      },
+      {
+       "acao": "marca_fatal",
+       "alvos": "[2]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ],
+     "-": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 102
+      },
+      {
+       "acao": "marca_fatal",
+       "alvos": "[2]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 103
+      }
+     ]
+    },
+    "run_usos": {
+     "+": [
+      {
+       "chave": "descanso:0",
+       "habilidade": "fireball_feit",
+       "run_id": 1,
+       "user_id": 104,
+       "usos": 1
+      }
+     ],
+     "-": []
+    }
+   }
+  },
+  {
+   "rodada": 4,
+   "quem": 105,
+   "faz": "ataque",
+   "alvos": [],
+   "leu": {
+    "resposta": "⚔️ 🎲 **12** +8 = **20** vs CA 13 — acertou Aranha de Fase 1, **19** de dano.",
+    "apagada": true
+   },
+   "canal": [
+    {
+     "mensagem": 1001,
+     "como": "editada",
+     "conteudo": "⚔️ <@101> <@102> <@103> <@104> <@105> — combate! Escolham ataque **ou** habilidade: as ações saem uma de cada vez, na ordem da iniciativa.",
+     "embeds": [
+      {
+       "footer": {
+        "text": "Combate encerrado."
+       },
+       "fields": [
+        {
+         "inline": false,
+         "name": "Inimigos (0 de pé de 5)",
+         "value": "☠️ ~~Gárgula 1~~ — abatido\n☠️ ~~Gárgula 2~~ — abatido\n☠️ ~~Gárgula 3~~ — abatido\n☠️ ~~Aranha de Fase 1~~ — abatido\n☠️ ~~Aranha de Fase 2~~ — abatido"
+        },
+        {
+         "inline": false,
+         "name": "Grupo",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▱ 50/57  🤢\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 38/39  ✨\n❤️ Druida105 — ▰▰▰▰▰▱ 40/45 +10 THP 💠❗"
+        },
+        {
+         "inline": false,
+         "name": "❗ Ameaça",
+         "value": "Druida105 27%❗ · Clerigo102 26% · Guerreiro101 22% · Feiticeiro104 16% · Ladino103 9%"
+        },
+        {
+         "inline": false,
+         "name": "Iniciativa",
+         "value": "☠️ `22` ~~Aranha de Fase 1~~\n🧝 `21` Feiticeiro104\n☠️ `21` ~~Aranha de Fase 2~~\n🧝 `20` Clerigo102\n🧝 `19` Ladino103\n🧝 `17` Druida105\n🧝 `17` Guerreiro101\n☠️ `16` ~~Gárgula 2~~\n☠️ ` 9` ~~Gárgula 1~~\n☠️ ` 5` ~~Gárgula 3~~"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 3",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 16 +4 = **20** vs CA 17 → **9** de dano em Druida105\n✴️ **Aranha de Fase 1** · Mordida em Druida105 · 🎲 19 +8 = **27** vs CD 13 → resistiu\n⚔️ Feiticeiro104 · 🎲 13 +9 = **22** vs CA 15 → **9** de dano\n↩️ **Aranha de Fase 2** · Mordida · 🎲 9 +4 = **13** vs CA 19 → errou Clerigo102\n✨ Clerigo102 usa **Spirit Guardians**\n⚔️ Ladino103 · 🎲 15 +7 = **22** vs CA 15 → **19** de dano\n⚔️ Druida105 · 🎲 15 +8 = **23** vs CA 15 → **10** de dano\n✨ Druida105 usa **Wild Shape — Urso**\n✨ Guerreiro101 usa **Second Wind**\n↩️ **Gárgula 3** · Mordida · 🎲 16 +4 = **20** vs CA 20 → **5** de dano em Druida105"
+        },
+        {
+         "inline": false,
+         "name": "Rodada 4",
+         "value": "↩️ **Aranha de Fase 1** · Mordida · 🎲 17 +4 = **21** vs CA 19 → **7** de dano em Guerreiro101\n✴️ **Aranha de Fase 1** · Mordida em Guerreiro101 · 🎲 4 +8 = **12** vs CD 13 → falhou: **🤢 Envenenado**\n🧪 **Guerreiro101** fica com 🤢 Envenenado — -1 nos ataques e nos testes de perícia.\n✨ Feiticeiro104 usa **Lightning Bolt**\n⚔️ Clerigo102 · 🎲 19 +8 = **27** vs CA 15 → **4** de dano\n💨 Ladino103 · 🎲 5 +7 = **12** vs CA 13 → errou\n✨ Ladino103 usa **Marca Fatal**\n⚔️ Druida105 · 🎲 12 +8 = **20** vs CA 13 → **19** de dano"
+        }
+       ],
+       "flags": 0,
+       "color": 10038562,
+       "type": "rich",
+       "title": "🏁 Sala OBJ — rodada 4"
+      }
+     ],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1015,
+     "como": "editada",
+     "conteudo": "⚔️ **Rodada 4** — <@101> <@102> <@103> <@104> <@105> — escolham a ação; ela sai na ordem da iniciativa.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1016,
+     "como": "editada",
+     "conteudo": "✨ **Lightning Bolt** (CD 16)\n· Gárgula 3 · 🎲 15 +0 = **15** vs CD 16 → **30** de dano\n· Aranha de Fase 1 · 🎲 16 +2 = **18** vs CD 16 → **15** de dano\n· Aranha de Fase 2 · 🎲 11 +2 = **13** vs CD 16 → **30** de dano\n☠️ caem: Aranha de Fase 2",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1017,
+     "como": "editada",
+     "conteudo": "✨ Ladino103 usa **Marca Fatal**.",
+     "embeds": [],
+     "view": null,
+     "arquivo": null,
+     "apagada": true
+    },
+    {
+     "mensagem": 1018,
+     "como": "nova",
+     "conteudo": null,
+     "embeds": [
+      {
+       "fields": [
+        {
+         "inline": false,
+         "name": "5 inimigos foram derrotados em 4 rodada(s)",
+         "value": "❤️ Guerreiro101 — ▰▰▰▰▰▱ 50/57\n❤️ Clerigo102 — ▰▰▰▰▰▰ 45/45\n❤️ Ladino103 — ▰▰▰▰▰▰ 45/45\n❤️ Feiticeiro104 — ▰▰▰▰▰▰ 38/39\n❤️ Druida105 — ▰▰▰▰▰▱ 40/45 +10 THP 💠❗"
+        },
+        {
+         "inline": false,
+         "name": "Recompensa (10 MEs por participante)",
+         "value": "<@101> — 10 MEs\n<@102> — 10 MEs\n<@103> — 10 MEs\n<@104> — 10 MEs\n<@105> — 10 MEs"
+        },
+        {
+         "inline": false,
+         "name": "Ouro da incursao (+625)",
+         "value": "**+125** · Clerigo102\n**+125** · Druida105\n**+125** · Feiticeiro104\n**+125** · Guerreiro101\n**+125** · Ladino103\nGaste com `/mercado vitrine`."
+        },
+        {
+         "inline": false,
+         "name": "Pontos de Organização (+12)",
+         "value": "**+2** · Participação na incursão\n**+10** · Objetivo cumprido\n**Vórtice Oculto** agora tem **12** ponto(s)."
+        }
+       ],
+       "flags": 0,
+       "color": 3066993,
+       "type": "rich",
+       "description": "O grupo entrega o resultado a Vórtice Oculto.",
+       "title": "🏆 Incursão de referência (tier livre) — objetivo cumprido"
+      }
+     ],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    },
+    {
+     "mensagem": 1019,
+     "como": "nova",
+     "conteudo": null,
+     "embeds": [
+      {
+       "flags": 0,
+       "color": 3066993,
+       "type": "rich",
+       "description": "Epílogo da referência.",
+       "title": "📖 Incursão de referência (tier livre) — epílogo"
+      }
+     ],
+     "view": null,
+     "arquivo": null,
+     "apagada": false
+    }
+   ],
+   "banco": {
+    "ouro_lancamentos": {
+     "+": [
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 10,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 5,
+       "run_id": 1
+      },
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 6,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 1,
+       "run_id": 1
+      },
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 7,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 2,
+       "run_id": 1
+      },
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 8,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 3,
+       "run_id": 1
+      },
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "id": 9,
+       "motivo": "Incursao concluida",
+       "ouro": 100,
+       "personagem_id": 4,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 1,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 1,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 2,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 2,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 3,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 3,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 4,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 4,
+       "run_id": 1
+      },
+      {
+       "chave": "salas",
+       "criado_em": "<relogio>",
+       "id": 5,
+       "motivo": "Salas superadas (1)",
+       "ouro": 25,
+       "personagem_id": 5,
+       "run_id": 1
+      }
+     ],
+     "-": []
+    },
+    "placar_organizacoes": {
+     "+": [
+      {
+       "guild_id": 1,
+       "organizacao": "Vórtice Oculto",
+       "pontos": 12
+      }
+     ],
+     "-": []
+    },
+    "pontos_lancamentos": {
+     "+": [
+      {
+       "chave": "conclusao",
+       "criado_em": "<relogio>",
+       "guild_id": 1,
+       "id": 2,
+       "motivo": "Objetivo cumprido",
+       "organizacao": "Vórtice Oculto",
+       "pontos": 10,
+       "run_id": 1
+      },
+      {
+       "chave": "participacao",
+       "criado_em": "<relogio>",
+       "guild_id": 1,
+       "id": 1,
+       "motivo": "Participação na incursão",
+       "organizacao": "Vórtice Oculto",
+       "pontos": 2,
+       "run_id": 1
+      }
+     ],
+     "-": []
+    },
+    "run_ataques": {
+     "+": [
+      {
+       "alvo": 3,
+       "bonus": 8,
+       "ca_alvo": 13,
+       "d20": 12,
+       "dano": 19,
+       "indice": 0,
+       "origem": "turno",
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "user_id": 105
+      }
+     ],
+     "-": []
+    },
+    "run_combate": {
+     "+": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 6,
+       "vez_desde": "<relogio>"
+      }
+     ],
+     "-": [
+      {
+       "decaiu": 0,
+       "passo": 4,
+       "rodada": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "vez": 5,
+       "vez_desde": "<relogio>"
+      }
+     ]
+    },
+    "run_efeitos": {
+     "+": [
+      {
+       "alvo_id": 105,
+       "alvo_tipo": "personagem",
+       "dono": null,
+       "efeito": "ameaca_rodada:4",
+       "expira": 6,
+       "passo": 4,
+       "run_id": 1,
+       "valor": "{\"ameaca\":2}"
+      }
+     ],
+     "-": []
+    },
+    "run_inimigos": {
+     "+": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 0,
+       "hp_max": 32,
+       "indice": 3,
+       "matilha": 0,
+       "nome": "Aranha de Fase 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ],
+     "-": [
+      {
+       "ataque": 4,
+       "ataques": 1,
+       "ca": 13,
+       "carregada": 1,
+       "dano": "1d10+2",
+       "golpes": "[{\"nome\": \"Mordida\", \"ataque\": 4, \"dano\": \"1d10+2\", \"efeito\": {\"nome\": \"Mordida\", \"save\": \"CON\", \"cd\": 13, \"texto\": \"\", \"dano\": null, \"alvos\": 1, \"atordoa\": 0, \"debuff\": [\"envenenado\"], \"cada\": 2, \"recarga\": null, \"save_repete\": false, \"metade\": false}}]",
+       "habilidade": null,
+       "hp_atual": 7,
+       "hp_max": 32,
+       "indice": 3,
+       "matilha": 0,
+       "nome": "Aranha de Fase 1",
+       "passo": 4,
+       "regeneracao": 0,
+       "run_id": 1,
+       "saves": "{\"FOR\": 2, \"DES\": 2, \"CON\": 1, \"INT\": -2, \"SAB\": 0, \"CAR\": -2}",
+       "saves_vantagem": "[]"
+      }
+     ]
+    },
+    "run_salas": {
+     "+": [
+      {
+       "fechada": 0,
+       "passo": 4,
+       "run_id": 1,
+       "sala_id": "OBJ",
+       "superada": 1,
+       "visitada": 0
+      }
+     ],
+     "-": []
+    },
+    "run_turnos": {
+     "+": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      },
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 1,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 105
+      }
+     ],
+     "-": [
+      {
+       "acao": "ataque",
+       "alvos": "[]",
+       "passo": 4,
+       "resolvida": 0,
+       "rodada": 4,
+       "run_id": 1,
+       "substituto": null,
+       "user_id": 101
+      }
+     ]
+    },
+    "runs": {
+     "+": [
+      {
+       "atualizada_em": "<relogio>",
+       "canal_id": 99,
+       "criada_em": "<relogio>",
+       "criador_id": 101,
+       "descansos": 0,
+       "guild_id": 1,
+       "id": 1,
+       "incursao_id": "ref",
+       "linha_atual": 4,
+       "mensagem_id": 1001,
+       "sala_atual": "OBJ",
+       "status": "sucesso",
+       "votacao_expira_em": null
+      }
+     ],
+     "-": [
+      {
+       "atualizada_em": "<relogio>",
+       "canal_id": 99,
+       "criada_em": "<relogio>",
+       "criador_id": 101,
+       "descansos": 0,
+       "guild_id": 1,
+       "id": 1,
+       "incursao_id": "ref",
+       "linha_atual": 4,
+       "mensagem_id": 1001,
+       "sala_atual": "OBJ",
+       "status": "objetivo",
+       "votacao_expira_em": null
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "fim": {
+  "motivo": "a run saiu do combate: sucesso"
+ }
+}
