@@ -1217,6 +1217,8 @@ src/
   condicoes.py  catalogo de debuff, maldicao, exaustao e buff, e as contas
   consequencias.py  o que cada tipo de sala faz ao passar ou falhar
   motor.py      regras da run (rolagens, margem, progresso) sem nada de Discord
+  combate/resolvedores.py  o que cada habilidade faz quando sai no combate; o cog herda
+  combate/fluxo.py  o estado do combate, a vez de cada um, a criatura, reações e efeitos; o cog herda
   embeds.py     montagem das mensagens da run
   cogs/incursao.py  runs: recrutamento, votação, salas, testes, combate
   cogs/organizacao.py  placar, extrato e ajuste de pontos
