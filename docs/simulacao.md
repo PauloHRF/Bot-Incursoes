@@ -20,32 +20,40 @@ estatísticas detalhadas, mantendo os mesmos combates e resultados de vitória.
 python tools/simular_combate.py data/incursoes/vortice_cripta.json --nivel 6 --repeticoes 240 --semente 42
 ```
 
-**O grupo é sorteado.** As repetições são divididas entre doze mesas tiradas
-entre as catorze classes, e a saída traz a média com a pior e a melhor mesa ao
-lado. Medir com cinco cópias da mesma classe dava um número que nunca vai
-acontecer — e que dependia de qual classe, então quem escolhia a classe
-escolhia a resposta. O detalhe está em `tools/simulacao/grupos.py`.
+**As formações são fixas.** A bancada, o sugeridor e a calibração usam os
+mesmos quatro grupos de referência. A semente altera as rolagens do combate,
+sem sortear as classes. Nenhuma formação repete classe.
 
-`--classe` ainda existe, como **diagnóstico**: ele responde "esta sala é dura
-*para quem*?", que é outra pergunta e continua valendo. É o único modo em que
-`--escolha` faz sentido, porque só ali existe uma ficha só.
+| Formação | Base de 3 jogadores | Com 5 jogadores, acrescenta |
+| --- | --- | --- |
+| Clássica | Guerreiro, Clérigo, Mago | Ladino, Patrulheiro |
+| Selvagem | Bárbaro, Xamã, Feiticeiro | Monge, Druida |
+| Arcana | Paladino, Clérigo, Bruxo | Artífice, Bardo |
+| Exploração | Druida, Xamã, Patrulheiro | Monge, Artífice |
 
-### Quantas mesas, e por que não adianta só subir as repetições
+Duplas usam as duas primeiras vagas; grupos de quatro acrescentam a quarta.
+O catálogo suporta até seis pessoas e está em `tools/simulacao/grupos.json`,
+com escolhas explícitas para as funções de frente e cura. Elas só entram
+no nível que as libera: Guerreiro defensivo, Druida-Urso, Clérigo curandeiro
+com magias de cura de grupo e Xamã com Cântico. As demais escolhas seguem a
+política automática do simulador.
 
-`--repeticoes` compra **lutas por mesa**, não mesas: com as doze do padrão,
-200 repetições dão 12×16 e 600 dão 12×50 — o número de mesas não se move. E é
-o sorteio das mesas que domina o erro da média. Medido no mesmo bando, com
-seis sorteios diferentes e o **mesmo custo** de 400 lutas:
+As repetições são divididas igualmente: no padrão de 240 lutas, cada um dos
+quatro grupos faz 60. `--composicoes` limita quantas formações do catálogo
+medir; pedir mais de quatro não duplica grupos. Abaixo de 60 lutas, o piso de
+15 por formação pode reduzir o conjunto medido, sempre na mesma ordem.
+Cada formação tem uma sequência própria de rolagens derivada da semente;
+mudar a quantidade de formações não altera a sequência das demais.
 
-| divisão | taxas medidas | amplitude |
-|---|---|---|
-| 12 mesas × 33 lutas | 67% · 56% · 75% · 69% · 75% · 62% | **19 pontos** |
-| 40 mesas × 10 lutas | 70% · 61% · 67% · 68% · 68% · 68% | **9 pontos** |
+A saída traz a média, os extremos e as classes/escolhas de cada formação.
+Esses números descrevem **os grupos de referência**, não todas as combinações
+possíveis das catorze classes. Resultados anteriores com mesas aleatórias
+não são diretamente comparáveis. O catálogo também entra no hash do modelo,
+para uma alteração de formação invalidar a procedência das medições antigas.
+Reinicie o Estúdio depois de editar o catálogo.
 
-Quem quer reduzir esse erro pede mais `--composicoes`. O piso de 15 lutas por
-mesa existe para proteger o número **de uma mesa** — quem publica só a média
-pode baixá-lo e comprar mesas com as mesmas lutas, que é o que o sugeridor
-faz (`grupos.MINIMO_PARA_A_MEDIA`).
+`--classe` permanece disponível como diagnóstico de uma classe isolada, e
+`--escolha` personaliza essa ficha. Esse não é o modo padrão da ferramenta.
 
 ```bash
 python tools/simular_combate.py ... --classe druida --escolha forma_t1=lobo

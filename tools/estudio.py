@@ -3,6 +3,9 @@
     python tools/estudio.py
     python tools/estudio.py --porta 8765 --sem-navegador
 
+Para entregar a outros autores, `tools/empacotar_estudio.py` gera um ZIP
+Windows com Python e dependências. Quem recebe extrai e abre pelo atalho.
+
 Sobe um servidor em 127.0.0.1 e abre a página. Ali dá para escrever sala,
 montar o filtro da dungeon vendo o pool que ele deixa, medir a sala contra o
 grupo e exportar o JSON pronto para mandar.
@@ -406,11 +409,11 @@ def _inteiro(valor: Any, padrao: int, menor: int, maior: int) -> int:
 
 
 def simular(payload: dict[str, Any]) -> dict[str, Any]:
-    """Mede a sala de combate com o motor do bot, contra mesas sorteadas.
+    """Mede a sala de combate com o motor do bot, contra formações fixas.
 
     A semente vai na resposta para dois autores comparando números verem o
     mesmo número — e para o próprio autor: sem fixá-la, editar o bando e
-    remedir mistura a diferença do bando com a diferença do sorteio.
+    remedir mistura a diferença do bando com a diferença das rolagens.
 
     Cada medida sai com um VEREDITO (`tools/simulacao/regua.py`), e não só com
     a porcentagem. Medir e deixar o autor adivinhar se 62% é o que ele queria
@@ -441,7 +444,7 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
     if not monstros:
         return {"erro": f"a sala não tem criatura escrita para o tier {tier}."}
 
-    # Sem classe, a sala é medida contra mesas SORTEADAS — ver
+    # Sem classe, a sala é medida contra mesas PREDEFINIDAS — ver
     # `tools/simulacao/grupos.py`. Com classe, o estúdio volta ao grupo
     # uniforme, que agora é o diagnóstico e não o padrão.
     classe = str(payload.get("classe") or "")
@@ -481,6 +484,7 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
             "caidos": bruto["caidos"],
             "lutas": bruto["amostras"],
             "mesas": len(mesas),
+            "composicoes": bruto["composicoes"],
             "pior": mesas[0] if len(mesas) > 1 else None,
             "melhor": mesas[-1] if len(mesas) > 1 else None,
             "azarada": azarada,
@@ -490,8 +494,9 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
         "sala": sala.id,
         "tema": tema,
         "tier": tier,
-        "classe": classe or "sorteado",
-        "sorteado": not classe,
+        "classe": classe or "predefinido",
+        "sorteado": False,
+        "predefinido": not classe,
         "nivel": nivel,
         "repeticoes": repeticoes,
         "semente": semente,

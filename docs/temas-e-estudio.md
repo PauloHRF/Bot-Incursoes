@@ -453,7 +453,13 @@ Python sem ele, tudo funciona menos os dois botões que custam mais caro para
 alcançar — então o estúdio avisa no terminal ao subir e no painel de Combate,
 antes do clique, em vez de deixar o erro aparecer no fim.
 
-A página é dividida em **quatro lugares**, e não em abas de uma sala só:
+A tela simples abre em **Escolher → Editar → Testar**, uma etapa de cada
+vez. Escolher uma sala ou criar uma nova abre a edição; a última etapa traz
+a prévia e a validação, ou os parâmetros e resultados do combate. Baixar
+exporta o banco completo. As alterações e parâmetros sobrevivem à troca de
+etapa. Campos menos usados ficam nas ferramentas avançadas.
+
+**Ferramentas avançadas** abre os **quatro lugares** da bancada completa:
 escrever um Evento, montar um combate, montar a dungeon e olhar o que já
 existe são quatro trabalhos, com listas, campos e ferramentas diferentes.
 Quem vai escrever um Evento não precisa ver a tabela de criaturas, e quem
@@ -461,16 +467,21 @@ monta um Combate não precisa da CD.
 
 1. **Salas de teste** — Evento, Tesouro e Armadilha. A lista lateral traz só
    elas, o formulário traz a dificuldade, a CD, os sucessos e as perícias, e
-   o texto sob o tipo diz o que a sala cobra do grupo: a Armadilha desconta
+   a ajuda recolhida em **Regras desta sala** diz o que ela cobra do grupo:
+   a Armadilha desconta
    `DESCONTO_CD_ARMADILHA` da CD escrita, o Tesouro acorda os Mímicos ao
    falhar, o Evento premia quem passa e castiga quem falha. Esses números
    vêm das constantes do bot, não escritos na página. **Virar combate** leva
    a sala para o outro lugar e limpa o que não pertence ao tipo novo.
-2. **Combates** — a lista traz só as salas de Combate, e o formulário é a
+2. **Combates** — a lista traz só as salas de Combate. **Editar sala** mostra a
    tabela de criaturas: nome (dos 385 do bestiário, oferecidos pelo campo),
-   quantas, tier e variante por tema. Embaixo, **Medir contra um grupo** roda
-   o motor do bot e mostra vitória, rodadas e caídos por tamanho de grupo;
-   **Sugerir criaturas** procura um bando na dificuldade pedida e aplica a
+   quantas, tier e variante por tema. **Simular** abre a medição na mesma
+   sala, sem rolar até o fim do formulário: escolha tier, nível, variante e
+   tamanhos do grupo. **Opções avançadas** reúne composição, repetições e
+   semente. As quatro formações predefinidas mantêm frente, cura e dano;
+   a semente muda as rolagens. **Ver grupos usados** lista as composições. O motor do bot mostra
+   vitória, rodadas e caídos por tamanho de grupo; **Sugerir criaturas**
+   procura um bando na dificuldade pedida e aplica a
    sugestão ao tier e à variante escolhidos. O máximo de criaturas é cobrado
    **por bando** — por tier, e por variante de tema —, e não pela soma do que
    está escrito na sala.
@@ -498,6 +509,14 @@ de conteúdo; confira o banco antes de colocá-lo no bot.
 
 Atalhos: **Ctrl+Enter** confere a sala aberta e **Ctrl+S** baixa o banco
 completo (no macOS, use Cmd). A ajuda de formato fica recolhida junto à prévia.
+ID, pontos, recompensa e imagem ficam em **Mais opções** do formulário.
+O [pacote portátil](estudio-portatil.md) inclui Python e dependências para
+entregar o Estúdio em um ZIP privado, sem instalar nada na máquina do autor.
+
+Nas simulações, a conexão SQLite descartável reutiliza a parte fixa das
+fichas entre leituras. HP e THP continuam vindo do estado atual; alterações
+de nível, escolhas ou equipamento produzem outra ficha. O cache termina com
+a mesa simulada e não muda a leitura do banco do bot nem as regras de combate.
 
 Os testes opcionais da interface usam Chromium e Playwright:
 

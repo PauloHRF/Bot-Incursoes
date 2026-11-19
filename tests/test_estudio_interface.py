@@ -69,7 +69,7 @@ class Interface(unittest.TestCase):
         self.page = self.context.new_page()
         self.erros = []
         self.page.on("pageerror", lambda e: self.erros.append(str(e)))
-        self.page.goto(self.url)
+        self.page.goto(self.url + ("" if self._testMethodName.startswith("test_fluxo_") else "?modo=avancado"))
         expect(self.page.locator(".sala-btn").first).to_be_visible()
         self.inicial = self.conteudo["bancos"][self.page.locator("#fBanco").input_value()]["original"]
         self.salas = self.inicial["salas"]
@@ -134,6 +134,101 @@ class Interface(unittest.TestCase):
         return json.loads(Path(evento.value.path()).read_text(encoding="utf-8"))
 
     # ------------------------------------------------- os quatro lugares
+
+    def test_fluxo_so_mostra_a_etapa_atual_e_exporta_as_edicoes(self):
+        expect(self.page.locator("#tituloEtapa")).to_have_text("Escolha uma sala")
+        expect(self.page.locator("#formSala")).to_be_hidden()
+        expect(self.page.locator("#lugarDungeon")).to_be_hidden()
+        expect(self.page.locator("#btBaixar")).to_be_hidden()
+        self.page.locator(".sala-btn").first.click()
+        expect(self.page.locator("#tituloEtapa")).to_have_text("Edite a sala")
+        expect(self.page.locator("#listaSalas")).to_be_hidden()
+        self.escrever("#fNome", "Sala por etapas")
+        self.page.locator("#btFluxoProximo").click()
+        expect(self.page.locator("#formSala")).to_be_hidden()
+        expect(self.page.locator("#dTitulo")).to_have_text("Sala por etapas")
+        expect(self.page.locator("#saidaRevisao")).to_contain_text("Sala conferida.")
+        self.page.locator("#btFluxoVoltar").click()
+        expect(self.page.locator("#fNome")).to_have_value("Sala por etapas")
+        self.page.locator("#btFluxoProximo").click()
+        with self.page.expect_download() as evento:
+            self.page.locator("#btFluxoProximo").click()
+        dados = json.loads(Path(evento.value.path()).read_text())
+        self.assertEqual(dados["salas"][self.teste[0]]["nome"], "Sala por etapas")
+        self.assertEqual(len(dados["salas"]), len(self.salas))
+
+    def test_fluxo_combates_simula_e_troca_de_modo_sem_perder_a_sala(self):
+        self.page.locator("#lugarCombate").click()
+        self.page.locator(".sala-btn").first.click()
+        self.escrever("#fNome", "Combate guiado")
+        expect(self.page.locator("#btMedir")).to_be_hidden()
+        self.page.locator("#btFluxoProximo").click()
+        expect(self.page.locator("#btMedir")).to_be_visible()
+        expect(self.page.locator("#fNome")).to_be_hidden()
+        expect(self.page.locator("#opcoesSimulacao")).to_be_hidden()
+        self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
+            "sala": "X", "tier": 2, "classe": "predefinido", "sorteado": False, "predefinido": True,
+            "nivel": 4, "repeticoes": 240, "semente": 9, "criaturas": [{"nome": "Teste"}],
+            "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 3, "caidos": .5, "lutas": 240}]}))
+        self.page.locator("#btMedir").click()
+        expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
+        self.page.locator("#btModo").click()
+        expect(self.page.locator("#lugarDungeon")).to_be_visible()
+        expect(self.page.locator(".passos")).to_be_hidden()
+        self.assertEqual(self.json()["nome"], "Combate guiado")
+        self.page.locator("#btModo").click()
+        expect(self.page.locator("#fNome")).to_have_value("Combate guiado")
+        self.page.locator("#btFluxoProximo").click()
+        expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
+
+    def test_fluxo_vazio_cria_sala_e_funciona_no_celular(self):
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        dados = {"organizacao": self.inicial["organizacao"], "salas": []}
+        self.page.locator("#fArquivo").set_input_files({"name": "vazio.json", "mimeType": "application/json", "buffer": json.dumps(dados).encode()})
+        expect(self.page.locator("#btFluxoProximo")).to_be_disabled()
+        self.page.locator("#btNova").click()
+        expect(self.page.locator("#fNome")).to_be_focused()
+        self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
+        self.page.locator("#btFluxoProximo").click()
+        expect(self.page.locator("#saidaRevisao")).to_be_visible()
+        self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
+        self.page.locator('.passos [data-etapa="Escolher"]').click()
+        expect(self.page.locator(".sala-btn")).to_have_count(1)
+        expect(self.page.locator("#formSala")).to_be_hidden()
+
+    def test_fluxo_parametro_avancado_invalido_fica_corrigivel(self):
+        self.page.locator("#lugarCombate").click()
+        self.page.locator(".sala-btn").first.click()
+        self.page.locator("#btFluxoProximo").click()
+        self.page.locator("#btModo").click()
+        self.page.locator("#opcoesSimulacao summary").click()
+        self.page.locator("#fReps").fill("61")
+        self.page.locator("#btModo").click()
+        self.page.locator("#btFluxoProximo").click()
+        self.page.locator("#btMedir").click()
+        expect(self.page.locator("#fReps")).to_be_visible()
+        expect(self.page.locator("#fReps")).to_be_focused()
+        expect(self.page.locator("#btModo")).to_have_text("Voltar ao modo simples")
+
+    def test_fluxo_mostra_os_grupos_fixos_sem_encher_a_tela(self):
+        self.page.locator("#lugarCombate").click()
+        self.page.locator(".sala-btn").first.click()
+        self.page.locator("#btFluxoProximo").click()
+        medida = {"grupo": 3, "taxa": .75, "rodadas": 3, "caidos": .5, "mesas": 4,
+                  "dizima": True,
+                  "pior": {"classes": ["guerreiro", "clerigo", "mago"], "taxa": .4, "amostras": 60},
+                  "melhor": {"classes": ["barbaro", "xama", "feiticeiro"], "taxa": .9, "amostras": 60},
+                  "composicoes": [{"nome": "Clássica", "classes": ["guerreiro", "clerigo", "mago"]}]}
+        self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
+            "tier": 2, "classe": "predefinido", "predefinido": True, "sorteado": False,
+            "nivel": 4, "repeticoes": 240, "semente": 9, "criaturas": [], "medidas": [medida]}))
+        self.page.locator("#btMedir").click()
+        expect(self.page.locator("#contaMedida")).to_contain_text("Grupos predefinidos")
+        expect(self.page.locator("#barrasMedida")).to_contain_text("risco nos grupos testados")
+        expect(self.page.locator("#gruposMedidos summary")).to_be_visible()
+        expect(self.page.locator("#listaGruposMedidos")).to_be_hidden()
+        self.page.locator("#gruposMedidos summary").click()
+        expect(self.page.locator("#listaGruposMedidos")).to_contain_text("Clássica: guerreiro, clerigo, mago")
 
     def test_cada_lugar_mostra_so_o_que_se_escreve_nele(self):
         """A separação que o estúdio promete, cobrada campo a campo.
@@ -399,23 +494,69 @@ class Interface(unittest.TestCase):
 
     # --------------------------------------------------- medir e sugerir
 
+    def test_alternar_edicao_e_simulacao_preserva_a_sala_e_os_parametros(self):
+        original = self.abrir(self.combates[0])
+        expect(self.page.locator("#painelEdicao")).to_be_visible()
+        expect(self.page.locator("#painelSimulacao")).to_be_hidden()
+        expect(self.page.locator("#fId")).to_be_hidden()
+        self.escrever("#fNome", "Combate revisado")
+        self.page.locator("#abaEdicao").focus()
+        self.page.keyboard.press("ArrowRight")
+        expect(self.page.locator("#abaSimulacao")).to_be_focused()
+        expect(self.page.locator("#painelEdicao")).to_be_hidden()
+        expect(self.page.locator("#btMedir")).to_be_visible()
+        expect(self.page.locator("#fSemente")).to_be_hidden()
+        self.page.locator("#fNivel").fill("6")
+        self.page.locator("#opcoesSimulacao summary").click()
+        self.page.locator("#fSemente").fill("88")
+
+        self.page.locator("#abaEdicao").click()
+        expect(self.page.locator("#fNome")).to_have_value("Combate revisado")
+        self.page.locator(".bloco-extra summary").first.click()
+        self.escrever("#fPontos", "7")
+        self.page.locator("#abaSimulacao").click()
+        expect(self.page.locator("#fNivel")).to_have_value("6")
+        expect(self.page.locator("#fSemente")).to_have_value("88")
+        self.assertEqual(self.json(), {**original, "nome": "Combate revisado", "pontos_organizacao": 7})
+
+        # Mesmo saindo da medição, criar pede primeiro a edição da nova sala.
+        self.page.locator("#btNova").click()
+        expect(self.page.locator("#painelEdicao")).to_be_visible()
+        expect(self.page.locator("#painelSimulacao")).to_be_hidden()
+        self.assertNotEqual(self.json()["id"], original["id"])
+
+    def test_parametro_invalido_reabre_as_opcoes_avancadas(self):
+        self.abrir(self.combates[0])
+        self.page.locator("#abaSimulacao").click()
+        self.page.locator("#opcoesSimulacao summary").click()
+        self.page.locator("#fReps").fill("61")  # fora do passo de 60
+        self.page.locator("#opcoesSimulacao summary").click()
+        pedidos = []
+        self.page.route("**/api/simular", lambda rota: (pedidos.append(rota.request), rota.abort()))
+        self.page.locator("#btMedir").click()
+        expect(self.page.locator("#fReps")).to_be_visible()
+        expect(self.page.locator("#fReps")).to_be_focused()
+        self.assertEqual(pedidos, [])
+
     def test_medida_respeita_parametros_e_sinaliza_resultado_antigo(self):
         self.abrir(self.combates[0])
+        self.page.locator("#abaSimulacao").click()
         expect(self.page.locator("#fAmb option:checked")).to_have_text("Qualquer ambiente")
         expect(self.page.locator("#fBicho option:checked")).to_have_text("Qualquer tipo")
         pedidos = []
         def responder(rota):
             pedido = rota.request.post_data_json; pedidos.append(pedido)
-            rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": "sorteado", "sorteado": True, "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 2.5, "caidos": .3, "mesas": 12, "lutas": 240, "pior": {"classes": ["bardo", "mago", "monge"], "taxa": .41, "amostras": 20}, "melhor": {"classes": ["clerigo", "guerreiro", "paladino"], "taxa": .94, "amostras": 20}}]})
+            rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": "predefinido", "sorteado": False, "predefinido": True, "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 2.5, "caidos": .3, "mesas": 4, "lutas": 240, "pior": {"classes": ["bardo", "mago", "monge"], "taxa": .41, "amostras": 60}, "melhor": {"classes": ["clerigo", "guerreiro", "paladino"], "taxa": .94, "amostras": 60}}]})
         self.page.route("**/api/simular", responder)
         self.page.locator('[name="grupo"][value="5"]').uncheck()
+        self.page.locator("#opcoesSimulacao summary").click()
         self.page.locator("#fSemente").fill("123")
         self.page.locator("#btMedir").click()
         expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
         expect(self.page.locator("#contaMedida")).to_contain_text("Grupo de 3")
         self.assertEqual(pedidos[0]["grupos"], [3])
         self.assertEqual(pedidos[0]["semente"], 123)
-        # O grupo sorteado é o PADRÃO: ninguém escolheu classe nenhuma.
+        # O grupo predefinido é o PADRÃO: ninguém escolheu classe nenhuma.
         self.assertEqual(pedidos[0]["classe"], "")
         self.page.locator("#fNivel").fill("5")
         expect(self.page.locator("#medidaDesatualizada")).to_be_visible()
@@ -428,30 +569,31 @@ class Interface(unittest.TestCase):
         só a barra na tela, as duas salas se parecem.
         """
         self.abrir(self.combates[0])
+        self.page.locator("#abaSimulacao").click()
         self.assertEqual(self.page.locator("#fClasse").input_value(), "")
         # Os padrões do formulário têm de passar na própria validação dele:
         # um `step` que não fecha com o `min` reprova o campo, e `medir`
         # desiste sem dizer nada — o botão vira enfeite.
         for campo in ("#fReps", "#fNivel"):
             self.assertTrue(self.page.locator(campo).evaluate("n => n.checkValidity()"), campo)
-        medida = {"grupo": 5, "taxa": .75, "rodadas": 3.0, "caidos": .5, "mesas": 12,
+        medida = {"grupo": 5, "taxa": .75, "rodadas": 3.0, "caidos": .5, "mesas": 4,
                   "lutas": 240,
-                  "pior": {"classes": ["bardo", "mago", "mago", "monge", "xama"],
-                           "taxa": .41, "amostras": 20},
+                  "pior": {"classes": ["guerreiro", "clerigo", "mago", "ladino", "patrulheiro"],
+                           "taxa": .41, "amostras": 60},
                   "melhor": {"classes": ["clerigo", "druida", "guerreiro", "ladino",
-                                         "paladino"], "taxa": .94, "amostras": 20}}
+                                         "paladino"], "taxa": .94, "amostras": 60}}
         self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
-            "sala": "X", "tier": 2, "classe": "sorteado", "sorteado": True, "nivel": 4,
+            "sala": "X", "tier": 2, "classe": "predefinido", "sorteado": False, "predefinido": True, "nivel": 4,
             "repeticoes": 240, "semente": 9, "criaturas": [{"nome": "Teste"}],
             "medidas": [medida]}))
         self.page.locator("#btMedir").click()
         barras = self.page.locator("#barrasMedida")
         expect(barras).to_contain_text("75%")
         expect(barras).to_contain_text("pior 41%")
-        expect(barras).to_contain_text("mago, mago")
-        expect(barras).to_contain_text("20 lutas")
+        expect(barras).to_contain_text("guerreiro, clerigo")
+        expect(barras).to_contain_text("60 lutas")
         expect(barras).to_contain_text("melhor 94%")
-        expect(self.page.locator("#contaMedida")).to_contain_text("12 mesas")
+        expect(self.page.locator("#contaMedida")).to_contain_text("4 mesas")
 
     def test_o_limite_de_criaturas_e_por_bando_e_nao_a_soma_da_sala(self):
         """Seis no tier 1 e dois no tier 2 é sala válida.
@@ -486,6 +628,7 @@ class Interface(unittest.TestCase):
             "monstros_por_tema": {tema: {"1": [{"nome": "Aarakocra"}]}},
             "extra": "preservado",
         })
+        self.page.locator("#abaSimulacao").click()
         self.page.locator("#fTemaSim").select_option(tema)
         self.page.locator(".sugeridor summary").click()
         self.page.route("**/api/sugerir", lambda rota: rota.fulfill(json={"semente": 7, "candidatas_no_bestiario": 1, "sugestoes": [{"bando": [{"nome": "Aarakocra", "quantidade": 2}], "na_faixa": True, "por_grupo": {"5": .9, "3": .7}}]}))
@@ -497,10 +640,13 @@ class Interface(unittest.TestCase):
         self.assertEqual(novo["monstros_por_tier"], antes["monstros_por_tier"])
         self.assertEqual(novo["extra"], "preservado")
         # A sala mudou: a sugestão medida na sala de antes não vale mais.
+        expect(self.page.locator("#painelEdicao")).to_be_visible()
+        self.page.locator("#abaSimulacao").click()
         expect(self.page.locator(".usar-sugestao")).to_be_disabled()
 
     def test_respostas_atrasadas_nao_entram_em_outra_sala(self):
         self.abrir(self.combates[0])
+        self.page.locator("#abaSimulacao").click()
         pendentes = []
         self.page.route("**/api/sugerir", lambda rota: pendentes.append(rota))
         self.page.locator(".sugeridor summary").click()
@@ -527,6 +673,11 @@ class Interface(unittest.TestCase):
         for lugar in ("Teste", "Combate", "Dungeon", "Inspecao"):
             self.page.locator("#lugar" + lugar).click()
             self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
+            if lugar == "Combate":
+                self.page.locator("#abaSimulacao").click()
+                self.page.locator("#opcoesSimulacao summary").click()
+                expect(self.page.locator("#btMedir")).to_be_visible()
+                self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
 
     def test_sem_o_motor_a_bancada_diz_em_vez_de_esperar_o_clique(self):
         """Quem abre o estúdio fora do ambiente do bot escreve tudo e só

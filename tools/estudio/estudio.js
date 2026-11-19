@@ -21,6 +21,35 @@ let linhasAtuais = null, linhasDoIndice = -1;
 let originais = {}, sequencia = 0, revisao = 0, medindo = false, sugerindo = false;
 let medidaContexto, sugestaoContexto, timerPool, timerConferir, timerToast;
 let pedidoConferir = 0, pedidoPool = 0, armazenamentoFalhou = false;
+let avancado = new URLSearchParams(location.search).get("modo") === "avancado";
+let etapa = "Escolher";
+
+function atualizarFluxo() {
+  document.body.dataset.modo = avancado ? "avancado" : "guiado";
+  document.body.dataset.etapa = etapa;
+  $("btModo").textContent = avancado ? "Voltar ao modo simples" : "Ferramentas avançadas";
+  const temSala = !!sala();
+  document.querySelectorAll(".passos [data-etapa]").forEach(botao => {
+    botao.disabled = botao.dataset.etapa !== "Escolher" && !temSala;
+    if (botao.dataset.etapa === etapa) botao.setAttribute("aria-current", "step");
+    else botao.removeAttribute("aria-current");
+  });
+  $("tituloEtapa").textContent = {Escolher: "Escolha uma sala", Editar: "Edite a sala", Testar: "Confira o resultado"}[etapa];
+  $("btFluxoVoltar").hidden = etapa === "Escolher";
+  $("btFluxoProximo").disabled = !temSala;
+  $("btFluxoProximo").textContent = etapa === "Escolher" ? "Editar selecionada →" : etapa === "Editar" ? "Validar e testar →" : "↓ Baixar JSON";
+  $("saidaRevisao").hidden = avancado || etapa !== "Testar" || !$("saidaRevisao").hasChildNodes();
+  if (!avancado) secaoSala(etapa === "Testar" && familia(sala()?.tipo) === "combate" ? "Simulacao" : "Edicao");
+}
+
+function irParaEtapa(nome, foco = true) {
+  if (nome !== "Escolher" && !sala()) return;
+  etapa = nome;
+  if (nome === "Testar") $("saidaRevisao").replaceChildren();
+  atualizarFluxo();
+  if (nome === "Testar") conferir();
+  if (foco) $("tituloEtapa").focus();
+}
 
 function no(tag, classe, conteudo) {
   const n = document.createElement(tag);
@@ -336,7 +365,7 @@ function contadores() {
   $("dicaDesc").textContent = `aviso em 600 · o Discord recusa acima de ${C.limites.descricao}`;
   const s = sala(), desconto = s ? (DESCONTO[s.tipo] || 0) : 0, cd = numero("fCd");
   $("dicaCd").textContent = desconto && cd
-    ? `${s.tipo} desconta ${desconto}: vale ${Math.max(1, cd - desconto)} na mesa.` : "";
+    ? `CD na mesa: ${Math.max(1, cd - desconto)} (−${desconto}).` : "";
 }
 
 function lerCampo(id, aplicar) {
@@ -370,6 +399,7 @@ function controles() {
   $("btMedir").disabled = !pode || !combate || medindo || !!falta;
   $("btSugerir").disabled = !pode || !combate || sugerindo || !!falta;
   document.querySelectorAll(".usar-sugestao").forEach(n => { n.disabled = !pode || sugestaoContexto !== contexto(); });
+  atualizarFluxo();
 }
 
 /* ----------------------------------------------------- os quatro lugares */
@@ -380,6 +410,27 @@ function indicesDoLugar(nome = bancadaEm) {
     if (lugarDoTipo(s.tipo) === nome) saida.push(i);
     return saida;
   }, []);
+}
+
+let secaoCombate = "Edicao";
+function secaoSala(nome, foco = false) {
+  const combate = bancadaEm === "Combate";
+  if (combate) secaoCombate = nome;
+  const atual = combate ? secaoCombate : "Edicao";
+  $("abasSala").hidden = !combate;
+  document.querySelectorAll("[data-secao]").forEach(botao => {
+    const ativo = botao.dataset.secao === atual;
+    botao.setAttribute("aria-selected", ativo); botao.tabIndex = ativo ? 0 : -1;
+    $("painel" + botao.dataset.secao).hidden = !ativo;
+    if (ativo && foco) botao.focus();
+  });
+  if (combate) {
+    $("painelEdicao").setAttribute("role", "tabpanel");
+    $("painelEdicao").setAttribute("aria-labelledby", "abaEdicao");
+  } else {
+    $("painelEdicao").removeAttribute("role");
+    $("painelEdicao").removeAttribute("aria-labelledby");
+  }
 }
 
 function entrar(nome, foco = false) {
@@ -401,12 +452,15 @@ function entrar(nome, foco = false) {
   const disponiveis = indicesDoLugar(bancadaEm), guardado = selecao[bancadaEm];
   indice = disponiveis.includes(guardado) ? guardado : (disponiveis[0] ?? -1);
   selecao[bancadaEm] = indice;
+  secaoSala(secaoCombate);
   mostrarEditor();
   atualizar();
   if (nome === "Inspecao") conferir(true);
 }
 
 function abrirSala(i) {
+  etapa = "Editar";
+  secaoCombate = "Edicao";
   const destino = lugarDoTipo(banco.salas[i].tipo);
   selecao[destino] = i;
   entrar(destino);
@@ -430,15 +484,16 @@ function listar() {
       if (!pronto()) return;
       indice = i; selecao[bancadaEm] = i;
       mostrarEditor(); atualizar(); guardar(); agendarConferencia();
+      if (!avancado) irParaEtapa("Editar");
     });
     const item = no("li"); item.append(botao); lista.append(item);
   });
   $("contaSalas").textContent = meus.length;
   $("listaVazia").hidden = lista.children.length > 0;
   $("notaLista").textContent = bancadaEm === "Combate"
-    ? "O tier da incursão escolhe quem aparece em cada combate."
+    ? "Criaturas definidas por tier."
     : banco.salas.some(s => familia(s.tipo) === "parada")
-      ? "O Descanso desta lista é parada fixa: ele não é sorteado."
+      ? "Descanso é uma parada fixa."
       : "Este banco não tem sala de Descanso.";
 }
 
@@ -642,10 +697,12 @@ function desatualizar() {
 }
 function alterado() {
   revisao++; pedidoConferir++; pedidoPool++;
+  $("saidaRevisao").replaceChildren();
   $("saidaSala").hidden = true; $("saidaBanco").hidden = true;
   atualizar(); guardar(); agendarConferencia();
 }
 function carregar(chave) {
+  etapa = "Escolher";
   origem = chave;
   const salvo = lerLocal(chave), original = originais[chave];
   const restauravel = salvo && objeto(salvo.banco) && Array.isArray(salvo.banco.salas) && salvo.banco.salas.every(objeto);
@@ -674,7 +731,8 @@ function agendarConferencia() {
 async function conferir(inteiro = false) {
   if (!banco) return;
   if (!inteiro && !sala()) return;
-  const id = ++pedidoConferir, versao = revisao, fonte = origem, alvo = inteiro ? "saidaBanco" : "saidaSala";
+  const id = ++pedidoConferir, versao = revisao, fonte = origem;
+  const alvo = inteiro ? "saidaBanco" : !avancado && etapa === "Testar" ? "saidaRevisao" : "saidaSala";
   try {
     const r = await api("/api/conferir", {dados: inteiro ? banco : sala()});
     if (id === pedidoConferir && versao === revisao && fonte === origem) recados(alvo, r, inteiro ? "Banco conferido." : "Sala conferida.");
@@ -700,6 +758,7 @@ function emBranco() {
 function adicionar(duplicar = false) {
   if (!pronto()) return;
   if (duplicar && !sala()) return;
+  etapa = "Editar";
   const nova = duplicar ? copiar(sala()) : emBranco();
   nova.id = novoId();
   if (duplicar) nova.nome = `${texto(nova.nome)} (cópia)`;
@@ -708,7 +767,7 @@ function adicionar(duplicar = false) {
   selecao[lugarDoTipo(nova.tipo)] = indice;
   $("fBusca").value = "";
   if (lugarDoTipo(nova.tipo) !== bancadaEm) entrar(lugarDoTipo(nova.tipo));
-  mostrarEditor(); alterado(); $("fId").focus();
+  secaoSala("Edicao"); mostrarEditor(); alterado(); $("fNome").focus();
 }
 /* Campo que não pertence ao tipo novo sai: o validador recusa sala de
    Combate com perícia e sala de teste com criatura, e o autor não tem como
@@ -728,6 +787,7 @@ function virar() {
   if (!destino) return;
   trocarTipo(s, destino);
   selecao[lugarDoTipo(destino)] = indice;
+  secaoCombate = "Edicao";
   entrar(lugarDoTipo(destino));
   alterado();
   aviso(`“${texto(s.nome)}” agora é ${destino}.`);
@@ -745,7 +805,15 @@ function baixar() {
 
 function parametros() {
   for (const id of ["fNivel", "fReps", "fSemente"]) {
-    if (!$(id).checkValidity()) { $(id).reportValidity(); return null; }
+    if (!$(id).checkValidity()) {
+      if ($("opcoesSimulacao").contains($(id))) {
+        // Um valor digitado no modo avançado precisa continuar corrigível
+        // depois de voltar ao caminho simples.
+        if (!avancado) { avancado = true; atualizarFluxo(); }
+        $("opcoesSimulacao").open = true;
+      }
+      $(id).reportValidity(); return null;
+    }
   }
   const p = {tier: Number($("fTierSim").value), classe: $("fClasse").value, nivel: Number($("fNivel").value)};
   if ($("fSemente").value !== "") p.semente = Number($("fSemente").value);
@@ -776,10 +844,9 @@ function barra(grupo, taxa, medida) {
   pior.append(no("b", "", `pior ${pct(medida.pior.taxa)}`),
               no("span", "", ` em ${medida.pior.amostras} lutas · ${medida.pior.classes.join(", ")}`));
   extremos.append(pior, no("span", "", `melhor ${pct(medida.melhor.taxa)}`));
-  /* "dizima" vem do PERCENTIL das mesas, e não da pior: o mínimo afunda
-     conforme a amostra cresce e por isso ele nomeia quem sofreu mas não
-     entra em veredito nenhum. Ver `grupos.mesa_azarada`. */
-  if (medida.dizima) extremos.prepend(no("span", "veredito dizima", "dizima 1 em 10"));
+  // O percentil resume os grupos de referência; não é uma frequência de
+  // encontrar uma party no jogo, porque as classes não são sorteadas.
+  if (medida.dizima) extremos.prepend(no("span", "veredito dizima", "risco nos grupos testados"));
   bloco.append(n, extremos);
   return bloco;
 }
@@ -792,7 +859,7 @@ async function medir() {
   const grupos = [...document.querySelectorAll('[name="grupo"]:checked')].map(n => Number(n.value));
   if (!grupos.length) { aviso("Escolha pelo menos um tamanho de grupo."); return; }
   const atual = contexto(), nome = sala().nome;
-  medindo = true; controles(); $("btMedir").textContent = "Medindo…"; $("saidaMedida").hidden = true;
+  medindo = true; controles(); $("btMedir").textContent = "Simulando…"; $("saidaMedida").hidden = true;
   try {
     const r = await api("/api/simular", {...p, sala: sala(), tema: $("fTemaSim").value || null, grupos, repeticoes: Number($("fReps").value)});
     if (atual !== contexto()) { aviso("A sala ou os parâmetros mudaram. Meça novamente."); return; }
@@ -803,14 +870,19 @@ async function medir() {
     $("barrasMedida").className = ""; $("barrasMedida").replaceChildren(...r.medidas.map(m => barra(m.grupo, m.taxa, m)));
     $("contaMedida").replaceChildren();
     r.medidas.forEach(m => conta(`Grupo de ${m.grupo}`, `${m.rodadas == null ? "—" : m.rodadas.toFixed(1)} rodadas · ${m.caidos.toFixed(1)} caídos`));
-    conta(r.sorteado ? "Mesas sorteadas" : "Classe (diagnóstico)",
-      r.sorteado
+    conta(r.predefinido ? "Grupos predefinidos" : "Classe (diagnóstico)",
+      r.predefinido
         ? `${primeira.mesas ?? "?"} mesas · nível ${r.nivel}`
-        : `${r.classe} · nível ${r.nivel} — não é uma mesa que existe`);
+        : `${r.classe} · nível ${r.nivel}`);
     conta("Semente", r.semente);
     conta("Criaturas", r.criaturas.map(m => m.nome).join(", "));
+    const lista = $("listaGruposMedidos"); lista.replaceChildren();
+    r.medidas.forEach(m => (m.composicoes || []).forEach(c => {
+      lista.append(no("p", "", `${m.grupo} jogadores · ${c.nome || "Diagnóstico"}: ${c.classes.join(", ")}`));
+    }));
+    $("gruposMedidos").hidden = !lista.hasChildNodes();
   } catch (erro) { if (atual === contexto()) recados("saidaMedida", {erro: erro.message}); }
-  finally { medindo = false; $("btMedir").textContent = "Medir combate"; desatualizar(); }
+  finally { medindo = false; $("btMedir").textContent = "Simular combate"; desatualizar(); }
 }
 async function sugerir() {
   if (!pronto()) return;
@@ -842,7 +914,7 @@ async function sugerir() {
         const tiers = tema ? alvo.monstros_por_tema[tema] : alvo.monstros_por_tier;
         tiers[String(p.tier)] = s.bando.map(m => ({nome: m.nome, quantidade: m.quantidade}));
         linhasAtuais = null; linhasDoIndice = -1;
-        mostrarEditor(); alterado(); aviso(`Criaturas aplicadas ao tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
+        mostrarEditor(); alterado(); secaoSala("Edicao"); aviso(`Criaturas aplicadas ao tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
       });
       card.append(botao); $("sugestoes").append(card);
     });
@@ -953,18 +1025,18 @@ async function iniciar() {
     // aparece no cartão sem ninguém reescrever a página.
     const daFamilia = f => C.tipos.filter(t => familia(t) === f);
     $("subTeste").textContent = daFamilia("teste").join(", ");
-    $("subCombate").textContent = "Criaturas, medição e sugestão de bando";
+    $("subCombate").textContent = "Criaturas e simulação";
     Object.entries(C.bancos).forEach(([nome, b]) => { originais[nome] = {banco: b.original || {organizacao: b.organizacao, salas: b.salas}, arquivo: b.arquivo}; });
     preencher("fBanco", Object.keys(C.bancos)); $("fBanco").disabled = false;
     preencher("fTierSim", Array.from({length: C.limites.tier_maximo}, (_, i) => i + 1), 2);
-    /* "Sorteado" primeiro e como padrão: cinco cópias da mesma classe não é
+    /* Grupos fixos como padrão: cinco cópias da mesma classe não é
        uma mesa que existe, e o número que ela dava dependia de QUAL classe.
        As classes continuam ali, debaixo de um rótulo que diz o que são. */
     const quemJoga = $("fClasse");
     quemJoga.replaceChildren();
-    const sorteado = document.createElement("option");
-    sorteado.value = ""; sorteado.textContent = "Sorteado · mesas variadas";
-    quemJoga.append(sorteado);
+    const padrao = document.createElement("option");
+    padrao.value = ""; padrao.textContent = "Grupos predefinidos";
+    quemJoga.append(padrao);
     const umaSo = document.createElement("optgroup");
     umaSo.label = "Uma classe só (diagnóstico)";
     C.classes.forEach(c => {
@@ -1065,12 +1137,35 @@ $("btRecarregar").addEventListener("click", () => {
   selecao.Teste = -1; selecao.Combate = -1; indice = -1;
   entrar(bancadaEm); alterado(); aviso("JSON original restaurado.");
 });
+$("btModo").addEventListener("click", () => {
+  avancado = !avancado;
+  if (!avancado) {
+    etapa = sala() ? "Editar" : "Escolher";
+    entrar(bancadaEm);
+  }
+  atualizarFluxo();
+});
+document.querySelectorAll(".passos [data-etapa]").forEach(botao => botao.addEventListener("click", () => irParaEtapa(botao.dataset.etapa)));
+$("btFluxoVoltar").addEventListener("click", () => irParaEtapa(etapa === "Testar" ? "Editar" : "Escolher"));
+$("btFluxoProximo").addEventListener("click", () => {
+  if (etapa === "Testar") baixar();
+  else irParaEtapa(etapa === "Escolher" ? "Editar" : "Testar");
+});
 const cartoes = [...document.querySelectorAll("[data-lugar]")];
 cartoes.forEach((n, i) => {
   n.addEventListener("click", () => entrar(n.dataset.lugar));
   n.addEventListener("keydown", evento => {
-    const destinos = {ArrowRight: (i + 1) % cartoes.length, ArrowLeft: (i + cartoes.length - 1) % cartoes.length, Home: 0, End: cartoes.length - 1};
-    if (destinos[evento.key] !== undefined) { evento.preventDefault(); entrar(cartoes[destinos[evento.key]].dataset.lugar, true); }
+    const visiveis = cartoes.filter(b => avancado || ["Teste", "Combate"].includes(b.dataset.lugar)), posicao = visiveis.indexOf(n);
+    const destinos = {ArrowRight: (posicao + 1) % visiveis.length, ArrowLeft: (posicao + visiveis.length - 1) % visiveis.length, Home: 0, End: visiveis.length - 1};
+    if (destinos[evento.key] !== undefined) { evento.preventDefault(); entrar(visiveis[destinos[evento.key]].dataset.lugar, true); }
+  });
+});
+const abasSala = [...document.querySelectorAll("[data-secao]")];
+abasSala.forEach((botao, i) => {
+  botao.addEventListener("click", () => secaoSala(botao.dataset.secao));
+  botao.addEventListener("keydown", evento => {
+    const destinos = {ArrowRight: (i + 1) % abasSala.length, ArrowLeft: (i + abasSala.length - 1) % abasSala.length, Home: 0, End: abasSala.length - 1};
+    if (destinos[evento.key] !== undefined) { evento.preventDefault(); secaoSala(abasSala[destinos[evento.key]].dataset.secao, true); }
   });
 });
 $("fTierSim").addEventListener("change", () => { $("fNivel").value = Math.min(10, Number($("fTierSim").value) * 2); desatualizar(); });

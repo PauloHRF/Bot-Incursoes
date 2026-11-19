@@ -117,10 +117,17 @@ Ele sobe em `127.0.0.1` e usa o validador e o motor de combate do próprio bot,
 então passar ali é passar no bot. Não escreve em `data/`: devolve o arquivo
 para você mandar.
 
-Escolha um banco e uma sala na lateral e edite o JSON com a prévia ao lado.
-Use **Banco inteiro** para alterar várias salas. Combate e filtro ficam em
-abas próprias. Os rascunhos ficam no navegador; **Baixar JSON** exporta o
-banco completo, preservando referências ao bestiário e campos extras.
+A tela simples segue **Escolher → Editar → Testar**, mostrando uma etapa
+por vez. **Ferramentas avançadas** abre o editor completo, filtros de dungeon,
+inspeção e sugestão de criaturas. Os rascunhos ficam no navegador;
+**Baixar JSON** exporta o banco completo, preservando referências ao bestiário
+e campos extras. As simulações usam quatro formações fixas com frente, cura
+e dano; **Ver grupos usados** mostra quem participou da medição.
+
+Para entregar a ferramenta pronta a outra pessoa, gere o
+[Estúdio portátil para Windows](docs/estudio-portatil.md) com
+`python tools/empacotar_estudio.py`. O ZIP já inclui Python e dependências;
+quem recebe só extrai e abre **Abrir Estudio.cmd**.
 
 Para um bando de criaturas numa dificuldade dada — a dificuldade é **medida**
 por simulação, não declarada:

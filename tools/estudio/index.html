@@ -7,14 +7,21 @@
 <link rel="stylesheet" href="/estudio.css">
 <script src="/estudio.js" defer></script>
 </head>
-<body>
+<body data-modo="guiado" data-etapa="Escolher">
 <div class="app">
   <header class="cabecalho">
-    <div class="marca"><span class="marca-icone" aria-hidden="true">✦</span><div><h1>Estúdio de Incursões</h1><p>Escreva, confira e meça o que vai para o bot.</p></div></div>
-    <span class="estado" id="estado" role="status">Carregando bancos…</span>
+    <div class="marca"><span class="marca-icone" aria-hidden="true">✦</span><div><h1>Estúdio de Incursões</h1><p>Monte salas e teste combates.</p></div></div>
+    <div class="cabecalho-acoes"><span class="estado" id="estado" role="status">Carregando bancos…</span><button id="btModo" class="botao discreto pequena" type="button">Ferramentas avançadas</button></div>
   </header>
 
   <div id="erroInicial" class="recados" role="alert" hidden></div>
+
+  <nav class="passos" aria-label="Etapas da sala">
+    <button type="button" data-etapa="Escolher" aria-current="step"><span>1</span> Escolher</button>
+    <button type="button" data-etapa="Editar" disabled><span>2</span> Editar</button>
+    <button type="button" data-etapa="Testar" disabled><span>3</span> Testar</button>
+  </nav>
+  <h2 id="tituloEtapa" class="titulo-etapa" tabindex="-1">Escolha uma sala</h2>
 
   <div class="barra-arquivo">
     <div class="campo banco-campo"><label for="fBanco">Banco de salas</label><select id="fBanco" disabled></select></div>
@@ -41,12 +48,12 @@
     </button>
     <button id="lugarDungeon" type="button" role="tab" data-lugar="Dungeon" aria-controls="painelDungeon" aria-selected="false" tabindex="-1">
       <span class="lugar-icone" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="4" cy="15" r="2.1"/><circle cx="10" cy="4.6" r="2.1"/><circle cx="16" cy="14" r="2.1"/><path d="M5.2 13.2 8.8 6.6M11.3 6.2 14.8 12.2"/></svg></span>
-      <span class="lugar-texto"><span class="lugar-nome">Montar dungeon</span><span class="lugar-sub">O caminho e as salas que podem cair nele</span></span>
+      <span class="lugar-texto"><span class="lugar-nome">Montar dungeon</span><span class="lugar-sub">Seleção de salas</span></span>
       <span class="lugar-conta" id="contaPoolAtalho">—</span>
     </button>
     <button id="lugarInspecao" type="button" role="tab" data-lugar="Inspecao" aria-controls="painelInspecao" aria-selected="false" tabindex="-1">
       <span class="lugar-icone" aria-hidden="true"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8.8" cy="8.8" r="5"/><path d="M12.6 12.6 17 17"/></svg></span>
-      <span class="lugar-texto"><span class="lugar-nome">Inspecionar</span><span class="lugar-sub">Tudo que o banco já tem</span></span>
+      <span class="lugar-texto"><span class="lugar-nome">Inspecionar</span><span class="lugar-sub">Visão do banco</span></span>
       <span class="lugar-conta" id="contaTudo">—</span>
     </button>
   </nav>
@@ -56,17 +63,6 @@
 
     <section id="painelCombate" role="tabpanel" aria-labelledby="lugarCombate" hidden>
       <div id="ancoraCombate" class="ancora"></div>
-      <div id="avisoCombate" class="aviso-inline" hidden>Nenhuma sala de Combate aberta. Crie uma para medir e sugerir.</div>
-      <div class="ferramentas">
-        <div class="painel parametros">
-          <div class="painel-cabecalho"><div><h3>Medir contra várias mesas</h3><p class="legenda">Grupos sorteados entre as classes, com HP e recursos cheios.</p></div></div>
-          <div class="campos cinco"><div class="campo"><label for="fTierSim">Tier da sala</label><select id="fTierSim"></select></div><div class="campo"><label for="fClasse">Grupo</label><select id="fClasse"></select></div><div class="campo"><label for="fNivel">Nível</label><input id="fNivel" type="number" min="1" max="10" value="4"></div><div class="campo"><label for="fReps">Repetições</label><input id="fReps" type="number" min="60" max="20000" step="60" value="240"></div><div class="campo"><label for="fTemaSim">Variante</label><select id="fTemaSim"></select></div></div>
-          <div class="simulacao-acoes"><fieldset class="grupo-checks"><legend>Jogadores</legend><label><input type="checkbox" name="grupo" value="5" checked>5</label><label><input type="checkbox" name="grupo" value="4">4</label><label><input type="checkbox" name="grupo" value="3" checked>3</label><label><input type="checkbox" name="grupo" value="2">2</label></fieldset><div class="campo semente"><label for="fSemente">Semente <span class="opcional">opcional</span></label><input id="fSemente" type="number" min="0" placeholder="Automática"></div><button id="btMedir" class="botao principal" type="button">Medir combate</button></div>
-          <p class="legenda">As repetições são divididas entre as mesas sorteadas. Aumente para confirmar o resultado — e para a pior mesa parar de ser ruído.</p>
-        </div>
-        <div class="painel resultado"><div class="painel-cabecalho"><h3>Resultado</h3><span id="tituloMedida" class="legenda">Ainda não medido</span></div><div id="barrasMedida" class="resultado-vazio">Meça o combate para comparar os tamanhos de grupo.</div><p id="medidaDesatualizada" class="aviso-inline" hidden>Resultado anterior. Meça novamente após as alterações.</p><div id="contaMedida" class="contas"></div><div id="saidaMedida" class="recados" aria-live="polite" hidden></div></div>
-      </div>
-      <details class="painel sugeridor"><summary><span><strong>Não sabe quem pôr aqui?</strong><small>O estúdio procura um bando que caia na dificuldade pedida.</small></span><span class="mais" aria-hidden="true">＋</span></summary><div class="detalhes-conteudo"><div class="campos tres"><div class="campo"><label for="fAmb">Ambiente</label><select id="fAmb"></select></div><div class="campo"><label for="fBicho">Tipo de criatura</label><select id="fBicho"></select></div><div class="campo"><label for="fDifCombate">Dificuldade</label><select id="fDifCombate"></select></div></div><div class="linha"><button id="btSugerir" class="botao" type="button">Gerar sugestões</button><span id="recadoSugerir" class="legenda" role="status"></span></div><div id="sugestoes" class="sugestoes"></div><div id="saidaSugerir" class="recados" aria-live="polite" hidden></div></div></details>
     </section>
 
     <section id="painelDungeon" role="tabpanel" aria-labelledby="lugarDungeon" hidden>
@@ -138,50 +134,43 @@
     <div class="mesa">
       <div class="contexto"><div><span id="tipoSala" class="etiqueta">Sala</span><h2 id="nomeSala">Selecione uma sala</h2></div><span id="idSala" class="id-sala"></span></div>
 
+      <div id="avisoCombate" class="aviso-inline" hidden>Nenhuma sala de Combate aberta. Crie uma para medir e sugerir.</div>
+      <div id="saidaRevisao" class="recados" aria-live="polite" hidden></div>
+      <nav id="abasSala" class="abas-sala" role="tablist" aria-label="Ferramentas do combate" hidden>
+        <button id="abaEdicao" type="button" role="tab" data-secao="Edicao" aria-controls="painelEdicao" aria-selected="true">Editar sala</button>
+        <button id="abaSimulacao" type="button" role="tab" data-secao="Simulacao" aria-controls="painelSimulacao" aria-selected="false" tabindex="-1">Simular</button>
+      </nav>
+      <section id="painelEdicao" aria-label="Edição da sala">
       <div class="edicao-grid">
         <div class="painel editor-painel">
           <form id="formSala" class="form-sala" autocomplete="off">
-            <div class="form-linha">
-              <div class="campo campo-id">
-                <label for="fId">id</label>
-                <input id="fId" type="text" maxlength="16" spellcheck="false">
-              </div>
+            <div class="form-linha nome-tipo">
               <div class="campo">
-                <label for="fTipo">tipo</label>
-                <select id="fTipo"></select>
+                <label for="fNome">Nome</label><input id="fNome" type="text">
+                <p class="medida"><span class="sr-only">Caracteres no título</span><span><b id="cNome">0</b> / <span id="tetoNome">256</span></span></p>
               </div>
-              <div class="campo campo-pontos">
-                <label for="fPontos">pontos da Organização</label>
-                <input id="fPontos" type="number" min="0" max="99" step="1">
-              </div>
-            </div>
-            <p class="explicacao" id="dicaTipo"></p>
-
-            <div class="campo">
-              <label for="fNome">nome</label>
-              <input id="fNome" type="text">
-              <p class="medida"><span>vai para o título do cartão</span>
-                <span><b id="cNome">0</b> / <span id="tetoNome">256</span></span></p>
+              <div class="campo"><label for="fTipo">Tipo</label><select id="fTipo"></select></div>
             </div>
 
             <div class="campo">
-              <label for="fDesc">descrição</label>
+              <label for="fDesc">Descrição</label>
               <textarea id="fDesc" rows="5"></textarea>
-              <p class="medida"><span id="dicaDesc"></span>
+              <p class="medida"><span id="dicaDesc" class="sr-only"></span>
                 <span><b id="cDesc">0</b> / <span id="tetoDesc">4096</span></span></p>
             </div>
 
-            <div class="campo">
-              <span class="rotulo">temas</span>
+            <div class="campo" id="campoTemas">
+              <span class="rotulo">Temas</span>
               <div id="fichasSala" class="fichas" role="group" aria-label="Temas da sala"></div>
-              <p class="medida"><span>marque todos em que a sala cabe — é isso que mantém o sorteio com opção</span></p>
             </div>
 
+            <details class="ajuda-tipo"><summary>Regras desta sala</summary><p class="explicacao" id="dicaTipo"></p></details>
+
             <fieldset id="blocoTeste" class="bloco">
-              <legend>O teste da sala</legend>
+              <legend>Teste</legend>
               <div class="form-linha">
                 <div class="campo">
-                  <label for="fDif">dificuldade</label>
+                  <label for="fDif">Dificuldade</label>
                   <select id="fDif"></select>
                 </div>
                 <div class="campo">
@@ -190,18 +179,18 @@
                   <p class="legenda" id="dicaCd"></p>
                 </div>
                 <div class="campo">
-                  <label for="fAlvo">sucessos necessários</label>
+                  <label for="fAlvo">Sucessos necessários</label>
                   <input id="fAlvo" type="number" min="1" max="99" step="1">
                 </div>
               </div>
               <div class="campo">
-                <span class="rotulo">perícias aceitas</span>
+                <span class="rotulo">Perícias aceitas</span>
                 <div id="fichasPericias" class="fichas" role="group" aria-label="Perícias da sala"></div>
               </div>
             </fieldset>
 
             <fieldset id="blocoCriaturas" class="bloco">
-              <legend>Quem mora aqui</legend>
+              <legend>Criaturas</legend>
               <div class="rolagem">
                 <table class="tabela-criaturas">
                   <thead><tr>
@@ -217,29 +206,64 @@
             </fieldset>
 
             <details class="bloco-extra">
-              <summary>Campos opcionais</summary>
+              <summary>Mais opções</summary>
+              <div class="form-linha">
+                <div class="campo campo-id"><label for="fId">ID</label><input id="fId" type="text" maxlength="16" spellcheck="false"></div>
+                <div class="campo campo-pontos"><label for="fPontos">Pontos da Organização</label><input id="fPontos" type="number" min="0" max="99" step="1"></div>
+              </div>
               <div class="campo">
-                <label for="fRecompensa">recompensa <span class="legenda">(texto do cartão)</span></label>
+                <label for="fRecompensa">Recompensa <span class="legenda">(texto do cartão)</span></label>
                 <input id="fRecompensa" type="text">
               </div>
               <div class="campo">
-                <label for="fImagem">imagem <span class="legenda">(URL)</span></label>
+                <label for="fImagem">Imagem <span class="legenda">(URL)</span></label>
                 <input id="fImagem" type="text" spellcheck="false">
               </div>
             </details>
           </form>
 
-          <div class="editor-acoes"><button id="btConferir" class="botao pequena" type="button">Conferir sala</button><button id="btDuplicar" class="botao discreto pequena" type="button">Duplicar</button><button id="btVirar" class="botao discreto pequena" type="button">Virar combate</button><button id="btExcluir" class="botao discreto pequena perigo" type="button">Excluir</button></div>
+          <div class="editor-acoes"><button id="btConferir" class="botao pequena" type="button">Validar sala</button><button id="btDuplicar" class="botao discreto pequena" type="button">Duplicar</button><button id="btVirar" class="botao discreto pequena" type="button">Virar combate</button><button id="btExcluir" class="botao discreto pequena perigo" type="button">Excluir</button></div>
           <div id="saidaSala" class="recados" aria-live="polite" hidden></div>
         </div>
 
         <aside class="previa-coluna" aria-label="Prévia da sala">
           <div class="painel previa"><div class="painel-cabecalho"><h3>Prévia</h3><span class="legenda">Discord</span></div><div class="discord"><h3 id="dTitulo">Sua sala aparece aqui</h3><p id="dCorpo"></p><div id="dCampos" class="discord-campos"></div></div><div id="temasPrevia" class="etiquetas"></div><p id="limitesTexto" class="legenda"></p></div>
-          <details class="ajuda"><summary>Como isto vira uma dungeon</summary><p>A sala entra no <strong>banco da Organização</strong>, e toda incursão dela pode sorteá-la. O tema decide em quais.</p><p>Criatura entra <strong>pelo nome do bestiário</strong> — são 385, com os números do livro. Criatura feita à mão, com multiataque ou ação especial, vai pela planilha: <code>tools/gerar_modelo_banco.py</code>.</p><p><a href="https://github.com/PauloHRF/Bot-Incursoes/blob/master/docs/formato-das-incursoes.md" target="_blank" rel="noopener">Ver o formato completo ↗</a></p><p><kbd>Ctrl</kbd> + <kbd>Enter</kbd> confere. <kbd>Ctrl</kbd> + <kbd>S</kbd> baixa o banco.</p></details>
+          <details class="ajuda"><summary>Ajuda e formato JSON</summary><p>A sala entra no <strong>banco da Organização</strong>, e toda incursão dela pode sorteá-la. O tema decide em quais.</p><p>Criatura entra <strong>pelo nome do bestiário</strong> — são 385, com os números do livro. Criatura feita à mão, com multiataque ou ação especial, vai pela planilha: <code>tools/gerar_modelo_banco.py</code>.</p><p><a href="https://github.com/PauloHRF/Bot-Incursoes/blob/master/docs/formato-das-incursoes.md" target="_blank" rel="noopener">Ver o formato completo ↗</a></p><p><kbd>Ctrl</kbd> + <kbd>Enter</kbd> confere. <kbd>Ctrl</kbd> + <kbd>S</kbd> baixa o banco.</p></details>
         </aside>
       </div>
+      </section>
+      <section id="painelSimulacao" role="tabpanel" aria-labelledby="abaSimulacao" hidden>
+      <div class="ferramentas">
+        <div class="painel parametros">
+          <div class="painel-cabecalho"><div><h3>Simular combate</h3></div></div>
+          <div class="campos tres">
+            <div class="campo"><label for="fTierSim">Tier</label><select id="fTierSim"></select></div>
+            <div class="campo"><label for="fNivel">Nível do grupo</label><input id="fNivel" type="number" min="1" max="10" value="4"></div>
+            <div class="campo"><label for="fTemaSim">Variante</label><select id="fTemaSim"></select></div>
+          </div>
+          <div class="simulacao-acoes">
+            <fieldset class="grupo-checks"><legend>Jogadores</legend><label><input type="checkbox" name="grupo" value="5" checked>5</label><label><input type="checkbox" name="grupo" value="4">4</label><label><input type="checkbox" name="grupo" value="3" checked>3</label><label><input type="checkbox" name="grupo" value="2">2</label></fieldset>
+            <button id="btMedir" class="botao principal" type="button">Simular combate</button>
+          </div>
+          <details id="opcoesSimulacao" class="bloco-extra">
+            <summary>Opções avançadas</summary>
+            <div class="campos tres">
+              <div class="campo"><label for="fClasse">Composição</label><select id="fClasse"></select></div>
+              <div class="campo"><label for="fReps">Repetições por tamanho</label><input id="fReps" type="number" min="60" max="20000" step="60" value="240"></div>
+              <div class="campo"><label for="fSemente">Semente (opcional)</label><input id="fSemente" type="number" min="0" placeholder="Automática"></div>
+            </div>
+            <p class="legenda">Mais repetições dão mais precisão. Use a mesma semente para comparar alterações.</p>
+          </details>
+          <details class="ajuda"><summary>Como funciona a medição</summary><p>Grupos fixos com frente, cura e dano. HP e recursos completos; a semente muda as rolagens, mantendo as mesmas classes.</p></details>
+        </div>
+        <div class="painel resultado"><div class="painel-cabecalho"><h3>Resultado</h3><span id="tituloMedida" class="legenda">Ainda não medido</span></div><div id="barrasMedida" class="resultado-vazio">Simule para ver as chances de vitória.</div><p id="medidaDesatualizada" class="aviso-inline" hidden>Configuração alterada. Simule novamente.</p><div id="contaMedida" class="contas"></div><details id="gruposMedidos" class="grupos-medidos" hidden><summary>Ver grupos usados</summary><div id="listaGruposMedidos"></div></details><div id="saidaMedida" class="recados" aria-live="polite" hidden></div></div>
+      </div>
+      <details class="painel sugeridor"><summary><span><strong>Sugerir criaturas</strong><small>Escolha o ambiente e a dificuldade.</small></span><span class="mais" aria-hidden="true">＋</span></summary><div class="detalhes-conteudo"><div class="campos tres"><div class="campo"><label for="fAmb">Ambiente</label><select id="fAmb"></select></div><div class="campo"><label for="fBicho">Tipo de criatura</label><select id="fBicho"></select></div><div class="campo"><label for="fDifCombate">Dificuldade</label><select id="fDifCombate"></select></div></div><div class="linha"><button id="btSugerir" class="botao" type="button">Gerar sugestões</button><span id="recadoSugerir" class="legenda" role="status"></span></div><div id="sugestoes" class="sugestoes"></div><div id="saidaSugerir" class="recados" aria-live="polite" hidden></div></div></details>
+      </section>
     </div>
   </div>
+
+  <div class="fluxo-acoes"><button id="btFluxoVoltar" class="botao" type="button" hidden>← Voltar</button><button id="btFluxoProximo" class="botao principal" type="button" disabled>Editar selecionada →</button></div>
 
   <footer>Rascunhos ficam neste navegador. Baixe o JSON para usar no bot.</footer>
 </div>

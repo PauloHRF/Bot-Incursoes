@@ -55,20 +55,8 @@ MISTURAS_NA_BUSCA = 2
 CONFRONTOS_DA_BUSCA = 200
 CONFRONTOS_DA_CONFIRMACAO = 400
 
-# Quantas mesas sortear, e com que piso de lutas por mesa.
-#
-# QUARENTA, e não as doze do padrão, porque o sorteio das mesas é a maior
-# fonte de erro da média — e mais confrontos não compravam mesa nenhuma: com
-# doze mesas, 200 confrontos dão 12×16 e 600 dão 12×50, e o erro fica igual.
-# Medido no mesmo bando com seis sorteios diferentes, pelo MESMO custo de 400
-# lutas: doze mesas de 33 espalharam 19 pontos de taxa (56% a 75%), quarenta
-# mesas de 10 espalharam 9 (61% a 70%). A faixa "média" tem 15 pontos de
-# largura, então 19 de erro não é detalhe: é o bando inteiro mudando de
-# dificuldade conforme quem sentou.
-#
-# O piso cai para dez porque este comando publica a MÉDIA, e o piso de quinze
-# existe para proteger o número de UMA mesa (ver `grupos.dividir`).
-MESAS_SORTEADAS = 40
+# As mesmas formações fixas da bancada, com mais lutas na confirmação.
+MESAS_FIXAS = grupos.COMPOSICOES_PADRAO
 
 # Os tamanhos que a confirmação reporta. Três é a mesa comum e cinco é o
 # grupo cheio: a distância entre os dois diz mais que qualquer dos dois.
@@ -131,7 +119,7 @@ def medir_bando(
     return medidor.medir(
         monstros, tamanho=tamanho, nivel=nivel, classe=classe,
         repeticoes=confrontos, semente=semente,
-        mesas=MESAS_SORTEADAS, minimo=grupos.MINIMO_PARA_A_MEDIA,
+        mesas=MESAS_FIXAS, minimo=grupos.MINIMO_PARA_A_MEDIA,
         detalhes=False,
     )["taxa"]
 
@@ -371,7 +359,7 @@ def sugerir(
         return {"erro": str(erro)}
     if not 1 <= tier <= TIER_MAXIMO:
         return {"erro": f"tier precisa ir de 1 a {TIER_MAXIMO}."}
-    # Sem classe o grupo e sorteado, que e o padrao: cinco copias da mesma
+    # Sem classe o grupo usa formações fixas: cinco copias da mesma
     # classe nao e uma mesa que existe. Com classe, o sugeridor vira
     # diagnostico — "que bando serve para um grupo SO de magos?".
     if classe and classes.classe(classe) is None:
@@ -456,7 +444,7 @@ def sugerir(
         "tipo": tipo,
         "dificuldade": dificuldade,
         "faixa": list(faixa),
-        "classe": classe or "sorteado",
+        "classe": classe or "predefinido",
         "nivel": nivel,
         "semente": semente,
         "janela_de_cr": list(janela),
@@ -477,7 +465,7 @@ def main() -> int:
     parser.add_argument("--dificuldade", default="media",
                         choices=sorted(FAIXAS_DE_VITORIA))
     parser.add_argument("--classe", default=None,
-                        help="mede contra um grupo de UMA classe; sem isto, sorteado")
+                        help="mede contra um grupo de UMA classe; sem isto, formações fixas")
     parser.add_argument("--nivel", type=int, default=None)
     parser.add_argument("--quantas", type=int, default=3)
     parser.add_argument("--semente", type=int, default=None)

@@ -40,10 +40,11 @@ class Consulta:
 
 
 class Memoria:
-    def __init__(self):
+    def __init__(self, *, cache_fichas=True):
         self.conn = sqlite3.connect(":memory:")
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
+        self._cache_fichas = {} if cache_fichas else None
 
     def execute(self, sql, parametros=()):
         return Consulta(self.conn.execute(sql, parametros))
@@ -58,4 +59,6 @@ class Memoria:
         self.conn.commit()
 
     async def close(self):
+        if self._cache_fichas is not None:
+            self._cache_fichas.clear()
         self.conn.close()
