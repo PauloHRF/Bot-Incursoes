@@ -1,0 +1,33 @@
+{
+  "grupos": [
+    {
+      "id": "classica", "nome": "Clássica",
+      "classes": ["guerreiro", "clerigo", "mago", "ladino", "patrulheiro", "bardo"]
+    },
+    {
+      "id": "selvagem", "nome": "Selvagem",
+      "classes": ["barbaro", "xama", "feiticeiro", "monge", "druida", "patrulheiro"]
+    },
+    {
+      "id": "arcana", "nome": "Arcana",
+      "classes": ["paladino", "clerigo", "bruxo", "artifice", "bardo", "mago"]
+    },
+    {
+      "id": "exploracao", "nome": "Exploração",
+      "classes": ["druida", "xama", "patrulheiro", "monge", "artifice", "ladino"]
+    }
+  ],
+  "escolhas": {
+    "guerreiro": {"fighting_style": "defensivo"},
+    "clerigo": {
+      "magia_t1": "cure_wounds", "dominio_t2": "curandeiro",
+      "magia_t3": "mass_healing_word", "dominio_t4": "especialista_cura",
+      "magia_t5": "mass_cure_wounds"
+    },
+    "xama": {"escolha_totemica": "cantico"},
+    "druida": {
+      "forma_t1": "urso", "bichinho_t2": "bichinho_curandeiro",
+      "magia_druida_t3": "aura_of_vitality", "natureza_t4": "forma_lunar"
+    }
+  }
+}

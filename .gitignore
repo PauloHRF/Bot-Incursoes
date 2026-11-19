@@ -35,3 +35,7 @@ data/planilhas/
 # Historico do aider. Fica de fora porque o repositorio e PUBLICO: transcricao
 # de conversa com assistente nao tem como ser conferida antes de cada commit.
 .aider*
+
+# Pacotes locais de distribuição do Estúdio.
+dist/
+.cache-estudio/

@@ -52,15 +52,8 @@ HP_RESTANTE = (55.0, 75.0)
 PIOR_MESA_MINIMA = regua.PIOR_MESA_MINIMA
 MESA = 5
 
-# Quantas mesas sortear para CALIBRAR — bem mais que as doze da bancada.
-#
-# O sorteio das mesas é ele próprio uma amostra, e foi uma surpresa cara: o
-# mesmo elenco do tier 4 mediu 57,5% com um sorteio e 32,5% com outro. Entre
-# mesas, a taxa vai de 0% a 100% no mesmo combate, então o desvio é enorme e
-# a média de doze mesas carrega uns dez pontos de erro. Para olhar uma sala na
-# bancada isso serve (o autor quer a ordem de grandeza e a pior mesa); para
-# escrever um número que vai para o jogo, não serve.
-COMPOSICOES_DA_CALIBRACAO = 40
+# A calibração usa os mesmos grupos fixos da bancada e do sugeridor.
+COMPOSICOES_DA_CALIBRACAO = grupos.COMPOSICOES_PADRAO
 
 
 def medir(tier: int, repeticoes: int, semente: int, composicoes: int) -> dict:
@@ -166,17 +159,12 @@ def varrer(tier: int, repeticoes: int, semente: int, composicoes: int) -> list[d
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tier", type=int, default=None, help="só este tier")
-    # Seiscentas, e nao trezentas: com trezentas o piso de quinze lutas por
-    # mesa fazia o pedido de quarenta mesas virar vinte, e o numero de MESAS e
-    # o que manda no erro — a p10 das taxas de mesa precisa de mesas, nao de
-    # lutas dentro delas. Este comando roda quando o conteudo muda, nao a cada
-    # salvamento: o preco e aceitavel para o unico lugar que escreve numero
-    # que vai para o jogo.
+    # Mais lutas refinam a taxa dos mesmos grupos de referência.
     parser.add_argument("--repeticoes", type=int, default=600)
     parser.add_argument("--semente", type=int, default=20261112)
     parser.add_argument(
         "--composicoes", type=int, default=COMPOSICOES_DA_CALIBRACAO, metavar="N",
-        help=f"quantas mesas sortear por ponto medido (padrao: {COMPOSICOES_DA_CALIBRACAO})",
+        help=f"quantas formações fixas medir por ponto (padrao: {COMPOSICOES_DA_CALIBRACAO})",
     )
     parser.add_argument(
         "--varrer", action="store_true",
@@ -193,23 +181,19 @@ def main() -> int:
     if any(not 1 <= t <= TIER_MAXIMO for t in tiers):
         parser.error(f"tier precisa ir de 1 a {TIER_MAXIMO}")
 
-    # O que SAI do `dividir`, e nao o que foi pedido: o piso de lutas por mesa
-    # morde, e com 300 lutas o pedido de 40 mesas virava 20 em silencio —
-    # enquanto esta linha anunciava 40. "Foi medido com quarenta mesas" era
-    # falso em todo commit que a citou.
+    # Mostra o catálogo realmente medido, respeitando o orçamento de lutas.
     mesas, por_mesa = grupos.dividir(args.repeticoes, args.composicoes)
     print(f"Alvo: vitória >= {VITORIA_MINIMA:.0%}, HP restante "
-          f"{HP_RESTANTE[0]:.0f}–{HP_RESTANTE[1]:.0f}%, mesa azarada (1 em 10) >= {PIOR_MESA_MINIMA:.0%}  "
+          f"{HP_RESTANTE[0]:.0f}–{HP_RESTANTE[1]:.0f}%, P10 dos grupos >= {PIOR_MESA_MINIMA:.0%}  "
           f"({mesas} mesas de {MESA}, {por_mesa} lutas cada, "
           f"{mesas * por_mesa} por ponto)")
     if mesas < args.composicoes:
-        print(f"  (pediu {args.composicoes} mesas; com {args.repeticoes} lutas "
-              f"só cabem {mesas} — ver `grupos.dividir`)")
+        print(f"  (pediu {args.composicoes} mesas; catálogo e amostra permitem {mesas})")
 
     if args.bando:
         if not args.tier:
             parser.error("--bando precisa de --tier: o alvo é por tier")
-        print(f"\n{'vitória':>8}  {'HP rest.':>9}  {'1 em 10':>9}  {'veredito':<32}  elenco")
+        print(f"\n{'vitória':>8}  {'HP rest.':>9}  {'P10 grupos':>9}  {'veredito':<32}  elenco")
         for texto in args.bando:
             elenco = ler_bando(texto)
             r = medir_elenco(elenco, args.tier, args.repeticoes, args.semente, args.composicoes)
@@ -225,13 +209,13 @@ def main() -> int:
             companhia = (", ".join(f"{q}x {n}" for n, q in fixos) + " + ") if fixos else ""
             print(f"\n--- tier {tier} (nível {min(10, tier * 2)}) · {companhia}N x "
                   f"{consequencias.emboscada_do_tier(tier)[-1][0]}")
-            print(f"{'N':>3}  {'vitória':>8}  {'HP rest.':>9}  {'1 em 10':>9}  veredito")
+            print(f"{'N':>3}  {'vitória':>8}  {'HP rest.':>9}  {'P10 grupos':>9}  veredito")
             for p in varrer(tier, args.repeticoes, args.semente, args.composicoes):
                 print(f"{p['quantas']:>3}  {p['taxa']:>7.1%}  {p['hp']:>8.1f}%  "
                       f"{p['pior']:>8.0%}  {p['veredito']}")
         return 0
 
-    print(f"\n{'tier':>4}  {'vitória':>8}  {'HP rest.':>9}  {'1 em 10':>9}  "
+    print(f"\n{'tier':>4}  {'vitória':>8}  {'HP rest.':>9}  {'P10 grupos':>9}  "
           f"{'veredito':<32}  emboscada")
     fora = 0
     for tier in tiers:

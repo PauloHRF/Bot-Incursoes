@@ -197,7 +197,7 @@ class Mesas(unittest.TestCase):
     A medida era contra cinco cópias da mesma classe — uma mesa que nunca vai
     existir. Pior: o número dependia de QUAL classe, então quem escolhia a
     classe escolhia a resposta sem saber. Agora a sala enfrenta várias mesas
-    sorteadas, e o que volta é a média com os extremos ao lado.
+    fixas, e o que volta é a média com os extremos ao lado.
     """
 
     def test_sem_classe_nenhuma_mesa_e_cinco_copias_da_mesma(self):
@@ -222,22 +222,20 @@ class Mesas(unittest.TestCase):
         args = SimpleNamespace(nivel=4, repeticoes=240, coletar_detalhes=False)
         r = simular([Monstro("Alvo", 16, 8, "3d8+4", 120)], 3, args, random.Random(3))
         taxas = [m["taxa"] for m in r["composicoes"]]
-        # Esta sala mede ~70% na média, e vai de 20% a 100% entre as mesas:
-        # é literalmente a diferença entre "difícil" e "morre todo mundo",
-        # dentro de um número só.
-        self.assertGreater(max(taxas) - min(taxas), 0.40, taxas)
+        # As formações de referência têm desempenhos diferentes no encontro.
+        self.assertGreater(max(taxas) - min(taxas), 0.10, taxas)
         self.assertLessEqual(min(taxas), r["taxa"])
         self.assertGreaterEqual(max(taxas), r["taxa"])
 
-    def test_a_mesma_semente_da_as_mesmas_mesas(self):
-        """Dois autores comparando números precisam ver o mesmo número."""
+    def test_as_formacoes_nao_mudam_com_a_semente(self):
+        """A semente controla as rolagens, mantendo as classes e suas funções."""
         args = SimpleNamespace(nivel=8, repeticoes=90, coletar_detalhes=False)
         monstros = [Monstro("Alvo", 14, 5, "1d8", 40)]
         a = simular(monstros, 4, args, random.Random(21))
         b = simular(monstros, 4, args, random.Random(21))
         self.assertEqual(a["composicoes"], b["composicoes"])
         outra = simular(monstros, 4, args, random.Random(22))
-        self.assertNotEqual(
+        self.assertEqual(
             [m["classes"] for m in a["composicoes"]],
             [m["classes"] for m in outra["composicoes"]],
         )
@@ -292,9 +290,47 @@ class Mesas(unittest.TestCase):
         mesas, por = grupos.dividir(100, 12)
         self.assertGreaterEqual(por, grupos.MINIMO_POR_COMPOSICAO)
         self.assertLessEqual(mesas * por, 100)
-        self.assertEqual(grupos.dividir(1200, 12), (12, 100))
+        self.assertEqual(grupos.dividir(1200, 12), (grupos.COMPOSICOES_PADRAO, 300))
         with self.assertRaises(ValueError):
             grupos.dividir(0, 12)
+
+    def test_formacoes_tem_funcoes_e_escolhas_validas_em_todos_os_niveis(self):
+        for tamanho in range(2, 7):
+            for nivel in range(1, 11):
+                for mesa in grupos.fixas(tamanho, nivel):
+                    with self.subTest(tamanho=tamanho, nivel=nivel, classes=grupos.nomes_da_mesa(mesa)):
+                        self.assertEqual(len({f.classe for f in mesa}), tamanho)
+                        self.assertIn(mesa[0].classe, {"guerreiro", "barbaro", "paladino", "druida"})
+                        self.assertIn(mesa[1].classe, {"clerigo", "xama"})
+                        if mesa[0].classe == "druida":
+                            self.assertEqual(mesa[0].escolhas["forma_t1"], "urso")
+                        if nivel >= 5 and mesa[1].classe == "clerigo":
+                            self.assertEqual(mesa[1].escolhas["magia_t3"], "mass_healing_word")
+        self.assertEqual({f.classe for m in grupos.fixas(5, 10) for f in m}, set(classes.CLASSES))
+
+    def test_pedir_mais_formacoes_nao_repete_os_mesmos_grupos(self):
+        mesas, por = grupos.dividir(400, 40, grupos.MINIMO_PARA_A_MEDIA)
+        self.assertEqual(mesas, grupos.COMPOSICOES_PADRAO)
+        self.assertEqual(mesas * por, 400)
+        self.assertEqual(len(grupos.fixas(5, 8, 40)), mesas)
+
+    def test_cada_formacao_tem_rolagens_independentes_das_outras(self):
+        from tools import simular_combate as sc
+        original = sc.executar
+        vistos = {}
+
+        def executar(monstros, mesa, repeticoes, rng, **kw):
+            vistos[tuple(f.classe for f in mesa)] = rng.getstate()
+            return original(monstros, mesa, repeticoes, rng, **kw)
+
+        args = SimpleNamespace(nivel=4, repeticoes=60, coletar_detalhes=False)
+        with patch.object(sc, "executar", side_effect=executar):
+            sc.simular([Monstro("Frágil", 1, 0, "1", 1)], 3, args, random.Random(8))
+            quatro = dict(vistos); vistos.clear()
+            args.composicoes = 2
+            sc.simular([Monstro("Frágil", 1, 0, "1", 1)], 3, args, random.Random(8))
+        self.assertEqual(len(vistos), 2)
+        self.assertEqual(vistos, {k: quatro[k] for k in vistos})
 
 
 class Interface(unittest.TestCase):
@@ -396,6 +432,12 @@ class Medidas(unittest.TestCase):
 
 class Medidor(unittest.TestCase):
     """A semente de uma medicao, montada num lugar so."""
+
+    def test_catalogo_de_formacoes_faz_parte_da_identidade_da_medicao(self):
+        antes = medidor.hash_do_modelo()
+        original = Path.read_bytes
+        with patch.object(Path, "read_bytes", lambda p: original(p) + b"\n" if p == grupos.ARQUIVO else original(p)):
+            self.assertNotEqual(medidor.hash_do_modelo(), antes)
 
     def test_o_bando_nunca_entra_na_semente(self):
         """E o que faz a diferenca entre dois numeros ser a diferenca entre

@@ -21,10 +21,10 @@ from tools.simulacao import grupos, politica as sb
 LIMITE_RODADAS = 50
 
 
-def mesas(tamanho: int, args, rng: random.Random) -> list[tuple[Ficha, ...]]:
+def mesas(tamanho: int, args, rng: random.Random) -> tuple[list[tuple[Ficha, ...]], int]:
     """As composições a medir, e quantas lutas cada uma leva.
 
-    Sem `args.classe`, a sala é medida contra mesas SORTEADAS — ver
+    Sem `args.classe`, a sala é medida contra mesas PREDEFINIDAS — ver
     `tools/simulacao/grupos.py`. Com uma classe, volta ao grupo uniforme, que
     não é mais o padrão e sim o diagnóstico: "esta sala é dura PARA QUEM?".
     """
@@ -37,7 +37,7 @@ def mesas(tamanho: int, args, rng: random.Random) -> list[tuple[Ficha, ...]]:
         getattr(args, "composicoes", None) or grupos.COMPOSICOES_PADRAO,
         getattr(args, "minimo_por_mesa", None) or grupos.MINIMO_POR_COMPOSICAO,
     )
-    return grupos.sortear(tamanho, args.nivel, quantas, rng), por_mesa
+    return grupos.fixas(tamanho, args.nivel, quantas), por_mesa
 
 
 def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> dict:
@@ -49,11 +49,16 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
     composicoes, por_mesa = mesas(tamanho, args, rng)
     detalhes = getattr(args, "coletar_detalhes", True)
     todas, por_composicao = [], []
+    predefinido = not getattr(args, "classe", None)
+    semente = rng.getrandbits(128) if predefinido else None
     for mesa in composicoes:
-        lutas = executar(monstros, list(mesa), por_mesa, rng, limite=LIMITE_RODADAS,
+        perfil = grupos.descricao(mesa) if predefinido else {}
+        dados = random.Random(f"{semente}:{perfil['id']}") if predefinido else rng
+        lutas = executar(monstros, list(mesa), por_mesa, dados, limite=LIMITE_RODADAS,
                          tier=getattr(args, "tier", None), coletar_detalhes=detalhes)
         todas.extend(lutas)
         por_composicao.append({
+            **perfil,
             "classes": grupos.nomes_da_mesa(mesa),
             "taxa": sum(l["inimigos_derrotados"] for l in lutas) / len(lutas),
             "amostras": len(lutas),
@@ -79,12 +84,12 @@ def main() -> int:
         "--classe",
         default=None,
         help="Mede contra um grupo de UMA classe, para diagnóstico. Sem isto o "
-             "grupo é sorteado, que é o padrão. Classes: "
+             "grupo usa formações fixas. Classes: "
              + ", ".join(sorted(classes.CLASSES)),
     )
     parser.add_argument(
         "--composicoes", type=int, default=grupos.COMPOSICOES_PADRAO,
-        metavar="N", help=f"quantas mesas sorteadas medir (padrão: {grupos.COMPOSICOES_PADRAO})",
+        metavar="N", help=f"quantas formações fixas medir (máximo: {grupos.COMPOSICOES_PADRAO})",
     )
     parser.add_argument("--nivel", type=int, default=8, help="Nivel do grupo (1 a 10)")
     parser.add_argument("--semente", type=int, default=None)
@@ -112,15 +117,15 @@ def main() -> int:
         parser.error("--repeticoes deve ser maior que zero")
     if not 1 <= args.nivel <= 10:
         parser.error("--nivel deve estar entre 1 e 10")
-    if not args.grupos or any(n <= 0 for n in args.grupos):
-        parser.error("--grupos deve conter tamanhos positivos")
+    if not args.grupos or any(not 1 <= n <= 6 for n in args.grupos):
+        parser.error("--grupos deve conter tamanhos de 1 a 6")
     if args.composicoes < 1:
         parser.error("--composicoes deve ser maior que zero")
-    # --escolha mexe na ficha de UMA classe. Com o grupo sorteado não existe
-    # "a ficha": sao doze mesas de classes diferentes, e aplicar a escolha a
+    # --escolha mexe na ficha de UMA classe. Com os grupos fixos não existe
+    # "a ficha": sao mesas de classes diferentes, e aplicar a escolha a
     # todas seria inventar magia em quem nao a tem.
     if args.escolha and not args.classe:
-        parser.error("--escolha precisa de --classe: o grupo sorteado não tem uma ficha só")
+        parser.error("--escolha precisa de --classe: os grupos fixos têm fichas diferentes")
     args.escolhas = None
     if args.classe:
         if classes.classe(args.classe) is None:
@@ -264,7 +269,7 @@ def main() -> int:
     else:
         mesas_medidas, por_mesa = grupos.dividir(args.repeticoes, args.composicoes)
         print(
-            f"Grupo: SORTEADO, nivel {args.nivel} (tier {tier(args.nivel)}) — "
+            f"Grupos PREDEFINIDOS, nivel {args.nivel} (tier {tier(args.nivel)}) — "
             f"{mesas_medidas} mesas por linha, {por_mesa} combates cada "
             f"({mesas_medidas * por_mesa} no total)"
         )

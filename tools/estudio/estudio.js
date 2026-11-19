@@ -21,6 +21,35 @@ let linhasAtuais = null, linhasDoIndice = -1;
 let originais = {}, sequencia = 0, revisao = 0, medindo = false, sugerindo = false;
 let medidaContexto, sugestaoContexto, timerPool, timerConferir, timerToast;
 let pedidoConferir = 0, pedidoPool = 0, armazenamentoFalhou = false;
+let avancado = new URLSearchParams(location.search).get("modo") === "avancado";
+let etapa = "Escolher";
+
+function atualizarFluxo() {
+  document.body.dataset.modo = avancado ? "avancado" : "guiado";
+  document.body.dataset.etapa = etapa;
+  $("btModo").textContent = avancado ? "Voltar ao modo simples" : "Ferramentas avançadas";
+  const temSala = !!sala();
+  document.querySelectorAll(".passos [data-etapa]").forEach(botao => {
+    botao.disabled = botao.dataset.etapa !== "Escolher" && !temSala;
+    if (botao.dataset.etapa === etapa) botao.setAttribute("aria-current", "step");
+    else botao.removeAttribute("aria-current");
+  });
+  $("tituloEtapa").textContent = {Escolher: "Escolha uma sala", Editar: "Edite a sala", Testar: "Confira o resultado"}[etapa];
+  $("btFluxoVoltar").hidden = etapa === "Escolher";
+  $("btFluxoProximo").disabled = !temSala;
+  $("btFluxoProximo").textContent = etapa === "Escolher" ? "Editar selecionada →" : etapa === "Editar" ? "Validar e testar →" : "↓ Baixar JSON";
+  $("saidaRevisao").hidden = avancado || etapa !== "Testar" || !$("saidaRevisao").hasChildNodes();
+  if (!avancado) secaoSala(etapa === "Testar" && familia(sala()?.tipo) === "combate" ? "Simulacao" : "Edicao");
+}
+
+function irParaEtapa(nome, foco = true) {
+  if (nome !== "Escolher" && !sala()) return;
+  etapa = nome;
+  if (nome === "Testar") $("saidaRevisao").replaceChildren();
+  atualizarFluxo();
+  if (nome === "Testar") conferir();
+  if (foco) $("tituloEtapa").focus();
+}
 
 function no(tag, classe, conteudo) {
   const n = document.createElement(tag);
@@ -370,6 +399,7 @@ function controles() {
   $("btMedir").disabled = !pode || !combate || medindo || !!falta;
   $("btSugerir").disabled = !pode || !combate || sugerindo || !!falta;
   document.querySelectorAll(".usar-sugestao").forEach(n => { n.disabled = !pode || sugestaoContexto !== contexto(); });
+  atualizarFluxo();
 }
 
 /* ----------------------------------------------------- os quatro lugares */
@@ -429,6 +459,7 @@ function entrar(nome, foco = false) {
 }
 
 function abrirSala(i) {
+  etapa = "Editar";
   secaoCombate = "Edicao";
   const destino = lugarDoTipo(banco.salas[i].tipo);
   selecao[destino] = i;
@@ -453,6 +484,7 @@ function listar() {
       if (!pronto()) return;
       indice = i; selecao[bancadaEm] = i;
       mostrarEditor(); atualizar(); guardar(); agendarConferencia();
+      if (!avancado) irParaEtapa("Editar");
     });
     const item = no("li"); item.append(botao); lista.append(item);
   });
@@ -665,10 +697,12 @@ function desatualizar() {
 }
 function alterado() {
   revisao++; pedidoConferir++; pedidoPool++;
+  $("saidaRevisao").replaceChildren();
   $("saidaSala").hidden = true; $("saidaBanco").hidden = true;
   atualizar(); guardar(); agendarConferencia();
 }
 function carregar(chave) {
+  etapa = "Escolher";
   origem = chave;
   const salvo = lerLocal(chave), original = originais[chave];
   const restauravel = salvo && objeto(salvo.banco) && Array.isArray(salvo.banco.salas) && salvo.banco.salas.every(objeto);
@@ -697,7 +731,8 @@ function agendarConferencia() {
 async function conferir(inteiro = false) {
   if (!banco) return;
   if (!inteiro && !sala()) return;
-  const id = ++pedidoConferir, versao = revisao, fonte = origem, alvo = inteiro ? "saidaBanco" : "saidaSala";
+  const id = ++pedidoConferir, versao = revisao, fonte = origem;
+  const alvo = inteiro ? "saidaBanco" : !avancado && etapa === "Testar" ? "saidaRevisao" : "saidaSala";
   try {
     const r = await api("/api/conferir", {dados: inteiro ? banco : sala()});
     if (id === pedidoConferir && versao === revisao && fonte === origem) recados(alvo, r, inteiro ? "Banco conferido." : "Sala conferida.");
@@ -723,6 +758,7 @@ function emBranco() {
 function adicionar(duplicar = false) {
   if (!pronto()) return;
   if (duplicar && !sala()) return;
+  etapa = "Editar";
   const nova = duplicar ? copiar(sala()) : emBranco();
   nova.id = novoId();
   if (duplicar) nova.nome = `${texto(nova.nome)} (cópia)`;
@@ -770,7 +806,12 @@ function baixar() {
 function parametros() {
   for (const id of ["fNivel", "fReps", "fSemente"]) {
     if (!$(id).checkValidity()) {
-      if ($("opcoesSimulacao").contains($(id))) $("opcoesSimulacao").open = true;
+      if ($("opcoesSimulacao").contains($(id))) {
+        // Um valor digitado no modo avançado precisa continuar corrigível
+        // depois de voltar ao caminho simples.
+        if (!avancado) { avancado = true; atualizarFluxo(); }
+        $("opcoesSimulacao").open = true;
+      }
       $(id).reportValidity(); return null;
     }
   }
@@ -803,10 +844,9 @@ function barra(grupo, taxa, medida) {
   pior.append(no("b", "", `pior ${pct(medida.pior.taxa)}`),
               no("span", "", ` em ${medida.pior.amostras} lutas · ${medida.pior.classes.join(", ")}`));
   extremos.append(pior, no("span", "", `melhor ${pct(medida.melhor.taxa)}`));
-  /* "dizima" vem do PERCENTIL das mesas, e não da pior: o mínimo afunda
-     conforme a amostra cresce e por isso ele nomeia quem sofreu mas não
-     entra em veredito nenhum. Ver `grupos.mesa_azarada`. */
-  if (medida.dizima) extremos.prepend(no("span", "veredito dizima", "dizima 1 em 10"));
+  // O percentil resume os grupos de referência; não é uma frequência de
+  // encontrar uma party no jogo, porque as classes não são sorteadas.
+  if (medida.dizima) extremos.prepend(no("span", "veredito dizima", "risco nos grupos testados"));
   bloco.append(n, extremos);
   return bloco;
 }
@@ -830,12 +870,17 @@ async function medir() {
     $("barrasMedida").className = ""; $("barrasMedida").replaceChildren(...r.medidas.map(m => barra(m.grupo, m.taxa, m)));
     $("contaMedida").replaceChildren();
     r.medidas.forEach(m => conta(`Grupo de ${m.grupo}`, `${m.rodadas == null ? "—" : m.rodadas.toFixed(1)} rodadas · ${m.caidos.toFixed(1)} caídos`));
-    conta(r.sorteado ? "Mesas sorteadas" : "Classe (diagnóstico)",
-      r.sorteado
+    conta(r.predefinido ? "Grupos predefinidos" : "Classe (diagnóstico)",
+      r.predefinido
         ? `${primeira.mesas ?? "?"} mesas · nível ${r.nivel}`
         : `${r.classe} · nível ${r.nivel}`);
     conta("Semente", r.semente);
     conta("Criaturas", r.criaturas.map(m => m.nome).join(", "));
+    const lista = $("listaGruposMedidos"); lista.replaceChildren();
+    r.medidas.forEach(m => (m.composicoes || []).forEach(c => {
+      lista.append(no("p", "", `${m.grupo} jogadores · ${c.nome || "Diagnóstico"}: ${c.classes.join(", ")}`));
+    }));
+    $("gruposMedidos").hidden = !lista.hasChildNodes();
   } catch (erro) { if (atual === contexto()) recados("saidaMedida", {erro: erro.message}); }
   finally { medindo = false; $("btMedir").textContent = "Simular combate"; desatualizar(); }
 }
@@ -984,14 +1029,14 @@ async function iniciar() {
     Object.entries(C.bancos).forEach(([nome, b]) => { originais[nome] = {banco: b.original || {organizacao: b.organizacao, salas: b.salas}, arquivo: b.arquivo}; });
     preencher("fBanco", Object.keys(C.bancos)); $("fBanco").disabled = false;
     preencher("fTierSim", Array.from({length: C.limites.tier_maximo}, (_, i) => i + 1), 2);
-    /* "Sorteado" primeiro e como padrão: cinco cópias da mesma classe não é
+    /* Grupos fixos como padrão: cinco cópias da mesma classe não é
        uma mesa que existe, e o número que ela dava dependia de QUAL classe.
        As classes continuam ali, debaixo de um rótulo que diz o que são. */
     const quemJoga = $("fClasse");
     quemJoga.replaceChildren();
-    const sorteado = document.createElement("option");
-    sorteado.value = ""; sorteado.textContent = "Grupos variados";
-    quemJoga.append(sorteado);
+    const padrao = document.createElement("option");
+    padrao.value = ""; padrao.textContent = "Grupos predefinidos";
+    quemJoga.append(padrao);
     const umaSo = document.createElement("optgroup");
     umaSo.label = "Uma classe só (diagnóstico)";
     C.classes.forEach(c => {
@@ -1092,12 +1137,27 @@ $("btRecarregar").addEventListener("click", () => {
   selecao.Teste = -1; selecao.Combate = -1; indice = -1;
   entrar(bancadaEm); alterado(); aviso("JSON original restaurado.");
 });
+$("btModo").addEventListener("click", () => {
+  avancado = !avancado;
+  if (!avancado) {
+    etapa = sala() ? "Editar" : "Escolher";
+    entrar(bancadaEm);
+  }
+  atualizarFluxo();
+});
+document.querySelectorAll(".passos [data-etapa]").forEach(botao => botao.addEventListener("click", () => irParaEtapa(botao.dataset.etapa)));
+$("btFluxoVoltar").addEventListener("click", () => irParaEtapa(etapa === "Testar" ? "Editar" : "Escolher"));
+$("btFluxoProximo").addEventListener("click", () => {
+  if (etapa === "Testar") baixar();
+  else irParaEtapa(etapa === "Escolher" ? "Editar" : "Testar");
+});
 const cartoes = [...document.querySelectorAll("[data-lugar]")];
 cartoes.forEach((n, i) => {
   n.addEventListener("click", () => entrar(n.dataset.lugar));
   n.addEventListener("keydown", evento => {
-    const destinos = {ArrowRight: (i + 1) % cartoes.length, ArrowLeft: (i + cartoes.length - 1) % cartoes.length, Home: 0, End: cartoes.length - 1};
-    if (destinos[evento.key] !== undefined) { evento.preventDefault(); entrar(cartoes[destinos[evento.key]].dataset.lugar, true); }
+    const visiveis = cartoes.filter(b => avancado || ["Teste", "Combate"].includes(b.dataset.lugar)), posicao = visiveis.indexOf(n);
+    const destinos = {ArrowRight: (posicao + 1) % visiveis.length, ArrowLeft: (posicao + visiveis.length - 1) % visiveis.length, Home: 0, End: visiveis.length - 1};
+    if (destinos[evento.key] !== undefined) { evento.preventDefault(); entrar(visiveis[destinos[evento.key]].dataset.lugar, true); }
   });
 });
 const abasSala = [...document.querySelectorAll("[data-secao]")];

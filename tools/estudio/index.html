@@ -7,14 +7,21 @@
 <link rel="stylesheet" href="/estudio.css">
 <script src="/estudio.js" defer></script>
 </head>
-<body>
+<body data-modo="guiado" data-etapa="Escolher">
 <div class="app">
   <header class="cabecalho">
     <div class="marca"><span class="marca-icone" aria-hidden="true">✦</span><div><h1>Estúdio de Incursões</h1><p>Monte salas e teste combates.</p></div></div>
-    <span class="estado" id="estado" role="status">Carregando bancos…</span>
+    <div class="cabecalho-acoes"><span class="estado" id="estado" role="status">Carregando bancos…</span><button id="btModo" class="botao discreto pequena" type="button">Ferramentas avançadas</button></div>
   </header>
 
   <div id="erroInicial" class="recados" role="alert" hidden></div>
+
+  <nav class="passos" aria-label="Etapas da sala">
+    <button type="button" data-etapa="Escolher" aria-current="step"><span>1</span> Escolher</button>
+    <button type="button" data-etapa="Editar" disabled><span>2</span> Editar</button>
+    <button type="button" data-etapa="Testar" disabled><span>3</span> Testar</button>
+  </nav>
+  <h2 id="tituloEtapa" class="titulo-etapa" tabindex="-1">Escolha uma sala</h2>
 
   <div class="barra-arquivo">
     <div class="campo banco-campo"><label for="fBanco">Banco de salas</label><select id="fBanco" disabled></select></div>
@@ -128,6 +135,7 @@
       <div class="contexto"><div><span id="tipoSala" class="etiqueta">Sala</span><h2 id="nomeSala">Selecione uma sala</h2></div><span id="idSala" class="id-sala"></span></div>
 
       <div id="avisoCombate" class="aviso-inline" hidden>Nenhuma sala de Combate aberta. Crie uma para medir e sugerir.</div>
+      <div id="saidaRevisao" class="recados" aria-live="polite" hidden></div>
       <nav id="abasSala" class="abas-sala" role="tablist" aria-label="Ferramentas do combate" hidden>
         <button id="abaEdicao" type="button" role="tab" data-secao="Edicao" aria-controls="painelEdicao" aria-selected="true">Editar sala</button>
         <button id="abaSimulacao" type="button" role="tab" data-secao="Simulacao" aria-controls="painelSimulacao" aria-selected="false" tabindex="-1">Simular</button>
@@ -151,7 +159,7 @@
                 <span><b id="cDesc">0</b> / <span id="tetoDesc">4096</span></span></p>
             </div>
 
-            <div class="campo">
+            <div class="campo" id="campoTemas">
               <span class="rotulo">Temas</span>
               <div id="fichasSala" class="fichas" role="group" aria-label="Temas da sala"></div>
             </div>
@@ -246,14 +254,16 @@
             </div>
             <p class="legenda">Mais repetições dão mais precisão. Use a mesma semente para comparar alterações.</p>
           </details>
-          <details class="ajuda"><summary>Como funciona a medição</summary><p>Grupos variados, com HP e recursos completos. As repetições são divididas entre as composições sorteadas; a pior composição vem de uma amostra menor.</p></details>
+          <details class="ajuda"><summary>Como funciona a medição</summary><p>Grupos fixos com frente, cura e dano. HP e recursos completos; a semente muda as rolagens, mantendo as mesmas classes.</p></details>
         </div>
-        <div class="painel resultado"><div class="painel-cabecalho"><h3>Resultado</h3><span id="tituloMedida" class="legenda">Ainda não medido</span></div><div id="barrasMedida" class="resultado-vazio">Simule para ver as chances de vitória.</div><p id="medidaDesatualizada" class="aviso-inline" hidden>Configuração alterada. Simule novamente.</p><div id="contaMedida" class="contas"></div><div id="saidaMedida" class="recados" aria-live="polite" hidden></div></div>
+        <div class="painel resultado"><div class="painel-cabecalho"><h3>Resultado</h3><span id="tituloMedida" class="legenda">Ainda não medido</span></div><div id="barrasMedida" class="resultado-vazio">Simule para ver as chances de vitória.</div><p id="medidaDesatualizada" class="aviso-inline" hidden>Configuração alterada. Simule novamente.</p><div id="contaMedida" class="contas"></div><details id="gruposMedidos" class="grupos-medidos" hidden><summary>Ver grupos usados</summary><div id="listaGruposMedidos"></div></details><div id="saidaMedida" class="recados" aria-live="polite" hidden></div></div>
       </div>
       <details class="painel sugeridor"><summary><span><strong>Sugerir criaturas</strong><small>Escolha o ambiente e a dificuldade.</small></span><span class="mais" aria-hidden="true">＋</span></summary><div class="detalhes-conteudo"><div class="campos tres"><div class="campo"><label for="fAmb">Ambiente</label><select id="fAmb"></select></div><div class="campo"><label for="fBicho">Tipo de criatura</label><select id="fBicho"></select></div><div class="campo"><label for="fDifCombate">Dificuldade</label><select id="fDifCombate"></select></div></div><div class="linha"><button id="btSugerir" class="botao" type="button">Gerar sugestões</button><span id="recadoSugerir" class="legenda" role="status"></span></div><div id="sugestoes" class="sugestoes"></div><div id="saidaSugerir" class="recados" aria-live="polite" hidden></div></div></details>
       </section>
     </div>
   </div>
+
+  <div class="fluxo-acoes"><button id="btFluxoVoltar" class="botao" type="button" hidden>← Voltar</button><button id="btFluxoProximo" class="botao principal" type="button" disabled>Editar selecionada →</button></div>
 
   <footer>Rascunhos ficam neste navegador. Baixe o JSON para usar no bot.</footer>
 </div>

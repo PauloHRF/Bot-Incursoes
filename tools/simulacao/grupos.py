@@ -1,118 +1,88 @@
-"""Quem senta na mesa quando uma sala é medida.
+"""Grupos fixos para medir salas: frente, cura e dano, sem sortear classes.
 
-Medir com cinco cópias da mesma classe dava um número que nunca vai
-acontecer: não existe mesa de cinco guerreiros. E o número dependia de QUAL
-classe — a mesma sala sai fácil contra uma linha de paladinos e letal contra
-uma de magos —, então quem escolhia a classe escolhia a resposta sem saber.
+O catálogo em grupos.json usa as primeiras N classes de cada formação.
+Cada formação tem uma frente e um curandeiro nas duas primeiras vagas; a
+terceira traz dano. Vagas seguintes complementam o grupo, sem repetir classe.
+As escolhas de tank e cura são explícitas e só entram no tier que as libera.
 
-Aqui a sala é medida contra VÁRIAS mesas sorteadas. O que volta é a média
-mais os extremos, porque são duas perguntas diferentes:
-
-- a média responde "esta sala é justa?";
-- a pior composição responde "existe mesa que ela mata?" — e é essa que
-  esconde o problema, porque some na média.
-
-POR QUE EM COMPOSIÇÕES, e não uma mesa nova a cada luta. Primeiro porque
-montar a mesa custa um banco em memória com os personagens gravados, e
-refazer isso a cada luta pagaria o preço do banco em vez do combate. Mas
-sobretudo porque **uma luta por composição não mede composição nenhuma**:
-para dizer "este grupo venceu 41%" é preciso tê-lo medido várias vezes. As
-repetições são divididas entre N mesas, e cada uma leva o mesmo número de
-lutas.
-
-COM REPOSIÇÃO, de propósito: duas mesas com dois bárbaros existem, e uma
-mesa sem curandeiro nenhum é justamente o caso que o autor precisa ver. O
-degenerado — as cinco iguais, que é o que estamos saindo de — tem chance de
-uma em quatorze mil por composição, então ele não volta pela porta dos
-fundos.
-
-O QUE O NÚMERO DE MESAS CUSTA, e que custou caro descobrir: o sorteio é ele
-próprio uma amostra. Entre mesas, a taxa do MESMO combate vai de 0% a 100%,
-então a média de uma dúzia delas carrega cerca de dez pontos de erro — o
-mesmo elenco mediu 57,5% com um sorteio e 32,5% com outro. Doze mesas servem
-para olhar uma sala na bancada, onde o que se quer é a ordem de grandeza e a
-pior mesa. Para CALIBRAR, não servem: `tools/calibrar_emboscada.py` sorteia
-quarenta, e quem for escrever número que vai para o jogo deve fazer o mesmo.
-
-O percentil que lê esse espalhamento (`mesa_azarada`) mora em
-`estatisticas.py`, junto do Wilson: é estatística, e quem a usa não
-precisa saber como as mesas foram montadas.
+Média e extremos descrevem ESTES grupos de referência. Não representam
+todas as combinações possíveis das catorze classes.
 """
 from __future__ import annotations
 
-import random
+from functools import lru_cache
+import json
+from pathlib import Path
 from typing import Iterable
 
-from src import classes
-
+from src import classes, rules
 from .execucao import Ficha
 
-# Quantas mesas diferentes medir, quando cabe. Doze cobre bem o espaço sem
-# fatiar a amostra a ponto de nenhuma composição ter número próprio.
-COMPOSICOES_PADRAO = 12
+ARQUIVO = Path(__file__).with_name("grupos.json")
 
-# E o piso de lutas por mesa. Abaixo disto a taxa de UMA composição é ruído:
-# dizer "esta mesa venceu 40%" com cinco lutas é inventar um dígito. Quando a
-# amostra é pequena demais para doze mesas, mede-se menos mesas — nunca mesas
-# com menos lutas.
+
+@lru_cache(maxsize=1)
+def catalogo() -> dict:
+    dados = json.loads(ARQUIVO.read_text(encoding="utf-8"))
+    ids = set()
+    for grupo in dados["grupos"]:
+        elenco = grupo["classes"]
+        if grupo["id"] in ids or len(elenco) != 6 or len(set(elenco)) != len(elenco):
+            raise ValueError(f"Formação repetida ou inválida: {grupo['id']}")
+        if any(classes.classe(c) is None for c in elenco):
+            raise ValueError(f"Classe desconhecida na formação: {grupo['id']}")
+        ids.add(grupo["id"])
+    if not ids:
+        raise ValueError("O catálogo precisa de pelo menos um grupo.")
+    for classe, escolhas in dados["escolhas"].items():
+        Ficha(classe, 10, escolhas)
+    return dados
+
+
+COMPOSICOES_PADRAO = len(catalogo()["grupos"])
 MINIMO_POR_COMPOSICAO = 15
-
-# O piso de quem só publica a MÉDIA. Ver `dividir`: o número de uma mesa
-# precisa de quinze lutas, a média do conjunto não — e para a média o sorteio
-# das mesas é a maior fonte de erro, então trocar lutas por mesas é compra
-# boa. Dez é onde a conta ainda fecha para quem queira dar uma olhada no
-# detalhe sem acreditar nele.
 MINIMO_PARA_A_MEDIA = 10
 
 
-def dividir(
-    repeticoes: int,
-    quantas: int = COMPOSICOES_PADRAO,
-    minimo: int = MINIMO_POR_COMPOSICAO,
-) -> tuple[int, int]:
-    """Quantas mesas medir e quantas lutas cada uma leva.
+def dividir(repeticoes: int, quantas: int = COMPOSICOES_PADRAO,
+            minimo: int = MINIMO_POR_COMPOSICAO) -> tuple[int, int]:
+    """Divide as lutas igualmente, limitado às formações do catálogo.
 
-    Devolve `(mesas, lutas_por_mesa)`. O produto pode ficar abaixo de
-    `repeticoes` — sobra que não dá uma luta inteira para cada mesa é
-    descartada, e não jogada numa mesa só, senão uma composição pesaria mais
-    que as outras na média sem nada dizer a respeito.
-
-    **Mais repetições compram lutas por mesa, não mesas.** Com `quantas` em
-    doze e o piso em quinze, 200 repetições dão 12×16 e 600 dão 12×50: o
-    número de mesas não se move, e o sorteio das mesas é justamente a maior
-    fonte de erro da média. Quem quer reduzir ESSE erro precisa pedir mais
-    `quantas` — foi o que o calibrador da emboscada aprendeu, e por isso ele
-    pede quarenta.
-
-    `minimo` é o piso de lutas por mesa, e ele existe para proteger o número
-    DE UMA MESA. Quem publica só a média pode baixá-lo (`MINIMO_PARA_A_MEDIA`)
-    e comprar mesas com as mesmas lutas, que é melhor negócio: o erro da média
-    cai com a raiz do número de mesas, e não com o de lutas por mesa.
+    Amostras pequenas usam um prefixo fixo de formações, sem sorteio. Com
+    60 ou mais lutas cabem os quatro grupos do padrão. Mais repetições
+    medem melhor os mesmos grupos; nunca duplicam formações para inflar N.
     """
     if repeticoes < 1 or quantas < 1 or minimo < 1:
         raise ValueError("Repetições, composições e mínimo precisam ser positivos.")
+    quantas = min(quantas, COMPOSICOES_PADRAO)
     por_mesa = max(minimo, repeticoes // quantas)
-    return max(1, repeticoes // por_mesa), por_mesa
+    return max(1, min(quantas, repeticoes // por_mesa)), por_mesa
 
 
-def sortear(
-    tamanho: int, nivel: int, quantas: int, rng: random.Random
-) -> list[tuple[Ficha, ...]]:
-    """`quantas` mesas de `tamanho` jogadores, sorteadas entre as classes.
+def fixas(tamanho: int, nivel: int, quantas: int = COMPOSICOES_PADRAO) -> list[tuple[Ficha, ...]]:
+    """Mesmas classes e funções, independentemente da semente de combate."""
+    if not 1 <= tamanho <= 6 or quantas < 1:
+        raise ValueError("Use grupos de 1 a 6 e uma quantidade positiva de formações.")
+    dados = catalogo()
+    mesas = []
+    for grupo in dados["grupos"][:quantas]:
+        fichas = []
+        for classe in grupo["classes"][:tamanho]:
+            abertas = {h.id for t, hs in classes.CLASSES[classe].habilidades.items()
+                       if t <= rules.tier(nivel) for h in hs}
+            escolhas = {k: v for k, v in dados["escolhas"].get(classe, {}).items() if k in abertas}
+            fichas.append(Ficha(classe, nivel, escolhas))
+        mesas.append(tuple(fichas))
+    return mesas
 
-    O mesmo `rng` dá as mesmas mesas: é o que deixa dois autores comparando
-    números verem o mesmo número, e é por isso que a semente da medição
-    aparece na resposta.
-    """
-    if tamanho < 1:
-        raise ValueError("A mesa precisa de pelo menos um jogador.")
-    nomes = sorted(classes.CLASSES)
-    return [
-        tuple(Ficha(rng.choice(nomes), nivel) for _ in range(tamanho))
-        for _ in range(max(1, quantas))
-    ]
+
+def descricao(mesa: Iterable[Ficha]) -> dict:
+    elenco = list(mesa)
+    nomes = [f.classe for f in elenco]
+    grupo = next(g for g in catalogo()["grupos"] if g["classes"][:len(nomes)] == nomes)
+    return {"id": grupo["id"], "nome": grupo["nome"],
+            "fichas": [{"classe": f.classe, "escolhas": f.escolhas} for f in elenco]}
 
 
 def nomes_da_mesa(mesa: Iterable[Ficha]) -> list[str]:
-    """As classes da mesa, ordenadas — é como ela aparece na tela."""
     return sorted(f.classe for f in mesa)

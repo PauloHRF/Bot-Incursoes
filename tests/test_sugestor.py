@@ -361,7 +361,7 @@ def caso_sugerir_mede_de_verdade():
     # contra cinco cópias de uma classe, a dificuldade que ele promete e o
     # número que a bancada mostra seriam réguas diferentes — e a faixa
     # "média" valeria só para quem jogasse com cinco guerreiros.
-    assert r["classe"] == "sorteado", r["classe"]
+    assert r["classe"] == "predefinido", r["classe"]
     lo, hi = r["faixa"]
     for s in r["sugestoes"]:
         assert s["bando"] and all(p["quantidade"] >= 1 for p in s["bando"])
@@ -418,15 +418,14 @@ def caso_a_semente_das_mesas_nao_leva_o_bando():
     assert vistos[0][0] == vistos[1][0], "bandos diferentes sortearam mesas diferentes"
     assert vistos[0][0] != vistos[2][0], "o tamanho do grupo tem de separar"
 
-    # E pede as quarenta mesas, nao as doze do padrao: mais confrontos nao
-    # compram mesa nenhuma, e e o numero de MESAS que manda no erro da media.
+    # Busca e confirmação usam o mesmo catálogo fixo da bancada.
     for _semente, composicoes, minimo in vistos:
-        assert composicoes == S.MESAS_SORTEADAS == 40, composicoes
+        assert composicoes == S.MESAS_FIXAS == grupos.COMPOSICOES_PADRAO, composicoes
         assert minimo == grupos.MINIMO_PARA_A_MEDIA, minimo
     mesas, por_mesa = grupos.dividir(
-        S.CONFRONTOS_DA_CONFIRMACAO, S.MESAS_SORTEADAS, grupos.MINIMO_PARA_A_MEDIA
+        S.CONFRONTOS_DA_CONFIRMACAO, S.MESAS_FIXAS, grupos.MINIMO_PARA_A_MEDIA
     )
-    assert mesas == 40, (mesas, por_mesa)
+    assert mesas == grupos.COMPOSICOES_PADRAO, (mesas, por_mesa)
     print(f"  as mesas sao as mesmas para todo bando, e sao {mesas}: ok")
 
 

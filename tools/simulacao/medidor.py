@@ -37,9 +37,7 @@ from . import grupos
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-# Quantas mesas sortear quando ninguém pede outra coisa. Doze é o da bancada,
-# que quer ordem de grandeza; quem vai ESCREVER número pede quarenta. Ver
-# `grupos.dividir`: mais repetições compram lutas por mesa, nunca mesas.
+# As mesmas formações fixas para a bancada, sugeridor e calibrador.
 MESAS_PADRAO = grupos.COMPOSICOES_PADRAO
 
 
@@ -66,7 +64,7 @@ def bando_de(elenco: Iterable[tuple[str, int]], onde: str = "medicao") -> list:
 
 
 def semente_de(semente: Any, tier: Optional[int], tamanho: int) -> random.Random:
-    """O sorteio das mesas daquela medição.
+    """As rolagens de combate daquela medição.
 
     **O bando não entra.** É o que faz a diferença entre dois números ser a
     diferença entre dois bandos, e não entre dois sorteios. O tier e o tamanho
@@ -84,10 +82,10 @@ def hash_do_modelo() -> str:
     """
     arquivos = sorted((RAIZ / "src").rglob("*.py")) + sorted(
         Path(__file__).parent.glob("*.py")
-    )
+    ) + [grupos.ARQUIVO]
     modelo = hashlib.sha256()
     for arquivo in arquivos:
-        modelo.update(str(arquivo.relative_to(RAIZ)).encode())
+        modelo.update(arquivo.relative_to(RAIZ).as_posix().encode())
         modelo.update(arquivo.read_bytes())
     return modelo.hexdigest()
 
@@ -109,10 +107,10 @@ def medir(
 
     `nivel` sem valor vira o primeiro nível do tier, que é a mesa que a sala
     daquele tier encontra. `classe` só para diagnóstico ("dura para quem?");
-    sem ela, as mesas são sorteadas, que é o padrão.
+    sem ela, as mesas são predefinidas, que é o padrão.
 
     `minimo` é o piso de lutas por mesa. Quem publica só a média pode baixá-lo
-    e comprar mesas com as mesmas lutas (`grupos.MINIMO_PARA_A_MEDIA`).
+    medindo as mesmas formações (`grupos.MINIMO_PARA_A_MEDIA`).
     """
     if tamanho < 1 or repeticoes < 1:
         raise ValueError("Tamanho de grupo e repetições precisam ser positivos.")

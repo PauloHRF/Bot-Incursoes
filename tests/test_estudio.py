@@ -248,7 +248,7 @@ def caso_simular_mede_a_sala_de_combate():
     print(f"  a sala foi medida: grupo 5 = {r['medidas'][0]['taxa']:.0%}: ok")
 
 
-def caso_a_medida_vem_de_mesas_sorteadas_com_os_extremos():
+def caso_a_medida_vem_de_mesas_predefinidas_com_os_extremos():
     """A sala é medida contra VÁRIAS mesas, e a página recebe os extremos.
 
     Cinco cópias da mesma classe não é uma mesa que existe, e o número que
@@ -259,7 +259,7 @@ def caso_a_medida_vem_de_mesas_sorteadas_com_os_extremos():
     """
     r = E.simular({"sala": sala_de_combate(monstros=[dict(CRIATURA, quantidade=3)]),
                    "tier": 1, "nivel": 4, "repeticoes": 90, "grupos": [3]})
-    assert r["sorteado"] is True and r["classe"] == "sorteado", r["classe"]
+    assert r["sorteado"] is False and r["predefinido"] is True and r["classe"] == "predefinido"
     medida = r["medidas"][0]
     assert medida["mesas"] > 1, medida
     assert medida["pior"]["taxa"] <= r["medidas"][0]["taxa"] <= medida["melhor"]["taxa"]
@@ -274,7 +274,8 @@ def caso_a_medida_vem_de_mesas_sorteadas_com_os_extremos():
     assert d["sorteado"] is False and d["classe"] == "mago"
     assert d["medidas"][0]["mesas"] == 1 and d["medidas"][0]["pior"] is None
     assert "erro" in E.simular({"sala": sala_de_combate(), "classe": "padeiro"})
-    print(f"  a sala foi medida contra {medida['mesas']} mesas sorteadas: ok")
+    assert all(c["nome"] for c in medida["composicoes"])
+    print(f"  a sala foi medida contra {medida['mesas']} mesas predefinidas: ok")
 
 
 def caso_a_medida_sai_com_veredito():
@@ -494,7 +495,7 @@ for caso in (
     caso_o_pool_traz_o_veredito_do_bot,
     caso_o_pool_recusa_pedido_torto,
     caso_simular_mede_a_sala_de_combate,
-    caso_a_medida_vem_de_mesas_sorteadas_com_os_extremos,
+    caso_a_medida_vem_de_mesas_predefinidas_com_os_extremos,
     caso_a_medida_sai_com_veredito,
     caso_a_mesma_semente_da_o_mesmo_numero,
     caso_mudar_a_lista_de_grupos_nao_mexe_nos_outros,

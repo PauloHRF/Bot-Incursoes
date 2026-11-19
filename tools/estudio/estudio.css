@@ -266,3 +266,47 @@ footer {color:var(--muted); font-size:11px; text-align:center; padding:26px 0}
 .previa-coluna {position:sticky; top:18px}
 @media(min-width:1250px) {#painelSimulacao .ferramentas {grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
 @media(max-width:700px) {.nome-tipo {grid-template-columns:minmax(0,1fr) 120px}.previa-coluna {position:static}.abas-sala {gap:18px}}
+
+/* O caminho simples mostra uma tarefa por etapa. As ferramentas completas
+   continuam no mesmo DOM, sem duplicar campos ou reescrever o JSON. */
+.cabecalho-acoes {display:grid; justify-items:end; gap:8px}
+.passos {display:flex; gap:8px; margin:0 0 24px}
+.passos button {display:flex; align-items:center; gap:9px; flex:1; border:1px solid var(--line); border-radius:8px; padding:12px 16px; background:var(--paper); color:var(--muted); font-size:13px}
+.passos button span {display:grid; place-items:center; border-radius:50%; background:var(--soft); width:24px; height:24px; font-size:12px}
+.passos [aria-current=step] {color:var(--accent); border-color:var(--accent); font-weight:600}
+.passos [aria-current=step] span {background:var(--accent); color:var(--on-accent)}
+.titulo-etapa {font-size:22px; margin:0 0 18px}
+.grupos-medidos {margin-top:14px; font-size:11px; color:var(--muted)}
+.grupos-medidos p {margin-top:8px; overflow-wrap:anywhere}
+.fluxo-acoes {display:flex; justify-content:space-between; gap:12px; margin-top:20px}
+.fluxo-acoes #btFluxoProximo {margin-left:auto}
+body[data-modo=avancado] .passos,body[data-modo=avancado] .titulo-etapa,body[data-modo=avancado] .fluxo-acoes {display:none}
+body[data-modo=guiado] .app {max-width:1100px}
+body[data-modo=guiado] .bancada {display:block}
+body[data-modo=guiado] .lugares {grid-template-columns:1fr 1fr}
+body[data-modo=guiado] [data-lugar=Dungeon],body[data-modo=guiado] [data-lugar=Inspecao],body[data-modo=guiado] .lugar-sub,
+body[data-modo=guiado] #btBaixar,body[data-modo=guiado] #btRecarregar,body[data-modo=guiado] .nota-lateral,
+body[data-modo=guiado] #abasSala,body[data-modo=guiado] .editor-acoes,body[data-modo=guiado] #campoTemas,
+body[data-modo=guiado] .ajuda-tipo,body[data-modo=guiado] .bloco-extra,body[data-modo=guiado] .ajuda,
+body[data-modo=guiado] .sugeridor,body[data-modo=guiado] #saidaSala {display:none}
+body[data-modo=guiado] .edicao-grid {grid-template-columns:1fr}
+body[data-modo=guiado] .editor-painel {padding-bottom:16px}
+body[data-modo=guiado][data-etapa=Escolher] .mesa {display:none}
+body[data-modo=guiado][data-etapa=Escolher] .navegador {position:static}
+body[data-modo=guiado][data-etapa=Escolher] .navegador .painel-cabecalho {flex-wrap:nowrap}
+body[data-modo=guiado][data-etapa=Escolher] #btNova {flex:0 0 auto}
+body[data-modo=guiado][data-etapa=Escolher] .salas {display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:6px; min-height:0; max-height:380px; padding:4px 12px 12px}
+body[data-modo=guiado]:not([data-etapa=Escolher]) .barra-arquivo,body[data-modo=guiado]:not([data-etapa=Escolher]) .lugares,
+body[data-modo=guiado]:not([data-etapa=Escolher]) .navegador {display:none}
+body[data-modo=guiado][data-etapa=Editar] .previa-coluna {display:none}
+body[data-modo=guiado][data-etapa=Testar] .editor-painel {display:none}
+body[data-modo=guiado][data-etapa=Testar] .previa-coluna {display:block; position:static; max-width:650px; margin:auto; width:100%}
+body[data-modo=guiado] #saidaRevisao {margin:0 0 16px}
+@media(max-width:700px) {
+  .cabecalho-acoes {justify-items:start; margin-left:53px; gap:4px}
+  .cabecalho-acoes .estado {margin-left:0}
+  .passos {gap:5px; margin-bottom:18px}
+  .passos button {padding:9px 8px; font-size:12px; gap:6px}
+  .passos button span {width:20px; height:20px}
+  body[data-modo=guiado][data-etapa=Escolher] .salas {grid-template-columns:1fr; max-height:300px}
+}
