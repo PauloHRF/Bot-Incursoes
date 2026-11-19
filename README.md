@@ -117,10 +117,13 @@ Ele sobe em `127.0.0.1` e usa o validador e o motor de combate do próprio bot,
 então passar ali é passar no bot. Não escreve em `data/`: devolve o arquivo
 para você mandar.
 
-Escolha um banco e uma sala na lateral e edite o JSON com a prévia ao lado.
-Use **Banco inteiro** para alterar várias salas. Combate e filtro ficam em
-abas próprias. Os rascunhos ficam no navegador; **Baixar JSON** exporta o
-banco completo, preservando referências ao bestiário e campos extras.
+Escolha um banco e uma sala na lateral e preencha o formulário com a prévia
+ao lado. Em **Combates**, alterne entre **Editar sala** e **Simular**. Os
+campos menos usados e a ajuda ficam recolhidos; composição, repetições e
+semente estão em **Opções avançadas** da simulação. **Montar dungeon** cuida
+do filtro e **Inspecionar** mostra o banco inteiro. Os rascunhos ficam no
+navegador; **Baixar JSON** exporta o banco completo, preservando referências
+ao bestiário e campos extras.
 
 Para um bando de criaturas numa dificuldade dada — a dificuldade é **medida**
 por simulação, não declarada:

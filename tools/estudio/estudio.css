@@ -250,3 +250,19 @@ footer {color:var(--muted); font-size:11px; text-align:center; padding:26px 0}
 @media(max-width:1180px) {.edicao-grid {grid-template-columns:minmax(0,1fr) 250px}.bancada {grid-template-columns:210px minmax(0,1fr);gap:18px}.barra-arquivo {flex-wrap:wrap}.banco-campo {width:260px}.acoes-arquivo {justify-content:flex-end}.lugares {grid-template-columns:repeat(2,minmax(0,1fr))}.ferramentas {grid-template-columns:1fr}}
 @media(max-width:950px) {.edicao-grid {grid-template-columns:1fr}.previa-coluna {display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px}.ajuda {margin-top:0}.acoes-arquivo {justify-content:flex-start}.barra-arquivo {align-items:end}.bancada {gap:16px}.contexto>div {flex-wrap:wrap;gap:5px}.contexto h2 {font-size:18px}.campo-incursao,.busca-inspecao {width:200px}}
 @media(max-width:700px) {.app {padding:0 14px}.cabecalho {padding:20px 0 16px;align-items:start;flex-wrap:wrap;gap:12px}.cabecalho .estado {margin-left:56px}.marca-icone {width:40px;height:40px}.barra-arquivo {padding:14px;gap:12px}.banco-campo {width:100%}.acoes-arquivo {gap:6px}.acoes-arquivo .botao {font-size:11px;padding:8px 10px}.lugares {gap:7px;margin:12px 0 16px}.lugares button {padding:10px;gap:9px}.lugar-sub {display:none}.lugar-icone {width:30px;height:30px}.bancada {grid-template-columns:1fr}.navegador {position:static}.salas {max-height:170px;min-height:0}.nota-lateral {padding:8px 14px}.contexto {margin-top:6px}.previa-coluna {display:block}.ajuda {margin-top:14px}.sugestoes {grid-template-columns:1fr}.painel-cabecalho {flex-wrap:wrap}.simulacao-acoes {gap:13px}.semente {width:130px}.contexto h2 {font-size:19px}.campo-incursao,.busca-inspecao {width:100%}.painel-cabecalho>.campo {width:100%}.filtros-inspecao {gap:14px}.editor-painel {padding:14px 14px 0}}
+
+/* Uma tarefa por vez: o editor e o teste compartilham a sala selecionada. */
+.abas-sala {display:flex; gap:22px; border-bottom:1px solid var(--line); margin-bottom:16px}
+.abas-sala button {border:0; border-bottom:2px solid transparent; background:transparent; color:var(--muted); padding:9px 0; margin-bottom:-1px; font-size:13px; font-weight:600}
+.abas-sala button[aria-selected=true] {border-bottom-color:var(--accent); color:var(--accent)}
+.nome-tipo {grid-template-columns:minmax(0,2fr) minmax(130px,1fr)}
+.medida {justify-content:flex-end; font-size:10px}
+.ajuda-tipo {font-size:11px; color:var(--muted)}
+.ajuda-tipo .explicacao {margin:8px 0 0}
+#painelSimulacao .ferramentas {margin-top:0; grid-template-columns:minmax(0,1fr)}
+#opcoesSimulacao {margin-top:14px}
+#opcoesSimulacao .campos {margin-top:12px}
+#opcoesSimulacao .legenda {margin-top:10px}
+.previa-coluna {position:sticky; top:18px}
+@media(min-width:1250px) {#painelSimulacao .ferramentas {grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
+@media(max-width:700px) {.nome-tipo {grid-template-columns:minmax(0,1fr) 120px}.previa-coluna {position:static}.abas-sala {gap:18px}}

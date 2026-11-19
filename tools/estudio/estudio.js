@@ -336,7 +336,7 @@ function contadores() {
   $("dicaDesc").textContent = `aviso em 600 · o Discord recusa acima de ${C.limites.descricao}`;
   const s = sala(), desconto = s ? (DESCONTO[s.tipo] || 0) : 0, cd = numero("fCd");
   $("dicaCd").textContent = desconto && cd
-    ? `${s.tipo} desconta ${desconto}: vale ${Math.max(1, cd - desconto)} na mesa.` : "";
+    ? `CD na mesa: ${Math.max(1, cd - desconto)} (−${desconto}).` : "";
 }
 
 function lerCampo(id, aplicar) {
@@ -382,6 +382,27 @@ function indicesDoLugar(nome = bancadaEm) {
   }, []);
 }
 
+let secaoCombate = "Edicao";
+function secaoSala(nome, foco = false) {
+  const combate = bancadaEm === "Combate";
+  if (combate) secaoCombate = nome;
+  const atual = combate ? secaoCombate : "Edicao";
+  $("abasSala").hidden = !combate;
+  document.querySelectorAll("[data-secao]").forEach(botao => {
+    const ativo = botao.dataset.secao === atual;
+    botao.setAttribute("aria-selected", ativo); botao.tabIndex = ativo ? 0 : -1;
+    $("painel" + botao.dataset.secao).hidden = !ativo;
+    if (ativo && foco) botao.focus();
+  });
+  if (combate) {
+    $("painelEdicao").setAttribute("role", "tabpanel");
+    $("painelEdicao").setAttribute("aria-labelledby", "abaEdicao");
+  } else {
+    $("painelEdicao").removeAttribute("role");
+    $("painelEdicao").removeAttribute("aria-labelledby");
+  }
+}
+
 function entrar(nome, foco = false) {
   const anterior = bancadaEm;
   lugar = nome;
@@ -401,12 +422,14 @@ function entrar(nome, foco = false) {
   const disponiveis = indicesDoLugar(bancadaEm), guardado = selecao[bancadaEm];
   indice = disponiveis.includes(guardado) ? guardado : (disponiveis[0] ?? -1);
   selecao[bancadaEm] = indice;
+  secaoSala(secaoCombate);
   mostrarEditor();
   atualizar();
   if (nome === "Inspecao") conferir(true);
 }
 
 function abrirSala(i) {
+  secaoCombate = "Edicao";
   const destino = lugarDoTipo(banco.salas[i].tipo);
   selecao[destino] = i;
   entrar(destino);
@@ -436,9 +459,9 @@ function listar() {
   $("contaSalas").textContent = meus.length;
   $("listaVazia").hidden = lista.children.length > 0;
   $("notaLista").textContent = bancadaEm === "Combate"
-    ? "O tier da incursão escolhe quem aparece em cada combate."
+    ? "Criaturas definidas por tier."
     : banco.salas.some(s => familia(s.tipo) === "parada")
-      ? "O Descanso desta lista é parada fixa: ele não é sorteado."
+      ? "Descanso é uma parada fixa."
       : "Este banco não tem sala de Descanso.";
 }
 
@@ -708,7 +731,7 @@ function adicionar(duplicar = false) {
   selecao[lugarDoTipo(nova.tipo)] = indice;
   $("fBusca").value = "";
   if (lugarDoTipo(nova.tipo) !== bancadaEm) entrar(lugarDoTipo(nova.tipo));
-  mostrarEditor(); alterado(); $("fId").focus();
+  secaoSala("Edicao"); mostrarEditor(); alterado(); $("fNome").focus();
 }
 /* Campo que não pertence ao tipo novo sai: o validador recusa sala de
    Combate com perícia e sala de teste com criatura, e o autor não tem como
@@ -728,6 +751,7 @@ function virar() {
   if (!destino) return;
   trocarTipo(s, destino);
   selecao[lugarDoTipo(destino)] = indice;
+  secaoCombate = "Edicao";
   entrar(lugarDoTipo(destino));
   alterado();
   aviso(`“${texto(s.nome)}” agora é ${destino}.`);
@@ -745,7 +769,10 @@ function baixar() {
 
 function parametros() {
   for (const id of ["fNivel", "fReps", "fSemente"]) {
-    if (!$(id).checkValidity()) { $(id).reportValidity(); return null; }
+    if (!$(id).checkValidity()) {
+      if ($("opcoesSimulacao").contains($(id))) $("opcoesSimulacao").open = true;
+      $(id).reportValidity(); return null;
+    }
   }
   const p = {tier: Number($("fTierSim").value), classe: $("fClasse").value, nivel: Number($("fNivel").value)};
   if ($("fSemente").value !== "") p.semente = Number($("fSemente").value);
@@ -792,7 +819,7 @@ async function medir() {
   const grupos = [...document.querySelectorAll('[name="grupo"]:checked')].map(n => Number(n.value));
   if (!grupos.length) { aviso("Escolha pelo menos um tamanho de grupo."); return; }
   const atual = contexto(), nome = sala().nome;
-  medindo = true; controles(); $("btMedir").textContent = "Medindo…"; $("saidaMedida").hidden = true;
+  medindo = true; controles(); $("btMedir").textContent = "Simulando…"; $("saidaMedida").hidden = true;
   try {
     const r = await api("/api/simular", {...p, sala: sala(), tema: $("fTemaSim").value || null, grupos, repeticoes: Number($("fReps").value)});
     if (atual !== contexto()) { aviso("A sala ou os parâmetros mudaram. Meça novamente."); return; }
@@ -806,11 +833,11 @@ async function medir() {
     conta(r.sorteado ? "Mesas sorteadas" : "Classe (diagnóstico)",
       r.sorteado
         ? `${primeira.mesas ?? "?"} mesas · nível ${r.nivel}`
-        : `${r.classe} · nível ${r.nivel} — não é uma mesa que existe`);
+        : `${r.classe} · nível ${r.nivel}`);
     conta("Semente", r.semente);
     conta("Criaturas", r.criaturas.map(m => m.nome).join(", "));
   } catch (erro) { if (atual === contexto()) recados("saidaMedida", {erro: erro.message}); }
-  finally { medindo = false; $("btMedir").textContent = "Medir combate"; desatualizar(); }
+  finally { medindo = false; $("btMedir").textContent = "Simular combate"; desatualizar(); }
 }
 async function sugerir() {
   if (!pronto()) return;
@@ -842,7 +869,7 @@ async function sugerir() {
         const tiers = tema ? alvo.monstros_por_tema[tema] : alvo.monstros_por_tier;
         tiers[String(p.tier)] = s.bando.map(m => ({nome: m.nome, quantidade: m.quantidade}));
         linhasAtuais = null; linhasDoIndice = -1;
-        mostrarEditor(); alterado(); aviso(`Criaturas aplicadas ao tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
+        mostrarEditor(); alterado(); secaoSala("Edicao"); aviso(`Criaturas aplicadas ao tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
       });
       card.append(botao); $("sugestoes").append(card);
     });
@@ -953,7 +980,7 @@ async function iniciar() {
     // aparece no cartão sem ninguém reescrever a página.
     const daFamilia = f => C.tipos.filter(t => familia(t) === f);
     $("subTeste").textContent = daFamilia("teste").join(", ");
-    $("subCombate").textContent = "Criaturas, medição e sugestão de bando";
+    $("subCombate").textContent = "Criaturas e simulação";
     Object.entries(C.bancos).forEach(([nome, b]) => { originais[nome] = {banco: b.original || {organizacao: b.organizacao, salas: b.salas}, arquivo: b.arquivo}; });
     preencher("fBanco", Object.keys(C.bancos)); $("fBanco").disabled = false;
     preencher("fTierSim", Array.from({length: C.limites.tier_maximo}, (_, i) => i + 1), 2);
@@ -963,7 +990,7 @@ async function iniciar() {
     const quemJoga = $("fClasse");
     quemJoga.replaceChildren();
     const sorteado = document.createElement("option");
-    sorteado.value = ""; sorteado.textContent = "Sorteado · mesas variadas";
+    sorteado.value = ""; sorteado.textContent = "Grupos variados";
     quemJoga.append(sorteado);
     const umaSo = document.createElement("optgroup");
     umaSo.label = "Uma classe só (diagnóstico)";
@@ -1071,6 +1098,14 @@ cartoes.forEach((n, i) => {
   n.addEventListener("keydown", evento => {
     const destinos = {ArrowRight: (i + 1) % cartoes.length, ArrowLeft: (i + cartoes.length - 1) % cartoes.length, Home: 0, End: cartoes.length - 1};
     if (destinos[evento.key] !== undefined) { evento.preventDefault(); entrar(cartoes[destinos[evento.key]].dataset.lugar, true); }
+  });
+});
+const abasSala = [...document.querySelectorAll("[data-secao]")];
+abasSala.forEach((botao, i) => {
+  botao.addEventListener("click", () => secaoSala(botao.dataset.secao));
+  botao.addEventListener("keydown", evento => {
+    const destinos = {ArrowRight: (i + 1) % abasSala.length, ArrowLeft: (i + abasSala.length - 1) % abasSala.length, Home: 0, End: abasSala.length - 1};
+    if (destinos[evento.key] !== undefined) { evento.preventDefault(); secaoSala(abasSala[destinos[evento.key]].dataset.secao, true); }
   });
 });
 $("fTierSim").addEventListener("change", () => { $("fNivel").value = Math.min(10, Number($("fTierSim").value) * 2); desatualizar(); });

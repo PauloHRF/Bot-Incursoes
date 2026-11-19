@@ -399,8 +399,53 @@ class Interface(unittest.TestCase):
 
     # --------------------------------------------------- medir e sugerir
 
+    def test_alternar_edicao_e_simulacao_preserva_a_sala_e_os_parametros(self):
+        original = self.abrir(self.combates[0])
+        expect(self.page.locator("#painelEdicao")).to_be_visible()
+        expect(self.page.locator("#painelSimulacao")).to_be_hidden()
+        expect(self.page.locator("#fId")).to_be_hidden()
+        self.escrever("#fNome", "Combate revisado")
+        self.page.locator("#abaEdicao").focus()
+        self.page.keyboard.press("ArrowRight")
+        expect(self.page.locator("#abaSimulacao")).to_be_focused()
+        expect(self.page.locator("#painelEdicao")).to_be_hidden()
+        expect(self.page.locator("#btMedir")).to_be_visible()
+        expect(self.page.locator("#fSemente")).to_be_hidden()
+        self.page.locator("#fNivel").fill("6")
+        self.page.locator("#opcoesSimulacao summary").click()
+        self.page.locator("#fSemente").fill("88")
+
+        self.page.locator("#abaEdicao").click()
+        expect(self.page.locator("#fNome")).to_have_value("Combate revisado")
+        self.page.locator(".bloco-extra summary").first.click()
+        self.escrever("#fPontos", "7")
+        self.page.locator("#abaSimulacao").click()
+        expect(self.page.locator("#fNivel")).to_have_value("6")
+        expect(self.page.locator("#fSemente")).to_have_value("88")
+        self.assertEqual(self.json(), {**original, "nome": "Combate revisado", "pontos_organizacao": 7})
+
+        # Mesmo saindo da medição, criar pede primeiro a edição da nova sala.
+        self.page.locator("#btNova").click()
+        expect(self.page.locator("#painelEdicao")).to_be_visible()
+        expect(self.page.locator("#painelSimulacao")).to_be_hidden()
+        self.assertNotEqual(self.json()["id"], original["id"])
+
+    def test_parametro_invalido_reabre_as_opcoes_avancadas(self):
+        self.abrir(self.combates[0])
+        self.page.locator("#abaSimulacao").click()
+        self.page.locator("#opcoesSimulacao summary").click()
+        self.page.locator("#fReps").fill("61")  # fora do passo de 60
+        self.page.locator("#opcoesSimulacao summary").click()
+        pedidos = []
+        self.page.route("**/api/simular", lambda rota: (pedidos.append(rota.request), rota.abort()))
+        self.page.locator("#btMedir").click()
+        expect(self.page.locator("#fReps")).to_be_visible()
+        expect(self.page.locator("#fReps")).to_be_focused()
+        self.assertEqual(pedidos, [])
+
     def test_medida_respeita_parametros_e_sinaliza_resultado_antigo(self):
         self.abrir(self.combates[0])
+        self.page.locator("#abaSimulacao").click()
         expect(self.page.locator("#fAmb option:checked")).to_have_text("Qualquer ambiente")
         expect(self.page.locator("#fBicho option:checked")).to_have_text("Qualquer tipo")
         pedidos = []
@@ -409,6 +454,7 @@ class Interface(unittest.TestCase):
             rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": "sorteado", "sorteado": True, "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 2.5, "caidos": .3, "mesas": 12, "lutas": 240, "pior": {"classes": ["bardo", "mago", "monge"], "taxa": .41, "amostras": 20}, "melhor": {"classes": ["clerigo", "guerreiro", "paladino"], "taxa": .94, "amostras": 20}}]})
         self.page.route("**/api/simular", responder)
         self.page.locator('[name="grupo"][value="5"]').uncheck()
+        self.page.locator("#opcoesSimulacao summary").click()
         self.page.locator("#fSemente").fill("123")
         self.page.locator("#btMedir").click()
         expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
@@ -428,6 +474,7 @@ class Interface(unittest.TestCase):
         só a barra na tela, as duas salas se parecem.
         """
         self.abrir(self.combates[0])
+        self.page.locator("#abaSimulacao").click()
         self.assertEqual(self.page.locator("#fClasse").input_value(), "")
         # Os padrões do formulário têm de passar na própria validação dele:
         # um `step` que não fecha com o `min` reprova o campo, e `medir`
@@ -486,6 +533,7 @@ class Interface(unittest.TestCase):
             "monstros_por_tema": {tema: {"1": [{"nome": "Aarakocra"}]}},
             "extra": "preservado",
         })
+        self.page.locator("#abaSimulacao").click()
         self.page.locator("#fTemaSim").select_option(tema)
         self.page.locator(".sugeridor summary").click()
         self.page.route("**/api/sugerir", lambda rota: rota.fulfill(json={"semente": 7, "candidatas_no_bestiario": 1, "sugestoes": [{"bando": [{"nome": "Aarakocra", "quantidade": 2}], "na_faixa": True, "por_grupo": {"5": .9, "3": .7}}]}))
@@ -497,10 +545,13 @@ class Interface(unittest.TestCase):
         self.assertEqual(novo["monstros_por_tier"], antes["monstros_por_tier"])
         self.assertEqual(novo["extra"], "preservado")
         # A sala mudou: a sugestão medida na sala de antes não vale mais.
+        expect(self.page.locator("#painelEdicao")).to_be_visible()
+        self.page.locator("#abaSimulacao").click()
         expect(self.page.locator(".usar-sugestao")).to_be_disabled()
 
     def test_respostas_atrasadas_nao_entram_em_outra_sala(self):
         self.abrir(self.combates[0])
+        self.page.locator("#abaSimulacao").click()
         pendentes = []
         self.page.route("**/api/sugerir", lambda rota: pendentes.append(rota))
         self.page.locator(".sugeridor summary").click()
@@ -527,6 +578,11 @@ class Interface(unittest.TestCase):
         for lugar in ("Teste", "Combate", "Dungeon", "Inspecao"):
             self.page.locator("#lugar" + lugar).click()
             self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
+            if lugar == "Combate":
+                self.page.locator("#abaSimulacao").click()
+                self.page.locator("#opcoesSimulacao summary").click()
+                expect(self.page.locator("#btMedir")).to_be_visible()
+                self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
 
     def test_sem_o_motor_a_bancada_diz_em_vez_de_esperar_o_clique(self):
         """Quem abre o estúdio fora do ambiente do bot escreve tudo e só

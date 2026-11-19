@@ -726,6 +726,42 @@ def _normalizar_bonus(bruto: dict[str, Any]) -> dict[str, int]:
     return saida
 
 
+def _copiar_ficha(valor):
+    """Copia os campos mutáveis, preservando os objetos do catálogo.
+
+    As habilidades são tuplas com Habilidade, como na leitura sem cache:
+    continuam apontando para o catálogo. Listas e efeitos de uma ficha nunca
+    podem contaminar a próxima leitura.
+    """
+    if isinstance(valor, dict):
+        return {k: _copiar_ficha(v) for k, v in valor.items()}
+    if isinstance(valor, list):
+        return [_copiar_ficha(v) for v in valor]
+    return valor
+
+
+def _ler_ficha(conn, row, equipados=()) -> dict[str, Any]:
+    """A bancada em memória pode reutilizar a parte fixa da ficha.
+
+    O bot continua derivando na leitura. Na simulação, milhares de leituras
+    da mesma ficha custavam mais que os turnos: a chave inclui TODOS os
+    campos gravados e o equipamento, exceto HP/THP da run, que vêm sempre da
+    consulta atual. Trocar nível, escolhas ou itens produz outra chave.
+    O cache pertence à conexão descartável, não é compartilhado entre mesas.
+    """
+    cache = getattr(conn, "_cache_fichas", None)
+    if cache is None:
+        return _desserializar(row, equipados)
+    bruto = dict(row)
+    atuais = {k: bruto.pop(k) for k in ("hp_atual", "thp") if k in bruto}
+    chave = (tuple(bruto.items()), tuple(equipados or ()))
+    if chave not in cache:
+        cache[chave] = _desserializar(bruto, equipados)
+    ficha = _copiar_ficha(cache[chave])
+    ficha.update(atuais)
+    return ficha
+
+
 def _desserializar(row: aiosqlite.Row, equipados=()) -> dict[str, Any]:
     """A ficha como o resto do bot a lê: o gravado mais os números da classe.
 
@@ -837,7 +873,7 @@ async def buscar_personagem(
     if not row:
         return None
     vestido = await _equipados_de(conn, [row["id"]])
-    return _desserializar(row, vestido.get(row["id"], ()))
+    return _ler_ficha(conn, row, vestido.get(row["id"], ()))
 
 
 async def listar_personagens(
@@ -849,7 +885,7 @@ async def listar_personagens(
     ) as cur:
         linhas = await cur.fetchall()
     vestido = await _equipados_de(conn, [r["id"] for r in linhas])
-    return [_desserializar(r, vestido.get(r["id"], ())) for r in linhas]
+    return [_ler_ficha(conn, r, vestido.get(r["id"], ())) for r in linhas]
 
 
 async def personagem_por_nome(
@@ -864,7 +900,7 @@ async def personagem_por_nome(
     if not row:
         return None
     vestido = await _equipados_de(conn, [row["id"]])
-    return _desserializar(row, vestido.get(row["id"], ()))
+    return _ler_ficha(conn, row, vestido.get(row["id"], ()))
 
 
 async def atualizar_personagem(
@@ -1112,7 +1148,7 @@ async def personagens_da_guilda(
     ) as cur:
         linhas = await cur.fetchall()
     vestido = await _equipados_de(conn, [r["id"] for r in linhas])
-    return [_desserializar(r, vestido.get(r["id"], ())) for r in linhas]
+    return [_ler_ficha(conn, r, vestido.get(r["id"], ())) for r in linhas]
 
 
 async def personagem_da_run(
@@ -1128,7 +1164,7 @@ async def personagem_da_run(
     if not row:
         return None
     vestido = await _equipados_de(conn, [row["id"]])
-    return _desserializar(row, vestido.get(row["id"], ()))
+    return _ler_ficha(conn, row, vestido.get(row["id"], ()))
 
 
 async def personagens_da_run(conn: aiosqlite.Connection, run_id: int) -> list[dict[str, Any]]:
@@ -1141,7 +1177,7 @@ async def personagens_da_run(conn: aiosqlite.Connection, run_id: int) -> list[di
     ) as cur:
         linhas = await cur.fetchall()
     vestido = await _equipados_de(conn, [r["id"] for r in linhas])
-    return [_desserializar(r, vestido.get(r["id"], ())) for r in linhas]
+    return [_ler_ficha(conn, r, vestido.get(r["id"], ())) for r in linhas]
 
 
 async def tomar_o_inicio(conn: aiosqlite.Connection, run_id: int) -> bool:

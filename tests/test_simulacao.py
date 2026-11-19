@@ -23,6 +23,7 @@ from src import aleatorio, classes, database as db, motor
 from src.incursoes import HabilidadeDoMonstro, Monstro, Sala
 from tools.simulacao import grupos
 from tools.simulacao.execucao import Bancada, Ficha, simular_async
+from tools.simulacao.memoria import Memoria
 from tools.simulacao.comparacao import carregar_builds, carregar_cenarios, comparar
 from tools.simulacao import medidas, medidor
 from tools.simulacao import estatisticas
@@ -30,6 +31,63 @@ from tools.simulacao.estatisticas import intervalo
 from tools.simular_combate import simular
 
 ALVO = Monstro("Alvo", 1, 0, "1d1", 1000)
+
+
+class FichasEmMemoria(unittest.IsolatedAsyncioTestCase):
+    async def test_cache_nao_altera_lutas_nem_o_rng(self):
+        """Mesma execução com/sem cache, incluindo métricas e estado final."""
+        for nivel in (2, 6, 10):
+            for nome in classes.CLASSES:
+                with self.subTest(classe=nome, nivel=nivel):
+                    mesa = [Ficha(nome, nivel), Ficha("guerreiro", nivel)]
+                    monstros = [Monstro("Teste", 14, 7, "2d8+3", 180)]
+                    parametros = dict(limite=6, estados=True)
+                    quente = await simular_async(monstros, mesa, 1, random.Random(81), **parametros)
+                    with patch("tools.simulacao.execucao.Memoria", side_effect=lambda: Memoria(cache_fichas=False)):
+                        frio = await simular_async(monstros, mesa, 1, random.Random(81), **parametros)
+                    self.assertEqual(quente, frio)
+
+    async def test_ficha_em_cache_segue_hp_escolhas_e_equipamento(self):
+        async with Bancada([Ficha("guerreiro", 6)], [ALVO]) as b:
+            await b.iniciar()
+            antes = (await db.personagens_da_run(b.conn, b.run_id))[0]
+            await db.definir_thp(b.conn, b.run_id, 1, 7)
+            await b.conn.execute("UPDATE run_participantes SET hp_atual = 3 WHERE run_id = ?", (b.run_id,))
+            atual = (await db.personagens_da_run(b.conn, b.run_id))[0]
+            self.assertEqual(atual["hp_atual"], 3)
+            self.assertEqual(atual["thp"], 7)
+            self.assertEqual(atual["efeitos"], antes["efeitos"])
+            entradas = len(b.conn._cache_fichas)
+            await db.definir_thp(b.conn, b.run_id, 1, 8)
+            await db.personagens_da_run(b.conn, b.run_id)
+            self.assertEqual(len(b.conn._cache_fichas), entradas)
+            await db.definir_escolha(b.conn, b.ids[0], "fighting_style", "defensivo")
+            defensivo = (await db.personagens_da_run(b.conn, b.run_id))[0]
+            self.assertEqual(defensivo["ca"], antes["ca"] + 1)
+            await b.conn.execute("UPDATE personagens SET nivel = 10 WHERE id = ?", (b.ids[0],))
+            await b.conn.commit()
+            depois = (await db.personagens_da_run(b.conn, b.run_id))[0]
+            async with b.conn.execute("SELECT * FROM personagens WHERE id = ?", (b.ids[0],)) as cur:
+                row = await cur.fetchone()
+            esperado = db._desserializar(row)
+            self.assertEqual(depois["hp_atual"], 3)
+            self.assertEqual(depois["thp"], 8)
+            self.assertEqual(depois["hp_max"], esperado["hp_max"])
+            self.assertNotEqual(depois["hp_max"], antes["hp_max"])
+            self.assertEqual(depois["efeitos"], esperado["efeitos"])
+            # Alterar o dicionário recebido não altera leituras seguintes.
+            depois["efeitos"]["bonus_save_atributo"]["CON"] = 999
+            depois["saves"]["CON"] = 999
+            depois["pericias"].append("Inventada")
+            outra = (await db.personagens_da_run(b.conn, b.run_id))[0]
+            self.assertEqual(outra["efeitos"], esperado["efeitos"])
+            self.assertEqual(outra["saves"], esperado["saves"])
+            self.assertNotIn("Inventada", outra["pericias"])
+            # O equipamento também faz parte da chave, sem invalidar por HP.
+            com_item = db._ler_ficha(b.conn, row, ("manto_estrelado",))
+            self.assertEqual(com_item, db._desserializar(row, ("manto_estrelado",)))
+            self.assertEqual(com_item["saves"], {k: v + 2 for k, v in esperado["saves"].items()})
+            self.assertEqual(db._ler_ficha(b.conn, row)["saves"], esperado["saves"])
 
 
 def _grupo_age_primeiro(estado, rng=None):
