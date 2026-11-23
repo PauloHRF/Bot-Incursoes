@@ -7,11 +7,10 @@
 Usa o servidor e os bancos reais; só as buscas demoradas de combate recebem
 respostas controladas. Não exige iniciar o estúdio separadamente.
 
-O que estes casos protegem, e que não é óbvio: o estúdio é dividido em quatro
-LUGARES — escrever sala de teste, montar combate, montar a dungeon e
-inspecionar o banco. A divisão não é enfeite: cada lugar esconde campo que não
-é dele, e o que cola um no outro (o tema da sala vazando para o filtro da
-dungeon, a sala sumindo da lista ao trocar de tipo) é o que quebra calado.
+O fluxo de criação é único: escolher, editar e testar. O menu lateral dá
+acesso às opções, à prévia e às ferramentas do banco. Estes casos conferem
+a preservação do JSON, os filtros e a aplicação da sugestão no tier certo,
+respostas atrasadas e a navegação no desktop e no celular.
 """
 from __future__ import annotations
 
@@ -69,7 +68,7 @@ class Interface(unittest.TestCase):
         self.page = self.context.new_page()
         self.erros = []
         self.page.on("pageerror", lambda e: self.erros.append(str(e)))
-        self.page.goto(self.url + ("" if self._testMethodName.startswith("test_fluxo_") else "?modo=avancado"))
+        self.page.goto(self.url)
         expect(self.page.locator(".sala-btn").first).to_be_visible()
         self.inicial = self.conteudo["bancos"][self.page.locator("#fBanco").input_value()]["original"]
         self.salas = self.inicial["salas"]
@@ -77,6 +76,8 @@ class Interface(unittest.TestCase):
         # para a página: o teste e a tela leem a divisão da mesma fonte.
         self.combates = [i for i, s in enumerate(self.salas) if self.lugar_de(s) == "Combate"]
         self.teste = [i for i, s in enumerate(self.salas) if self.lugar_de(s) == "Teste"]
+        if not self._testMethodName.startswith("test_fluxo_"):
+            self.abrir(self.teste[0])
 
     def tearDown(self):
         self.context.close()
@@ -95,9 +96,44 @@ class Interface(unittest.TestCase):
         sala = self.salas[indice]
         lugar = self.lugar_de(sala)
         irmas = self.combates if lugar == "Combate" else self.teste
-        self.page.locator("#lugar" + lugar).click()
+        self.navegar(lugar)
         self.page.locator(".sala-btn").nth(irmas.index(indice)).click()
         return sala
+
+    def navegar(self, lugar):
+        self.fechar_painel()
+        botao = self.page.locator("#lugar" + lugar)
+        if not botao.is_visible():
+            self.page.locator("#btMenu").click()
+        botao.click()
+
+    def painel(self, nome):
+        self.fechar_painel()
+        botao = self.page.locator(f'[data-painel="{nome}"]')
+        if not botao.is_visible():
+            self.page.locator("#btMenu").click()
+        botao.click()
+        expect(self.page.locator("#config" + nome)).to_be_visible()
+
+    def fechar_painel(self):
+        if self.page.locator("#painelLateral").is_visible():
+            self.page.locator("#btFecharPainel").click()
+
+    def arquivo(self):
+        self.fechar_painel()
+        caixa = self.page.locator(".menu-arquivo")
+        if not caixa.is_visible():
+            self.page.locator("#btMenu").click()
+        if not caixa.evaluate("n => n.open"):
+            caixa.locator("summary").click()
+
+    def editar(self):
+        self.fechar_painel()
+        self.page.locator('.passos [data-etapa="Editar"]').click()
+
+    def ir_teste(self):
+        self.fechar_painel()
+        self.page.locator('.passos [data-etapa="Testar"]').click()
 
     def json(self):
         """A sala aberta, como o estúdio a tem na memória.
@@ -128,6 +164,8 @@ class Interface(unittest.TestCase):
         )
 
     def baixar(self):
+        self.fechar_painel()
+        self.arquivo()
         expect(self.page.locator("#btBaixar")).to_be_enabled()
         with self.page.expect_download() as evento:
             self.page.locator("#btBaixar").click()
@@ -135,13 +173,117 @@ class Interface(unittest.TestCase):
 
     # ------------------------------------------------- os quatro lugares
 
-    def test_fluxo_so_mostra_a_etapa_atual_e_exporta_as_edicoes(self):
-        expect(self.page.locator("#tituloEtapa")).to_have_text("Escolha uma sala")
-        expect(self.page.locator("#formSala")).to_be_hidden()
-        expect(self.page.locator("#lugarDungeon")).to_be_hidden()
-        expect(self.page.locator("#btBaixar")).to_be_hidden()
+    def test_fluxo_sugere_por_tier_proprio_e_aplica_sem_apagar_outros_bandos(self):
         self.page.locator(".sala-btn").first.click()
-        expect(self.page.locator("#tituloEtapa")).to_have_text("Edite a sala")
+        antes = self.json()
+        self.ir_teste()
+        self.page.locator("#fTierSim").select_option("5")
+        self.painel("Simulacao")
+        self.page.locator("#fClasse").select_option("mago")
+        self.page.locator("#fSemente").fill("2026")
+        self.editar()
+        self.page.locator("#sugeridor > summary").click()
+        self.page.locator("#fTierSug").select_option("3")
+        self.page.locator("#fBicho").select_option("dragon")
+        self.page.locator("#fAmb").select_option("forest")
+        self.page.locator("#fDifCombate").select_option("dificil")
+        pedidos = []
+        bando = [{"nome": "Dragão Verde Jovem", "quantidade": 1}]
+        def responder(rota):
+            pedidos.append(rota.request.post_data_json)
+            rota.fulfill(json={"semente": 2026, "candidatas_no_bestiario": 4,
+                "sugestoes": [{"bando": bando, "na_faixa": True, "por_grupo": {"5": .55, "3": .3}}]})
+        self.page.route("**/api/sugerir", responder)
+        self.page.locator("#btSugerir").click()
+        expect(self.page.locator(".usar-sugestao")).to_be_enabled()
+        self.assertEqual(pedidos, [{"tier": 3, "ambiente": "forest", "tipo": "dragon",
+            "dificuldade": "dificil", "quantas": 2, "semente": 2026}])
+        self.page.locator(".usar-sugestao").click()
+        novo = self.json()
+        self.assertEqual(novo["monstros_por_tier"]["3"], bando)
+        for tier, criaturas in antes["monstros_por_tier"].items():
+            if tier != "3": self.assertEqual(novo["monstros_por_tier"][tier], criaturas)
+        expect(self.page.locator("#fNome")).to_be_visible()
+        self.ir_teste()
+        expect(self.page.locator("#fTierSim")).to_have_value("3")
+        expect(self.page.locator("#fNivel")).to_have_value("6")
+        self.assertEqual(self.page.locator("#fClasse").input_value(), "")
+
+    def test_fluxo_tipo_e_ambiente_sao_filtros_opcionais(self):
+        self.page.locator(".sala-btn").first.click()
+        self.page.locator("#sugeridor > summary").click()
+        pedidos = []
+        def responder(rota):
+            pedidos.append(rota.request.post_data_json)
+            rota.fulfill(json={"semente": 5, "candidatas_no_bestiario": 10, "sugestoes": []})
+        self.page.route("**/api/sugerir", responder)
+        for tipo, ambiente in (("beast", ""), ("", "forest"), ("", "")):
+            self.page.locator("#fBicho").select_option(tipo)
+            self.page.locator("#fAmb").select_option(ambiente)
+            self.page.locator("#btSugerir").click()
+            expect(self.page.locator("#saidaSugerir")).to_contain_text("Nenhuma sugestão encontrada")
+            expect(self.page.locator("#btSugerir")).to_be_enabled()
+        self.assertEqual([(p["tipo"], p["ambiente"]) for p in pedidos], [("beast", ""), ("", "forest"), ("", "")])
+        self.assertTrue(all("classe" not in p and "nivel" not in p for p in pedidos))
+
+    def test_fluxo_mudar_o_tier_descarta_sugestao_em_andamento(self):
+        self.page.locator(".sala-btn").first.click()
+        antes = self.json()
+        self.page.locator("#sugeridor > summary").click()
+        pendentes = []
+        self.page.route("**/api/sugerir", lambda rota: pendentes.append(rota))
+        with self.page.expect_request("**/api/sugerir"):
+            self.page.locator("#btSugerir").click()
+        self.page.locator("#fTierSug").select_option("4")
+        pendentes[0].fulfill(json={"semente": 5, "candidatas_no_bestiario": 1,
+            "sugestoes": [{"bando": [{"nome": "Aarakocra", "quantidade": 2}], "na_faixa": True, "por_grupo": {"5": .9}}]})
+        expect(self.page.locator("#toast")).to_have_text("Os filtros ou a sala mudaram. Gere novas sugestões.")
+        expect(self.page.locator(".usar-sugestao")).to_have_count(0)
+        self.assertEqual(self.json(), antes)
+
+    def test_fluxo_opcoes_e_previa_ficam_acessiveis_sem_trocar_de_interface(self):
+        self.abrir(self.teste[0])
+        self.escrever("#fNome", "Sala com prévia")
+        self.painel("Sala")
+        self.escrever("#fPontos", "8")
+        self.escrever("#fRecompensa", "Uma chave")
+        self.painel("Previa")
+        expect(self.page.locator("#dTitulo")).to_be_visible()
+        expect(self.page.locator("#dTitulo")).to_have_text("Sala com prévia")
+        self.page.keyboard.press("Escape")
+        self.ir_teste()
+        expect(self.page.locator("#ancoraPrevia #dTitulo")).to_be_visible()
+        self.assertEqual(self.json()["pontos_organizacao"], 8)
+        self.assertEqual(self.json()["recompensa"], "Uma chave")
+        self.page.goto(self.url + "?modo=avancado")
+        expect(self.page.locator(".sala-btn").first).to_be_visible()
+        expect(self.page.locator(".passos")).to_be_visible()
+        expect(self.page.locator("#btModo")).to_have_count(0)
+
+    def test_fluxo_menu_e_paineis_no_celular_abrem_e_fecham_pelo_teclado(self):
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.page.locator("#btMenu").focus()
+        self.page.keyboard.press("Enter")
+        expect(self.page.locator("#menuMovel")).to_be_visible()
+        expect(self.page.locator("#lugarDungeon")).to_be_visible()
+        self.page.keyboard.press("Escape")
+        expect(self.page.locator("#menuMovel")).to_be_hidden()
+        expect(self.page.locator("#btMenu")).to_be_focused()
+        self.painel("Sala")
+        expect(self.page.locator("#menuMovel")).to_be_hidden()
+        expect(self.page.locator("#fId")).to_be_visible()
+        self.page.keyboard.press("Escape")
+        expect(self.page.locator("#painelLateral")).to_be_hidden()
+        expect(self.page.locator("#btMenu")).to_be_focused()
+        self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
+
+    def test_fluxo_so_mostra_a_etapa_atual_e_exporta_as_edicoes(self):
+        expect(self.page.locator("#tituloEtapa")).to_have_text("Escolha um combate")
+        expect(self.page.locator("#btModo")).to_have_count(0)
+        expect(self.page.locator("#formSala")).to_be_hidden()
+        expect(self.page.locator("#lugarDungeon")).to_be_visible()
+        self.navegar("Teste")
+        self.page.locator(".sala-btn").first.click()
         expect(self.page.locator("#listaSalas")).to_be_hidden()
         self.escrever("#fNome", "Sala por etapas")
         self.page.locator("#btFluxoProximo").click()
@@ -157,28 +299,23 @@ class Interface(unittest.TestCase):
         self.assertEqual(dados["salas"][self.teste[0]]["nome"], "Sala por etapas")
         self.assertEqual(len(dados["salas"]), len(self.salas))
 
-    def test_fluxo_combates_simula_e_troca_de_modo_sem_perder_a_sala(self):
-        self.page.locator("#lugarCombate").click()
+    def test_fluxo_combates_preserva_resultado_ao_usar_ferramentas(self):
         self.page.locator(".sala-btn").first.click()
         self.escrever("#fNome", "Combate guiado")
         expect(self.page.locator("#btMedir")).to_be_hidden()
-        self.page.locator("#btFluxoProximo").click()
-        expect(self.page.locator("#btMedir")).to_be_visible()
-        expect(self.page.locator("#fNome")).to_be_hidden()
-        expect(self.page.locator("#opcoesSimulacao")).to_be_hidden()
+        self.ir_teste()
         self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
-            "sala": "X", "tier": 2, "classe": "predefinido", "sorteado": False, "predefinido": True,
+            "sala": "X", "tier": 2, "classe": "predefinido", "predefinido": True,
             "nivel": 4, "repeticoes": 240, "semente": 9, "criaturas": [{"nome": "Teste"}],
             "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 3, "caidos": .5, "lutas": 240}]}))
         self.page.locator("#btMedir").click()
         expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
-        self.page.locator("#btModo").click()
-        expect(self.page.locator("#lugarDungeon")).to_be_visible()
+        self.navegar("Dungeon")
         expect(self.page.locator(".passos")).to_be_hidden()
-        self.assertEqual(self.json()["nome"], "Combate guiado")
-        self.page.locator("#btModo").click()
+        self.navegar("Combate")
+        self.page.locator(".sala-btn").first.click()
         expect(self.page.locator("#fNome")).to_have_value("Combate guiado")
-        self.page.locator("#btFluxoProximo").click()
+        self.ir_teste()
         expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
 
     def test_fluxo_vazio_cria_sala_e_funciona_no_celular(self):
@@ -196,22 +333,19 @@ class Interface(unittest.TestCase):
         expect(self.page.locator(".sala-btn")).to_have_count(1)
         expect(self.page.locator("#formSala")).to_be_hidden()
 
-    def test_fluxo_parametro_avancado_invalido_fica_corrigivel(self):
-        self.page.locator("#lugarCombate").click()
+    def test_fluxo_parametro_recolhido_invalido_fica_corrigivel(self):
         self.page.locator(".sala-btn").first.click()
-        self.page.locator("#btFluxoProximo").click()
-        self.page.locator("#btModo").click()
-        self.page.locator("#opcoesSimulacao summary").click()
+        self.ir_teste()
+        self.painel("Simulacao")
         self.page.locator("#fReps").fill("61")
-        self.page.locator("#btModo").click()
-        self.page.locator("#btFluxoProximo").click()
+        self.fechar_painel()
         self.page.locator("#btMedir").click()
-        expect(self.page.locator("#fReps")).to_be_visible()
+        expect(self.page.locator("#configSimulacao")).to_be_visible()
         expect(self.page.locator("#fReps")).to_be_focused()
-        expect(self.page.locator("#btModo")).to_have_text("Voltar ao modo simples")
+        expect(self.page.locator("#btModo")).to_have_count(0)
 
     def test_fluxo_mostra_os_grupos_fixos_sem_encher_a_tela(self):
-        self.page.locator("#lugarCombate").click()
+        self.navegar("Combate")
         self.page.locator(".sala-btn").first.click()
         self.page.locator("#btFluxoProximo").click()
         medida = {"grupo": 3, "taxa": .75, "rodadas": 3, "caidos": .5, "mesas": 4,
@@ -222,6 +356,7 @@ class Interface(unittest.TestCase):
         self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
             "tier": 2, "classe": "predefinido", "predefinido": True, "sorteado": False,
             "nivel": 4, "repeticoes": 240, "semente": 9, "criaturas": [], "medidas": [medida]}))
+        self.fechar_painel()
         self.page.locator("#btMedir").click()
         expect(self.page.locator("#contaMedida")).to_contain_text("Grupos predefinidos")
         expect(self.page.locator("#barrasMedida")).to_contain_text("risco nos grupos testados")
@@ -247,7 +382,7 @@ class Interface(unittest.TestCase):
         expect(self.page.locator("#painelCombate")).to_be_hidden()
         self.assertNotIn("Combate", self.opcoes("#fTipo"))
 
-        self.page.locator("#lugarCombate").click()
+        self.abrir(self.combates[0])
         expect(self.page.locator(".sala-btn")).to_have_count(len(self.combates))
         expect(self.page.locator("#blocoCriaturas")).to_be_visible()
         expect(self.page.locator("#blocoTeste")).to_be_hidden()
@@ -256,8 +391,8 @@ class Interface(unittest.TestCase):
 
         # E voltar reencontra a sala onde ela foi deixada, não a primeira.
         esperado = self.abrir(self.teste[1])
-        self.page.locator("#lugarDungeon").click()
-        self.page.locator("#lugarTeste").click()
+        self.navegar("Dungeon")
+        self.navegar("Teste")
         self.assertEqual(self.json()["id"], esperado["id"])
 
     def test_abrir_descanso_mostra_o_tipo_que_a_sala_tem(self):
@@ -283,6 +418,7 @@ class Interface(unittest.TestCase):
         lista que o autor estava olhando — ela "sumia" sem ter sumido.
         """
         self.abrir(self.teste[0])
+        self.painel("Sala")
         self.page.locator("#btVirar").click()
         expect(self.page.locator("#lugarCombate")).to_have_attribute("aria-selected", "true")
         expect(self.page.locator(".sala-btn")).to_have_count(len(self.combates) + 1)
@@ -292,13 +428,14 @@ class Interface(unittest.TestCase):
         self.assertEqual(virada["pericias"], [])
         expect(self.page.locator("#blocoCriaturas")).to_be_visible()
 
+        self.painel("Sala")
         self.page.locator("#btVirar").click()
         expect(self.page.locator("#lugarTeste")).to_have_attribute("aria-selected", "true")
         expect(self.page.locator(".sala-btn")).to_have_count(len(self.teste))
         self.assertEqual(self.json()["tipo"], self.conteudo["sala_nova"]["teste"])
 
     def test_inspecionar_lista_o_banco_inteiro_e_abre_a_sala(self):
-        self.page.locator("#lugarInspecao").click()
+        self.navegar("Inspecao")
         expect(self.page.locator("#tabelaInspecao tr")).to_have_count(len(self.salas))
         expect(self.page.locator("#saidaBanco")).to_be_visible()
 
@@ -325,10 +462,12 @@ class Interface(unittest.TestCase):
         tema são, viravam `null` no pedido e o pool voltava vazio.
         """
         self.context.grant_permissions(["clipboard-read", "clipboard-write"])
+        self.painel("Sala")
         self.page.locator('#fichasSala .ficha[aria-pressed="false"]').first.click()
+        self.fechar_painel()
         self.page.locator('#fichasPericias .ficha[aria-pressed="false"]').first.click()
 
-        self.page.locator("#lugarDungeon").click()
+        self.navegar("Dungeon")
         self.page.locator("#btCopiarFiltro").click()
         expect(self.page.locator("#toast")).to_have_text("Filtro JSON copiado.")
         self.assertEqual(
@@ -352,7 +491,7 @@ class Interface(unittest.TestCase):
         filtro de outra aponta para IDs que este banco não tem, e o pool
         sairia vazio sem dizer por quê.
         """
-        self.page.locator("#lugarDungeon").click()
+        self.navegar("Dungeon")
         daqui = {
             i["id"] for i in self.conteudo["incursoes"].values()
             if i["organizacao"] == self.inicial["organizacao"]
@@ -378,7 +517,7 @@ class Interface(unittest.TestCase):
     def test_filtro_utiliza_edicoes_e_exporta_json(self):
         dados = self.abrir(self.teste[0])
         self.escrever("#fNome", "Sala do filtro")
-        self.page.locator("#lugarDungeon").click()
+        self.navegar("Dungeon")
         self.page.locator("#fIncluir").fill(dados["id"])
         expect(self.page.locator("#tabelaPool tr")).to_have_count(1)
         expect(self.page.locator("#tabelaPool")).to_contain_text("Sala do filtro")
@@ -461,10 +600,12 @@ class Interface(unittest.TestCase):
 
     def test_duplicar_criar_excluir_e_restaurar(self):
         original = self.json()
+        self.painel("Sala")
         self.page.locator("#btDuplicar").click()
         copia = self.json()
         self.assertNotEqual(copia["id"], original["id"])
         self.assertEqual(copia["descricao"], original["descricao"])
+        self.navegar("Teste")
         self.page.locator("#btNova").click()
         self.assertNotEqual(self.json()["id"], copia["id"])
         self.assertEqual(self.json()["tipo"], self.conteudo["sala_nova"]["teste"])
@@ -472,9 +613,11 @@ class Interface(unittest.TestCase):
         # A nova é de teste: a conta do outro lugar não pode ter andado.
         expect(self.page.locator("#contaCombate")).to_have_text(str(len(self.combates)))
         self.page.once("dialog", lambda d: d.accept())
+        self.painel("Sala")
         self.page.locator("#btExcluir").click()
         expect(self.page.locator(".sala-btn")).to_have_count(len(self.teste) + 1)
         self.page.once("dialog", lambda d: d.accept())
+        self.arquivo()
         self.page.locator("#btRecarregar").click()
         self.assertEqual(self.baixar(), self.inicial)
 
@@ -489,6 +632,7 @@ class Interface(unittest.TestCase):
         self.page.reload()
         expect(self.page.locator(".sala-btn")).to_have_count(1)
         self.page.once("dialog", lambda d: d.accept())
+        self.arquivo()
         self.page.locator("#btRecarregar").click()
         self.assertEqual(self.baixar(), dados)
 
@@ -496,41 +640,31 @@ class Interface(unittest.TestCase):
 
     def test_alternar_edicao_e_simulacao_preserva_a_sala_e_os_parametros(self):
         original = self.abrir(self.combates[0])
-        expect(self.page.locator("#painelEdicao")).to_be_visible()
-        expect(self.page.locator("#painelSimulacao")).to_be_hidden()
-        expect(self.page.locator("#fId")).to_be_hidden()
         self.escrever("#fNome", "Combate revisado")
-        self.page.locator("#abaEdicao").focus()
-        self.page.keyboard.press("ArrowRight")
-        expect(self.page.locator("#abaSimulacao")).to_be_focused()
-        expect(self.page.locator("#painelEdicao")).to_be_hidden()
-        expect(self.page.locator("#btMedir")).to_be_visible()
-        expect(self.page.locator("#fSemente")).to_be_hidden()
+        self.ir_teste()
         self.page.locator("#fNivel").fill("6")
-        self.page.locator("#opcoesSimulacao summary").click()
+        self.painel("Simulacao")
         self.page.locator("#fSemente").fill("88")
-
-        self.page.locator("#abaEdicao").click()
+        self.editar()
         expect(self.page.locator("#fNome")).to_have_value("Combate revisado")
-        self.page.locator(".bloco-extra summary").first.click()
+        self.painel("Sala")
         self.escrever("#fPontos", "7")
-        self.page.locator("#abaSimulacao").click()
+        self.ir_teste()
         expect(self.page.locator("#fNivel")).to_have_value("6")
         expect(self.page.locator("#fSemente")).to_have_value("88")
         self.assertEqual(self.json(), {**original, "nome": "Combate revisado", "pontos_organizacao": 7})
-
-        # Mesmo saindo da medição, criar pede primeiro a edição da nova sala.
+        self.navegar("Combate")
         self.page.locator("#btNova").click()
         expect(self.page.locator("#painelEdicao")).to_be_visible()
-        expect(self.page.locator("#painelSimulacao")).to_be_hidden()
+        expect(self.page.locator("#fNome")).to_be_focused()
         self.assertNotEqual(self.json()["id"], original["id"])
 
-    def test_parametro_invalido_reabre_as_opcoes_avancadas(self):
+    def test_parametro_invalido_abre_os_ajustes_da_simulacao(self):
         self.abrir(self.combates[0])
-        self.page.locator("#abaSimulacao").click()
-        self.page.locator("#opcoesSimulacao summary").click()
-        self.page.locator("#fReps").fill("61")  # fora do passo de 60
-        self.page.locator("#opcoesSimulacao summary").click()
+        self.ir_teste()
+        self.painel("Simulacao")
+        self.page.locator("#fReps").fill("61")
+        self.fechar_painel()
         pedidos = []
         self.page.route("**/api/simular", lambda rota: (pedidos.append(rota.request), rota.abort()))
         self.page.locator("#btMedir").click()
@@ -540,7 +674,7 @@ class Interface(unittest.TestCase):
 
     def test_medida_respeita_parametros_e_sinaliza_resultado_antigo(self):
         self.abrir(self.combates[0])
-        self.page.locator("#abaSimulacao").click()
+        self.ir_teste()
         expect(self.page.locator("#fAmb option:checked")).to_have_text("Qualquer ambiente")
         expect(self.page.locator("#fBicho option:checked")).to_have_text("Qualquer tipo")
         pedidos = []
@@ -549,8 +683,9 @@ class Interface(unittest.TestCase):
             rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": "predefinido", "sorteado": False, "predefinido": True, "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 2.5, "caidos": .3, "mesas": 4, "lutas": 240, "pior": {"classes": ["bardo", "mago", "monge"], "taxa": .41, "amostras": 60}, "melhor": {"classes": ["clerigo", "guerreiro", "paladino"], "taxa": .94, "amostras": 60}}]})
         self.page.route("**/api/simular", responder)
         self.page.locator('[name="grupo"][value="5"]').uncheck()
-        self.page.locator("#opcoesSimulacao summary").click()
+        self.painel("Simulacao")
         self.page.locator("#fSemente").fill("123")
+        self.fechar_painel()
         self.page.locator("#btMedir").click()
         expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
         expect(self.page.locator("#contaMedida")).to_contain_text("Grupo de 3")
@@ -569,7 +704,7 @@ class Interface(unittest.TestCase):
         só a barra na tela, as duas salas se parecem.
         """
         self.abrir(self.combates[0])
-        self.page.locator("#abaSimulacao").click()
+        self.ir_teste()
         self.assertEqual(self.page.locator("#fClasse").input_value(), "")
         # Os padrões do formulário têm de passar na própria validação dele:
         # um `step` que não fecha com o `min` reprova o campo, e `medir`
@@ -586,6 +721,7 @@ class Interface(unittest.TestCase):
             "sala": "X", "tier": 2, "classe": "predefinido", "sorteado": False, "predefinido": True, "nivel": 4,
             "repeticoes": 240, "semente": 9, "criaturas": [{"nome": "Teste"}],
             "medidas": [medida]}))
+        self.fechar_painel()
         self.page.locator("#btMedir").click()
         barras = self.page.locator("#barrasMedida")
         expect(barras).to_contain_text("75%")
@@ -608,7 +744,9 @@ class Interface(unittest.TestCase):
             if len(self.salas[i].get("monstros_por_tier") or {}) > 1
         )
         self.abrir(indice)
-        expect(self.page.locator("#saidaSala")).to_contain_text("Sala conferida.")
+        self.ir_teste()
+        expect(self.page.locator("#saidaRevisao")).to_contain_text("Sala conferida.")
+        self.editar()
         recado = self.page.locator("#recadoCriaturas")
         expect(recado).not_to_have_class(re.compile("invalido"))
         self.assertNotIn("máximo", recado.inner_text())
@@ -628,9 +766,9 @@ class Interface(unittest.TestCase):
             "monstros_por_tema": {tema: {"1": [{"nome": "Aarakocra"}]}},
             "extra": "preservado",
         })
-        self.page.locator("#abaSimulacao").click()
-        self.page.locator("#fTemaSim").select_option(tema)
-        self.page.locator(".sugeridor summary").click()
+        self.page.locator(".sugeridor > summary").click()
+        self.page.locator("#varianteSugestao summary").click()
+        self.page.locator("#fTemaSug").select_option(tema)
         self.page.route("**/api/sugerir", lambda rota: rota.fulfill(json={"semente": 7, "candidatas_no_bestiario": 1, "sugestoes": [{"bando": [{"nome": "Aarakocra", "quantidade": 2}], "na_faixa": True, "por_grupo": {"5": .9, "3": .7}}]}))
         self.page.locator("#btSugerir").click()
         self.page.locator(".usar-sugestao").click()
@@ -641,42 +779,44 @@ class Interface(unittest.TestCase):
         self.assertEqual(novo["extra"], "preservado")
         # A sala mudou: a sugestão medida na sala de antes não vale mais.
         expect(self.page.locator("#painelEdicao")).to_be_visible()
-        self.page.locator("#abaSimulacao").click()
+        self.page.locator(".sugeridor > summary").click()
         expect(self.page.locator(".usar-sugestao")).to_be_disabled()
 
     def test_respostas_atrasadas_nao_entram_em_outra_sala(self):
         self.abrir(self.combates[0])
-        self.page.locator("#abaSimulacao").click()
         pendentes = []
         self.page.route("**/api/sugerir", lambda rota: pendentes.append(rota))
-        self.page.locator(".sugeridor summary").click()
+        self.page.locator(".sugeridor > summary").click()
         with self.page.expect_request("**/api/sugerir"):
             self.page.locator("#btSugerir").click()
         # Mudar de lugar é mudar de sala: a resposta que volta é de outra.
-        self.page.locator("#lugarTeste").click()
+        self.navegar("Teste")
         pendentes[0].fulfill(json={"semente": 7, "candidatas_no_bestiario": 1, "sugestoes": [{"bando": [{"nome": "Aarakocra", "quantidade": 2}], "na_faixa": True, "por_grupo": {"3": .7}}]})
-        expect(self.page.locator("#toast")).to_have_text("Os parâmetros mudaram. Gere novas sugestões.")
+        expect(self.page.locator("#toast")).to_have_text("Os filtros ou a sala mudaram. Gere novas sugestões.")
         expect(self.page.locator(".usar-sugestao")).to_have_count(0)
         self.assertEqual(self.baixar(), self.inicial)
 
     # -------------------------------------------------------------- geral
 
     def test_lugares_pelo_teclado_e_mobile_sem_rolagem_horizontal(self):
-        self.page.locator("#lugarTeste").focus()
-        self.page.keyboard.press("ArrowRight")
-        expect(self.page.locator("#lugarCombate")).to_be_focused()
-        expect(self.page.locator("#painelCombate")).to_be_visible()
+        self.page.locator("#lugarCombate").focus()
+        self.page.keyboard.press("ArrowDown")
+        expect(self.page.locator("#lugarTeste")).to_be_focused()
         self.page.keyboard.press("End")
         expect(self.page.locator("#painelInspecao")).to_be_visible()
         self.page.set_viewport_size({"width": 390, "height": 844})
         self.page.emulate_media(color_scheme="dark")
         for lugar in ("Teste", "Combate", "Dungeon", "Inspecao"):
-            self.page.locator("#lugar" + lugar).click()
+            self.navegar(lugar)
             self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
             if lugar == "Combate":
-                self.page.locator("#abaSimulacao").click()
-                self.page.locator("#opcoesSimulacao summary").click()
-                expect(self.page.locator("#btMedir")).to_be_visible()
+                self.page.locator(".sala-btn").first.click()
+                self.page.locator("#sugeridor > summary").click()
+                expect(self.page.locator("#fTierSug")).to_be_visible()
+                self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
+                self.ir_teste()
+                self.painel("Simulacao")
+                expect(self.page.locator("#fReps")).to_be_visible()
                 self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
 
     def test_sem_o_motor_a_bancada_diz_em_vez_de_esperar_o_clique(self):
@@ -700,7 +840,7 @@ class Interface(unittest.TestCase):
         expect(self.page.locator(".sala-btn").first).to_be_visible()
         expect(self.page.locator("#btBaixar")).to_be_enabled()
 
-        self.page.locator("#lugarCombate").click()
+        self.abrir(self.combates[0])
         expect(self.page.locator("#avisoCombate")).to_contain_text(recado)
         expect(self.page.locator("#btMedir")).to_be_disabled()
         expect(self.page.locator("#btSugerir")).to_be_disabled()

@@ -48,6 +48,9 @@ LEIA = """ESTÚDIO DE INCURSÕES — WINDOWS 10/11, 64 BITS
 3. O navegador abre o Estúdio. Siga Escolher → Editar → Testar.
 4. Use "Baixar JSON" para guardar e enviar o banco de salas.
 
+Na edição, "Sugerir combate" busca criaturas pelo tier e dificuldade.
+Tipo e ambiente são opcionais. As demais ferramentas ficam no menu lateral.
+
 Não precisa instalar Python nem dependências. Funciona sem internet.
 Mantenha a janela de abertura aberta durante o uso; feche-a ao terminar.
 Os rascunhos ficam neste navegador. Para levar o trabalho, baixe o JSON.

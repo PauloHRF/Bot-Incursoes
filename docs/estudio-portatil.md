@@ -5,10 +5,13 @@ cliques. O pacote é para **Windows 10/11 de 64 bits** e já inclui Python e
 as dependências, incluindo `aiosqlite`. Funciona sem internet e não precisa
 de conta no GitHub.
 
-A página abre em **Escolher → Editar → Testar**. Em **Ferramentas avançadas**
-continuam disponíveis filtros de dungeon, inspeção, sugestão de criaturas e
-opções de simulação. Os combates usam quatro formações fixas, conferíveis
-em **Ver grupos usados**. **Baixar JSON** guarda o banco completo para enviar.
+A página abre em **Escolher → Editar → Testar**. **Sugerir combate**, na
+edição, pede tier e dificuldade; tipo de criatura e ambiente são opcionais.
+Revise a sugestão e aplique ao tier desejado. O menu lateral reúne opções
+da sala, prévia, ajustes da simulação, dungeon e inspeção. No celular,
+abra-o pelo botão **Menu**. Os combates usam quatro formações fixas,
+conferíveis em **Ver grupos usados**. **Baixar JSON** guarda o banco completo
+para enviar, ao final do teste ou pelo menu **Arquivo**.
 Mantenha a janela de abertura aberta durante o uso e feche-a ao terminar.
 
 ## Gerar uma nova distribuição

@@ -117,9 +117,11 @@ Ele sobe em `127.0.0.1` e usa o validador e o motor de combate do próprio bot,
 então passar ali é passar no bot. Não escreve em `data/`: devolve o arquivo
 para você mandar.
 
-A tela simples segue **Escolher → Editar → Testar**, mostrando uma etapa
-por vez. **Ferramentas avançadas** abre o editor completo, filtros de dungeon,
-inspeção e sugestão de criaturas. Os rascunhos ficam no navegador;
+A interface segue **Escolher → Editar → Testar**, mostrando uma etapa
+por vez. Na edição, **Sugerir combate** busca criaturas pelo tier e pela
+dificuldade, com filtros opcionais de tipo e ambiente. O menu lateral reúne
+opções da sala, prévia, ajustes da simulação, dungeon e inspeção do banco.
+Os rascunhos ficam no navegador;
 **Baixar JSON** exporta o banco completo, preservando referências ao bestiário
 e campos extras. As simulações usam quatro formações fixas com frente, cura
 e dano; **Ver grupos usados** mostra quem participou da medição.

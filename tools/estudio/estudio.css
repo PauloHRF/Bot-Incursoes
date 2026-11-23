@@ -22,20 +22,18 @@ a {color:var(--accent); text-underline-offset:3px}
 h1,h2,h3,p {margin:0}
 h1 {font:600 clamp(22px,2.4vw,30px)/1.2 Georgia,"Times New Roman",serif; letter-spacing:-.5px}
 h2,h3 {font-weight:650; font-size:14px}
-.app {max-width:1500px; margin:auto; padding:0 28px}
+.app {max-width:1480px; margin:auto; padding:0 28px}
 .cabecalho {display:flex; justify-content:space-between; align-items:center; gap:20px; padding:26px 0 22px}
 .marca {display:flex; align-items:center; gap:13px}
 .marca p {color:var(--muted); font-size:13px; margin-top:4px}
 .marca-icone {display:grid; place-items:center; width:43px; height:43px; background:var(--ink); color:var(--paper); border-radius:12px; font-size:26px}
 .estado {font-size:12px; color:var(--muted); display:flex; align-items:center; gap:7px; white-space:nowrap}
 .estado::before {content:""; width:6px; height:6px; background:var(--good); border-radius:50%}
-.barra-arquivo {display:flex; justify-content:space-between; align-items:end; gap:18px; padding:17px 20px; background:var(--paper); border:1px solid var(--line); border-radius:10px}
-.banco-campo {width:280px; flex-shrink:0}
 .campo {display:grid; gap:6px; min-width:0}
 label,.rotulo,legend {font-size:12px; color:var(--muted); font-weight:550}
 input:not([type=checkbox]),select {border:1px solid var(--line); border-radius:6px; background:var(--paper); height:37px; width:100%; padding:7px 10px; min-width:0}
 input::placeholder,textarea::placeholder {color:var(--muted); opacity:.85}
-.acoes-arquivo,.linha {display:flex; align-items:center; flex-wrap:wrap; gap:8px}
+.linha {display:flex; align-items:center; flex-wrap:wrap; gap:8px}
 .botao {border:1px solid var(--line); border-radius:6px; background:var(--paper); padding:8px 13px; min-height:36px; font-size:12px; font-weight:600; line-height:1.3; white-space:nowrap}
 .botao:hover:not(:disabled) {border-color:var(--accent); color:var(--accent)}
 .botao.principal {background:var(--accent); border-color:var(--accent); color:var(--on-accent)}
@@ -44,37 +42,51 @@ input::placeholder,textarea::placeholder {color:var(--muted); opacity:.85}
 .botao.pequena {padding:6px 10px; min-height:30px}
 .botao.perigo:hover:not(:disabled) {color:var(--bad)}
 
-/* ---- os quatro lugares ---- */
-.lugares {display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:14px 0 22px}
-.lugares button {display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:11px; text-align:left;
-  background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:13px 15px; color:var(--muted)}
-.lugares button:hover {border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
-.lugares button[aria-selected=true] {background:var(--tint); border-color:var(--accent); color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent)}
-.lugar-icone {display:grid; place-items:center; width:34px; height:34px; border-radius:9px; background:var(--soft); color:var(--muted)}
-.lugares button[aria-selected=true] .lugar-icone {background:var(--accent); color:var(--on-accent)}
-.lugar-texto {display:grid; gap:2px; min-width:0}
-.lugar-nome {font-size:13px; font-weight:650; color:var(--ink)}
-.lugares button[aria-selected=true] .lugar-nome {color:var(--accent)}
-.lugar-sub {font-size:11px; line-height:1.35; color:var(--muted); overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
-.lugar-conta {font:600 11px var(--mono); color:var(--muted); background:var(--soft); border-radius:5px; padding:2px 6px; min-width:26px; text-align:center}
-.lugares button[aria-selected=true] .lugar-conta {background:var(--paper); color:var(--accent)}
+/* ---- navegação e painéis laterais ---- */
+.layout {display:grid; grid-template-columns:220px minmax(0,1fr); align-items:start; gap:28px}
+.area-trabalho {min-width:0}
+.menu-lateral {display:grid; gap:20px; position:sticky; top:18px; padding:18px 14px; background:var(--paper); border:1px solid var(--line); border-radius:10px; max-height:calc(100dvh - 40px); overflow-y:auto}
+.menu-cabecalho {display:none; align-items:center; justify-content:space-between}
+.menu-lateral .campo {padding:0 3px}
+.lugares,.menu-ferramentas {display:grid; gap:5px}
+.menu-grupo {font-size:10px; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); margin:6px 9px}
+.menu-grupo:not(:first-child) {margin-top:18px}
+.lugares button {display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid transparent; border-radius:6px; background:transparent; padding:9px 10px; text-align:left; font-size:12px; color:var(--muted)}
+.lugares button:hover,.menu-link:hover {background:var(--soft); color:var(--ink)}
+.lugares button[aria-selected=true] {background:var(--tint); border-color:var(--accent); color:var(--accent); font-weight:650}
+.menu-link {display:block; border:0; border-radius:6px; background:transparent; padding:8px 10px; text-align:left; font-size:12px; color:var(--muted)}
+.menu-link.perigo:hover {color:var(--bad)}
+.menu-arquivo {border-top:1px solid var(--line); padding-top:13px; font-size:12px; color:var(--muted)}
+.menu-arquivo summary {padding:0 10px}
+.menu-arquivo .menu-ferramentas {margin-top:8px}
+#btMenu {display:none}
+dialog {background:var(--paper); color:var(--ink); border:1px solid var(--line)}
+dialog::backdrop {background:#11182766}
+.menu-movel {position:fixed; left:0; top:0; margin:0; padding:0; border:0; width:280px; max-width:90vw; height:100dvh; max-height:100dvh}
+.gaveta {position:fixed; left:auto; right:0; top:0; margin:0; padding:22px; width:420px; max-width:100vw; height:100dvh; max-height:100dvh; overflow-y:auto; border:0; border-left:1px solid var(--line)}
+.gaveta-cabecalho {display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:24px}
+.gaveta-cabecalho h2 {font-size:19px}
+.gaveta .campos {gap:18px}
+.gaveta #nomeOpcoes {margin-bottom:18px}
+.gaveta .previa-coluna {position:static}
+.gaveta .previa {border:1px solid var(--line); border-radius:8px}
+#configAjuda p {margin:10px 0 22px; font-size:12px; color:var(--muted)}
+.nota-config {margin-top:18px}
 
 /* ---- a bancada de escrever sala ---- */
-.bancada {display:grid; grid-template-columns:236px minmax(0,1fr); gap:25px; align-items:start}
+.bancada {display:block}
 .painel {background:var(--paper); border:1px solid var(--line); border-radius:9px; min-width:0}
 .painel-cabecalho {display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 18px}
 .painel-cabecalho h3 + p {margin-top:4px}
-.navegador {overflow:hidden; position:sticky; top:18px}
-/* O botão ocupa a linha inteira: a coluna tem 210px no monitor apertado, e
-   "Salas de teste · 7 · + Nova sala" lado a lado quebrava o título em três. */
-.navegador .painel-cabecalho {flex-wrap:wrap; padding:15px 14px 13px; gap:10px}
+.navegador {overflow:hidden}
+.navegador .painel-cabecalho {padding:15px 14px 13px; gap:10px}
 .navegador h2 {display:flex; gap:8px; align-items:center; min-width:0}
-.navegador #btNova {flex:1 1 100%}
+.navegador #btNova {flex:0 0 auto}
 .contador {display:inline-flex; align-items:center; justify-content:center; min-width:23px; padding:1px 6px; border-radius:5px; background:var(--soft); color:var(--muted); font-size:11px}
 .busca {padding:0 12px 12px}
 .busca input {background:var(--soft); font-size:12px}
-.salas {list-style:none; padding:0 8px 8px; margin:0; max-height:calc(100vh - 360px); min-height:200px; overflow-y:auto}
-.salas li + li {margin-top:3px}
+.salas {display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:6px; list-style:none; padding:4px 12px 12px; margin:0; max-height:460px; overflow-y:auto}
+.salas li + li {margin-top:0}
 .sala-btn {display:grid; gap:3px; width:100%; text-align:left; border:1px solid transparent; border-radius:6px; background:transparent; padding:10px 10px}
 .sala-btn:hover {background:var(--soft)}
 .sala-btn[aria-current=true] {background:var(--tint); border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
@@ -82,7 +94,6 @@ input::placeholder,textarea::placeholder {color:var(--muted); opacity:.85}
 .snome {font-weight:600; font-size:12px; overflow-wrap:anywhere}
 .sala-meta {display:flex; justify-content:space-between; gap:6px; color:var(--muted); font-size:10px}
 .sid {font-family:var(--mono)}
-.nota-lateral {border-top:1px solid var(--line); padding:12px 16px; color:var(--muted); font-size:11px}
 .mesa {min-width:0}
 .contexto {display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:42px; margin-bottom:14px}
 .contexto>div {display:flex; align-items:center; gap:10px; min-width:0}
@@ -90,8 +101,8 @@ input::placeholder,textarea::placeholder {color:var(--muted); opacity:.85}
 .id-sala {font:12px var(--mono); color:var(--muted); overflow-wrap:anywhere}
 .etiqueta {display:inline-block; font-size:10px; font-weight:600; background:var(--soft); color:var(--muted); padding:3px 7px; border:1px solid var(--line); border-radius:5px}
 .etiqueta.combate {background:var(--tint); color:var(--accent); border-color:transparent}
-.edicao-grid {display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:20px; align-items:start}
-.editor-painel {overflow:hidden; padding:16px 16px 0}
+.edicao-grid {display:grid; grid-template-columns:minmax(0,1fr); gap:20px; align-items:start}
+.editor-painel {overflow:hidden; padding:18px}
 .editor-acoes {display:flex; flex-wrap:wrap; gap:4px; border-top:1px solid var(--line); padding:9px 0; margin-top:16px}
 .previa {padding-bottom:17px}
 .discord {margin:0 17px; border-radius:5px; border-left:3px solid var(--accent); background:var(--soft); padding:16px; overflow-wrap:anywhere}
@@ -103,10 +114,7 @@ input::placeholder,textarea::placeholder {color:var(--muted); opacity:.85}
 .etiquetas {display:flex; flex-wrap:wrap; gap:5px; margin:14px 17px 0}
 .previa>.legenda {margin:12px 17px 0}
 .legenda {font-size:11px; color:var(--muted)}
-.ajuda {margin-top:13px; padding:0 5px; font-size:12px; color:var(--muted)}
 summary {cursor:pointer}
-.ajuda summary {font-size:11px}
-.ajuda p {margin-top:10px}
 kbd,code {font-family:var(--mono); font-size:.9em; background:var(--soft); padding:1px 3px; border-radius:3px}
 
 /* ---- o formulário da sala ---- */
@@ -114,16 +122,13 @@ kbd,code {font-family:var(--mono); font-size:.9em; background:var(--soft); paddi
 .form-linha {display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px}
 .campo-id input {font-family:var(--mono)}
 textarea {border:1px solid var(--line); border-radius:6px; background:var(--paper); width:100%; padding:8px 10px; min-width:0; font:inherit; line-height:1.45; resize:vertical}
-.medida {display:flex; justify-content:space-between; gap:10px; margin:0; font-size:11px; color:var(--muted)}
+.medida {display:flex; justify-content:flex-end; gap:10px; margin:0; font-size:11px; color:var(--muted)}
 .medida b {font-variant-numeric:tabular-nums; font-weight:600}
 .explicacao {font-size:12px; line-height:1.5; color:var(--muted); background:var(--soft); border-left:2px solid var(--accent); border-radius:0 5px 5px 0; padding:9px 12px; margin:-4px 0 0}
 .explicacao:empty {display:none}
 .bloco {border:1px solid var(--line); border-radius:8px; padding:12px 13px 13px; display:grid; gap:12px; margin:0}
 .bloco legend {padding:0 6px}
 .bloco[hidden] {display:none}
-.bloco-extra {border:1px solid var(--line); border-radius:8px; padding:10px 13px}
-.bloco-extra summary {cursor:pointer; font-size:12px; color:var(--muted)}
-.bloco-extra[open] {display:grid; gap:12px}
 .tabela-criaturas {width:100%; border-collapse:collapse; font-size:13px}
 .tabela-criaturas th {text-align:left; font-size:11px; color:var(--muted); font-weight:550; padding:0 6px 6px 0; border:0}
 .tabela-criaturas th.n, .tabela-criaturas td.n {width:80px}
@@ -135,18 +140,15 @@ textarea {border:1px solid var(--line); border-radius:6px; background:var(--pape
 /* ---- as ferramentas do combate ---- */
 .ferramentas {display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; margin-top:20px; align-items:start}
 .campos {display:grid; gap:12px}
-.cinco {grid-template-columns:repeat(auto-fit,minmax(104px,1fr))}
 .tres {grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .parametros {padding:0 18px 17px}
 .parametros>.painel-cabecalho {padding-inline:0}
 .simulacao-acoes {display:flex; align-items:end; flex-wrap:wrap; gap:18px; margin:17px 0 10px}
-fieldset {margin:0; border:0; padding:0}
+fieldset {margin:0; border:0; padding:0; min-width:0}
 .grupo-checks {display:flex; gap:5px}
 .grupo-checks legend {margin-bottom:6px}
 .grupo-checks label {display:flex; align-items:center; gap:5px; border:1px solid var(--line); border-radius:5px; padding:7px 9px; height:37px; color:var(--ink); background:var(--paper)}
 input[type=checkbox] {accent-color:var(--accent)}
-.semente {width:150px}
-.opcional {font-weight:400; font-size:10px}
 .resultado {padding:0 18px 17px}
 .resultado>.painel-cabecalho {padding-inline:0}
 .resultado-vazio,.vazio {font-size:12px; color:var(--muted); padding:24px 8px; text-align:center}
@@ -158,7 +160,7 @@ input[type=checkbox] {accent-color:var(--accent)}
 .taxa-linha>b {font:600 12px var(--mono); text-align:right}
 .taxa-bloco {margin-bottom:14px}
 .taxa-bloco>.taxa-linha {margin-bottom:4px}
-.taxa-extremos {display:flex; justify-content:space-between; gap:12px; padding-left:105px; font-size:11px; color:var(--muted)}
+.taxa-extremos {display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; padding-left:105px; font-size:11px; color:var(--muted)}
 .taxa-extremos b {font-weight:600; font-variant-numeric:tabular-nums}
 .taxa-extremos .duro b {color:var(--bad)}
 .taxa-extremos>span:last-child {white-space:nowrap}
@@ -175,7 +177,6 @@ input[type=checkbox] {accent-color:var(--accent)}
 .sugeridor>summary {display:flex; align-items:center; justify-content:space-between; padding:16px 18px; list-style:none}
 .sugeridor>summary::-webkit-details-marker {display:none}
 .sugeridor summary strong {display:block; font-size:13px}
-.sugeridor summary small {display:block; margin-top:3px; color:var(--muted); font-size:11px}
 .sugeridor[open]>summary {border-bottom:1px solid var(--line)}
 .sugeridor[open] .mais {transform:rotate(45deg)}
 .mais {display:inline-block; color:var(--muted); transition:transform .15s}
@@ -246,67 +247,68 @@ footer {color:var(--muted); font-size:11px; text-align:center; padding:26px 0}
 .toast {position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:10; background:var(--ink); color:var(--paper); font-size:12px; padding:12px 20px; border-radius:8px; max-width:calc(100% - 30px); box-shadow:0 5px 25px #0002}
 .sr-only {position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
 
-@media(min-width:1500px) {.app {padding-inline:40px}}
-@media(max-width:1180px) {.edicao-grid {grid-template-columns:minmax(0,1fr) 250px}.bancada {grid-template-columns:210px minmax(0,1fr);gap:18px}.barra-arquivo {flex-wrap:wrap}.banco-campo {width:260px}.acoes-arquivo {justify-content:flex-end}.lugares {grid-template-columns:repeat(2,minmax(0,1fr))}.ferramentas {grid-template-columns:1fr}}
-@media(max-width:950px) {.edicao-grid {grid-template-columns:1fr}.previa-coluna {display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px}.ajuda {margin-top:0}.acoes-arquivo {justify-content:flex-start}.barra-arquivo {align-items:end}.bancada {gap:16px}.contexto>div {flex-wrap:wrap;gap:5px}.contexto h2 {font-size:18px}.campo-incursao,.busca-inspecao {width:200px}}
-@media(max-width:700px) {.app {padding:0 14px}.cabecalho {padding:20px 0 16px;align-items:start;flex-wrap:wrap;gap:12px}.cabecalho .estado {margin-left:56px}.marca-icone {width:40px;height:40px}.barra-arquivo {padding:14px;gap:12px}.banco-campo {width:100%}.acoes-arquivo {gap:6px}.acoes-arquivo .botao {font-size:11px;padding:8px 10px}.lugares {gap:7px;margin:12px 0 16px}.lugares button {padding:10px;gap:9px}.lugar-sub {display:none}.lugar-icone {width:30px;height:30px}.bancada {grid-template-columns:1fr}.navegador {position:static}.salas {max-height:170px;min-height:0}.nota-lateral {padding:8px 14px}.contexto {margin-top:6px}.previa-coluna {display:block}.ajuda {margin-top:14px}.sugestoes {grid-template-columns:1fr}.painel-cabecalho {flex-wrap:wrap}.simulacao-acoes {gap:13px}.semente {width:130px}.contexto h2 {font-size:19px}.campo-incursao,.busca-inspecao {width:100%}.painel-cabecalho>.campo {width:100%}.filtros-inspecao {gap:14px}.editor-painel {padding:14px 14px 0}}
-
-/* Uma tarefa por vez: o editor e o teste compartilham a sala selecionada. */
-.abas-sala {display:flex; gap:22px; border-bottom:1px solid var(--line); margin-bottom:16px}
-.abas-sala button {border:0; border-bottom:2px solid transparent; background:transparent; color:var(--muted); padding:9px 0; margin-bottom:-1px; font-size:13px; font-weight:600}
-.abas-sala button[aria-selected=true] {border-bottom-color:var(--accent); color:var(--accent)}
-.nome-tipo {grid-template-columns:minmax(0,2fr) minmax(130px,1fr)}
-.medida {justify-content:flex-end; font-size:10px}
-.ajuda-tipo {font-size:11px; color:var(--muted)}
-.ajuda-tipo .explicacao {margin:8px 0 0}
-#painelSimulacao .ferramentas {margin-top:0; grid-template-columns:minmax(0,1fr)}
-#opcoesSimulacao {margin-top:14px}
-#opcoesSimulacao .campos {margin-top:12px}
-#opcoesSimulacao .legenda {margin-top:10px}
-.previa-coluna {position:sticky; top:18px}
-@media(min-width:1250px) {#painelSimulacao .ferramentas {grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
-@media(max-width:700px) {.nome-tipo {grid-template-columns:minmax(0,1fr) 120px}.previa-coluna {position:static}.abas-sala {gap:18px}}
-
-/* O caminho simples mostra uma tarefa por etapa. As ferramentas completas
-   continuam no mesmo DOM, sem duplicar campos ou reescrever o JSON. */
-.cabecalho-acoes {display:grid; justify-items:end; gap:8px}
+/* ---- um único fluxo de criação ---- */
+.cabecalho-acoes {display:flex; align-items:center; gap:12px}
 .passos {display:flex; gap:8px; margin:0 0 24px}
 .passos button {display:flex; align-items:center; gap:9px; flex:1; border:1px solid var(--line); border-radius:8px; padding:12px 16px; background:var(--paper); color:var(--muted); font-size:13px}
 .passos button span {display:grid; place-items:center; border-radius:50%; background:var(--soft); width:24px; height:24px; font-size:12px}
 .passos [aria-current=step] {color:var(--accent); border-color:var(--accent); font-weight:600}
 .passos [aria-current=step] span {background:var(--accent); color:var(--on-accent)}
 .titulo-etapa {font-size:22px; margin:0 0 18px}
-.grupos-medidos {margin-top:14px; font-size:11px; color:var(--muted)}
-.grupos-medidos p {margin-top:8px; overflow-wrap:anywhere}
 .fluxo-acoes {display:flex; justify-content:space-between; gap:12px; margin-top:20px}
 .fluxo-acoes #btFluxoProximo {margin-left:auto}
-body[data-modo=avancado] .passos,body[data-modo=avancado] .titulo-etapa,body[data-modo=avancado] .fluxo-acoes {display:none}
-body[data-modo=guiado] .app {max-width:1100px}
-body[data-modo=guiado] .bancada {display:block}
-body[data-modo=guiado] .lugares {grid-template-columns:1fr 1fr}
-body[data-modo=guiado] [data-lugar=Dungeon],body[data-modo=guiado] [data-lugar=Inspecao],body[data-modo=guiado] .lugar-sub,
-body[data-modo=guiado] #btBaixar,body[data-modo=guiado] #btRecarregar,body[data-modo=guiado] .nota-lateral,
-body[data-modo=guiado] #abasSala,body[data-modo=guiado] .editor-acoes,body[data-modo=guiado] #campoTemas,
-body[data-modo=guiado] .ajuda-tipo,body[data-modo=guiado] .bloco-extra,body[data-modo=guiado] .ajuda,
-body[data-modo=guiado] .sugeridor,body[data-modo=guiado] #saidaSala {display:none}
-body[data-modo=guiado] .edicao-grid {grid-template-columns:1fr}
-body[data-modo=guiado] .editor-painel {padding-bottom:16px}
-body[data-modo=guiado][data-etapa=Escolher] .mesa {display:none}
-body[data-modo=guiado][data-etapa=Escolher] .navegador {position:static}
-body[data-modo=guiado][data-etapa=Escolher] .navegador .painel-cabecalho {flex-wrap:nowrap}
-body[data-modo=guiado][data-etapa=Escolher] #btNova {flex:0 0 auto}
-body[data-modo=guiado][data-etapa=Escolher] .salas {display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:6px; min-height:0; max-height:380px; padding:4px 12px 12px}
-body[data-modo=guiado]:not([data-etapa=Escolher]) .barra-arquivo,body[data-modo=guiado]:not([data-etapa=Escolher]) .lugares,
-body[data-modo=guiado]:not([data-etapa=Escolher]) .navegador {display:none}
-body[data-modo=guiado][data-etapa=Editar] .previa-coluna {display:none}
-body[data-modo=guiado][data-etapa=Testar] .editor-painel {display:none}
-body[data-modo=guiado][data-etapa=Testar] .previa-coluna {display:block; position:static; max-width:650px; margin:auto; width:100%}
-body[data-modo=guiado] #saidaRevisao {margin:0 0 16px}
+.nome-tipo {grid-template-columns:minmax(0,2fr) minmax(130px,1fr)}
+.grupos-medidos {margin-top:14px; font-size:11px; color:var(--muted)}
+.grupos-medidos p {margin-top:8px; overflow-wrap:anywhere}
+body[data-etapa=Escolher] .mesa {display:none}
+body:not([data-etapa=Escolher]) .navegador {display:none}
+body[data-etapa=Editar] #ancoraPrevia {display:none}
+body[data-etapa=Testar] #painelEdicao .editor-painel {display:none}
+body:not([data-etapa=Testar]) #saidaRevisao {display:none}
+#ancoraPrevia {max-width:650px; width:100%; margin:auto}
+#saidaRevisao {margin:0 0 16px}
+#painelSimulacao .ferramentas {margin-top:0}
+.sugeridor {border:1px solid var(--line); border-radius:7px; background:var(--soft)}
+.sugeridor>summary {padding:12px 13px; font-size:12px; color:var(--accent)}
+.sugeridor .detalhes-conteudo {background:var(--paper); padding:14px}
+.filtros-sugestao {grid-template-columns:repeat(4,minmax(0,1fr))}
+#varianteSugestao {margin-top:12px; max-width:260px}
+#varianteSugestao summary {font-size:11px; color:var(--muted)}
+#varianteSugestao .campo {margin-top:10px}
+#blocoCriaturas .rolagem {padding:0; margin:2px 0}
+@media(max-width:1180px) {
+  .layout {grid-template-columns:210px minmax(0,1fr); gap:20px}
+  #painelSimulacao .ferramentas {grid-template-columns:minmax(0,1fr)}
+  .filtros-sugestao {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .campo-incursao,.busca-inspecao {width:200px}
+}
+@media(max-width:900px) {
+  .layout {display:block}
+  #ancoraMenu {display:none}
+  #btMenu {display:block}
+  .menu-cabecalho {display:flex}
+  .menu-movel .menu-lateral {position:static; border:0; border-radius:0; height:100%; max-height:100%; padding:18px}
+}
 @media(max-width:700px) {
-  .cabecalho-acoes {justify-items:start; margin-left:53px; gap:4px}
-  .cabecalho-acoes .estado {margin-left:0}
+  .app {padding:0 14px}
+  .cabecalho {padding:18px 0; flex-wrap:wrap; gap:12px}
+  .cabecalho-acoes {width:100%; justify-content:space-between}
+  .marca-icone {width:40px; height:40px}
+  .marca h1 {font-size:24px}
   .passos {gap:5px; margin-bottom:18px}
   .passos button {padding:9px 8px; font-size:12px; gap:6px}
   .passos button span {width:20px; height:20px}
-  body[data-modo=guiado][data-etapa=Escolher] .salas {grid-template-columns:1fr; max-height:300px}
+  .salas {grid-template-columns:1fr; max-height:360px}
+  .nome-tipo {grid-template-columns:minmax(0,1fr) 120px}
+  .contexto>div {flex-wrap:wrap; gap:5px}
+  .contexto h2 {font-size:19px}
+  .sugestoes {grid-template-columns:1fr}
+  .painel-cabecalho {flex-wrap:wrap}
+  .simulacao-acoes {gap:13px}
+  .campo-incursao,.busca-inspecao {width:100%}
+  .painel-cabecalho>.campo {width:100%}
+  .filtros-inspecao {gap:14px}
+  .editor-painel {padding:14px}
+  .tabela-criaturas td:first-child {min-width:150px}
+  .taxa-extremos {padding-left:0}
 }
