@@ -45,7 +45,7 @@ from tools.simulacao import regua  # noqa: E402
 # com nome, e não espalhado em comparações pelo código.
 VITORIA_MINIMA = 0.95
 HP_RESTANTE = (55.0, 75.0)
-# E a mesa azarada — a do decimo percentil — nao pode ser dizimada. O piso
+# E a mesa azarada — a PIOR formacao do catalogo — nao pode ser dizimada. O piso
 # mora na regua compartilhada: e o mesmo criterio que a bancada do Estudio
 # usa para avisar que uma sala aposta em quem sentou, e ter dois numeros para
 # a mesma ideia era o jeito de eles divergirem.
@@ -184,7 +184,7 @@ def main() -> int:
     # Mostra o catálogo realmente medido, respeitando o orçamento de lutas.
     mesas, por_mesa = grupos.dividir(args.repeticoes, args.composicoes)
     print(f"Alvo: vitória >= {VITORIA_MINIMA:.0%}, HP restante "
-          f"{HP_RESTANTE[0]:.0f}–{HP_RESTANTE[1]:.0f}%, P10 dos grupos >= {PIOR_MESA_MINIMA:.0%}  "
+          f"{HP_RESTANTE[0]:.0f}–{HP_RESTANTE[1]:.0f}%, pior formação >= {PIOR_MESA_MINIMA:.0%}  "
           f"({mesas} mesas de {MESA}, {por_mesa} lutas cada, "
           f"{mesas * por_mesa} por ponto)")
     if mesas < args.composicoes:
@@ -193,7 +193,7 @@ def main() -> int:
     if args.bando:
         if not args.tier:
             parser.error("--bando precisa de --tier: o alvo é por tier")
-        print(f"\n{'vitória':>8}  {'HP rest.':>9}  {'P10 grupos':>9}  {'veredito':<32}  elenco")
+        print(f"\n{'vitória':>8}  {'HP rest.':>9}  {'pior mesa':>9}  {'veredito':<32}  elenco")
         for texto in args.bando:
             elenco = ler_bando(texto)
             r = medir_elenco(elenco, args.tier, args.repeticoes, args.semente, args.composicoes)
@@ -209,13 +209,13 @@ def main() -> int:
             companhia = (", ".join(f"{q}x {n}" for n, q in fixos) + " + ") if fixos else ""
             print(f"\n--- tier {tier} (nível {min(10, tier * 2)}) · {companhia}N x "
                   f"{consequencias.emboscada_do_tier(tier)[-1][0]}")
-            print(f"{'N':>3}  {'vitória':>8}  {'HP rest.':>9}  {'P10 grupos':>9}  veredito")
+            print(f"{'N':>3}  {'vitória':>8}  {'HP rest.':>9}  {'pior mesa':>9}  veredito")
             for p in varrer(tier, args.repeticoes, args.semente, args.composicoes):
                 print(f"{p['quantas']:>3}  {p['taxa']:>7.1%}  {p['hp']:>8.1f}%  "
                       f"{p['pior']:>8.0%}  {p['veredito']}")
         return 0
 
-    print(f"\n{'tier':>4}  {'vitória':>8}  {'HP rest.':>9}  {'P10 grupos':>9}  "
+    print(f"\n{'tier':>4}  {'vitória':>8}  {'HP rest.':>9}  {'pior mesa':>9}  "
           f"{'veredito':<32}  emboscada")
     fora = 0
     for tier in tiers:

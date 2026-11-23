@@ -7,7 +7,7 @@ de conta no GitHub.
 
 A página abre em **Escolher → Editar → Testar**. Em **Ferramentas avançadas**
 continuam disponíveis filtros de dungeon, inspeção, sugestão de criaturas e
-opções de simulação. Os combates usam quatro formações fixas, conferíveis
+opções de simulação. Os combates usam sete formações fixas, conferíveis
 em **Ver grupos usados**. **Baixar JSON** guarda o banco completo para enviar.
 Mantenha a janela de abertura aberta durante o uso e feche-a ao terminar.
 

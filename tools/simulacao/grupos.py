@@ -5,6 +5,13 @@ Cada formação tem uma frente e um curandeiro nas duas primeiras vagas; a
 terceira traz dano. Vagas seguintes complementam o grupo, sem repetir classe.
 As escolhas de tank e cura são explícitas e só entram no tier que as libera.
 
+A ordem das duas primeiras vagas é VERIFICADA aqui, no `catalogo()`: uma
+formação que comece por mago, ou que ponha um ladino na vaga da cura, não
+carrega. Antes isso era só um teste varrendo as formações, e o erro aparecia
+como "bardo não está em {clerigo, xama}" sem dizer de qual formação. A vaga
+do dano não tem lista: todas as catorze classes dão dano, e uma lista com as
+catorze não provaria nada.
+
 Média e extremos descrevem ESTES grupos de referência. Não representam
 todas as combinações possíveis das catorze classes.
 """
@@ -20,6 +27,11 @@ from .execucao import Ficha
 
 ARQUIVO = Path(__file__).with_name("grupos.json")
 
+# Quem pode abrir uma formação e quem pode ser o curandeiro dela. O druida
+# aparece na frente porque a escolha dele no catálogo é a forma de urso.
+FRENTE = frozenset({"guerreiro", "barbaro", "paladino", "druida"})
+CURA = frozenset({"clerigo", "xama", "bardo"})
+
 
 @lru_cache(maxsize=1)
 def catalogo() -> dict:
@@ -31,6 +43,16 @@ def catalogo() -> dict:
             raise ValueError(f"Formação repetida ou inválida: {grupo['id']}")
         if any(classes.classe(c) is None for c in elenco):
             raise ValueError(f"Classe desconhecida na formação: {grupo['id']}")
+        if elenco[0] not in FRENTE:
+            raise ValueError(
+                f"Formação {grupo['id']}: a primeira vaga é da frente, e "
+                f"'{elenco[0]}' não é uma delas ({', '.join(sorted(FRENTE))})."
+            )
+        if elenco[1] not in CURA:
+            raise ValueError(
+                f"Formação {grupo['id']}: a segunda vaga é da cura, e "
+                f"'{elenco[1]}' não cura ({', '.join(sorted(CURA))})."
+            )
         ids.add(grupo["id"])
     if not ids:
         raise ValueError("O catálogo precisa de pelo menos um grupo.")
@@ -48,9 +70,11 @@ def dividir(repeticoes: int, quantas: int = COMPOSICOES_PADRAO,
             minimo: int = MINIMO_POR_COMPOSICAO) -> tuple[int, int]:
     """Divide as lutas igualmente, limitado às formações do catálogo.
 
-    Amostras pequenas usam um prefixo fixo de formações, sem sorteio. Com
-    60 ou mais lutas cabem os quatro grupos do padrão. Mais repetições
-    medem melhor os mesmos grupos; nunca duplicam formações para inflar N.
+    Amostras pequenas usam um prefixo fixo de formações, sem sorteio: cabem
+    `repeticoes // MINIMO_POR_COMPOSICAO` formações, e as demais ficam de
+    fora. Mais repetições medem melhor os mesmos grupos; nunca duplicam
+    formações para inflar N. O teto é o catálogo inteiro — hoje
+    `COMPOSICOES_PADRAO`, que muda quando uma formação entra ou sai.
     """
     if repeticoes < 1 or quantas < 1 or minimo < 1:
         raise ValueError("Repetições, composições e mínimo precisam ser positivos.")

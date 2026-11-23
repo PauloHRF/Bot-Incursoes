@@ -16,28 +16,35 @@ def intervalo(vitorias, amostras):
 
 
 def mesa_azarada(composicoes) -> float:
-    """A taxa no DÉCIMO PERCENTIL: "uma mesa em dez vai pior que isto".
+    """A taxa da PIOR formação medida: "o grupo que mais sofreu tirou isto".
 
-    E não o mínimo, que é o que se pega primeiro. O mínimo de uma amostra
-    afunda conforme a amostra cresce — quanto mais mesas se sorteia, maior a
-    chance de tirar uma péssima —, então o pior de quarenta sorteios não é
-    comparável ao pior de doze. A MESMA emboscada "piorou" de 93% para 80%
-    só porque foi medida com mais mesas, sem nada ter mudado nela.
+    É o mínimo, e isso mudou de resposta junto com o método. Enquanto as
+    mesas eram SORTEADAS o mínimo não servia: ele estima o pior da população,
+    que não tem fundo, então sortear mais mesas só o empurrava para baixo e
+    dois mínimos de amostras de tamanhos diferentes não se comparavam — a
+    mesma emboscada "piorou" de 93% para 80% só por ter sido medida com mais
+    mesas. O décimo percentil resolvia isso porque estimava a mesma coisa em
+    qualquer tamanho de amostra.
 
-    O percentil estima a mesma coisa para qualquer número de sorteios, e é
-    por isso que ele serve para comparar duas medições e para entrar num
-    veredito. O mínimo continua útil para MOSTRAR — a bancada nomeia a pior
-    mesa e diz em quantas lutas ela foi medida —, mas mostrar e decidir são
-    coisas diferentes.
+    Com o catálogo de formações FIXO (`grupos.json`) não há amostragem: as
+    formações são a população inteira, sempre as mesmas, e o mínimo passa a
+    ser exatamente o que se quer — a pior das que existem, comparável entre
+    duas medições porque o catálogo não muda.
 
-    Mora aqui, e não junto do sorteio das mesas: é estatística, vizinha do
-    Wilson, e quem a usa (o calibrador, a bancada, a régua) não precisa saber
-    como as mesas foram montadas.
+    E o percentil passou a MENTIR. `statistics.quantiles` é *exclusive*: ele
+    estima o percentil de uma população a partir de uma amostra, e extrapola
+    para fora dos dados quando o decil pedido fica abaixo de `1/(n+1)`. Com
+    doze ou quarenta mesas, 0,1 ficava dentro. Com QUATRO formações, 0,1 <
+    0,2 e ele extrapolava abaixo da pior: formações em 100/100/100/30% viravam
+    "pior mesa: -5%", e 100/100/100/0% viravam **-50%**. Uma taxa de vitória
+    negativa, na tela do autor e no veredito da emboscada.
+
+    O nome fica por continuidade (ele aparece no Estúdio e no calibrador), mas
+    leia "a pior formação", não "uma em dez": com catálogo fixo não existe
+    frequência de encontrar essa mesa no jogo.
     """
-    taxas = sorted(c["taxa"] for c in composicoes)
-    if len(taxas) < 2:
-        return taxas[0] if taxas else 1.0
-    return statistics.quantiles(taxas, n=10)[0]
+    taxas = [c["taxa"] for c in composicoes]
+    return min(taxas) if taxas else 1.0
 
 
 def resumir(resultados):

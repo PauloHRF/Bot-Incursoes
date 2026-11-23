@@ -121,8 +121,9 @@ A tela simples segue **Escolher → Editar → Testar**, mostrando uma etapa
 por vez. **Ferramentas avançadas** abre o editor completo, filtros de dungeon,
 inspeção e sugestão de criaturas. Os rascunhos ficam no navegador;
 **Baixar JSON** exporta o banco completo, preservando referências ao bestiário
-e campos extras. As simulações usam quatro formações fixas com frente, cura
-e dano; **Ver grupos usados** mostra quem participou da medição.
+e campos extras. As simulações usam sete formações fixas com frente, cura
+e dano, para grupos de 5 ou 6; **Ver grupos usados** mostra quem participou
+da medição.
 
 Para entregar a ferramenta pronta a outra pessoa, gere o
 [Estúdio portátil para Windows](docs/estudio-portatil.md) com

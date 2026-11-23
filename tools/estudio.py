@@ -51,7 +51,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from src import bestiario, incursoes as I  # noqa: E402
 from src.rules import ATRIBUTOS, PERICIAS, TIER_MAXIMO  # noqa: E402
-from src import classes  # noqa: E402
+from src import classes, config  # noqa: E402
 from tools.simulacao import regua  # noqa: E402
 from tools.simulacao.estatisticas import mesa_azarada  # noqa: E402
 
@@ -63,7 +63,15 @@ PASTA_INCURSOES = RAIZ / "data" / "incursoes"
 # acionadas na luta; o autor pode reduzir a amostra ou aumentar para confirmar.
 REPETICOES_PADRAO = 800
 REPETICOES_MAXIMO = 20000
-GRUPOS_PADRAO = (5, 4, 3, 2)
+# O grupo do jogo e CINCO (`config.TAMANHO_GRUPO`), e e esse que se mede.
+# Media com quatro, tres e dois saia junto e nao respondia pergunta nenhuma
+# que o autor faca: a sala e escrita para a mesa que existe, e as formacoes de
+# referencia tem seis classes cada — medir "as cinco primeiras" e medir a
+# mesa, medir "as duas primeiras" e medir uma dupla que nunca vai entrar
+# numa dungeon. O seis fica disponivel para quem jogar com mesa cheia.
+TAMANHO_MINIMO = config.TAMANHO_GRUPO
+TAMANHO_MAXIMO = 6
+GRUPOS_PADRAO = (TAMANHO_MINIMO,)
 
 
 # --------------------------------------------------------------- leitura
@@ -457,10 +465,18 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(semente, int):
         semente = random.randrange(1, 10**8)
 
-    grupos = payload.get("grupos") or list(GRUPOS_PADRAO)
-    grupos = [g for g in grupos if isinstance(g, int) and 1 <= g <= 6]
-    if not grupos:
-        grupos = list(GRUPOS_PADRAO)
+    # Um tamanho fora da faixa e RECUSADO, nao corrigido de mansinho: medir
+    # cinco e devolver a medida rotulada de tres seria pior que nao medir.
+    pedidos = payload.get("grupos") or list(GRUPOS_PADRAO)
+    if not isinstance(pedidos, list) or not all(
+            isinstance(g, int) and not isinstance(g, bool) for g in pedidos):
+        return {"erro": "grupos precisa ser uma lista de números."}
+    fora = sorted({g for g in pedidos if not TAMANHO_MINIMO <= g <= TAMANHO_MAXIMO})
+    if fora:
+        return {"erro": f"grupo de {', '.join(str(g) for g in fora)} não se "
+                        f"mede: a medição é de {TAMANHO_MINIMO} a "
+                        f"{TAMANHO_MAXIMO} jogadores."}
+    grupos = list(dict.fromkeys(pedidos))
 
     args = SimpleNamespace(classe=classe or None, nivel=nivel, repeticoes=repeticoes,
                            tier=tier, coletar_detalhes=False)
@@ -473,9 +489,10 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
         # grupo que esta sala mata?", e deixá-la para a página ordenar seria
         # pedir que ela soubesse o que a média esconde.
         mesas = sorted(bruto["composicoes"], key=lambda c: c["taxa"])
-        # A pior mesa é para MOSTRAR e o percentil é para DECIDIR: o mínimo de
-        # uma amostra afunda conforme ela cresce, então ele nomeia quem sofreu
-        # mas não entra em veredito nenhum. Ver `estatisticas.mesa_azarada`.
+        # A pior formação nomeia quem sofreu E decide o veredito, e as duas
+        # coisas são a mesma agora: com o catálogo fixo, a pior das que existem
+        # é um número comparável entre medições. Era o décimo percentil, de
+        # quando as mesas eram sorteadas. Ver `estatisticas.mesa_azarada`.
         azarada = mesa_azarada(bruto["composicoes"]) if len(mesas) > 1 else None
         medidas.append({
             "grupo": tamanho,

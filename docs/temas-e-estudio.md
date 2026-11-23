@@ -397,8 +397,12 @@ o piso da **mesa azarada** que o calibrador da emboscada usa. Há buraco entre
 as faixas de propósito — 82% não é "quase fácil", é uma sala que não foi
 mirada, e dizer isso é mais honesto que arredondar para o vizinho.
 
-E mostra o grupo de 3 junto, não só o de 5: três é o tamanho de mesa comum, e o
-`tools/simular_combate.py` já reporta 5, 4, 3 e 2.
+A medição é de **5 ou 6**, e nada abaixo disso. O grupo de 3 saía junto no
+relatório, e a medição que fechou o assunto está logo abaixo: um bando em 54%
+para cinco jogadores deu **0%** para três. Não é o mesmo combate um pouco mais
+difícil — é outro combate, e nenhuma sala é escrita para ele. Pedir quatro,
+três ou dois agora dá erro em vez de medida, porque um filtro que medisse
+cinco calado devolveria o número certo com o rótulo errado.
 
 ### O que a medição disse sobre as faixas
 
@@ -426,7 +430,8 @@ escreve:
 
 - **o grupo de 3 cai muito mais do que proporcionalmente.** Um bando medido em
   54% para cinco jogadores deu 0% para três. A mesa de três não está jogando o
-  mesmo combate um pouco mais difícil: está jogando outro combate;
+  mesmo combate um pouco mais difícil: está jogando outro combate — e é por
+  isso que medir abaixo de cinco saiu das ferramentas;
 - **a escala de uma criatura só é grossa.** Entre quatro e cinco cópias a taxa
   pula faixa inteira, e por isso o sugeridor tenta âncora mais lacaios: é o que
   dá passo pequeno o bastante para cair numa faixa de quinze pontos.
@@ -478,7 +483,7 @@ monta um Combate não precisa da CD.
    quantas, tier e variante por tema. **Simular** abre a medição na mesma
    sala, sem rolar até o fim do formulário: escolha tier, nível, variante e
    tamanhos do grupo. **Opções avançadas** reúne composição, repetições e
-   semente. As quatro formações predefinidas mantêm frente, cura e dano;
+   semente. As sete formações predefinidas mantêm frente, cura e dano;
    a semente muda as rolagens. **Ver grupos usados** lista as composições. O motor do bot mostra
    vitória, rodadas e caídos por tamanho de grupo; **Sugerir criaturas**
    procura um bando na dificuldade pedida e aplica a

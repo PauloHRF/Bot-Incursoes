@@ -844,8 +844,9 @@ function barra(grupo, taxa, medida) {
   pior.append(no("b", "", `pior ${pct(medida.pior.taxa)}`),
               no("span", "", ` em ${medida.pior.amostras} lutas · ${medida.pior.classes.join(", ")}`));
   extremos.append(pior, no("span", "", `melhor ${pct(medida.melhor.taxa)}`));
-  // O percentil resume os grupos de referência; não é uma frequência de
-  // encontrar uma party no jogo, porque as classes não são sorteadas.
+  // O aviso sai quando a PIOR formação do catálogo fica abaixo do piso. Não
+  // é a chance de encontrar essa mesa no jogo — as classes não são sorteadas
+  // —, é "existe grupo de referência que esta sala mata".
   if (medida.dizima) extremos.prepend(no("span", "veredito dizima", "risco nos grupos testados"));
   bloco.append(n, extremos);
   return bloco;

@@ -58,9 +58,10 @@ CONFRONTOS_DA_CONFIRMACAO = 400
 # As mesmas formações fixas da bancada, com mais lutas na confirmação.
 MESAS_FIXAS = grupos.COMPOSICOES_PADRAO
 
-# Os tamanhos que a confirmação reporta. Três é a mesa comum e cinco é o
-# grupo cheio: a distância entre os dois diz mais que qualquer dos dois.
-GRUPOS_CONFIRMADOS = (5, 3)
+# O tamanho que a confirmação reporta. Era (5, 3), e o três saiu: a sala é
+# escrita para a mesa que existe, e o grupo do jogo é cinco. Medir um trio
+# dobrava o custo da confirmação para responder uma pergunta que ninguém faz.
+GRUPOS_CONFIRMADOS = (5,)
 
 
 def janela_de_cr(tier: int, dificuldade: str) -> tuple[float, float]:

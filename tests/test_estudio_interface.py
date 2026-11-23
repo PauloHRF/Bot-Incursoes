@@ -169,7 +169,7 @@ class Interface(unittest.TestCase):
         self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
             "sala": "X", "tier": 2, "classe": "predefinido", "sorteado": False, "predefinido": True,
             "nivel": 4, "repeticoes": 240, "semente": 9, "criaturas": [{"nome": "Teste"}],
-            "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 3, "caidos": .5, "lutas": 240}]}))
+            "medidas": [{"grupo": 5, "taxa": .75, "rodadas": 3, "caidos": .5, "lutas": 240}]}))
         self.page.locator("#btMedir").click()
         expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
         self.page.locator("#btModo").click()
@@ -214,11 +214,11 @@ class Interface(unittest.TestCase):
         self.page.locator("#lugarCombate").click()
         self.page.locator(".sala-btn").first.click()
         self.page.locator("#btFluxoProximo").click()
-        medida = {"grupo": 3, "taxa": .75, "rodadas": 3, "caidos": .5, "mesas": 4,
+        medida = {"grupo": 5, "taxa": .75, "rodadas": 3, "caidos": .5, "mesas": 4,
                   "dizima": True,
-                  "pior": {"classes": ["guerreiro", "clerigo", "mago"], "taxa": .4, "amostras": 60},
-                  "melhor": {"classes": ["barbaro", "xama", "feiticeiro"], "taxa": .9, "amostras": 60},
-                  "composicoes": [{"nome": "Clássica", "classes": ["guerreiro", "clerigo", "mago"]}]}
+                  "pior": {"classes": ["guerreiro", "clerigo", "mago", "ladino", "patrulheiro"], "taxa": .4, "amostras": 60},
+                  "melhor": {"classes": ["barbaro", "xama", "feiticeiro", "monge", "druida"], "taxa": .9, "amostras": 60},
+                  "composicoes": [{"nome": "Clássica", "classes": ["guerreiro", "clerigo", "mago", "ladino", "patrulheiro"]}]}
         self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
             "tier": 2, "classe": "predefinido", "predefinido": True, "sorteado": False,
             "nivel": 4, "repeticoes": 240, "semente": 9, "criaturas": [], "medidas": [medida]}))
@@ -228,7 +228,7 @@ class Interface(unittest.TestCase):
         expect(self.page.locator("#gruposMedidos summary")).to_be_visible()
         expect(self.page.locator("#listaGruposMedidos")).to_be_hidden()
         self.page.locator("#gruposMedidos summary").click()
-        expect(self.page.locator("#listaGruposMedidos")).to_contain_text("Clássica: guerreiro, clerigo, mago")
+        expect(self.page.locator("#listaGruposMedidos")).to_contain_text("Clássica: guerreiro, clerigo, mago, ladino, patrulheiro")
 
     def test_cada_lugar_mostra_so_o_que_se_escreve_nele(self):
         """A separação que o estúdio promete, cobrada campo a campo.
@@ -546,15 +546,18 @@ class Interface(unittest.TestCase):
         pedidos = []
         def responder(rota):
             pedido = rota.request.post_data_json; pedidos.append(pedido)
-            rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": "predefinido", "sorteado": False, "predefinido": True, "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 3, "taxa": .75, "rodadas": 2.5, "caidos": .3, "mesas": 4, "lutas": 240, "pior": {"classes": ["bardo", "mago", "monge"], "taxa": .41, "amostras": 60}, "melhor": {"classes": ["clerigo", "guerreiro", "paladino"], "taxa": .94, "amostras": 60}}]})
+            rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": "predefinido", "sorteado": False, "predefinido": True, "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 6, "taxa": .75, "rodadas": 2.5, "caidos": .3, "mesas": 4, "lutas": 240, "pior": {"classes": ["bardo", "mago", "monge", "ladino", "artifice", "bruxo"], "taxa": .41, "amostras": 60}, "melhor": {"classes": ["clerigo", "guerreiro", "paladino", "barbaro", "monge", "bardo"], "taxa": .94, "amostras": 60}}]})
         self.page.route("**/api/simular", responder)
+        # Marcar o seis e desmarcar o cinco: a lista que vai no pedido e a
+        # que esta na tela, e nao o padrao do servidor.
+        self.page.locator('[name="grupo"][value="6"]').check()
         self.page.locator('[name="grupo"][value="5"]').uncheck()
         self.page.locator("#opcoesSimulacao summary").click()
         self.page.locator("#fSemente").fill("123")
         self.page.locator("#btMedir").click()
         expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
-        expect(self.page.locator("#contaMedida")).to_contain_text("Grupo de 3")
-        self.assertEqual(pedidos[0]["grupos"], [3])
+        expect(self.page.locator("#contaMedida")).to_contain_text("Grupo de 6")
+        self.assertEqual(pedidos[0]["grupos"], [6])
         self.assertEqual(pedidos[0]["semente"], 123)
         # O grupo predefinido é o PADRÃO: ninguém escolheu classe nenhuma.
         self.assertEqual(pedidos[0]["classe"], "")

@@ -247,38 +247,40 @@ class Mesas(unittest.TestCase):
         self.assertEqual(r["composicoes"], [{"classes": ["mago"] * 4,
                                              "taxa": r["taxa"], "amostras": 20}])
 
-    def test_a_mesa_azarada_nao_muda_com_o_tamanho_da_amostra(self):
-        """Por que o veredito olha o percentil e não a pior mesa.
+    def test_a_pior_formacao_e_um_numero_que_alguem_tirou(self):
+        """E nao uma extrapolacao abaixo de todas elas.
 
-        O mínimo de uma amostra afunda conforme a amostra cresce: sortear
-        mais mesas é ter mais chance de tirar uma péssima. Medindo a MESMA
-        emboscada com doze e depois com quarenta mesas, a "pior" caiu de 93%
-        para 80% sem nada ter mudado nela — e eu quase reprovei por isso uma
-        calibração que estava certa. Dois mínimos de amostras de tamanhos
-        diferentes não são comparáveis; dois percentis são.
+        Isto era o decimo percentil, de quando as mesas eram SORTEADAS: ali o
+        minimo nao servia, porque estimava o pior da populacao e afundava
+        conforme a amostra crescia. Com o catalogo de formacoes FIXO nao ha
+        amostragem, e o percentil passou a mentir — `statistics.quantiles` e
+        *exclusive* e extrapola para fora dos dados quando o decil pedido fica
+        abaixo de `1/(n+1)`. Com QUATRO formacoes, 0,1 < 0,2.
+
+        O caso usa quatro, que e o tamanho que a ferramenta de fato mede. Os
+        antigos usavam doze e oitenta, justamente os tamanhos onde a
+        extrapolacao nao morde — e foi por isso que a suite ficou verde com
+        taxa de vitoria NEGATIVA na tela.
         """
-        # Mesas com cauda: a maioria perto de 100%, algumas bem abaixo. É a
-        # forma que a medição real tem — e é nela que o mínimo engana.
-        rng = random.Random(11)
-        populacao = [min(1.0, 1.0 - abs(rng.gauss(0, 0.12))) for _ in range(5000)]
+        def azarada(*taxas):
+            return estatisticas.mesa_azarada([{"taxa": t} for t in taxas])
 
-        def medias(n):
-            minimos, percentis = [], []
-            for _ in range(400):
-                mesas = [{"taxa": rng.choice(populacao)} for _ in range(n)]
-                minimos.append(min(c["taxa"] for c in mesas))
-                percentis.append(estatisticas.mesa_azarada(mesas))
-            return (sum(minimos) / len(minimos), sum(percentis) / len(percentis))
+        # Sempre uma das formacoes, nunca abaixo de todas.
+        for taxas in ((1.0, 0.9, 0.8, 0.6), (0.95, 0.95, 0.95, 0.40),
+                      (1.0, 1.0, 1.0, 0.30), (0.9, 0.85, 0.8, 0.75)):
+            valor = azarada(*taxas)
+            self.assertIn(valor, taxas, taxas)
+            self.assertEqual(valor, min(taxas), taxas)
 
-        min_12, p10_12 = medias(12)
-        min_80, p10_80 = medias(80)
-        # O mínimo não converge: ele estima o PIOR DA POPULAÇÃO, que não tem
-        # fundo. Sortear mais mesas só o empurra para baixo.
-        self.assertLess(min_80, min_12 - 0.05, (min_12, min_80))
-        # O percentil estima a mesma coisa em qualquer tamanho de amostra.
-        self.assertLess(abs(p10_80 - p10_12), 0.03, (p10_12, p10_80))
-        esperado = statistics.quantiles(sorted(populacao), n=10)[0]
-        self.assertAlmostEqual(p10_80, esperado, delta=0.02)
+        # E o caso que o percentil estragava: tres vitorias limpas e uma
+        # derrota limpa davam -50%.
+        self.assertEqual(azarada(1.0, 1.0, 1.0, 0.0), 0.0)
+        for taxas in ((1.0, 1.0, 1.0, 0.0), (1.0, 0.99, 0.98, 0.10)):
+            self.assertGreaterEqual(azarada(*taxas), 0.0, taxas)
+
+        # Uma formacao so: ela mesma. Nenhuma: nada a reprovar.
+        self.assertEqual(azarada(0.42), 0.42)
+        self.assertEqual(estatisticas.mesa_azarada([]), 1.0)
 
     def test_amostra_pequena_mede_menos_mesas_e_nao_mesas_piores(self):
         """Doze mesas de oito lutas não medem composição nenhuma.
@@ -290,7 +292,13 @@ class Mesas(unittest.TestCase):
         mesas, por = grupos.dividir(100, 12)
         self.assertGreaterEqual(por, grupos.MINIMO_POR_COMPOSICAO)
         self.assertLessEqual(mesas * por, 100)
-        self.assertEqual(grupos.dividir(1200, 12), (grupos.COMPOSICOES_PADRAO, 300))
+        # Com folga sobrando, cabe o catalogo inteiro e as lutas se dividem
+        # entre as formacoes que existem. O numero nao fica escrito aqui: ele
+        # muda quando uma formacao entra ou sai do catalogo.
+        self.assertEqual(
+            grupos.dividir(1200, 12),
+            (grupos.COMPOSICOES_PADRAO, 1200 // grupos.COMPOSICOES_PADRAO),
+        )
         with self.assertRaises(ValueError):
             grupos.dividir(0, 12)
 
@@ -300,18 +308,50 @@ class Mesas(unittest.TestCase):
                 for mesa in grupos.fixas(tamanho, nivel):
                     with self.subTest(tamanho=tamanho, nivel=nivel, classes=grupos.nomes_da_mesa(mesa)):
                         self.assertEqual(len({f.classe for f in mesa}), tamanho)
-                        self.assertIn(mesa[0].classe, {"guerreiro", "barbaro", "paladino", "druida"})
-                        self.assertIn(mesa[1].classe, {"clerigo", "xama"})
+                        self.assertIn(mesa[0].classe, grupos.FRENTE)
+                        self.assertIn(mesa[1].classe, grupos.CURA)
                         if mesa[0].classe == "druida":
                             self.assertEqual(mesa[0].escolhas["forma_t1"], "urso")
                         if nivel >= 5 and mesa[1].classe == "clerigo":
                             self.assertEqual(mesa[1].escolhas["magia_t3"], "mass_healing_word")
         self.assertEqual({f.classe for m in grupos.fixas(5, 10) for f in m}, set(classes.CLASSES))
 
+    def test_o_catalogo_recusa_formacao_com_as_vagas_trocadas(self):
+        """A frente na primeira vaga e a cura na segunda: o catalogo confere.
+
+        Com quatro formacoes a ordem dava para olhar a olho; com sete, nao. E
+        uma formacao sem frente ou sem cura nao mede a sala: mede o acidente.
+        O erro tem de dizer QUAL formacao, porque o json nao diz qual vaga e
+        qual - a ordem das classes e que diz.
+        """
+        bom = json.loads(grupos.ARQUIVO.read_text(encoding="utf-8"))
+        for vaga, errada in ((0, "mago"), (1, "ladino")):
+            torto = json.loads(json.dumps(bom))
+            alvo = torto["grupos"][1]
+            self.assertNotIn(errada, alvo["classes"])  # senao cai na repetida
+            alvo["classes"][vaga] = errada
+            with tempfile.TemporaryDirectory() as pasta:
+                arquivo = Path(pasta) / "grupos.json"
+                arquivo.write_text(json.dumps(torto), encoding="utf-8")
+                grupos.catalogo.cache_clear()
+                try:
+                    with patch.object(grupos, "ARQUIVO", arquivo):
+                        with self.assertRaises(ValueError) as erro:
+                            grupos.catalogo()
+                finally:
+                    grupos.catalogo.cache_clear()
+            self.assertIn(alvo["id"], str(erro.exception))
+            self.assertIn(errada, str(erro.exception))
+
     def test_pedir_mais_formacoes_nao_repete_os_mesmos_grupos(self):
         mesas, por = grupos.dividir(400, 40, grupos.MINIMO_PARA_A_MEDIA)
         self.assertEqual(mesas, grupos.COMPOSICOES_PADRAO)
-        self.assertEqual(mesas * por, 400)
+        # Pedir quarenta formacoes nao inventa formacao: o teto e o catalogo,
+        # e as lutas se dividem igualmente entre o que existe. O resto da
+        # divisao fica de fora em vez de engordar uma mesa.
+        self.assertEqual(por, 400 // grupos.COMPOSICOES_PADRAO)
+        self.assertLessEqual(mesas * por, 400)
+        self.assertGreater(mesas * por, 400 - grupos.COMPOSICOES_PADRAO)
         self.assertEqual(len(grupos.fixas(5, 8, 40)), mesas)
 
     def test_cada_formacao_tem_rolagens_independentes_das_outras(self):

@@ -51,11 +51,30 @@ CHANCE_DE_MIMICO = 1.0
 # câmara e cofre. A ficção é a mesma — o tesouro era isca.
 #
 # O ALVO, que é decisão de design e não sai de medição: vitória ≥ 95%, HP
-# restante entre 55% e 75%, e a mesa azarada (uma em dez) não podendo ser
+# restante entre 55% e 75%, e a pior formação do catálogo não podendo ser
 # dizimada. A emboscada é castigo por falhar num teste, não um segundo chefe:
 # ela cobra, não encerra a incursão.
 #
-# MEDIDO COM `tools/calibrar_emboscada.py`, contra MESAS SORTEADAS — grupos
+# ESTA TABELA ESTÁ FORA DO ALVO, e o que está escrito aqui continua valendo
+# até alguém decidir o que trocar — mudar a emboscada é conteúdo, não
+# arrumação. Remedida em 23/11/2026 (`tools/calibrar_emboscada.py
+# --repeticoes 600`, semente 20261112, 7 formações de 5, 85 lutas cada):
+#
+#   T1 3 Mímicos ................. vitória 98,7%  HP 69,4%  pior mesa 95%
+#   T2 5 Mímicos ................. vitória 99,2%  HP 70,6%  pior mesa 98%
+#   T3 1 Mímico + 4 Xorn ......... vitória 89,9%  HP 57,5%  pior mesa 68%
+#   T4 1 Mímico + 3 Golens Argila  vitória 96,5%  HP 63,5%  pior mesa 78%
+#   T5 1 Mímico + 5 Golens Argila  vitória 91,1%  HP 62,0%  pior mesa 42%
+#
+# E A QUEDA TEM UM NOME: a formação Arcana (paladino, clérigo, bruxo,
+# artífice, bardo). Ela tira 70% no T3 e 50% no T5 enquanto as outras seis
+# ficam entre 95% e 100%, e a média só desce por causa dela. O motivo está em
+# `docs/BALANCO.md`: os cinco somam 60 de dano por rodada no T5, contra 80 da
+# Clássica e da Muralha — é a única mesa de referência que leva bardo E bruxo,
+# as duas classes mexidas na rodada de balanceamento. A emboscada não ficou
+# mais forte; uma das mesas ficou mais fraca.
+#
+# A TABELA DE ANTES, para comparar, foi medida contra MESAS SORTEADAS — grupos
 # de cinco tirados entre as catorze classes, 40 mesas e 600 lutas por linha:
 #
 #   T1 3 Mímicos ................. vitória 97,5%  HP 67,7%  1-em-10 87%
@@ -63,6 +82,9 @@ CHANCE_DE_MIMICO = 1.0
 #   T3 1 Mímico + 4 Xorn ......... vitória 95,5%  HP 72,9%  1-em-10 87%
 #   T4 1 Mímico + 3 Golens Argila  vitória 98,5%  HP 67,2%  1-em-10 100%
 #   T5 1 Mímico + 5 Golens Argila  vitória 98,8%  HP 74,4%  1-em-10 100%
+#
+# (o "1-em-10" era o décimo percentil, de quando as mesas eram sorteadas. Com
+# catálogo fixo a conta virou a pior formação — ver `estatisticas.mesa_azarada`)
 #
 # A TABELA ANTERIOR foi medida contra cinco cópias da mesma classe, e isso não
 # é uma mesa que existe: cinco guerreiros não têm conjurador frágil. Contra
@@ -81,7 +103,8 @@ NOME_DO_MIMICO = "Mímico"
 A_EMBOSCADA: dict[int, tuple[tuple[str, int], ...]] = {
     1: ((NOME_DO_MIMICO, 3),),
     2: ((NOME_DO_MIMICO, 5),),
-    # Este 1+4 já foi trocado por 2+3 e voltou, e a história vale o espaço:
+    # Hoje mede 89,9% / 57,5% / 68% — ver o cabeçalho. Este 1+4 já foi
+    # trocado por 2+3 e voltou, e a história vale o espaço:
     # a troca foi decidida por RUÍDO DE MEDIÇÃO. O calibrador pedia quarenta
     # mesas e recebia vinte (o piso de lutas por mesa mordia, e o banner
     # anunciava as quarenta pedidas), e com vinte o percentil deste elenco

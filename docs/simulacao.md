@@ -21,27 +21,42 @@ python tools/simular_combate.py data/incursoes/vortice_cripta.json --nivel 6 --r
 ```
 
 **As formações são fixas.** A bancada, o sugeridor e a calibração usam os
-mesmos quatro grupos de referência. A semente altera as rolagens do combate,
+mesmos sete grupos de referência. A semente altera as rolagens do combate,
 sem sortear as classes. Nenhuma formação repete classe.
 
-| Formação | Base de 3 jogadores | Com 5 jogadores, acrescenta |
+| Formação | Grupo de 5 | A sexta vaga |
 | --- | --- | --- |
-| Clássica | Guerreiro, Clérigo, Mago | Ladino, Patrulheiro |
-| Selvagem | Bárbaro, Xamã, Feiticeiro | Monge, Druida |
-| Arcana | Paladino, Clérigo, Bruxo | Artífice, Bardo |
-| Exploração | Druida, Xamã, Patrulheiro | Monge, Artífice |
+| Clássica | Guerreiro, Clérigo, Mago, Ladino, Patrulheiro | Bardo |
+| Selvagem | Bárbaro, Xamã, Feiticeiro, Monge, Druida | Patrulheiro |
+| Arcana | Paladino, Clérigo, Bruxo, Artífice, Bardo | Mago |
+| Exploração | Druida, Xamã, Patrulheiro, Monge, Artífice | Ladino |
+| Muralha | Paladino, Clérigo, Guerreiro, Bárbaro, Monge | Bardo |
+| Mercenária | Guerreiro, Bardo, Ladino, Patrulheiro, Monge | Artífice |
+| Primal pesada | Druida, Xamã, Bárbaro, Patrulheiro, Monge | Bruxo |
 
-Duplas usam as duas primeiras vagas; grupos de quatro acrescentam a quarta.
-O catálogo suporta até seis pessoas e está em `tools/simulacao/grupos.json`,
-com escolhas explícitas para as funções de frente e cura. Elas só entram
+**A medição é de cinco ou seis.** Cinco é o grupo do jogo
+(`config.TAMANHO_GRUPO`) e seis é a mesa cheia; pedir quatro, três ou dois dá
+erro em vez de medida. As formações têm seis classes cada, então "as duas
+primeiras" mediria uma dupla que nunca entra numa incursão — e a resposta
+saía junto, no mesmo relatório, como se respondesse alguma pergunta. Quem
+compara CLASSES (`--comparar`) continua podendo usar grupos pequenos: ali o
+grupo pequeno é o instrumento, porque com quatro companheiros fixos a
+contribuição do candidato fica diluída em um quinto do dano.
+
+A primeira vaga é da frente e a segunda é da cura, e isso é conferido ao
+carregar o catálogo: uma formação que comece por mago não carrega. O catálogo
+está em `tools/simulacao/grupos.json`, com escolhas explícitas para as funções
+de frente e cura. Elas só entram
 no nível que as libera: Guerreiro defensivo, Druida-Urso, Clérigo curandeiro
 com magias de cura de grupo e Xamã com Cântico. As demais escolhas seguem a
 política automática do simulador.
 
-As repetições são divididas igualmente: no padrão de 240 lutas, cada um dos
-quatro grupos faz 60. `--composicoes` limita quantas formações do catálogo
-medir; pedir mais de quatro não duplica grupos. Abaixo de 60 lutas, o piso de
-15 por formação pode reduzir o conjunto medido, sempre na mesma ordem.
+As repetições são divididas igualmente: no padrão de 240 lutas, cada uma das
+sete formações faz 34. `--composicoes` limita quantas formações do catálogo
+medir; pedir mais de sete não duplica grupos. Com poucas lutas, o piso de 15
+por formação reduz o conjunto medido, sempre na mesma ordem — 60 lutas medem
+quatro formações, não as sete, porque uma taxa vinda de oito combates é ruído
+com três dígitos.
 Cada formação tem uma sequência própria de rolagens derivada da semente;
 mudar a quantidade de formações não altera a sequência das demais.
 

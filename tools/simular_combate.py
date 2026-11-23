@@ -98,7 +98,10 @@ def main() -> int:
         help="Substitui escolha automatica da ficha; pode repetir. Ex.: --escolha magia_t3=mass_healing_word",
     )
     parser.add_argument(
-        "--grupos", type=int, nargs="+", default=[5, 4, 3, 2],
+        # Cinco e o grupo do jogo; seis e a mesa cheia. Quatro, tres e dois
+        # saiam no padrao e nao respondiam pergunta nenhuma: a sala e escrita
+        # para a mesa que existe.
+        "--grupos", type=int, nargs="+", default=[5], choices=(5, 6),
         metavar="N", help="Tamanhos de grupo a medir (padrao: 5 4 3 2)",
     )
     parser.add_argument(

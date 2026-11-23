@@ -1,33 +1,114 @@
 {
   "grupos": [
     {
-      "id": "classica", "nome": "Clássica",
-      "classes": ["guerreiro", "clerigo", "mago", "ladino", "patrulheiro", "bardo"]
+      "id": "classica",
+      "nome": "Clássica",
+      "classes": [
+        "guerreiro",
+        "clerigo",
+        "mago",
+        "ladino",
+        "patrulheiro",
+        "bardo"
+      ]
     },
     {
-      "id": "selvagem", "nome": "Selvagem",
-      "classes": ["barbaro", "xama", "feiticeiro", "monge", "druida", "patrulheiro"]
+      "id": "selvagem",
+      "nome": "Selvagem",
+      "classes": [
+        "barbaro",
+        "xama",
+        "feiticeiro",
+        "monge",
+        "druida",
+        "patrulheiro"
+      ]
     },
     {
-      "id": "arcana", "nome": "Arcana",
-      "classes": ["paladino", "clerigo", "bruxo", "artifice", "bardo", "mago"]
+      "id": "arcana",
+      "nome": "Arcana",
+      "classes": [
+        "paladino",
+        "clerigo",
+        "bruxo",
+        "artifice",
+        "bardo",
+        "mago"
+      ]
     },
     {
-      "id": "exploracao", "nome": "Exploração",
-      "classes": ["druida", "xama", "patrulheiro", "monge", "artifice", "ladino"]
+      "id": "exploracao",
+      "nome": "Exploração",
+      "classes": [
+        "druida",
+        "xama",
+        "patrulheiro",
+        "monge",
+        "artifice",
+        "ladino"
+      ]
+    },
+    {
+      "id": "muralha",
+      "nome": "Muralha",
+      "classes": [
+        "paladino",
+        "clerigo",
+        "guerreiro",
+        "barbaro",
+        "monge",
+        "bardo"
+      ]
+    },
+    {
+      "id": "mercenaria",
+      "nome": "Mercenária",
+      "classes": [
+        "guerreiro",
+        "bardo",
+        "ladino",
+        "patrulheiro",
+        "monge",
+        "artifice"
+      ]
+    },
+    {
+      "id": "primal",
+      "nome": "Primal pesada",
+      "classes": [
+        "druida",
+        "xama",
+        "barbaro",
+        "patrulheiro",
+        "monge",
+        "bruxo"
+      ]
     }
   ],
   "escolhas": {
-    "guerreiro": {"fighting_style": "defensivo"},
+    "guerreiro": {
+      "fighting_style": "defensivo"
+    },
     "clerigo": {
-      "magia_t1": "cure_wounds", "dominio_t2": "curandeiro",
-      "magia_t3": "mass_healing_word", "dominio_t4": "especialista_cura",
+      "magia_t1": "cure_wounds",
+      "dominio_t2": "curandeiro",
+      "magia_t3": "mass_healing_word",
+      "dominio_t4": "especialista_cura",
       "magia_t5": "mass_cure_wounds"
     },
-    "xama": {"escolha_totemica": "cantico"},
+    "xama": {
+      "escolha_totemica": "cantico"
+    },
     "druida": {
-      "forma_t1": "urso", "bichinho_t2": "bichinho_curandeiro",
-      "magia_druida_t3": "aura_of_vitality", "natureza_t4": "forma_lunar"
+      "forma_t1": "urso",
+      "bichinho_t2": "bichinho_curandeiro",
+      "magia_druida_t3": "aura_of_vitality",
+      "natureza_t4": "forma_lunar"
+    },
+    "bardo": {
+      "magia_bardo_t1": "healing_word",
+      "magia_bardo_t3": "aid",
+      "magia_bardo_t5": "mass_cure_wounds_bardo"
     }
   }
 }

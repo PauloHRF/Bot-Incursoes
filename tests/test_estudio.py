@@ -240,9 +240,9 @@ def caso_o_pool_recusa_pedido_torto():
 
 def caso_simular_mede_a_sala_de_combate():
     r = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
-                   "repeticoes": 60, "grupos": [5, 3]})
+                   "repeticoes": 60, "grupos": [5, 6]})
     assert "erro" not in r, r
-    assert [m["grupo"] for m in r["medidas"]] == [5, 3]
+    assert [m["grupo"] for m in r["medidas"]] == [5, 6]
     assert all(0.0 <= m["taxa"] <= 1.0 for m in r["medidas"]), r["medidas"]
     assert r["criaturas"][0]["nome"].startswith("Coisa")
     print(f"  a sala foi medida: grupo 5 = {r['medidas'][0]['taxa']:.0%}: ok")
@@ -258,7 +258,7 @@ def caso_a_medida_vem_de_mesas_predefinidas_com_os_extremos():
     saber o que procurar.
     """
     r = E.simular({"sala": sala_de_combate(monstros=[dict(CRIATURA, quantidade=3)]),
-                   "tier": 1, "nivel": 4, "repeticoes": 90, "grupos": [3]})
+                   "tier": 1, "nivel": 4, "repeticoes": 90, "grupos": [5]})
     assert r["sorteado"] is False and r["predefinido"] is True and r["classe"] == "predefinido"
     medida = r["medidas"][0]
     assert medida["mesas"] > 1, medida
@@ -270,7 +270,7 @@ def caso_a_medida_vem_de_mesas_predefinidas_com_os_extremos():
 
     # E a classe continua aceita, como DIAGNÓSTICO: "dura para quem?".
     d = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
-                   "repeticoes": 30, "grupos": [3], "classe": "mago"})
+                   "repeticoes": 30, "grupos": [5], "classe": "mago"})
     assert d["sorteado"] is False and d["classe"] == "mago"
     assert d["medidas"][0]["mesas"] == 1 and d["medidas"][0]["pior"] is None
     assert "erro" in E.simular({"sala": sala_de_combate(), "classe": "padeiro"})
@@ -287,16 +287,17 @@ def caso_a_medida_sai_com_veredito():
     emboscada — ter faixas em tres lugares era o jeito de elas divergirem.
     """
     r = E.simular({"sala": sala_de_combate(monstros=[dict(CRIATURA, quantidade=3)]),
-                   "tier": 1, "nivel": 4, "repeticoes": 90, "grupos": [3]})
+                   "tier": 1, "nivel": 4, "repeticoes": 90, "grupos": [5]})
     medida = r["medidas"][0]
     assert "rotulo" in medida and medida["rotulo"], medida
     assert medida["dificuldade"] == regua.dificuldade_de(medida["taxa"]), medida
     assert isinstance(medida["dizima"], bool)
 
-    # O veredito da mesa azarada vem do PERCENTIL, e nao da pior mesa: o
-    # minimo afunda conforme a amostra cresce, entao ele nomeia quem sofreu
-    # mas nao decide nada.
-    assert medida["azarada"] is None or medida["azarada"] >= medida["pior"]["taxa"]
+    # O veredito da mesa azarada E a pior formacao: o catalogo e fixo, entao
+    # a pior das que existem e um numero que algum grupo tirou e e comparavel
+    # entre duas medicoes. Era o percentil, de quando as mesas eram sorteadas
+    # — e com poucas formacoes ele extrapolava para fora dos dados.
+    assert medida["azarada"] == medida["pior"]["taxa"], medida
     assert medida["dizima"] == (
         medida["azarada"] is not None and medida["azarada"] < regua.PIOR_MESA_MINIMA
     ), medida
@@ -313,7 +314,7 @@ def caso_a_medida_sai_com_veredito():
 def caso_a_mesma_semente_da_o_mesmo_numero():
     """Dois autores comparando números precisam ver o mesmo número."""
     pedido = {"sala": sala_de_combate(), "tier": 1, "nivel": 2,
-              "repeticoes": 80, "grupos": [4], "semente": 12345}
+              "repeticoes": 80, "grupos": [5], "semente": 12345}
     a = E.simular(dict(pedido))
     b = E.simular(dict(pedido))
     assert a["medidas"] == b["medidas"], (a["medidas"], b["medidas"])
@@ -328,10 +329,39 @@ def caso_mudar_a_lista_de_grupos_nao_mexe_nos_outros():
     """Cada tamanho tem rng próprio, derivado da semente."""
     pedido = {"sala": sala_de_combate(), "tier": 1, "nivel": 2,
               "repeticoes": 80, "semente": 7}
-    so_quatro = E.simular({**pedido, "grupos": [4]})["medidas"][0]
-    com_cinco = E.simular({**pedido, "grupos": [5, 4]})["medidas"][1]
-    assert so_quatro == com_cinco, (so_quatro, com_cinco)
+    so_seis = E.simular({**pedido, "grupos": [6]})["medidas"][0]
+    com_cinco = E.simular({**pedido, "grupos": [5, 6]})["medidas"][1]
+    assert so_seis == com_cinco, (so_seis, com_cinco)
     print("  tirar um tamanho da lista não move o número dos outros: ok")
+
+
+def caso_a_medicao_recusa_grupo_menor_que_o_do_jogo():
+    """Pedir grupo de três tem de dar ERRO, e não uma medida de cinco.
+
+    A dungeon é escrita para a mesa que existe, e a mesa do jogo é de cinco
+    (`config.TAMANHO_GRUPO`). Medir dois ou três saía junto e não respondia
+    pergunta nenhuma: as formações de referência têm seis classes, então
+    "as duas primeiras" é uma dupla que nunca entra numa incursão.
+
+    O importante aqui é o erro. Um filtro que jogasse o três fora e medisse
+    cinco calado devolveria um número certo com o rótulo errado — e quem
+    pediu três acreditaria nele.
+    """
+    pedido = {"sala": sala_de_combate(), "tier": 1, "nivel": 2, "repeticoes": 60}
+    for fora in ([3], [1], [7], [5, 3]):
+        r = E.simular({**pedido, "grupos": fora})
+        assert "erro" in r, (fora, r)
+        assert "medidas" not in r, (fora, r)
+        assert str(min(set(fora) - {5, 6})) in r["erro"], (fora, r["erro"])
+    assert "erro" in E.simular({**pedido, "grupos": ["cinco"]})
+    assert "erro" in E.simular({**pedido, "grupos": [True]})
+
+    # Sem lista, mede o grupo do jogo; e pedir o mesmo duas vezes não mede
+    # duas vezes.
+    assert [m["grupo"] for m in E.simular(pedido)["medidas"]] == [5]
+    r = E.simular({**pedido, "grupos": [6, 6, 5]})
+    assert [m["grupo"] for m in r["medidas"]] == [6, 5], r["medidas"]
+    print("  grupo menor que cinco é recusado, não corrigido calado: ok")
 
 
 def caso_a_bancada_abre_sem_o_motor_e_diz_o_que_falta():
@@ -403,10 +433,10 @@ def caso_as_repeticoes_tem_teto():
                 "composicoes": [{"classes": ["mago"], "taxa": 1.0, "amostras": 1}]}
     with patch.object(sc, "simular", side_effect=medir) as chamada:
         r = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
-                       "repeticoes": 10**9, "grupos": [2]})
+                       "repeticoes": 10**9, "grupos": [5]})
         assert r["repeticoes"] == E.REPETICOES_MAXIMO, r["repeticoes"]
         r = E.simular({"sala": sala_de_combate(), "tier": 1, "nivel": 2,
-                       "repeticoes": "muitas", "grupos": [2]})
+                       "repeticoes": "muitas", "grupos": [5]})
         assert r["repeticoes"] == E.REPETICOES_PADRAO
         assert chamada.call_args.args[2].repeticoes == E.REPETICOES_PADRAO
     print("  as repetições têm teto e padrão: ok")
@@ -499,6 +529,7 @@ for caso in (
     caso_a_medida_sai_com_veredito,
     caso_a_mesma_semente_da_o_mesmo_numero,
     caso_mudar_a_lista_de_grupos_nao_mexe_nos_outros,
+    caso_a_medicao_recusa_grupo_menor_que_o_do_jogo,
     caso_a_bancada_abre_sem_o_motor_e_diz_o_que_falta,
     caso_sala_de_teste_nao_e_medida_por_simulacao,
     caso_simular_recusa_o_que_nao_dá_para_medir,

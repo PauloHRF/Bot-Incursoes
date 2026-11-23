@@ -39,10 +39,18 @@ FAIXAS_DE_VITORIA: dict[str, tuple[float, float]] = {
 # Como cada uma se escreve na tela.
 ROTULOS = {"facil": "Fácil", "media": "Média", "dificil": "Difícil"}
 
-# O décimo percentil continua como resumo conservador dos grupos testados.
-# Com formações fixas, não é uma probabilidade de encontrar uma party no
-# jogo: o aviso aponta risco dentro do catálogo de referência. A média e
-# as taxas de cada formação devem ser lidas juntas.
+# A PIOR formação do catálogo não pode ser dizimada.
+#
+# É o mínimo, e com catálogo fixo isso é o certo: as formações são sempre as
+# mesmas, então a pior delas é um número comparável entre duas medições — e é
+# um número que algum grupo de fato tirou. Era o décimo percentil, de quando
+# as mesas eram sorteadas, e com poucas formações no catálogo ele extrapolava
+# para fora dos dados (chegava a taxa NEGATIVA). Ver
+# `estatisticas.mesa_azarada`.
+#
+# Não é probabilidade de encontrar essa mesa no jogo: o aviso aponta risco
+# dentro do catálogo de referência. A média e a taxa de cada formação devem
+# ser lidas juntas.
 PIOR_MESA_MINIMA = 0.80
 
 
@@ -75,9 +83,10 @@ def dificuldade_de(taxa: Optional[float]) -> Optional[str]:
 def veredito(taxa: Optional[float], azarada: Optional[float] = None) -> dict[str, Any]:
     """O que a medição quer dizer: a faixa, e o aviso da mesa azarada.
 
-    Devolve `{"dificuldade", "rotulo", "dizima"}`. `dizima` é True quando uma
-    parte dos grupos testados está abaixo do piso, mesmo com a média na faixa — são
-    duas perguntas diferentes, e a segunda é a que a média esconde.
+    Devolve `{"dificuldade", "rotulo", "dizima"}`. `dizima` é True quando a
+    PIOR formação do catálogo fica abaixo do piso, mesmo com a média dentro
+    da faixa — são duas perguntas diferentes, e a segunda é a que a média
+    esconde.
     """
     nome = dificuldade_de(taxa)
     if taxa is None:
