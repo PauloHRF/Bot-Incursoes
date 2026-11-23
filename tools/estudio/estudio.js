@@ -11,7 +11,7 @@ let C, banco, origem, arquivo, indice = -1;
 /* Os quatro lugares da bancada, e qual sala esta aberta em cada um.
    `bancadaEm` e o ultimo lugar de ESCRITA (Teste ou Combate): quem vai
    montar a dungeon e volta tem de reencontrar a sala onde a deixou. */
-let lugar = "Teste", bancadaEm = "Teste";
+let lugar = "Combate", bancadaEm = "Combate";
 const selecao = {Teste: -1, Combate: -1};
 // Familia, resumo e desconto de CD de cada tipo, vindos de /api/conteudo.
 let FAMILIA = {}, RESUMO = {}, DESCONTO = {};
@@ -21,29 +21,56 @@ let linhasAtuais = null, linhasDoIndice = -1;
 let originais = {}, sequencia = 0, revisao = 0, medindo = false, sugerindo = false;
 let medidaContexto, sugestaoContexto, timerPool, timerConferir, timerToast;
 let pedidoConferir = 0, pedidoPool = 0, armazenamentoFalhou = false;
-let avancado = new URLSearchParams(location.search).get("modo") === "avancado";
-let etapa = "Escolher";
+let etapa = "Escolher", salaDoSugeridor, tipoDoSugeridor;
+
+const menuPequeno = window.matchMedia("(max-width: 900px)");
+
+function ajustarMenu() {
+  const alvo = menuPequeno.matches ? $("menuMovel") : $("ancoraMenu");
+  if (!menuPequeno.matches) fecharMenu();
+  if ($("menuLateral").parentElement !== alvo) alvo.append($("menuLateral"));
+}
+function fecharMenu() { if ($("menuMovel").open) $("menuMovel").close(); }
+function fecharPainel() {
+  if ($("painelLateral").open) $("painelLateral").close();
+  if (menuPequeno.matches) $("btMenu").focus();
+}
+function abrirPainel(nome) {
+  if (["Sala", "Previa"].includes(nome) && !sala()) return;
+  fecharMenu();
+  const titulos = {Sala: "Opções da sala", Simulacao: "Ajustes da simulação", Previa: "Prévia da sala", Ajuda: "Ajuda"};
+  $("tituloPainel").textContent = titulos[nome];
+  Object.keys(titulos).forEach(n => { $("config" + n).hidden = n !== nome; });
+  if (nome === "Previa") $("configPrevia").append(document.querySelector(".previa-coluna"));
+  if (!$("painelLateral").open) $("painelLateral").showModal();
+}
 
 function atualizarFluxo() {
-  document.body.dataset.modo = avancado ? "avancado" : "guiado";
+  const oficina = ["Teste", "Combate"].includes(lugar), combate = familia(sala()?.tipo) === "combate";
   document.body.dataset.etapa = etapa;
-  $("btModo").textContent = avancado ? "Voltar ao modo simples" : "Ferramentas avançadas";
+  document.body.dataset.lugar = lugar;
+  $("fluxoSalas").hidden = !oficina;
+  $("fluxoAcoes").hidden = !oficina;
   const temSala = !!sala();
   document.querySelectorAll(".passos [data-etapa]").forEach(botao => {
     botao.disabled = botao.dataset.etapa !== "Escolher" && !temSala;
     if (botao.dataset.etapa === etapa) botao.setAttribute("aria-current", "step");
     else botao.removeAttribute("aria-current");
   });
-  $("tituloEtapa").textContent = {Escolher: "Escolha uma sala", Editar: "Edite a sala", Testar: "Confira o resultado"}[etapa];
+  $("tituloEtapa").textContent = etapa === "Escolher"
+    ? bancadaEm === "Combate" ? "Escolha um combate" : "Escolha uma sala"
+    : etapa === "Editar" ? "Edite a sala" : "Confira o resultado";
   $("btFluxoVoltar").hidden = etapa === "Escolher";
   $("btFluxoProximo").disabled = !temSala;
   $("btFluxoProximo").textContent = etapa === "Escolher" ? "Editar selecionada →" : etapa === "Editar" ? "Validar e testar →" : "↓ Baixar JSON";
-  $("saidaRevisao").hidden = avancado || etapa !== "Testar" || !$("saidaRevisao").hasChildNodes();
-  if (!avancado) secaoSala(etapa === "Testar" && familia(sala()?.tipo) === "combate" ? "Simulacao" : "Edicao");
+  $("saidaRevisao").hidden = etapa !== "Testar" || !$("saidaRevisao").hasChildNodes();
+  $("painelEdicao").hidden = etapa === "Testar" && combate;
+  $("painelSimulacao").hidden = etapa !== "Testar" || !combate;
 }
 
 function irParaEtapa(nome, foco = true) {
   if (nome !== "Escolher" && !sala()) return;
+  if (!["Teste", "Combate"].includes(lugar)) entrar(bancadaEm);
   etapa = nome;
   if (nome === "Testar") $("saidaRevisao").replaceChildren();
   atualizarFluxo();
@@ -326,6 +353,16 @@ function mostrarEditor() {
   $("fCd").value = s.cd ?? "";
   $("fAlvo").value = s.alvo_progresso ?? "";
   $("dicaTipo").textContent = RESUMO[s.tipo] || "";
+  if (s !== salaDoSugeridor || s.tipo !== tipoDoSugeridor) {
+    salaDoSugeridor = s; tipoDoSugeridor = s.tipo;
+    const tiers = [...new Set([...Object.keys(s.monstros_por_tier || {}),
+      ...Object.values(s.monstros_por_tema || {}).flatMap(porTier => Object.keys(porTier || {}))])];
+    const atual = $("fTierSim").value || "2";
+    $("fTierSug").value = tiers.includes(atual) ? atual : tiers[0] || atual;
+    $("fTemaSug").value = "";
+    $("sugestoes").replaceChildren(); $("saidaSugerir").hidden = true;
+    $("recadoSugerir").textContent = ""; sugestaoContexto = null;
+  }
 
   const temas = Array.isArray(s.temas) ? s.temas : [];
   fichas("fichasSala", C.temas, temas, (tema, ligar) => {
@@ -386,7 +423,7 @@ const SEM_COMBATE = $("avisoCombate").textContent;
 function controles() {
   const temSala = !!sala(), pode = !!banco;
   ["btBaixar", "btConferirBanco", "btNova", "btCopiarFiltro"].forEach(id => { $(id).disabled = !pode; });
-  ["btDuplicar", "btExcluir", "btConferir", "btVirar"].forEach(id => { $(id).disabled = !pode || !temSala; });
+  ["btDuplicar", "btExcluir", "btConferir", "btVirar", "btOpcoesSala", "btPrevia"].forEach(id => { $(id).disabled = !pode || !temSala; });
   $("btRecarregar").disabled = !banco;
   $("btVirar").textContent = bancadaEm === "Combate" ? "Virar sala de teste" : "Virar combate";
   const combate = temSala && familia(sala().tipo) === "combate";
@@ -398,7 +435,9 @@ function controles() {
   $("avisoCombate").hidden = lugar !== "Combate" || (!falta && combate);
   $("btMedir").disabled = !pode || !combate || medindo || !!falta;
   $("btSugerir").disabled = !pode || !combate || sugerindo || !!falta;
-  document.querySelectorAll(".usar-sugestao").forEach(n => { n.disabled = !pode || sugestaoContexto !== contexto(); });
+  $("btSugerir").textContent = sugerindo ? "Buscando…" : "Gerar sugestões";
+  $("sugestoes").setAttribute("aria-busy", sugerindo);
+  document.querySelectorAll(".usar-sugestao").forEach(n => { n.disabled = !pode || sugestaoContexto !== contextoSugestao(); });
   atualizarFluxo();
 }
 
@@ -410,27 +449,6 @@ function indicesDoLugar(nome = bancadaEm) {
     if (lugarDoTipo(s.tipo) === nome) saida.push(i);
     return saida;
   }, []);
-}
-
-let secaoCombate = "Edicao";
-function secaoSala(nome, foco = false) {
-  const combate = bancadaEm === "Combate";
-  if (combate) secaoCombate = nome;
-  const atual = combate ? secaoCombate : "Edicao";
-  $("abasSala").hidden = !combate;
-  document.querySelectorAll("[data-secao]").forEach(botao => {
-    const ativo = botao.dataset.secao === atual;
-    botao.setAttribute("aria-selected", ativo); botao.tabIndex = ativo ? 0 : -1;
-    $("painel" + botao.dataset.secao).hidden = !ativo;
-    if (ativo && foco) botao.focus();
-  });
-  if (combate) {
-    $("painelEdicao").setAttribute("role", "tabpanel");
-    $("painelEdicao").setAttribute("aria-labelledby", "abaEdicao");
-  } else {
-    $("painelEdicao").removeAttribute("role");
-    $("painelEdicao").removeAttribute("aria-labelledby");
-  }
 }
 
 function entrar(nome, foco = false) {
@@ -452,7 +470,6 @@ function entrar(nome, foco = false) {
   const disponiveis = indicesDoLugar(bancadaEm), guardado = selecao[bancadaEm];
   indice = disponiveis.includes(guardado) ? guardado : (disponiveis[0] ?? -1);
   selecao[bancadaEm] = indice;
-  secaoSala(secaoCombate);
   mostrarEditor();
   atualizar();
   if (nome === "Inspecao") conferir(true);
@@ -460,7 +477,6 @@ function entrar(nome, foco = false) {
 
 function abrirSala(i) {
   etapa = "Editar";
-  secaoCombate = "Edicao";
   const destino = lugarDoTipo(banco.salas[i].tipo);
   selecao[destino] = i;
   entrar(destino);
@@ -484,17 +500,12 @@ function listar() {
       if (!pronto()) return;
       indice = i; selecao[bancadaEm] = i;
       mostrarEditor(); atualizar(); guardar(); agendarConferencia();
-      if (!avancado) irParaEtapa("Editar");
+      irParaEtapa("Editar");
     });
     const item = no("li"); item.append(botao); lista.append(item);
   });
   $("contaSalas").textContent = meus.length;
   $("listaVazia").hidden = lista.children.length > 0;
-  $("notaLista").textContent = bancadaEm === "Combate"
-    ? "Criaturas definidas por tier."
-    : banco.salas.some(s => familia(s.tipo) === "parada")
-      ? "Descanso é uma parada fixa."
-      : "Este banco não tem sala de Descanso.";
 }
 
 function contas() {
@@ -657,6 +668,7 @@ function inspecionar() {
 function previa() {
   const s = sala();
   $("nomeSala").textContent = s?.nome || "Selecione uma sala";
+  $("nomeOpcoes").textContent = s?.nome || "";
   $("tipoSala").textContent = s?.tipo || "Sala";
   $("tipoSala").classList.toggle("combate", !!s && familia(s.tipo) === "combate");
   $("idSala").textContent = texto(s?.id);
@@ -687,6 +699,10 @@ function atualizar() {
   listar(); previa(); contas();
   const tema = $("fTemaSim").value;
   preencher("fTemaSim", [["", "Padrão"], ...Object.keys(objeto(sala()?.monstros_por_tema) ? sala().monstros_por_tema : {})], tema);
+  const temas = [...new Set([...(Array.isArray(sala()?.temas) ? sala().temas : []),
+    ...Object.keys(objeto(sala()?.monstros_por_tema) ? sala().monstros_por_tema : {})])];
+  preencher("fTemaSug", [["", "Padrão"], ...temas], $("fTemaSug").value);
+  $("varianteSugestao").hidden = !temas.length;
   desatualizar(); controles();
   if (lugar === "Dungeon") agendarPool();
   if (lugar === "Inspecao") inspecionar();
@@ -698,7 +714,7 @@ function desatualizar() {
 function alterado() {
   revisao++; pedidoConferir++; pedidoPool++;
   $("saidaRevisao").replaceChildren();
-  $("saidaSala").hidden = true; $("saidaBanco").hidden = true;
+  $("saidaBanco").hidden = true;
   atualizar(); guardar(); agendarConferencia();
 }
 function carregar(chave) {
@@ -718,7 +734,7 @@ function carregar(chave) {
     selecao[bancadaEm] = guardado;
   }
   $("fBanco").value = chave; $("fBusca").value = "";
-  $("saidaBanco").hidden = true; $("saidaSala").hidden = true;
+  $("saidaBanco").hidden = true;
   listarIncursoes();
   entrar(lugar === "Dungeon" || lugar === "Inspecao" ? lugar : bancadaEm);
   guardar(); agendarConferencia();
@@ -732,7 +748,7 @@ async function conferir(inteiro = false) {
   if (!banco) return;
   if (!inteiro && !sala()) return;
   const id = ++pedidoConferir, versao = revisao, fonte = origem;
-  const alvo = inteiro ? "saidaBanco" : !avancado && etapa === "Testar" ? "saidaRevisao" : "saidaSala";
+  const alvo = inteiro ? "saidaBanco" : "saidaRevisao";
   try {
     const r = await api("/api/conferir", {dados: inteiro ? banco : sala()});
     if (id === pedidoConferir && versao === revisao && fonte === origem) recados(alvo, r, inteiro ? "Banco conferido." : "Sala conferida.");
@@ -767,7 +783,7 @@ function adicionar(duplicar = false) {
   selecao[lugarDoTipo(nova.tipo)] = indice;
   $("fBusca").value = "";
   if (lugarDoTipo(nova.tipo) !== bancadaEm) entrar(lugarDoTipo(nova.tipo));
-  secaoSala("Edicao"); mostrarEditor(); alterado(); $("fNome").focus();
+  mostrarEditor(); alterado(); $("fNome").focus();
 }
 /* Campo que não pertence ao tipo novo sai: o validador recusa sala de
    Combate com perícia e sala de teste com criatura, e o autor não tem como
@@ -787,7 +803,6 @@ function virar() {
   if (!destino) return;
   trocarTipo(s, destino);
   selecao[lugarDoTipo(destino)] = indice;
-  secaoCombate = "Edicao";
   entrar(lugarDoTipo(destino));
   alterado();
   aviso(`“${texto(s.nome)}” agora é ${destino}.`);
@@ -803,22 +818,22 @@ function baixar() {
 
 /* ------------------------------------------------------ medir e sugerir */
 
+function validarNumero(id) {
+  if ($(id).checkValidity()) return true;
+  if ($("configSimulacao").contains($(id))) abrirPainel("Simulacao");
+  $(id).reportValidity();
+  return false;
+}
 function parametros() {
-  for (const id of ["fNivel", "fReps", "fSemente"]) {
-    if (!$(id).checkValidity()) {
-      if ($("opcoesSimulacao").contains($(id))) {
-        // Um valor digitado no modo avançado precisa continuar corrigível
-        // depois de voltar ao caminho simples.
-        if (!avancado) { avancado = true; atualizarFluxo(); }
-        $("opcoesSimulacao").open = true;
-      }
-      $(id).reportValidity(); return null;
-    }
-  }
+  for (const id of ["fNivel", "fReps", "fSemente"]) if (!validarNumero(id)) return null;
   const p = {tier: Number($("fTierSim").value), classe: $("fClasse").value, nivel: Number($("fNivel").value)};
   if ($("fSemente").value !== "") p.semente = Number($("fSemente").value);
   return p;
 }
+function contextoSugestao() {
+  return JSON.stringify([origem, indice, revisao, ...["fTierSug", "fTemaSug", "fAmb", "fBicho", "fDifCombate", "fSemente"].map(id => $(id).value)]);
+}
+
 const pct = taxa => taxa == null ? "—" : `${Math.round(taxa * 100)}%`;
 
 /* A barra é a MÉDIA das mesas. Sozinha ela responde "a sala é justa?" e
@@ -885,27 +900,31 @@ async function medir() {
   finally { medindo = false; $("btMedir").textContent = "Simular combate"; desatualizar(); }
 }
 async function sugerir() {
-  if (!pronto()) return;
-  const p = parametros(); if (!p) return;
-  const atual = contexto(), tema = $("fTemaSim").value, opcoes = [$("fAmb").value, $("fBicho").value, $("fDifCombate").value];
-  sugerindo = true; controles(); $("recadoSugerir").textContent = "Simulando candidatos…";
+  if (!pronto() || !sala() || familia(sala().tipo) !== "combate" || sugerindo) return;
+  if (!validarNumero("fTierSug") || !validarNumero("fSemente")) return;
+  const p = {tier: Number($("fTierSug").value), ambiente: $("fAmb").value,
+    tipo: $("fBicho").value, dificuldade: $("fDifCombate").value, quantas: 2};
+  if ($("fSemente").value !== "") p.semente = Number($("fSemente").value);
+  const atual = contextoSugestao(), tema = $("fTemaSug").value;
+  sugerindo = true; controles(); $("recadoSugerir").textContent = "Simulando opções…";
   $("sugestoes").replaceChildren(); $("saidaSugerir").hidden = true;
   try {
-    const r = await api("/api/sugerir", {...p, ambiente: opcoes[0], tipo: opcoes[1], dificuldade: opcoes[2], quantas: 2});
-    if (atual !== contexto() || opcoes.join() !== [$("fAmb").value, $("fBicho").value, $("fDifCombate").value].join()) {
-      aviso("Os parâmetros mudaram. Gere novas sugestões."); return;
-    }
-    if (r.erro) { recados("saidaSugerir", r); return; }
+    const r = await api("/api/sugerir", p);
+    if (atual !== contextoSugestao()) { aviso("Os filtros ou a sala mudaram. Gere novas sugestões."); return; }
+    if (r.erro) { recados("saidaSugerir", {...r, avisos: [...(r.avisos || []), ...(r.dica ? [r.dica] : [])]}); return; }
     sugestaoContexto = atual;
-    $("recadoSugerir").textContent = `Semente ${r.semente} · ${r.candidatas_no_bestiario} criaturas no filtro`;
+    const quantidade = (r.sugestoes || []).length;
+    $("recadoSugerir").textContent = `${quantidade} ${quantidade === 1 ? "opção" : "opções"} · Tier ${p.tier} · ${tema || "Padrão"}`;
+    $("recadoSugerir").title = `Semente ${r.semente} · ${r.candidatas_no_bestiario} criaturas no filtro`;
+    if (!(r.sugestoes || []).length) recados("saidaSugerir", {avisos: ["Nenhuma sugestão encontrada. Tente outro tipo de criatura ou ambiente."]});
     (r.sugestoes || []).forEach((s, i) => {
       const card = no("article", "sugestao"), lista = no("ul");
-      card.append(no("h4", "", `Opção ${i + 1} · ${s.na_faixa ? "Na faixa" : "Fora da faixa"}`));
+      card.append(no("h4", "", `Opção ${i + 1} · ${s.na_faixa ? "Na dificuldade pedida" : "Fora da faixa pedida"}`));
       s.bando.forEach(m => lista.append(no("li", "", `${m.quantidade}× ${m.nome}`))); card.append(lista);
       Object.entries(s.por_grupo).forEach(([grupo, taxa]) => card.append(barra(grupo, taxa)));
-      const botao = no("button", "botao usar-sugestao", "Usar neste tier"); botao.type = "button";
+      const botao = no("button", "botao usar-sugestao", `Aplicar no tier ${p.tier}`); botao.type = "button";
       botao.addEventListener("click", () => {
-        if (!pronto() || contexto() !== atual) { aviso("Gere sugestões para a sala atual."); return; }
+        if (!pronto() || contextoSugestao() !== atual) { aviso("Gere sugestões para a sala atual."); return; }
         const alvo = sala();
         if (tema) {
           if (!objeto(alvo.monstros_por_tema)) alvo.monstros_por_tema = {};
@@ -914,13 +933,19 @@ async function sugerir() {
         const tiers = tema ? alvo.monstros_por_tema[tema] : alvo.monstros_por_tier;
         tiers[String(p.tier)] = s.bando.map(m => ({nome: m.nome, quantidade: m.quantidade}));
         linhasAtuais = null; linhasDoIndice = -1;
-        mostrarEditor(); alterado(); secaoSala("Edicao"); aviso(`Criaturas aplicadas ao tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
+        etapa = "Editar";
+        mostrarEditor(); alterado();
+        $("fTierSim").value = p.tier; $("fNivel").value = Math.min(10, p.tier * 2); $("fTemaSim").value = tema;
+        $("fClasse").value = "";
+        desatualizar(); $("sugeridor").open = false;
+        $("btNovaCriatura").focus();
+        aviso(`Combate aplicado no tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
       });
       card.append(botao); $("sugestoes").append(card);
     });
-    if (r.nenhuma_na_faixa) recados("saidaSugerir", {avisos: ["Nenhuma opção chegou à faixa pedida. Confira as taxas antes de usar."]});
-  } catch (erro) { if (atual === contexto()) recados("saidaSugerir", {erro: erro.message}); }
-  finally { sugerindo = false; if ($("recadoSugerir").textContent === "Simulando candidatos…") $("recadoSugerir").textContent = ""; controles(); }
+    if (r.nenhuma_na_faixa) recados("saidaSugerir", {avisos: ["As opções ficaram fora da dificuldade pedida. Confira as taxas antes de aplicar."]});
+  } catch (erro) { if (atual === contextoSugestao()) recados("saidaSugerir", {erro: erro.message}); }
+  finally { sugerindo = false; if ($("recadoSugerir").textContent === "Simulando opções…") $("recadoSugerir").textContent = ""; controles(); }
 }
 
 /* ------------------------------------------------------- montar dungeon */
@@ -1021,14 +1046,10 @@ async function iniciar() {
     (C.tipos_de_sala || []).forEach(t => {
       FAMILIA[t.id] = t.familia; RESUMO[t.id] = t.resumo; DESCONTO[t.id] = t.desconto_cd || 0;
     });
-    // O subtítulo de cada lugar sai dos tipos do servidor: tipo novo no bot
-    // aparece no cartão sem ninguém reescrever a página.
-    const daFamilia = f => C.tipos.filter(t => familia(t) === f);
-    $("subTeste").textContent = daFamilia("teste").join(", ");
-    $("subCombate").textContent = "Criaturas e simulação";
     Object.entries(C.bancos).forEach(([nome, b]) => { originais[nome] = {banco: b.original || {organizacao: b.organizacao, salas: b.salas}, arquivo: b.arquivo}; });
     preencher("fBanco", Object.keys(C.bancos)); $("fBanco").disabled = false;
     preencher("fTierSim", Array.from({length: C.limites.tier_maximo}, (_, i) => i + 1), 2);
+    preencher("fTierSug", Array.from({length: C.limites.tier_maximo}, (_, i) => i + 1), 2);
     /* Grupos fixos como padrão: cinco cópias da mesma classe não é
        uma mesa que existe, e o número que ela dava dependia de QUAL classe.
        As classes continuam ali, debaixo de um rótulo que diz o que são. */
@@ -1045,8 +1066,8 @@ async function iniciar() {
       umaSo.append(o);
     });
     quemJoga.append(umaSo);
-    preencher("fAmb", [["", "Qualquer ambiente"], ...C.ambientes]);
-    preencher("fBicho", [["", "Qualquer tipo"], ...C.tipos_de_bicho.map(t => [t.id, `${t.id} (${t.quantas})`])]);
+    preencher("fAmb", [["", "Qualquer ambiente"], ...C.ambientes.map(a => [a, C.rotulos_ambientes?.[a] || a])]);
+    preencher("fBicho", [["", "Qualquer tipo"], ...C.tipos_de_bicho.map(t => [t.id, `${t.nome || t.id} (${t.quantas})`])]);
     // As 385 do bestiario no campo de criatura: o autor escolhe da lista em
     // vez de digitar, e nome digitado errado vira sala sem criatura.
     const nomes = $("listaCriaturas");
@@ -1056,7 +1077,7 @@ async function iniciar() {
       o.value = nome;
       nomes.append(o);
     });
-    preencher("fDifCombate", Object.keys(C.dificuldades_de_combate).map(d => [d, `${d} · ${C.dificuldades_de_combate[d].map(v => Math.round(v * 100)).join("–")}% de vitória`]), "media");
+    preencher("fDifCombate", Object.keys(C.dificuldades_de_combate).map(d => [d, C.rotulos_dificuldades?.[d] || d]), "media");
     preencher("fTam", Object.keys(C.tamanhos));
     C.temas.forEach(t => {
       const ficha = no("button", "ficha", t); ficha.type = "button"; ficha.dataset.tema = t; ficha.setAttribute("aria-pressed", "false");
@@ -1112,16 +1133,17 @@ $("fBanco").addEventListener("change", evento => {
 });
 $("fBusca").addEventListener("input", () => { if (banco) listar(); });
 $("fBuscaInspecao").addEventListener("input", () => { if (banco) inspecionar(); });
-$("btAbrir").addEventListener("click", () => { if (pronto()) $("fArquivo").click(); });
+$("btAbrir").addEventListener("click", () => { if (pronto()) { fecharMenu(); $("fArquivo").click(); } });
 $("fArquivo").addEventListener("change", importar);
 $("btBaixar").addEventListener("click", baixar);
-$("btConferir").addEventListener("click", () => { if (pronto()) conferir(); });
+$("btConferir").addEventListener("click", () => { if (pronto()) { fecharPainel(); irParaEtapa("Testar"); } });
 $("btConferirBanco").addEventListener("click", () => { if (pronto()) conferir(true); });
 $("btNova").addEventListener("click", () => adicionar());
-$("btDuplicar").addEventListener("click", () => adicionar(true));
-$("btVirar").addEventListener("click", virar);
+$("btDuplicar").addEventListener("click", () => { fecharPainel(); adicionar(true); });
+$("btVirar").addEventListener("click", () => { fecharPainel(); etapa = "Editar"; virar(); });
 $("btExcluir").addEventListener("click", () => {
   if (!pronto() || !sala() || !confirm(`Excluir “${texto(sala().nome)}” do rascunho?`)) return;
+  fecharPainel(); etapa = "Escolher";
   banco.salas.splice(indice, 1);
   // Todo índice depois do removido andou um: guardar os antigos abriria a
   // sala errada. O do lugar atual vira a vizinha, e `entrar` confere.
@@ -1132,19 +1154,28 @@ $("btExcluir").addEventListener("click", () => {
 });
 $("btRecarregar").addEventListener("click", () => {
   if (!banco || !confirm("Descartar o rascunho deste banco e restaurar o JSON original?")) return;
+  fecharMenu(); etapa = "Escolher";
   const original = originais[origem];
   banco = copiar(original.banco); arquivo = original.arquivo;
   selecao.Teste = -1; selecao.Combate = -1; indice = -1;
   entrar(bancadaEm); alterado(); aviso("JSON original restaurado.");
 });
-$("btModo").addEventListener("click", () => {
-  avancado = !avancado;
-  if (!avancado) {
-    etapa = sala() ? "Editar" : "Escolher";
-    entrar(bancadaEm);
-  }
-  atualizarFluxo();
+$("btMenu").addEventListener("click", () => { if (!$("menuMovel").open) $("menuMovel").showModal(); });
+$("btFecharMenu").addEventListener("click", fecharMenu);
+$("btFecharPainel").addEventListener("click", fecharPainel);
+$("painelLateral").addEventListener("cancel", evento => { evento.preventDefault(); fecharPainel(); });
+$("painelLateral").addEventListener("close", () => {
+  const previa = $("configPrevia").querySelector(".previa-coluna");
+  if (previa) $("ancoraPrevia").append(previa);
 });
+menuPequeno.addEventListener("change", ajustarMenu);
+for (const id of ["menuMovel", "painelLateral"]) $(id).addEventListener("click", evento => {
+  const r = $(id).getBoundingClientRect();
+  if (evento.target === $(id) && (evento.clientX < r.left || evento.clientX > r.right || evento.clientY < r.top || evento.clientY > r.bottom)) {
+    id === "menuMovel" ? fecharMenu() : fecharPainel();
+  }
+});
+document.querySelectorAll("[data-painel]").forEach(b => b.addEventListener("click", () => abrirPainel(b.dataset.painel)));
 document.querySelectorAll(".passos [data-etapa]").forEach(botao => botao.addEventListener("click", () => irParaEtapa(botao.dataset.etapa)));
 $("btFluxoVoltar").addEventListener("click", () => irParaEtapa(etapa === "Testar" ? "Editar" : "Escolher"));
 $("btFluxoProximo").addEventListener("click", () => {
@@ -1152,26 +1183,22 @@ $("btFluxoProximo").addEventListener("click", () => {
   else irParaEtapa(etapa === "Escolher" ? "Editar" : "Testar");
 });
 const cartoes = [...document.querySelectorAll("[data-lugar]")];
+function navegar(nome, foco = false) {
+  if (["Teste", "Combate"].includes(nome)) etapa = "Escolher";
+  entrar(nome, foco); fecharMenu();
+}
 cartoes.forEach((n, i) => {
-  n.addEventListener("click", () => entrar(n.dataset.lugar));
+  n.addEventListener("click", () => navegar(n.dataset.lugar));
   n.addEventListener("keydown", evento => {
-    const visiveis = cartoes.filter(b => avancado || ["Teste", "Combate"].includes(b.dataset.lugar)), posicao = visiveis.indexOf(n);
-    const destinos = {ArrowRight: (posicao + 1) % visiveis.length, ArrowLeft: (posicao + visiveis.length - 1) % visiveis.length, Home: 0, End: visiveis.length - 1};
-    if (destinos[evento.key] !== undefined) { evento.preventDefault(); entrar(visiveis[destinos[evento.key]].dataset.lugar, true); }
-  });
-});
-const abasSala = [...document.querySelectorAll("[data-secao]")];
-abasSala.forEach((botao, i) => {
-  botao.addEventListener("click", () => secaoSala(botao.dataset.secao));
-  botao.addEventListener("keydown", evento => {
-    const destinos = {ArrowRight: (i + 1) % abasSala.length, ArrowLeft: (i + abasSala.length - 1) % abasSala.length, Home: 0, End: abasSala.length - 1};
-    if (destinos[evento.key] !== undefined) { evento.preventDefault(); secaoSala(abasSala[destinos[evento.key]].dataset.secao, true); }
+    const destinos = {ArrowRight: (i + 1) % cartoes.length, ArrowDown: (i + 1) % cartoes.length,
+      ArrowLeft: (i + cartoes.length - 1) % cartoes.length, ArrowUp: (i + cartoes.length - 1) % cartoes.length, Home: 0, End: cartoes.length - 1};
+    if (destinos[evento.key] !== undefined) { evento.preventDefault(); navegar(cartoes[destinos[evento.key]].dataset.lugar, true); }
   });
 });
 $("fTierSim").addEventListener("change", () => { $("fNivel").value = Math.min(10, Number($("fTierSim").value) * 2); desatualizar(); });
 ["fTemaSim", "fClasse", "fNivel", "fReps", "fSemente"].forEach(id => $(id).addEventListener("input", desatualizar));
 document.querySelectorAll('[name="grupo"]').forEach(n => n.addEventListener("change", desatualizar));
-["fAmb", "fBicho", "fDifCombate"].forEach(id => $(id).addEventListener("change", () => { sugestaoContexto = null; controles(); }));
+["fAmb", "fBicho", "fDifCombate", "fTierSug", "fTemaSug", "fSemente"].forEach(id => $(id).addEventListener("change", () => { sugestaoContexto = null; controles(); }));
 $("btMedir").addEventListener("click", medir);
 $("btSugerir").addEventListener("click", sugerir);
 ["fTam", "fIncluir", "fExcluir"].forEach(id => $(id).addEventListener("input", agendarPool));
@@ -1180,11 +1207,18 @@ $("btCopiarFiltro").addEventListener("click", copiarFiltro);
 document.addEventListener("keydown", evento => {
   if (!(evento.ctrlKey || evento.metaKey)) return;
   if (evento.key.toLowerCase() === "s") { evento.preventDefault(); baixar(); }
-  if (evento.key === "Enter") { evento.preventDefault(); if (pronto()) conferir(); }
+  if (evento.key === "Enter") {
+    evento.preventDefault();
+    if (pronto()) {
+      fecharPainel();
+      if (["Teste", "Combate"].includes(lugar)) irParaEtapa("Testar"); else conferir(true);
+    }
+  }
 });
 window.addEventListener("beforeunload", guardar);
 // A bancada entra no lugar antes do primeiro pintar: ela mora no fim do HTML
 // e apareceria sob os paineis durante o `await` do conteúdo.
-$("ancoraTeste").append($("bancada"));
+$("ancoraCombate").append($("bancada"));
+ajustarMenu();
 controles();
 iniciar();

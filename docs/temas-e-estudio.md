@@ -453,36 +453,38 @@ Python sem ele, tudo funciona menos os dois botões que custam mais caro para
 alcançar — então o estúdio avisa no terminal ao subir e no painel de Combate,
 antes do clique, em vez de deixar o erro aparecer no fim.
 
-A tela simples abre em **Escolher → Editar → Testar**, uma etapa de cada
+A interface abre em **Escolher → Editar → Testar**, uma etapa de cada
 vez. Escolher uma sala ou criar uma nova abre a edição; a última etapa traz
 a prévia e a validação, ou os parâmetros e resultados do combate. Baixar
 exporta o banco completo. As alterações e parâmetros sobrevivem à troca de
-etapa. Campos menos usados ficam nas ferramentas avançadas.
+etapa. Existe um único fluxo de edição; campos menos usados ficam no menu
+lateral, aberto pelo botão **Menu** no celular.
 
-**Ferramentas avançadas** abre os **quatro lugares** da bancada completa:
-escrever um Evento, montar um combate, montar a dungeon e olhar o que já
-existe são quatro trabalhos, com listas, campos e ferramentas diferentes.
-Quem vai escrever um Evento não precisa ver a tabela de criaturas, e quem
-monta um Combate não precisa da CD.
+O menu lateral reúne as áreas de criação e as ferramentas do banco:
 
-1. **Salas de teste** — Evento, Tesouro e Armadilha. A lista lateral traz só
+1. **Outras salas** — Evento, Tesouro e Armadilha. A lista traz só
    elas, o formulário traz a dificuldade, a CD, os sucessos e as perícias, e
-   a ajuda recolhida em **Regras desta sala** diz o que ela cobra do grupo:
+   **Ajuda** diz o que a sala cobra do grupo:
    a Armadilha desconta
    `DESCONTO_CD_ARMADILHA` da CD escrita, o Tesouro acorda os Mímicos ao
    falhar, o Evento premia quem passa e castiga quem falha. Esses números
    vêm das constantes do bot, não escritos na página. **Virar combate** leva
    a sala para o outro lugar e limpa o que não pertence ao tipo novo.
-2. **Combates** — a lista traz só as salas de Combate. **Editar sala** mostra a
+2. **Combates** — a lista traz só as salas de Combate. **Editar** mostra a
    tabela de criaturas: nome (dos 385 do bestiário, oferecidos pelo campo),
-   quantas, tier e variante por tema. **Simular** abre a medição na mesma
+   quantas, tier e variante por tema. **Testar** abre a medição na mesma
    sala, sem rolar até o fim do formulário: escolha tier, nível, variante e
-   tamanhos do grupo. **Opções avançadas** reúne composição, repetições e
+   tamanhos do grupo. **Ajustes da simulação** reúne composição, repetições e
    semente. As quatro formações predefinidas mantêm frente, cura e dano;
    a semente muda as rolagens. **Ver grupos usados** lista as composições. O motor do bot mostra
-   vitória, rodadas e caídos por tamanho de grupo; **Sugerir criaturas**
-   procura um bando na dificuldade pedida e aplica a
-   sugestão ao tier e à variante escolhidos. O máximo de criaturas é cobrado
+   vitória, rodadas e caídos por tamanho de grupo. Na edição, **Sugerir combate**
+   pede tier e dificuldade; tipo de criatura e ambiente são filtros opcionais,
+   usados juntos ou separadamente. A ferramenta simula os candidatos e mostra
+   as taxas de vitória para revisão, avisando quando a opção fica fora da
+   faixa pedida. Aplicar substitui apenas o bando do tier e da variante
+   escolhidos, preservando o restante da sala. O teste seguinte já usa esse
+   tier, o nível correspondente e os mesmos grupos fixos da sugestão.
+   O máximo de criaturas é cobrado
    **por bando** — por tier, e por variante de tema —, e não pela soma do que
    está escrito na sala.
 3. **Montar dungeon** — o tamanho, os temas e os IDs do filtro, com o pool
@@ -496,8 +498,8 @@ monta um Combate não precisa da CD.
    sala a abre no lugar dela. No topo, o que o banco consegue montar em cada
    tamanho e a conferência do banco pelo validador do bot.
 
-Fora dos lugares fica o arquivo: **Abrir JSON** importa um banco do disco,
-**Baixar JSON** exporta o banco completo para `data/bancos/` — preservando os
+Em **Arquivo**, no menu lateral, **Abrir JSON** importa um banco do disco,
+**Baixar JSON** exporta o banco completo para enviar a quem mantém `data/bancos/` — preservando os
 campos extras e os nomes do bestiário, sem expandir as fichas das criaturas —
 e **Restaurar original** descarta o rascunho após confirmação.
 
@@ -508,8 +510,9 @@ banco e baixar nunca ficam bloqueados. É possível baixar um rascunho com erros
 de conteúdo; confira o banco antes de colocá-lo no bot.
 
 Atalhos: **Ctrl+Enter** confere a sala aberta e **Ctrl+S** baixa o banco
-completo (no macOS, use Cmd). A ajuda de formato fica recolhida junto à prévia.
-ID, pontos, recompensa e imagem ficam em **Mais opções** do formulário.
+completo (no macOS, use Cmd). **Ajuda**, **Prévia da sala** e **Opções da sala**
+abrem painéis laterais. Este último reúne ID, pontos, temas, recompensa,
+imagem e as ações de duplicar, converter e excluir.
 O [pacote portátil](estudio-portatil.md) inclui Python e dependências para
 entregar o Estúdio em um ZIP privado, sem instalar nada na máquina do autor.
 
@@ -526,9 +529,9 @@ python -m playwright install chromium
 python tests/test_estudio_interface.py
 ```
 
-O que o colaborador precisa instalar: Python, o repositório e as dependências.
-É o preço da opção local, e é o que mantém o resto em zero: sem TLS, sem login,
-sem porta pública, sem moderação, sem depender de a Leeroy virar Pay As You Go.
+Para executar pelo código-fonte, o colaborador precisa de Python, do
+repositório e das dependências. Com o pacote portátil, basta extrair e abrir.
+Nos dois casos o servidor permanece local, sem login nem porta pública.
 
 ### "Probabilidade da dungeon" não existe como número único
 

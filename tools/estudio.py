@@ -65,6 +65,21 @@ REPETICOES_PADRAO = 800
 REPETICOES_MAXIMO = 20000
 GRUPOS_PADRAO = (5, 4, 3, 2)
 
+# Só rótulos de apresentação; os filtros continuam usando os IDs do bestiário.
+ROTULOS_AMBIENTES = {
+    "arctic": "Ártico", "coastal": "Costa", "desert": "Deserto",
+    "forest": "Floresta", "grassland": "Planície", "hill": "Colinas",
+    "mountain": "Montanha", "swamp": "Pântano", "underdark": "Subterrâneo",
+    "underwater": "Subaquático", "urban": "Urbano",
+}
+ROTULOS_CRIATURAS = {
+    "aberration": "Aberração", "beast": "Fera", "celestial": "Celestial",
+    "construct": "Constructo", "dragon": "Dragão", "elemental": "Elemental",
+    "fey": "Feérico", "fiend": "Ínfero", "giant": "Gigante",
+    "humanoid": "Humanoide", "monstrosity": "Monstruosidade", "ooze": "Gosma",
+    "plant": "Planta", "undead": "Morto-vivo",
+}
+
 
 # --------------------------------------------------------------- leitura
 
@@ -104,7 +119,7 @@ def _tipos_de_bicho() -> list[dict[str, Any]]:
         if tipo:
             contagem[tipo] = contagem.get(tipo, 0) + 1
     return [
-        {"id": tipo, "quantas": quantas}
+        {"id": tipo, "nome": ROTULOS_CRIATURAS.get(tipo, tipo), "quantas": quantas}
         for tipo, quantas in sorted(contagem.items(), key=lambda p: -p[1])
     ]
 
@@ -272,6 +287,7 @@ def conteudo() -> dict[str, Any]:
             "desconto_armadilha": I.DESCONTO_CD_ARMADILHA,
         },
         "ambientes": list(bestiario.AMBIENTES),
+        "rotulos_ambientes": dict(ROTULOS_AMBIENTES),
         # Os tipos de bicho com quantas criaturas cada um tem: sem o número, o
         # autor não sabe que 'ooze' corta o bestiário para quatro.
         "tipos_de_bicho": _tipos_de_bicho(),
@@ -283,6 +299,7 @@ def conteudo() -> dict[str, Any]:
             c["nome"] for c in bestiario.carregar() if c.get("nome")
         ),
         "dificuldades_de_combate": _faixas_de_combate(),
+        "rotulos_dificuldades": dict(regua.ROTULOS),
         # Vazio quando a medição roda. Cheio, a página avisa no painel de
         # Combate em vez de deixar o autor descobrir no clique.
         "falta_para_simular": _falta_para_simular(),
