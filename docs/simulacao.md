@@ -168,22 +168,35 @@ python tools/calibrar_emboscada.py --tier 4 --bando "Mímico:1,Naga Guardiã:3"
 
 `consequencias.A_EMBOSCADA` é conteúdo **medido**, não escolhido no olho: ela
 é o que acorda quando se falha num Tesouro, e o alvo é cobrar sem matar —
-vitória ≥ 95%, HP restante entre 55% e 75%, e a mesa azarada (uma em dez) não
+vitória ≥ 95%, HP restante entre 55% e 75%, e a pior formação do catálogo não
 podendo ser dizimada.
+
+**Hoje ela está fora do alvo no T3 e no T5**, e o cabeçalho de
+`src/consequencias.py` tem a medição com data e o motivo: a formação Arcana
+(paladino, clérigo, bruxo, artífice, bardo) soma 60 de dano por rodada no T5
+contra 80 da Clássica, e é ela que derruba a média. O conteúdo não foi mexido
+junto: trocar a emboscada é decisão de conteúdo, não arrumação de ferramenta.
 
 Três coisas que este comando aprendeu na marra, e que valem para qualquer
 número que vá para o jogo:
 
-- **quarenta mesas, não doze.** O sorteio das mesas é ele próprio uma amostra,
-  e a média de uma dúzia carrega uns dez pontos de erro. Toda escolha feita
-  com doze caiu quando remedida com quarenta;
+- **amostra anunciada tem de ser a amostra medida.** Quando as mesas eram
+  sorteadas, a média de uma dúzia carregava uns dez pontos de erro, e toda
+  escolha feita com doze caiu quando remedida com quarenta. Pior: o calibrador
+  pedia quarenta, o piso de lutas por mesa mordia, ele media vinte e anunciava
+  quarenta — e reprovou conteúdo que estava certo. Hoje o catálogo é fixo, e o
+  banner imprime quantas formações entraram de verdade;
 - **comparar candidatos exige as mesmas mesas.** `--bando` semeia o sorteio
   pelo tier, não pelo elenco, senão a diferença entre dois candidatos fica
   menor que a diferença entre duas amostras;
-- **o veredito olha o percentil, não o mínimo.** O mínimo afunda conforme a
-  amostra cresce — ele estima o pior da população, que não tem fundo —, então
-  dois mínimos de amostras diferentes não se comparam. Ver
-  `tools/simulacao/grupos.mesa_azarada`.
+- **com catálogo fixo, o veredito olha o mínimo — e era percentil.** Enquanto
+  as mesas eram sorteadas, o mínimo afundava conforme a amostra crescia (ele
+  estima o pior de uma população que não tem fundo), e o percentil era o certo.
+  Com sete formações sempre as mesmas não há amostragem de mesas: a pior delas
+  é um número que algum grupo tirou, e é comparável entre duas medições. O
+  percentil, nessa posição, passou a extrapolar para FORA dos dados — quatro
+  formações em 100/100/100/0% davam taxa negativa. Ver
+  `tools/simulacao/estatisticas.mesa_azarada`.
 
 ## Resultados e interpretação
 

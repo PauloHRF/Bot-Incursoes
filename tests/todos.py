@@ -12,6 +12,13 @@ que o arquivo nasce.
 
 `--sem-pular` é para o CI, que instala tudo: lá uma suíte pulada quer dizer
 que faltou instalar alguma coisa, e isso tem de ficar vermelho.
+
+**UMA RODADA POR VEZ.** Cada suíte tem um nome fixo de banco em `tests/`, e no
+Windows o arquivo fica preso enquanto outro processo o tem aberto. Rodar duas
+cópias ao mesmo tempo — isto aqui no fundo e uma suíte à mão, por exemplo — dá
+`PermissionError: [WinError 32]` na que chegar depois, e parece suíte instável
+quando é só o arquivo ocupado. Já custou uma caçada: o vermelho aparecia numa
+suíte diferente a cada vez, porque o que variava era quem estava rodando junto.
 """
 from __future__ import annotations
 
