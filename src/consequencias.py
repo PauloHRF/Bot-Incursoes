@@ -47,35 +47,50 @@ CHANCE_DE_MIMICO = 1.0
 # Nada é esticado por multiplicador aqui, como em nenhuma outra sala. E o
 # Mímico sozinho não dá conta de todos os tiers: ele é CR 2 e satura. Do tier
 # 3 para cima o baú tem companhia, e quem dá o peso é quem morava com ele: o
-# Xorn come metal e pedra preciosa, e o Golem de Argila é feito para guardar
-# câmara e cofre. A ficção é a mesma — o tesouro era isca.
+# Xorn come metal e pedra preciosa, o Golem de Argila é feito para guardar
+# câmara e cofre, e o Horror Elmado é a armadura que estava no canto. A ficção
+# é a mesma — o tesouro era isca.
 #
 # O ALVO, que é decisão de design e não sai de medição: vitória ≥ 95%, HP
 # restante entre 55% e 75%, e a pior formação do catálogo não podendo ser
 # dizimada. A emboscada é castigo por falhar num teste, não um segundo chefe:
 # ela cobra, não encerra a incursão.
 #
-# ESTA TABELA ESTÁ FORA DO ALVO, e o que está escrito aqui continua valendo
-# até alguém decidir o que trocar — mudar a emboscada é conteúdo, não
-# arrumação. Remedida em 23/11/2026 (`tools/calibrar_emboscada.py
-# --repeticoes 600`, semente 20261112, 7 formações de 5, 85 lutas cada):
+# MEDIDA EM 23/11/2026 contra as SETE FORMAÇÕES FIXAS do catálogo
+# (`tools/calibrar_emboscada.py --repeticoes 980`, semente 20261112, 140
+# lutas por formação). Os cinco tiers fecham os três critérios:
 #
-#   T1 3 Mímicos ................. vitória 98,7%  HP 69,4%  pior mesa 95%
-#   T2 5 Mímicos ................. vitória 99,2%  HP 70,6%  pior mesa 98%
-#   T3 1 Mímico + 4 Xorn ......... vitória 89,9%  HP 57,5%  pior mesa 68%
-#   T4 1 Mímico + 3 Golens Argila  vitória 96,5%  HP 63,5%  pior mesa 78%
-#   T5 1 Mímico + 5 Golens Argila  vitória 91,1%  HP 62,0%  pior mesa 42%
+#   T1 3 Mímicos ................... vitória 98,7%  HP 69,4%  pior mesa 95%
+#   T2 5 Mímicos ................... vitória 99,2%  HP 70,6%  pior mesa 98%
+#   T3 2 Mímicos + 3 Xorn .......... vitória 98,4%  HP 71,1%  pior mesa 91%
+#   T4 2 Mím. + 2 Golens + 2 Elmos   vitória 98,8%  HP 70,3%  pior mesa 91%
+#   T5 2 Mímicos + 4 Golens Argila . vitória 98,4%  HP 72,7%  pior mesa 89%
 #
-# E A QUEDA TEM UM NOME: a formação Arcana (paladino, clérigo, bruxo,
-# artífice, bardo). Ela tira 70% no T3 e 50% no T5 enquanto as outras seis
-# ficam entre 95% e 100%, e a média só desce por causa dela. O motivo está em
-# `docs/BALANCO.md`: os cinco somam 60 de dano por rodada no T5, contra 80 da
-# Clássica e da Muralha — é a única mesa de referência que leva bardo E bruxo,
-# as duas classes mexidas na rodada de balanceamento. A emboscada não ficou
-# mais forte; uma das mesas ficou mais fraca.
+# O BAÚ QUE ERA ISCA PASSA A SER DOIS, e isso não foi escolha de ficção: nos
+# três tiers que precisavam de ajuste, o lacaio que fez a conta fechar foi um
+# segundo Mímico. O catálogo de referência cresceu de quatro formações para
+# sete, e com ele entrou gente mais frágil — a emboscada anterior (1 Mímico +
+# 4 Xorn no T3, 1 + 5 Golens no T5) matava o grupo nos dois tiers: 89,9% de
+# vitória e 68% na pior mesa no T3, 91,1% e 42% no T5.
 #
-# A TABELA DE ANTES, para comparar, foi medida contra MESAS SORTEADAS — grupos
-# de cinco tirados entre as catorze classes, 40 mesas e 600 lutas por linha:
+# E A QUEDA TINHA UM NOME: a formação Arcana (paladino, clérigo, bruxo,
+# artífice, bardo), que tirava 70% no T3 e 50% no T5 enquanto as outras seis
+# ficavam entre 95% e 100%. O motivo está em `docs/BALANCO.md`: os cinco somam
+# 60 de dano por rodada no T5, contra 80 da Clássica e da Muralha — é a única
+# mesa de referência que leva bardo E bruxo, as duas classes mexidas na rodada
+# de balanceamento. A emboscada não tinha ficado mais forte; uma das mesas
+# ficou mais fraca, e é para isso que a pior formação está no alvo.
+#
+# O T4 ERA OUTRO PROBLEMA: ele já cobrava o HP certo (63%), e o que reprovava
+# era só a pior mesa, em 76%. Tirar peso deixava barato demais (1 Mímico + 2
+# Golens + 2 Gárgulas devolve 83,5% do HP) e pôr mais matava (2 Mímicos + 3
+# Golens: 51,8% de HP, pior mesa em 52%). O que cabe no meio troca um Golem
+# por dois Horrores Elmados — CR 4, CA 20, elmo de armadura que levanta
+# sozinho. O alternativo medido foi 3 Mímicos + 2 Golens + 1 Gárgula
+# (98,2% / 70,5% / 88%), sem criatura nova no elenco.
+#
+# A TABELA DE DOIS ANTES, para comparar, foi medida contra MESAS SORTEADAS —
+# grupos de cinco tirados entre as catorze classes, 40 mesas e 600 lutas:
 #
 #   T1 3 Mímicos ................. vitória 97,5%  HP 67,7%  1-em-10 87%
 #   T2 5 Mímicos ................. vitória 99,5%  HP 72,5%  1-em-10 100%
@@ -89,8 +104,8 @@ CHANCE_DE_MIMICO = 1.0
 # A TABELA ANTERIOR foi medida contra cinco cópias da mesma classe, e isso não
 # é uma mesa que existe: cinco guerreiros não têm conjurador frágil. Contra
 # mesas de verdade ela matava o grupo NOS CINCO TIERS — no tier 4, a pior mesa
-# vencia 5% das vezes. Note que quase toda linha nova tem MENOS criaturas que
-# a antiga: ela não estava só descalibrada, estava uniformemente pesada.
+# vencia 5% das vezes. Note que quase toda linha da tabela que a substituiu tem
+# MENOS criaturas: ela não estava só descalibrada, estava uniformemente pesada.
 #
 # Duas criaturas saíram, e por medida: a Naga Guardiã (CR 10, três ataques)
 # deixa um vão no tier 4 — duas devolvem 77% do HP e qualquer peso a mais
@@ -98,25 +113,24 @@ CHANCE_DE_MIMICO = 1.0
 # tier 5 com 4 cópias (95,5% / 71,2% / 87%), e fica aqui como alternativa se
 # alguém preferir variedade de criatura entre T4 e T5; perde-se margem, que é
 # a diferença entre uma incursão encerrada a cada 22 emboscadas e uma a cada
-# 83.
+# 83. As duas medidas são da régua de então (mesas sorteadas, percentil): para
+# usar qualquer uma delas hoje, remeça com `--bando`.
 NOME_DO_MIMICO = "Mímico"
 A_EMBOSCADA: dict[int, tuple[tuple[str, int], ...]] = {
     1: ((NOME_DO_MIMICO, 3),),
     2: ((NOME_DO_MIMICO, 5),),
-    # Hoje mede 89,9% / 57,5% / 68% — ver o cabeçalho. Este 1+4 já foi
-    # trocado por 2+3 e voltou, e a história vale o espaço:
-    # a troca foi decidida por RUÍDO DE MEDIÇÃO. O calibrador pedia quarenta
-    # mesas e recebia vinte (o piso de lutas por mesa mordia, e o banner
-    # anunciava as quarenta pedidas), e com vinte o percentil deste elenco
-    # mediu 75% — abaixo do piso de 80, o que o reprovou. Com as quarenta de
-    # verdade ele mede 87%, e os três critérios fecham: 97,0% de vitória,
-    # 73,9% de HP restante, 87% na mesa azarada.
+    # Este 2+3 já esteve escrito aqui, foi trocado por 1+4 e voltou — e a
+    # história vale o espaço, porque a troca foi decidida por RUÍDO DE
+    # MEDIÇÃO. O calibrador pedia quarenta mesas e recebia vinte (o piso de
+    # lutas por mesa mordia, e o banner anunciava as quarenta pedidas), e com
+    # vinte o percentil deste elenco mediu 75% — abaixo do piso de 80, o que
+    # o reprovou.
     #
     # A lição não é sobre o Mímico: é que um número medido com amostra menor
     # do que a anunciada reprova conteúdo que estava certo.
-    3: ((NOME_DO_MIMICO, 1), ("Xorn", 4)),
-    4: ((NOME_DO_MIMICO, 1), ("Golem de Argila", 3)),
-    5: ((NOME_DO_MIMICO, 1), ("Golem de Argila", 5)),
+    3: ((NOME_DO_MIMICO, 2), ("Xorn", 3)),
+    4: ((NOME_DO_MIMICO, 2), ("Golem de Argila", 2), ("Horror Elmado", 2)),
+    5: ((NOME_DO_MIMICO, 2), ("Golem de Argila", 4)),
 }
 
 
