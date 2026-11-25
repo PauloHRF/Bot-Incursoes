@@ -7,7 +7,7 @@ from typing import Any, Optional, Sequence
 import discord
 
 from . import config, retratos
-from .incursoes import DESCANSOS_DO_CAMINHO, Incursao, Sala, com_artigo
+from .incursoes import DESCANSOS_DO_CAMINHO, LIMITE_CHAMADA, Incursao, Sala, com_artigo
 from .motor import (
     ResolucaoSala,
     barra,
@@ -187,7 +187,7 @@ def exigencia_de_tier(incursao: Incursao) -> str:
     )
 
 
-def chamada(texto: str, limite: int = 400) -> str:
+def chamada(texto: str, limite: int = LIMITE_CHAMADA) -> str:
     """O gancho da lore: o primeiro parágrafo, cortado se for longo demais.
 
     O recrutamento mostra só isto; a lore inteira sai quando a run começa, para

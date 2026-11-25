@@ -72,7 +72,11 @@ def copiar_app(raiz: Path, destino: Path) -> None:
         ("data/bancos", "*.json"), ("data/incursoes", "*.json"),
     ):
         arquivos.extend((raiz / pasta).glob(padrao))
-    arquivos.extend(raiz / "tools" / n for n in ("estudio.py", "simular_combate.py", "sugestor.py"))
+    # `validar_conteudo` entra porque o estúdio confere com ele: sem ele no
+    # pacote, todo "conferir" do colaborador dava ModuleNotFoundError.
+    arquivos.extend(raiz / "tools" / n for n in (
+        "estudio.py", "simular_combate.py", "sugestor.py", "validar_conteudo.py",
+    ))
     for arquivo in sorted(set(arquivos)):
         alvo = destino / arquivo.relative_to(raiz)
         alvo.parent.mkdir(parents=True, exist_ok=True)

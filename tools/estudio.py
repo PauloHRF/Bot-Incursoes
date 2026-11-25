@@ -49,11 +49,12 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from src import bestiario, incursoes as I  # noqa: E402
-from src.rules import ATRIBUTOS, PERICIAS, TIER_MAXIMO  # noqa: E402
+from src import bestiario, incursoes as I, pacotes  # noqa: E402
+from src.rules import ATRIBUTOS, PERICIAS, TIER_MAXIMO, nivel_maximo_do_tier  # noqa: E402
 from src import classes, config  # noqa: E402
 from tools.simulacao import regua  # noqa: E402
 from tools.simulacao.estatisticas import mesa_azarada  # noqa: E402
+import validar_conteudo as V  # noqa: E402
 
 PAGINA = Path(__file__).resolve().parent / "estudio" / "index.html"
 PASTA_BANCOS = RAIZ / "data" / "bancos"
@@ -102,6 +103,26 @@ def _bancos() -> dict[str, Any]:
         },
         "problemas": problemas,
     }
+
+
+def _incursoes() -> dict[str, dict[str, Any]]:
+    """As incursões do disco como estão escritas, por id.
+
+    Cruas, e não por `para_dict`: o Estúdio abre uma CÓPIA delas para o autor
+    partir de algo pronto, e `para_dict` expandiria cada criatura chamada pelo
+    nome na ficha inteira — a cópia viria com números que deixam de
+    acompanhar o bestiário. Só entram as que o bot aceita: partir de um
+    arquivo quebrado seria começar com problema que o autor não fez.
+    """
+    saida: dict[str, dict[str, Any]] = {}
+    for arquivo in sorted(PASTA_INCURSOES.glob("*.json")):
+        try:
+            dados = json.loads(arquivo.read_text(encoding="utf-8"))
+            incursao = I.de_dict(dados)
+        except (OSError, ValueError, I.ErroDeValidacao):
+            continue
+        saida[incursao.id] = dados
+    return saida
 
 
 def _tipos_de_bicho() -> list[dict[str, Any]]:
@@ -247,7 +268,7 @@ def conteudo() -> dict[str, Any]:
     Vem do código, e não repetido no JavaScript: tema, tipo de sala e limite
     mudam aqui dentro, e uma lista copiada na página envelheceria calada.
     """
-    incursoes, ruins = I.carregar_todas_tolerante(PASTA_INCURSOES)
+    _, ruins = I.carregar_todas_tolerante(PASTA_INCURSOES)
     do_disco = _bancos()
     return {
         "temas": list(I.TEMAS),
@@ -278,7 +299,19 @@ def conteudo() -> dict[str, Any]:
             "opcoes_por_passo": I.OPCOES_POR_PASSO,
             "tier_maximo": TIER_MAXIMO,
             "desconto_armadilha": I.DESCONTO_CD_ARMADILHA,
+            # O texto legal mas longo demais para um celular: aviso, e não
+            # recusa. Os números moram no validador, que é quem avisa.
+            "aviso_titulo": V.AVISO_TITULO,
+            "aviso_descricao": V.AVISO_DESCRICAO_SALA,
+            "aviso_lore": V.AVISO_LORE,
+            "chamada": I.LIMITE_CHAMADA,
         },
+        # Até que nível cada tier aceita: é o que a dungeon diz a quem entra.
+        "nivel_maximo_do_tier": {
+            str(t): nivel_maximo_do_tier(t) for t in range(1, TIER_MAXIMO + 1)
+        },
+        # O arquivo que a página baixa: o bot lê o mesmo.
+        "formato": {"nome": pacotes.FORMATO, "versao": pacotes.VERSAO},
         "ambientes": list(bestiario.AMBIENTES),
         # Os tipos de bicho com quantas criaturas cada um tem: sem o número, o
         # autor não sabe que 'ooze' corta o bestiário para quatro.
@@ -291,13 +324,13 @@ def conteudo() -> dict[str, Any]:
             c["nome"] for c in bestiario.carregar() if c.get("nome")
         ),
         "dificuldades_de_combate": _faixas_de_combate(),
+        # Como cada faixa se escreve: a régua do resultado usa os nomes dela.
+        "rotulos_de_combate": dict(regua.ROTULOS),
         # Vazio quando a medição roda. Cheio, a página avisa no painel de
         # Combate em vez de deixar o autor descobrir no clique.
         "falta_para_simular": _falta_para_simular(),
         "bancos": do_disco["bancos"],
-        "incursoes": {i.id: i.para_dict() for i in sorted(
-            incursoes.values(), key=lambda x: x.id
-        )},
+        "incursoes": _incursoes(),
         "problemas": do_disco["problemas"] + ruins,
     }
 
@@ -306,6 +339,8 @@ def conteudo() -> dict[str, Any]:
 
 
 def _tipo_do_payload(dados: dict[str, Any]) -> str:
+    if pacotes.e_pacote(dados):
+        return "pacote"
     if isinstance(dados.get("salas"), list):
         return "banco"
     if "objetivo" in dados:
@@ -325,6 +360,8 @@ def conferir(payload: dict[str, Any]) -> dict[str, Any]:
         return {"problemas": ["não veio nenhum objeto para conferir."], "avisos": []}
 
     tipo = _tipo_do_payload(dados)
+    if tipo == "pacote":
+        return conferir_pacote(dados)
     conversor = {
         "banco": I.banco_de_dict,
         "incursao": I.de_dict,
@@ -337,10 +374,29 @@ def conferir(payload: dict[str, Any]) -> dict[str, Any]:
     return {"tipo": tipo, "problemas": [], "avisos": _avisos(tipo, dados)}
 
 
+def conferir_pacote(dados: dict[str, Any]) -> dict[str, Any]:
+    """O arquivo do Estúdio, pela MESMA conferência que o bot vai usar.
+
+    Contra os bancos e as dungeons do disco: o código de uma dungeon do
+    repositório não pode ser tomado por um arquivo novo — e o Estúdio é onde
+    o autor tem de saber disso, e não no envio.
+    """
+    bancos, _ = I.carregar_bancos_tolerante(PASTA_BANCOS)
+    r = pacotes.conferir(dados, bancos, ocupadas=set(_incursoes()))
+    avisos = list(r.avisos)
+    bruta = dados.get("incursao")
+    if isinstance(bruta, dict):
+        avisos[:0] = V.avisos(Path("incursao.json"), bruta)
+        if isinstance(bruta.get("objetivo"), dict):
+            avisos.extend(V.avisos_da_sala({**bruta["objetivo"], "id": "do chefe"}))
+    for sala in dados.get("salas") or []:
+        if isinstance(sala, dict):
+            avisos.extend(V.avisos_da_sala(sala))
+    return {"tipo": "pacote", "problemas": r.problemas, "avisos": avisos}
+
+
 def _avisos(tipo: str, dados: dict[str, Any]) -> list[str]:
     """O que passa no bot e ainda assim não faz o que o autor espera."""
-    import validar_conteudo as V
-
     if tipo == "incursao":
         saida = V.avisos(Path("incursao.json"), dados)
         _, cruzados = V.cruzar_com_o_banco(dados)

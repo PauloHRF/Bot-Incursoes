@@ -18,7 +18,8 @@ class Pacote(unittest.TestCase):
             raiz = Path(pasta) / "projeto"
             arquivos = [
                 "src/__init__.py", "src/combate/mesa.py", "tools/estudio.py",
-                "tools/simular_combate.py", "tools/sugestor.py", "tools/estudio/index.html",
+                "tools/simular_combate.py", "tools/sugestor.py", "tools/validar_conteudo.py",
+                "tools/estudio/index.html",
                 "tools/simulacao/execucao.py", "tools/simulacao/medidas.json",
                 "data/bestiario.json", "data/bancos/banco.json", "data/incursoes/a.json",
             ]
@@ -32,6 +33,42 @@ class Pacote(unittest.TestCase):
             P.copiar_app(raiz, destino)
             obtidos = sorted(p.relative_to(destino).as_posix() for p in destino.rglob("*") if p.is_file())
             self.assertEqual(obtidos, sorted(arquivos))
+
+    def test_o_estudio_copiado_abre_e_confere_sozinho(self):
+        """A cópia de verdade, e não uma lista de nomes, sobe e confere.
+
+        O caso acima confere a LISTA; ele passava enquanto o pacote saía sem o
+        `validar_conteudo.py` que o estúdio importa, e o "conferir" de todo
+        colaborador dava ModuleNotFoundError. Aqui o estúdio roda de dentro da
+        pasta copiada, sem o repositório no caminho de importação.
+        """
+        import subprocess
+
+        with tempfile.TemporaryDirectory() as pasta:
+            destino = Path(pasta) / "app"
+            P.copiar_app(RAIZ, destino)
+            roteiro = (
+                "import json, sys\n"
+                "import estudio as E\n"
+                "c = E.conteudo()\n"
+                "assert c['incursoes'] and c['bancos'], 'leu nada'\n"
+                "inc = next(iter(c['incursoes'].values()))\n"
+                "r = E.conferir({'dados': {'formato': c['formato']['nome'],\n"
+                "    'versao': c['formato']['versao'], 'organizacao': inc['organizacao'],\n"
+                "    'incursao': inc, 'salas': []}})\n"
+                "assert r['tipo'] == 'pacote', r\n"
+                "print('ok')\n"
+            )
+            # -I: sem o diretório atual nem o site-packages do usuário no
+            # caminho, como o atalho do pacote roda o estúdio.
+            saida = subprocess.run(
+                [sys.executable, "-I", "-c",
+                 f"import sys; sys.path[:0] = [{str(destino / 'tools')!r}, {str(destino)!r}]\n"
+                 + roteiro],
+                capture_output=True, text=True, encoding="utf-8", cwd=pasta,
+            )
+            self.assertEqual(saida.returncode, 0, saida.stderr[-2000:])
+            self.assertIn("ok", saida.stdout)
 
     def test_wheel_instala_purelib_no_caminho_de_importacao(self):
         with tempfile.TemporaryDirectory() as pasta:

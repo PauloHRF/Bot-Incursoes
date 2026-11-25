@@ -143,6 +143,11 @@ LIMITE_TITULO = 256
 LIMITE_DESCRICAO = 4096
 LIMITE_CAMPO = 1024
 
+# O anúncio do recrutamento mostra só o primeiro parágrafo da lore, cortado
+# neste tamanho (`embeds.chamada`). Mora aqui, junto dos outros tetos de
+# texto, para o Estúdio mostrar o mesmo corte na prévia sem copiar o número.
+LIMITE_CHAMADA = 400
+
 # Quantos golpes uma criatura pode dar por rodada, e quantos alvos a habilidade
 # dela pode pegar de uma vez.
 MAX_ATAQUES_DO_MONSTRO = 8

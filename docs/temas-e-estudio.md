@@ -458,65 +458,65 @@ Python sem ele, tudo funciona menos os dois botões que custam mais caro para
 alcançar — então o estúdio avisa no terminal ao subir e no painel de Combate,
 antes do clique, em vez de deixar o erro aparecer no fim.
 
-A tela simples abre em **Escolher → Editar → Testar**, uma etapa de cada
-vez. Escolher uma sala ou criar uma nova abre a edição; a última etapa traz
-a prévia e a validação, ou os parâmetros e resultados do combate. Baixar
-exporta o banco completo. As alterações e parâmetros sobrevivem à troca de
-etapa. Campos menos usados ficam nas ferramentas avançadas.
+O Estúdio escreve **uma coisa: a dungeon**. Até novembro de 2026 ele era uma
+bancada de editar o banco de salas, com um modo simples por cima e quatro
+"lugares" no modo avançado; o banco virou o centro, e escrever a dungeon — que
+é o que o colaborador quer — ficava de fora, em JSON à mão. Agora existe só o
+caminho da dungeon, em cinco etapas, uma de cada vez:
 
-**Ferramentas avançadas** abre os **quatro lugares** da bancada completa:
-escrever um Evento, montar um combate, montar a dungeon e olhar o que já
-existe são quatro trabalhos, com listas, campos e ferramentas diferentes.
-Quem vai escrever um Evento não precisa ver a tabela de criaturas, e quem
-monta um Combate não precisa da CD.
+1. **Escolher** — os rascunhos deste navegador, **Nova dungeon**, **Abrir
+   arquivo…** (um arquivo baixado antes, para continuar) e **Partir de uma
+   dungeon pronta**, que abre uma *cópia* de uma incursão do repositório com
+   código próprio; a original não muda.
+2. **A dungeon** — nome, Organização, tier, tamanho, lore de abertura, epílogo,
+   recompensa, pontos e capa. O código (`id`) sai do nome e fica fixo no
+   primeiro download, porque é por ele que o reenvio atualiza a mesma dungeon.
+   A prévia imita os três cartões de `src/embeds.py` — o anúncio do
+   recrutamento (só o primeiro parágrafo, cortado em `LIMITE_CHAMADA`), a
+   abertura e o epílogo.
+3. **O chefe** — o nome e o texto da sala final e o bando, pelo nome do
+   bestiário. Criatura com números escritos à mão aparece como "ficha
+   própria"; trocar o nome dela por um do bestiário troca a ficha pela do
+   livro. **Simular o chefe** usa o tier da dungeon — não há seletor de tier
+   nem de nível, porque o chefe é sempre lutado no tier dela e a ficha não
+   muda dentro do tier. O resultado mostra a taxa, as três faixas da régua
+   (`tools/simulacao/regua.py`) com a marca de onde a luta caiu, o próximo
+   passo (endurecer, aliviar, ajustar) e a pior formação. Mexer no bando ou no
+   tier deixa o resultado esmaecido, com o aviso de simular de novo.
+4. **O caminho** — por enquanto só mostra as salas que podem cair (o banco da
+   Organização, ou o filtro herdado da original). Escolher os temas e as salas
+   é a próxima fatia.
+5. **Revisar e baixar** — a conferência do bot, o resumo do que a dungeon tem,
+   o que mudou em relação ao ponto de partida (a original copiada ou o arquivo
+   aberto) e o download.
 
-1. **Salas de teste** — Evento, Tesouro e Armadilha. A lista lateral traz só
-   elas, o formulário traz a dificuldade, a CD, os sucessos e as perícias, e
-   a ajuda recolhida em **Regras desta sala** diz o que ela cobra do grupo:
-   a Armadilha desconta
-   `DESCONTO_CD_ARMADILHA` da CD escrita, o Tesouro acorda os Mímicos ao
-   falhar, o Evento premia quem passa e castiga quem falha. Esses números
-   vêm das constantes do bot, não escritos na página. **Virar combate** leva
-   a sala para o outro lugar e limpa o que não pertence ao tipo novo.
-2. **Combates** — a lista traz só as salas de Combate. **Editar sala** mostra a
-   tabela de criaturas: nome (dos 385 do bestiário, oferecidos pelo campo),
-   quantas, tier e variante por tema. **Simular** abre a medição na mesma
-   sala, sem rolar até o fim do formulário: escolha tier, nível, variante e
-   tamanhos do grupo. **Opções avançadas** reúne composição, repetições e
-   semente. As sete formações predefinidas mantêm frente, cura e dano;
-   a semente muda as rolagens. **Ver grupos usados** lista as composições. O motor do bot mostra
-   vitória, rodadas e caídos por tamanho de grupo; **Sugerir criaturas**
-   procura um bando na dificuldade pedida e aplica a
-   sugestão ao tier e à variante escolhidos. O máximo de criaturas é cobrado
-   **por bando** — por tier, e por variante de tema —, e não pela soma do que
-   está escrito na sala.
-3. **Montar dungeon** — o tamanho, os temas e os IDs do filtro, com o pool
-   que eles deixam medido contra o que o sorteio precisa para terminar e para
-   manter as portas. **Partir de uma incursão** carrega o que uma incursão da
-   mesma Organização usa hoje; **Copiar filtro JSON** entrega o trecho pronto
-   para o arquivo da incursão.
-4. **Inspecionar** — o banco inteiro numa tabela: tipo, temas, o que tem
-   dentro de cada sala (a CD da Armadilha já com o desconto, os tiers escritos
-   de cada combate) e os pontos. Filtra por tipo e por tema, e clicar numa
-   sala a abre no lugar dela. No topo, o que o banco consegue montar em cada
-   tamanho e a conferência do banco pelo validador do bot.
+**O arquivo que sai é um só**, no formato de `src/pacotes.py`:
 
-Fora dos lugares fica o arquivo: **Abrir JSON** importa um banco do disco,
-**Baixar JSON** exporta o banco completo para `data/bancos/` — preservando os
-campos extras e os nomes do bestiário, sem expandir as fichas das criaturas —
-e **Restaurar original** descarta o rascunho após confirmação.
+```json
+{
+  "formato": "incursao-do-estudio",
+  "versao": 1,
+  "organizacao": "Vórtice Oculto",
+  "incursao": { "...": "o mesmo formato de data/incursoes" },
+  "salas": []
+}
+```
 
-Rascunhos ficam no armazenamento local do navegador, separados por banco, e
-reabrem no lugar da sala que estava aberta. Não existe estado de "JSON pela
-metade": cada campo escreve direto no objeto, então trocar de sala, trocar de
-banco e baixar nunca ficam bloqueados. É possível baixar um rascunho com erros
-de conteúdo; confira o banco antes de colocá-lo no bot.
+Um arquivo, e não incursão mais banco, porque é ele que o autor vai enviar
+pelo Discord sem depender de ninguém: dois arquivos que precisam casar é
+convite a mandar um sem o outro, e devolver o banco inteiro apagaria o
+trabalho de outro autor. `salas` leva só as salas *novas*. A conferência desse
+arquivo mora em `src/pacotes.py`, e não no Estúdio, para a página e o bot
+dizerem a mesma coisa; ela cobra o que `de_dict` cobra, mais três regras que
+são só deste arquivo — o tier é obrigatório (a falta dele valeria "aberta a
+todos"), o código não pode ser de uma dungeon que já existe, e sala nova não
+pode tomar id do banco. Os avisos de texto continuam vindo de
+`tools/validar_conteudo.py`.
 
-Atalhos: **Ctrl+Enter** confere a sala aberta e **Ctrl+S** baixa o banco
-completo (no macOS, use Cmd). A ajuda de formato fica recolhida junto à prévia.
-ID, pontos, recompensa e imagem ficam em **Mais opções** do formulário.
-O [pacote portátil](estudio-portatil.md) inclui Python e dependências para
-entregar o Estúdio em um ZIP privado, sem instalar nada na máquina do autor.
+Rascunhos ficam no armazenamento local do navegador (`incursoes.estudio.v3.*`),
+um por dungeon. Sem armazenamento, o Estúdio avisa e o download continua
+funcionando. **Ctrl+S** baixa o arquivo. O [pacote portátil](estudio-portatil.md)
+inclui Python e dependências para entregar o Estúdio num ZIP privado.
 
 Nas simulações, a conexão SQLite descartável reutiliza a parte fixa das
 fichas entre leituras. HP e THP continuam vindo do estado atual; alterações

@@ -106,8 +106,8 @@ Não é formalidade: o bot pula o arquivo inválido e segue com o resto, então 
 dungeon do autor é a que **não existe** — e o aviso sai no log e na resposta do
 `/incursao recarregar`, longe de quem escreveu.
 
-Para escrever com a bancada aberta — sala, filtro da dungeon, medição e
-exportação na mesma tela:
+Para escrever a dungeon com o Estúdio aberto — a lore, o chefe com a
+simulação no tier dela, e o arquivo pronto para enviar:
 
 ```bash
 python tools/estudio.py
@@ -117,13 +117,13 @@ Ele sobe em `127.0.0.1` e usa o validador e o motor de combate do próprio bot,
 então passar ali é passar no bot. Não escreve em `data/`: devolve o arquivo
 para você mandar.
 
-A tela simples segue **Escolher → Editar → Testar**, mostrando uma etapa
-por vez. **Ferramentas avançadas** abre o editor completo, filtros de dungeon,
-inspeção e sugestão de criaturas. Os rascunhos ficam no navegador;
-**Baixar JSON** exporta o banco completo, preservando referências ao bestiário
-e campos extras. As simulações usam sete formações fixas com frente, cura
-e dano, para grupos de 5 ou 6; **Ver grupos usados** mostra quem participou
-da medição.
+A página segue **Escolher → A dungeon → O chefe → O caminho → Revisar e
+baixar**, uma etapa por vez. O chefe é simulado no tier da dungeon, contra
+sete formações fixas com frente, cura e dano. Os rascunhos ficam no
+navegador; **Baixar arquivo** gera um arquivo só, com a dungeon e as salas
+novas, conferido pela mesma régua que o bot usa (`src/pacotes.py`). O
+porquê de cada escolha está na seção 11 de
+[`docs/temas-e-estudio.md`](docs/temas-e-estudio.md).
 
 Para entregar a ferramenta pronta a outra pessoa, gere o
 [Estúdio portátil para Windows](docs/estudio-portatil.md) com

@@ -1,55 +1,42 @@
 "use strict";
 
+/* O Estúdio escreve UMA coisa: a dungeon. Cinco etapas, uma de cada vez —
+   escolher, a dungeon, o chefe, o caminho, revisar e baixar —, e no fim um
+   arquivo só, que é o mesmo que o bot vai receber pelo Discord.
+
+   O rascunho é o próprio arquivo (`rascunho().pacote`): cada campo escreve
+   direto nele, então não existe "aplicar" nem estado pela metade. O que
+   vale para o jogo — a validação, a simulação, os limites, as listas — vem
+   do servidor, que importa o bot. A página não tem regra própria. */
+
 const $ = id => document.getElementById(id);
 const copiar = valor => JSON.parse(JSON.stringify(valor));
 const objeto = valor => valor !== null && typeof valor === "object" && !Array.isArray(valor);
 const texto = valor => valor == null ? "" : String(valor);
-const bonito = valor => JSON.stringify(valor, null, 2);
 const normalizar = valor => texto(valor).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const ns = "incursoes.estudio.v2.";
-let C, banco, origem, arquivo, indice = -1;
-/* Os quatro lugares da bancada, e qual sala esta aberta em cada um.
-   `bancadaEm` e o ultimo lugar de ESCRITA (Teste ou Combate): quem vai
-   montar a dungeon e volta tem de reencontrar a sala onde a deixou. */
-let lugar = "Teste", bancadaEm = "Teste";
-const selecao = {Teste: -1, Combate: -1};
-// Familia, resumo e desconto de CD de cada tipo, vindos de /api/conteudo.
-let FAMILIA = {}, RESUMO = {}, DESCONTO = {};
-const tiposVisiveis = new Set(), temasVisiveis = new Set();
-// As linhas da tabela de criaturas, enquanto a sala esta aberta.
-let linhasAtuais = null, linhasDoIndice = -1;
-let originais = {}, sequencia = 0, revisao = 0, medindo = false, sugerindo = false;
-let medidaContexto, sugestaoContexto, timerPool, timerConferir, timerToast;
-let pedidoConferir = 0, pedidoPool = 0, armazenamentoFalhou = false;
-let avancado = new URLSearchParams(location.search).get("modo") === "avancado";
+const pct = taxa => taxa == null ? "—" : `${Math.round(taxa * 100)}%`;
+const NS = "incursoes.estudio.v3.";
+const ETAPAS = ["Escolher", "Dungeon", "Chefe", "Caminho", "Revisar"];
+const TITULOS = {
+  Escolher: "Escolha a dungeon", Dungeon: "A dungeon", Chefe: "O chefe",
+  Caminho: "O caminho", Revisar: "Revisar e baixar",
+};
+const PROXIMO = {Dungeon: "Próximo: o chefe →", Chefe: "Próximo: o caminho →", Caminho: "Próximo: revisar →"};
+// Lutas por tamanho de grupo. Pouco para virar veredito final, o bastante
+// para o autor ajustar o bando sem esperar meio minuto a cada tentativa.
+const REPETICOES = 240;
+
+let C;                        // /api/conteudo
+let rascunhos = {};           // chave -> rascunho
+let chave = null;             // o rascunho aberto
 let etapa = "Escolher";
+let abaPrevia = "anuncio";
+let linhasChefe = null, linhasDe = null;
+let simulando = false, relogio = null;
+let armazenamentoFalhou = false, timerToast, pedidoConferir = 0, pedidoCaminho = 0;
+const BESTIARIO = new Set();
 
-function atualizarFluxo() {
-  document.body.dataset.modo = avancado ? "avancado" : "guiado";
-  document.body.dataset.etapa = etapa;
-  $("btModo").textContent = avancado ? "Voltar ao modo simples" : "Ferramentas avançadas";
-  const temSala = !!sala();
-  document.querySelectorAll(".passos [data-etapa]").forEach(botao => {
-    botao.disabled = botao.dataset.etapa !== "Escolher" && !temSala;
-    if (botao.dataset.etapa === etapa) botao.setAttribute("aria-current", "step");
-    else botao.removeAttribute("aria-current");
-  });
-  $("tituloEtapa").textContent = {Escolher: "Escolha uma sala", Editar: "Edite a sala", Testar: "Confira o resultado"}[etapa];
-  $("btFluxoVoltar").hidden = etapa === "Escolher";
-  $("btFluxoProximo").disabled = !temSala;
-  $("btFluxoProximo").textContent = etapa === "Escolher" ? "Editar selecionada →" : etapa === "Editar" ? "Validar e testar →" : "↓ Baixar JSON";
-  $("saidaRevisao").hidden = avancado || etapa !== "Testar" || !$("saidaRevisao").hasChildNodes();
-  if (!avancado) secaoSala(etapa === "Testar" && familia(sala()?.tipo) === "combate" ? "Simulacao" : "Edicao");
-}
-
-function irParaEtapa(nome, foco = true) {
-  if (nome !== "Escolher" && !sala()) return;
-  etapa = nome;
-  if (nome === "Testar") $("saidaRevisao").replaceChildren();
-  atualizarFluxo();
-  if (nome === "Testar") conferir();
-  if (foco) $("tituloEtapa").focus();
-}
+/* -------------------------------------------------------------- miúdos */
 
 function no(tag, classe, conteudo) {
   const n = document.createElement(tag);
@@ -63,16 +50,6 @@ function aviso(mensagem) {
   $("toast").hidden = false;
   timerToast = setTimeout(() => { $("toast").hidden = true; }, 4000);
 }
-function lerLocal(chave) {
-  try { return JSON.parse(localStorage.getItem(ns + chave)); } catch { return null; }
-}
-function gravarLocal(chave, valor) {
-  try { localStorage.setItem(ns + chave, JSON.stringify(valor)); }
-  catch {
-    if (!armazenamentoFalhou) aviso("Não foi possível guardar o rascunho. Baixe o JSON para salvar.");
-    armazenamentoFalhou = true;
-  }
-}
 async function api(url, dados) {
   const resposta = await fetch(url, dados === undefined ? {} : {
     method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(dados),
@@ -85,26 +62,20 @@ function recados(id, r, sucesso = "Nenhum problema encontrado.") {
   const caixa = $(id);
   caixa.replaceChildren();
   const problemas = r.problemas || [], avisos = r.avisos || [];
-  caixa.className = "recados " + (r.erro || problemas.length ? "erro" : avisos.length ? "aviso" : "ok");
+  caixa.className = caixa.className.replace(/\b(erro|aviso|ok)\b/g, "").trim()
+    + " " + (r.erro || problemas.length ? "erro" : avisos.length ? "aviso" : "ok");
   caixa.hidden = false;
-  caixa.append(no("strong", "", r.erro || (problemas.length ? `${problemas.length} problema(s)` : avisos.length ? `${avisos.length} aviso(s)` : sucesso)));
+  caixa.append(no("strong", "", r.erro || (problemas.length
+    ? `${problemas.length} problema(s) — o bot recusa a dungeon assim`
+    : avisos.length ? `${avisos.length} aviso(s) — o bot aceita, mas vale olhar` : sucesso)));
   const mensagens = [...problemas, ...avisos];
   if (mensagens.length) {
     const lista = no("ul");
-    mensagens.slice(0, 3).forEach(m => lista.append(no("li", "", m)));
+    mensagens.forEach(m => lista.append(no("li", "", m)));
     caixa.append(lista);
-    if (mensagens.length > 3) {
-      const detalhes = no("details"), resto = no("ul");
-      detalhes.append(no("summary", "", `Ver mais ${mensagens.length - 3}`));
-      mensagens.slice(3).forEach(m => resto.append(no("li", "", m)));
-      detalhes.append(resto); caixa.append(detalhes);
-    }
   }
 }
-function preencher(id, itens, escolhido) {
-  preencherSelect($(id), itens.map(i => Array.isArray(i) ? i : [i, i]), texto(escolhido));
-}
-function preencherSelect(alvo, pares, escolhido) {
+function preencher(alvo, pares, escolhido) {
   alvo.replaceChildren();
   pares.forEach(([valor, rotulo]) => {
     const o = document.createElement("option");
@@ -113,1079 +84,815 @@ function preencherSelect(alvo, pares, escolhido) {
     alvo.append(o);
   });
 }
-function sala() { return indice < 0 ? undefined : banco?.salas[indice]; }
-function contexto() {
-  return JSON.stringify([origem, indice, revisao, $("fTierSim").value, $("fTemaSim").value,
-    $("fClasse").value, $("fNivel").value, $("fReps").value, $("fSemente").value,
-    [...document.querySelectorAll('[name="grupo"]:checked')].map(n => n.value)]);
-}
-function guardar() {
-  if (!banco || !origem) return;
-  gravarLocal(origem, {banco, arquivo, indice, original: originais[origem]});
-  gravarLocal("ultimo", origem);
-  $("estado").textContent = armazenamentoFalhou ? "Baixe o JSON para salvar" : "Rascunho neste navegador";
-}
-/* A conferencia da FORMA de um arquivo aberto do disco. O formulario nao
-   deixa o autor escrever um banco torto, mas `importar` abre o que vier, e
-   sem isto um arquivo qualquer virava `banco` e quebrava a tela em vez de
-   avisar. */
-function estrutura(dados, bancoInteiro) {
-  if (!objeto(dados)) throw new Error("Use um objeto JSON entre { e }.");
-  if (bancoInteiro && (typeof dados.organizacao !== "string" || !Array.isArray(dados.salas) || !dados.salas.every(objeto))) {
-    throw new Error('O banco precisa de "organizacao" e de uma lista "salas" com objetos.');
-  }
-}
-
-/* ------------------------------------------------- tipos e famílias
-
-   A familia de um tipo diz o que o autor FAZ ao escrever a sala, e e o que
-   divide a bancada em lugares. Ela vem do servidor junto com os tipos: um
-   tipo novo no bot aparece aqui sem ninguem lembrar de mexer na pagina.
-   Tipo desconhecido cai em "teste" para a sala continuar visivel e
-   editavel — sumir da tela seria pior do que aparecer no lugar errado. */
-function familia(tipo) { return FAMILIA[tipo] || "teste"; }
-function lugarDoTipo(tipo) { return familia(tipo) === "combate" ? "Combate" : "Teste"; }
-function tipoNovo(fam) { return (C.sala_nova || {})[fam]; }
-function tiposDoLugar(atual) {
-  const quero = bancadaEm === "Combate" ? ["combate"] : ["teste"];
-  const lista = C.tipos.filter(t => quero.includes(familia(t)));
-  // O tipo da sala aberta entra sempre, mesmo fora da familia do lugar: um
-  // select que nao tem o valor da sala mostra OUTRA coisa e mente calado.
-  if (atual && !lista.includes(atual)) lista.unshift(atual);
-  return lista;
-}
-
-function fichas(alvo, lista, marcados, aoTrocar) {
-  const caixa = $(alvo);
-  caixa.replaceChildren();
-  lista.forEach(item => {
-    const b = no("button", "ficha", item);
-    b.type = "button";
-    b.setAttribute("aria-pressed", marcados.includes(item) ? "true" : "false");
-    b.addEventListener("click", () => {
-      const tem = marcados.includes(item);
-      aoTrocar(item, !tem);
-      alterado();
-    });
-    caixa.append(b);
-  });
-}
-
 function numero(id) {
   const bruto = $(id).value.trim();
   if (bruto === "") return null;
   const n = Number(bruto);
   return Number.isFinite(n) ? n : null;
 }
-
-/* As criaturas em LINHAS, e nao aninhadas: `monstros`, `monstros_por_tier` e
-   `monstros_por_tema` sao a mesma coisa vista de tres jeitos, e uma tabela de
-   (criatura, quantas, tier, tema) escreve as tres sem o autor saber que elas
-   existem. A volta — de linhas para os tres campos — fica em `montarMonstros`. */
-function linhasDaSala(s) {
-  const saida = [];
-  (s.monstros || []).forEach(m => saida.push({...m, tier: "", tema: ""}));
-  Object.entries(s.monstros_por_tier || {}).forEach(([tier, lista]) =>
-    (lista || []).forEach(m => saida.push({...m, tier, tema: ""})));
-  Object.entries(s.monstros_por_tema || {}).forEach(([tema, porTier]) =>
-    Object.entries(porTier || {}).forEach(([tier, lista]) =>
-      (lista || []).forEach(m => saida.push({...m, tier, tema}))));
-  return saida;
+function quando(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("pt-BR", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"});
 }
 
-function montarMonstros(s, linhas) {
-  delete s.monstros; delete s.monstros_por_tier; delete s.monstros_por_tema;
-  linhas.forEach(l => {
-    const nome = texto(l.nome).trim();
-    if (!nome) return;
-    const bicho = {nome};
-    const q = Number(l.quantidade);
-    if (Number.isFinite(q) && q > 1) bicho.quantidade = q;
-    if (!l.tier) { (s.monstros ||= []).push(bicho); return; }
-    if (!l.tema) {
-      ((s.monstros_por_tier ||= {})[l.tier] ||= []).push(bicho);
-      return;
-    }
-    (((s.monstros_por_tema ||= {})[l.tema] ||= {})[l.tier] ||= []).push(bicho);
-  });
-}
+/* ----------------------------------------------------------- rascunhos */
 
-function desenharCriaturas(reconstruir = false) {
-  const s = sala();
-  const corpo = $("linhasCriaturas");
-  corpo.replaceChildren();
-  if (!s) return;
-  if (reconstruir || linhasAtuais === null || linhasDoIndice !== indice) {
-    linhasAtuais = linhasDaSala(s);
-    linhasDoIndice = indice;
+function rascunho() { return chave ? rascunhos[chave] : undefined; }
+function inc() { return rascunho()?.pacote.incursao; }
+function chefe() { return inc()?.objetivo; }
+
+function lerLocal(nome) {
+  try { return JSON.parse(localStorage.getItem(NS + nome)); } catch { return null; }
+}
+function gravarLocal(nome, valor) {
+  try { localStorage.setItem(NS + nome, JSON.stringify(valor)); return true; }
+  catch {
+    if (!armazenamentoFalhou) aviso("Não foi possível guardar o rascunho neste navegador. Baixe o arquivo para não perder o trabalho.");
+    armazenamentoFalhou = true;
+    return false;
   }
-  const linhas = linhasAtuais;
-  const temas = Array.isArray(s.temas) ? s.temas : [];
-  linhas.forEach((l, i) => {
-    const tr = no("tr");
-
-    const nome = no("td");
-    const campoNome = document.createElement("input");
-    campoNome.type = "text"; campoNome.value = texto(l.nome);
-    campoNome.setAttribute("list", "listaCriaturas");
-    campoNome.addEventListener("input", () => { linhas[i].nome = campoNome.value; gravarLinhas(linhas); });
-    nome.append(campoNome); tr.append(nome);
-
-    const quantas = no("td", "n");
-    const campoQ = document.createElement("input");
-    campoQ.type = "number"; campoQ.min = "1"; campoQ.max = String(C.limites.inimigos);
-    campoQ.value = String(l.quantidade || 1);
-    campoQ.addEventListener("input", () => { linhas[i].quantidade = campoQ.value; gravarLinhas(linhas); });
-    quantas.append(campoQ); tr.append(quantas);
-
-    const tier = no("td");
-    const campoT = document.createElement("select");
-    preencherSelect(campoT, [["", "qualquer"]].concat(
-      Array.from({length: C.limites.tier_maximo}, (_, n) => [String(n + 1), `tier ${n + 1}`])), texto(l.tier));
-    campoT.addEventListener("change", () => { linhas[i].tier = campoT.value; gravarLinhas(linhas); });
-    tier.append(campoT); tr.append(tier);
-
-    const tema = no("td");
-    const campoTema = document.createElement("select");
-    preencherSelect(campoTema, [["", "padrão"]].concat(temas.map(t => [t, t])), texto(l.tema));
-    campoTema.disabled = !l.tier || !temas.length;
-    campoTema.title = temas.length ? "" : "A sala precisa ter tema para ter variante.";
-    campoTema.addEventListener("change", () => { linhas[i].tema = campoTema.value; gravarLinhas(linhas); });
-    tema.append(campoTema); tr.append(tema);
-
-    const fora = no("td");
-    const botao = no("button", "botao discreto pequena", "×");
-    botao.type = "button"; botao.title = "Remover";
-    botao.addEventListener("click", () => { linhas.splice(i, 1); gravarLinhas(linhas); desenharCriaturas(); });
-    fora.append(botao); tr.append(fora);
-
-    corpo.append(tr);
-  });
-  contarBando();
 }
-
-/* O limite de criaturas é POR BANDO — o que entra na mesa de uma vez —, e
-   não a soma do que está escrito na sala: o bot cobra `MAX_INIMIGOS` por
-   tier (e por variante de tema), porque é um tier por incursão. Somando os
-   tiers, o estúdio pintava de vermelho uma sala que ele mesmo aprova em
-   /api/conferir, e mandava o autor apagar criatura que não sobrava.
-
-   Linha sem nome não conta: é um campo em branco esperando o autor, e
-   `montarMonstros` também a ignora ao escrever no objeto. */
-function bandos() {
-  const contagem = new Map();
-  (linhasAtuais || []).forEach(l => {
-    if (!texto(l.nome).trim()) return;
-    const chave = l.tier ? `tier ${l.tier}${l.tema ? ` · ${l.tema}` : ""}` : "sem tier";
-    contagem.set(chave, (contagem.get(chave) || 0) + Math.max(1, Number(l.quantidade) || 1));
-  });
-  return [...contagem].sort((a, b) => b[1] - a[1]);
+function guardar() {
+  if (!C) return;
+  gravarLocal("rascunhos", rascunhos);
+  if (chave) gravarLocal("ultimo", chave);
+  $("estado").textContent = armazenamentoFalhou
+    ? "Baixe o arquivo para não perder o trabalho" : "Rascunho salvo neste navegador";
+  $("estado").classList.toggle("falhou", armazenamentoFalhou);
 }
-
-function contarBando() {
-  const todos = bandos(), teto = C.limites.inimigos;
-  const recado = $("recadoCriaturas");
-  if (!todos.length) {
-    recado.textContent = "Sala de Combate sem criatura não passa na validação.";
-    recado.classList.remove("invalido");
-    return;
-  }
-  const [maiorNome, maior] = todos[0], estoura = maior > teto;
-  const excesso = estoura ? ` — o máximo é ${teto} por bando` : "";
-  recado.textContent = todos.length > 1
-    ? `${todos.length} bandos · o maior tem ${maior} criatura(s) em ${maiorNome}${excesso}.`
-    : `${maior} criatura(s) no bando${estoura ? ` — o máximo é ${teto}` : ""}.`;
-  recado.classList.toggle("invalido", estoura);
+/* Rascunho que não tem a forma de um rascunho não abre: um navegador com
+   lixo de outra versão não pode quebrar a página na cara do autor. */
+function rascunhoValido(r) {
+  return objeto(r) && objeto(r.pacote) && objeto(r.pacote.incursao) && objeto(r.pacote.incursao.objetivo);
 }
-
-function gravarLinhas(linhas) {
-  const s = sala();
-  if (!s) return;
-  montarMonstros(s, linhas);
-  contarBando();
-  alterado();
+function carregarRascunhos() {
+  const salvos = lerLocal("rascunhos");
+  rascunhos = {};
+  if (objeto(salvos)) Object.entries(salvos).forEach(([k, r]) => { if (rascunhoValido(r)) rascunhos[k] = r; });
 }
-
-/* ------------------------------------------------------- o formulário */
-
-function mostrarEditor() {
-  const s = sala();
-  if (linhasDoIndice !== indice) { linhasAtuais = null; linhasDoIndice = -1; }
-  const form = $("formSala");
-  form.hidden = !s;
-  if (!s) { $("dicaTipo").textContent = ""; previa(); controles(); return; }
-
-  $("fId").value = texto(s.id);
-  $("fNome").value = texto(s.nome);
-  $("fDesc").value = texto(s.descricao);
-  $("fPontos").value = s.pontos_organizacao ?? 0;
-  $("fRecompensa").value = texto(s.recompensa);
-  $("fImagem").value = texto(s.imagem);
-  preencherSelect($("fTipo"), tiposDoLugar(s.tipo).map(t => [t, t]), s.tipo);
-  preencherSelect($("fDif"), C.dificuldades.map(d => [d, d]), texto(s.dificuldade) || C.dificuldades[1]);
-  $("fCd").value = s.cd ?? "";
-  $("fAlvo").value = s.alvo_progresso ?? "";
-  $("dicaTipo").textContent = RESUMO[s.tipo] || "";
-
-  const temas = Array.isArray(s.temas) ? s.temas : [];
-  fichas("fichasSala", C.temas, temas, (tema, ligar) => {
-    const atual = new Set(Array.isArray(s.temas) ? s.temas : []);
-    ligar ? atual.add(tema) : atual.delete(tema);
-    s.temas = C.temas.filter(t => atual.has(t));
-    if (!s.temas.length) delete s.temas;
-    mostrarEditor();
-  });
-  const pericias = Array.isArray(s.pericias) ? s.pericias : [];
-  fichas("fichasPericias", C.pericias, pericias, (pericia, ligar) => {
-    const atual = new Set(Array.isArray(s.pericias) ? s.pericias : []);
-    ligar ? atual.add(pericia) : atual.delete(pericia);
-    s.pericias = C.pericias.filter(p => atual.has(p));
-    mostrarEditor();
-  });
-
-  contadores();
-  $("blocoTeste").hidden = familia(s.tipo) !== "teste";
-  $("blocoCriaturas").hidden = familia(s.tipo) !== "combate";
-  if (familia(s.tipo) === "combate") desenharCriaturas();
-  previa(); controles();
-}
-
-/* O formulario escreve direto no objeto, campo a campo. Nao ha "aplicar":
-   o que esta na tela e o que esta no banco, sempre. */
-function contadores() {
-  const marcar = (alvo, quantos, aviso, teto) => {
-    $(alvo).textContent = quantos;
-    $(alvo).classList.toggle("invalido", quantos > teto);
-    $(alvo).classList.toggle("atencao", quantos > aviso && quantos <= teto);
+function novoRascunho(incursao, base = null, idFixo = false, salas = []) {
+  const agora = new Date().toISOString();
+  return {
+    pacote: {
+      formato: C.formato.nome, versao: C.formato.versao,
+      organizacao: texto(incursao.organizacao), incursao, salas,
+    },
+    base, idFixo, medida: null, criado: agora, atualizado: agora,
   };
-  marcar("cNome", $("fNome").value.length, 80, C.limites.titulo);
-  marcar("cDesc", $("fDesc").value.length, 600, C.limites.descricao);
-  $("tetoNome").textContent = C.limites.titulo;
-  $("tetoDesc").textContent = C.limites.descricao;
-  $("dicaDesc").textContent = `aviso em 600 · o Discord recusa acima de ${C.limites.descricao}`;
-  const s = sala(), desconto = s ? (DESCONTO[s.tipo] || 0) : 0, cd = numero("fCd");
-  $("dicaCd").textContent = desconto && cd
-    ? `CD na mesa: ${Math.max(1, cd - desconto)} (−${desconto}).` : "";
 }
-
-function lerCampo(id, aplicar) {
-  $(id).addEventListener("input", () => {
-    const s = sala();
-    if (!s) return;
-    aplicar(s);
-    contadores();
-    alterado();
-  });
-}
-
-function pronto() { return !!banco; }
-
-// O texto que o HTML traz, guardado antes de `controles` escrever por cima.
-const SEM_COMBATE = $("avisoCombate").textContent;
-
-function controles() {
-  const temSala = !!sala(), pode = !!banco;
-  ["btBaixar", "btConferirBanco", "btNova", "btCopiarFiltro"].forEach(id => { $(id).disabled = !pode; });
-  ["btDuplicar", "btExcluir", "btConferir", "btVirar"].forEach(id => { $(id).disabled = !pode || !temSala; });
-  $("btRecarregar").disabled = !banco;
-  $("btVirar").textContent = bancadaEm === "Combate" ? "Virar sala de teste" : "Virar combate";
-  const combate = temSala && familia(sala().tipo) === "combate";
-  /* Falta de dependência ganha a frente do aviso de sala: sem o motor, não
-     adianta o autor abrir um combate — os dois botões continuam parados, e
-     ele tem de saber por quê antes de clicar. */
-  const falta = C?.falta_para_simular || "";
-  $("avisoCombate").textContent = falta || SEM_COMBATE;
-  $("avisoCombate").hidden = lugar !== "Combate" || (!falta && combate);
-  $("btMedir").disabled = !pode || !combate || medindo || !!falta;
-  $("btSugerir").disabled = !pode || !combate || sugerindo || !!falta;
-  document.querySelectorAll(".usar-sugestao").forEach(n => { n.disabled = !pode || sugestaoContexto !== contexto(); });
-  atualizarFluxo();
-}
-
-/* ----------------------------------------------------- os quatro lugares */
-
-function indicesDoLugar(nome = bancadaEm) {
-  if (!banco) return [];
-  return banco.salas.reduce((saida, s, i) => {
-    if (lugarDoTipo(s.tipo) === nome) saida.push(i);
-    return saida;
-  }, []);
-}
-
-let secaoCombate = "Edicao";
-function secaoSala(nome, foco = false) {
-  const combate = bancadaEm === "Combate";
-  if (combate) secaoCombate = nome;
-  const atual = combate ? secaoCombate : "Edicao";
-  $("abasSala").hidden = !combate;
-  document.querySelectorAll("[data-secao]").forEach(botao => {
-    const ativo = botao.dataset.secao === atual;
-    botao.setAttribute("aria-selected", ativo); botao.tabIndex = ativo ? 0 : -1;
-    $("painel" + botao.dataset.secao).hidden = !ativo;
-    if (ativo && foco) botao.focus();
-  });
-  if (combate) {
-    $("painelEdicao").setAttribute("role", "tabpanel");
-    $("painelEdicao").setAttribute("aria-labelledby", "abaEdicao");
-  } else {
-    $("painelEdicao").removeAttribute("role");
-    $("painelEdicao").removeAttribute("aria-labelledby");
-  }
-}
-
-function entrar(nome, foco = false) {
-  const anterior = bancadaEm;
-  lugar = nome;
-  if (nome === "Teste" || nome === "Combate") bancadaEm = nome;
-  document.querySelectorAll("[data-lugar]").forEach(n => {
-    const ativo = n.dataset.lugar === nome;
-    n.setAttribute("aria-selected", ativo); n.tabIndex = ativo ? 0 : -1;
-    $("painel" + n.dataset.lugar).hidden = !ativo;
-    if (ativo && foco) n.focus();
-  });
-  // A bancada acompanha `bancadaEm` mesmo quando o painel aberto é outro:
-  // quem vai montar a dungeon e volta reencontra a sala onde a deixou.
-  $("ancora" + bancadaEm).append($("bancada"));
-  $("tituloLista").textContent = bancadaEm === "Combate" ? "Combates" : "Salas de teste";
-  $("btNova").textContent = bancadaEm === "Combate" ? "+ Novo combate" : "+ Nova sala";
-  if (anterior !== bancadaEm) $("fBusca").value = "";
-  const disponiveis = indicesDoLugar(bancadaEm), guardado = selecao[bancadaEm];
-  indice = disponiveis.includes(guardado) ? guardado : (disponiveis[0] ?? -1);
-  selecao[bancadaEm] = indice;
-  secaoSala(secaoCombate);
-  mostrarEditor();
-  atualizar();
-  if (nome === "Inspecao") conferir(true);
-}
-
-function abrirSala(i) {
-  etapa = "Editar";
-  secaoCombate = "Edicao";
-  const destino = lugarDoTipo(banco.salas[i].tipo);
-  selecao[destino] = i;
-  entrar(destino);
-  guardar(); agendarConferencia();
-}
-
-function listar() {
-  const busca = normalizar($("fBusca").value), lista = $("listaSalas");
-  lista.replaceChildren();
-  const meus = indicesDoLugar();
-  meus.forEach(i => {
-    const s = banco.salas[i];
-    if (!normalizar(`${texto(s.id)} ${texto(s.nome)}`).includes(busca)) return;
-    const botao = no("button", "sala-btn"); botao.type = "button";
-    botao.setAttribute("aria-current", i === indice ? "true" : "false");
-    botao.append(no("span", "snome", s.nome || "Sem nome"));
-    const meta = no("span", "sala-meta");
-    meta.append(no("span", "sid", s.id || "Sem ID"), no("span", "", s.tipo || "Sem tipo"));
-    botao.append(meta);
-    botao.addEventListener("click", () => {
-      if (!pronto()) return;
-      indice = i; selecao[bancadaEm] = i;
-      mostrarEditor(); atualizar(); guardar(); agendarConferencia();
-      if (!avancado) irParaEtapa("Editar");
-    });
-    const item = no("li"); item.append(botao); lista.append(item);
-  });
-  $("contaSalas").textContent = meus.length;
-  $("listaVazia").hidden = lista.children.length > 0;
-  $("notaLista").textContent = bancadaEm === "Combate"
-    ? "Criaturas definidas por tier."
-    : banco.salas.some(s => familia(s.tipo) === "parada")
-      ? "Descanso é uma parada fixa."
-      : "Este banco não tem sala de Descanso.";
-}
-
-function contas() {
-  if (!banco) return;
-  $("contaTeste").textContent = indicesDoLugar("Teste").length;
-  $("contaCombate").textContent = indicesDoLugar("Combate").length;
-  $("contaTudo").textContent = banco.salas.length;
-}
-
-/* ---------------------------------------------------------- inspecionar */
-
-function sorteaveis() {
-  return banco.salas.filter(s => familia(s.tipo) !== "parada");
-}
-
-function dentroDa(s) {
-  if (familia(s.tipo) === "parada") return "";
-  if (familia(s.tipo) === "combate") {
-    const linhas = linhasDaSala(s);
-    if (!linhas.length) return "";
-    const tiers = [...new Set(linhas.map(l => l.tier).filter(Boolean))].sort();
-    const variantes = [...new Set(linhas.map(l => l.tema).filter(Boolean))];
-    const nomes = [...new Set(linhas.map(l => texto(l.nome).trim()).filter(Boolean))];
-    const partes = [tiers.length ? `tiers ${tiers.join(", ")}` : "qualquer tier"];
-    if (variantes.length) partes.push(`variantes: ${variantes.join(", ")}`);
-    partes.push(nomes.slice(0, 3).join(", ") + (nomes.length > 3 ? ` +${nomes.length - 3}` : ""));
-    return partes.join(" · ");
-  }
-  const desconto = DESCONTO[s.tipo] || 0, partes = [];
-  if (s.dificuldade) partes.push(s.dificuldade);
-  if (s.cd != null) partes.push(desconto ? `CD ${s.cd} → ${Math.max(1, s.cd - desconto)}` : `CD ${s.cd}`);
-  if (s.alvo_progresso != null) partes.push(`${s.alvo_progresso} sucesso(s)`);
-  if (Array.isArray(s.pericias) && s.pericias.length) partes.push(s.pericias.join(", "));
-  return partes.join(" · ");
-}
-
-function cartao(titulo, conteudo) {
-  const n = no("section");
-  n.append(no("h4", "", titulo), conteudo);
-  return n;
-}
-
-function mapa() {
-  const caixa = $("mapaBanco");
-  caixa.replaceChildren();
-  const pool = sorteaveis().length;
-
-  // O caminho: quais tamanhos este banco consegue montar, com a conta do
-  // sorteio (precisa de `folga` salas para oferecer 3 portas em toda parada).
-  const caminhos = no("div", "contas");
-  Object.entries(C.tamanhos).forEach(([nome, t]) => {
-    const linha = no("div", "conta-linha");
-    const veredito = pool >= t.folga ? "com folga" : pool >= t.terminar ? "sem variedade" : "não fecha";
-    const marca = no("b", "", veredito);
-    marca.style.color = `var(--${pool >= t.folga ? "good" : pool >= t.terminar ? "warn" : "bad"})`;
-    linha.append(no("span", "", `${nome} · ${t.paradas} paradas · quer ${t.folga}`), marca);
-    caminhos.append(linha);
-  });
-  // O mapa dos temas são as fichas do filtro aqui embaixo, que já trazem a
-  // contagem e ainda filtram a tabela. O que falta a elas é isto: sala SEM
-  // tema não aparece em ficha nenhuma, e entra em toda dungeon.
-  const semTema = sorteaveis().filter(s => !(s.temas || []).length).length;
-  const bloco = no("div");
-  bloco.append(caminhos, no("p", "legenda nota-mapa",
-    `"Quer" é o que mantém ${C.limites.opcoes_por_passo} portas em toda parada. `
-    + (semTema
-      ? `${semTema} sala(s) estão sem tema e entram em TODA dungeon, filtrada ou não.`
-      : "Toda sala sorteável tem tema.")));
-  caixa.append(cartao(`O caminho · ${pool} salas sorteáveis`, bloco));
-
-  // Os combates, e o que eles escrevem por tier.
-  const combates = banco.salas.filter(s => familia(s.tipo) === "combate");
-  const porTier = combates.filter(s => objeto(s.monstros_por_tier)).length;
-  const comVariante = combates.filter(s => objeto(s.monstros_por_tema)).length;
-  const vazias = combates.filter(s => !linhasDaSala(s).length).length;
-  const contas = no("div", "contas");
-  [["Salas de combate", combates.length],
-   ["Com criaturas por tier", porTier],
-   ["Com variante por tema", comVariante],
-   ["Sem nenhuma criatura", vazias]].forEach(([rotulo, valor]) => {
-    const linha = no("div", "conta-linha");
-    const b = no("b", "", valor);
-    if (rotulo.startsWith("Sem") && valor) b.style.color = "var(--bad)";
-    linha.append(no("span", "", rotulo), b);
-    contas.append(linha);
-  });
-  caixa.append(cartao("Combates", contas));
-
-  $("resumoBanco").textContent =
-    `${banco.salas.length} salas em ${texto(banco.organizacao)} · arquivo ${texto(arquivo)}`;
-}
-
-function filtrosDaInspecao() {
-  const tipos = $("fichasTipos"), temas = $("fichasTemasInspecao");
-  tipos.replaceChildren(); temas.replaceChildren();
-  const alternar = (conjunto, valor, botao) => {
-    conjunto.has(valor) ? conjunto.delete(valor) : conjunto.add(valor);
-    botao.setAttribute("aria-pressed", conjunto.has(valor));
-    inspecionar();
-  };
-  C.tipos.forEach(t => {
-    const quantas = banco.salas.filter(s => s.tipo === t).length;
-    if (!quantas) return;
-    const b = no("button", "ficha", t); b.type = "button";
-    b.append(no("span", "quantas", quantas));
-    b.setAttribute("aria-pressed", tiposVisiveis.has(t));
-    b.addEventListener("click", () => alternar(tiposVisiveis, t, b));
-    tipos.append(b);
-  });
-  C.temas.forEach(t => {
-    const quantas = banco.salas.filter(s => (s.temas || []).includes(t)).length;
-    // Tema sem sala fica visível e apagado: ele é o buraco do banco, e
-    // esconder o buraco é esconder o trabalho que falta.
-    const b = no("button", "ficha" + (quantas ? "" : " zero"), t); b.type = "button";
-    b.append(no("span", "quantas", quantas));
-    b.disabled = !quantas;
-    b.setAttribute("aria-pressed", temasVisiveis.has(t));
-    b.addEventListener("click", () => alternar(temasVisiveis, t, b));
-    temas.append(b);
-  });
-}
-
-function inspecionar() {
-  if (!banco) return;
-  mapa();
-  filtrosDaInspecao();
-  const busca = normalizar($("fBuscaInspecao").value);
-  const corpo = $("tabelaInspecao");
-  corpo.replaceChildren();
-  let quantas = 0;
-  banco.salas.forEach((s, i) => {
-    if (tiposVisiveis.size && !tiposVisiveis.has(s.tipo)) return;
-    if (temasVisiveis.size && !(s.temas || []).some(t => temasVisiveis.has(t))) return;
-    const dentro = dentroDa(s);
-    if (busca && !normalizar(`${texto(s.id)} ${texto(s.nome)} ${dentro}`).includes(busca)) return;
-    quantas++;
-    const tr = no("tr");
-
-    const primeira = no("td");
-    const abrir = no("button", "abrir-sala"); abrir.type = "button";
-    abrir.append(no("small", "", s.id || "sem id"), no("span", "", s.nome || "Sem nome"));
-    abrir.addEventListener("click", () => abrirSala(i));
-    primeira.append(abrir); tr.append(primeira);
-
-    const tipo = no("td");
-    const etiqueta = no("span", "etiqueta" + (familia(s.tipo) === "combate" ? " combate" : ""), s.tipo || "sem tipo");
-    tipo.append(etiqueta); tr.append(tipo);
-
-    tr.append(no("td", "", (s.temas || []).join(", ") || "—"));
-    tr.append(no("td", "dentro" + (dentro ? "" : " nada"), dentro || "—"));
-    tr.append(no("td", "n", s.pontos_organizacao ?? 0));
-    corpo.append(tr);
-  });
-  $("contaInspecao").textContent = quantas;
-  $("inspecaoVazia").hidden = quantas > 0;
-}
-
-/* ------------------------------------------------------------- a prévia */
-
-function previa() {
-  const s = sala();
-  $("nomeSala").textContent = s?.nome || "Selecione uma sala";
-  $("tipoSala").textContent = s?.tipo || "Sala";
-  $("tipoSala").classList.toggle("combate", !!s && familia(s.tipo) === "combate");
-  $("idSala").textContent = texto(s?.id);
-  $("dTitulo").textContent = s?.nome || "Sua sala aparece aqui";
-  $("dCorpo").textContent = texto(s?.descricao);
-  $("dCampos").replaceChildren(); $("temasPrevia").replaceChildren();
-  if (!s) { $("limitesTexto").textContent = ""; return; }
-  function campo(nome, valor) {
-    if (valor == null || valor === "") return;
-    const n = no("div"); n.append(no("strong", "", nome), no("span", "", valor)); $("dCampos").append(n);
-  }
-  if (familia(s.tipo) === "combate") {
-    const tiers = objeto(s.monstros_por_tier) ? Object.keys(s.monstros_por_tier) : [];
-    campo("Criaturas", tiers.length ? `Tiers ${tiers.join(", ")}` : Array.isArray(s.monstros) ? s.monstros.map(m => `${m.quantidade || 1}× ${texto(m.nome)}`).join(", ") : "Não definidas");
-    campo("Variantes", objeto(s.monstros_por_tema) ? Object.keys(s.monstros_por_tema).join(", ") : "");
-  } else if (familia(s.tipo) === "teste") {
-    campo("Dificuldade", s.dificuldade); campo("CD base", s.cd); campo("Sucessos", s.alvo_progresso);
-    campo("Perícias", Array.isArray(s.pericias) ? s.pericias.join(", ") : "");
-  }
-  campo("Recompensa", s.recompensa);
-  (Array.isArray(s.temas) ? s.temas : []).forEach(t => $("temasPrevia").append(no("span", "etiqueta", t)));
-  const titulo = texto(s.nome).length, descricao = texto(s.descricao).length;
-  $("limitesTexto").textContent = `Título ${titulo}/${C.limites.titulo} · Texto ${descricao}/${C.limites.descricao}`;
-  $("limitesTexto").style.color = titulo > C.limites.titulo || descricao > C.limites.descricao ? "var(--bad)" : "";
-}
-
-function atualizar() {
-  listar(); previa(); contas();
-  const tema = $("fTemaSim").value;
-  preencher("fTemaSim", [["", "Padrão"], ...Object.keys(objeto(sala()?.monstros_por_tema) ? sala().monstros_por_tema : {})], tema);
-  desatualizar(); controles();
-  if (lugar === "Dungeon") agendarPool();
-  if (lugar === "Inspecao") inspecionar();
-}
-function desatualizar() {
-  $("medidaDesatualizada").hidden = !medidaContexto || medidaContexto === contexto();
-  controles();
+function abrirRascunho(k, destino = "Dungeon") {
+  chave = k;
+  linhasChefe = null; linhasDe = null;
+  guardar();
+  irPara(destino);
 }
 function alterado() {
-  revisao++; pedidoConferir++; pedidoPool++;
-  $("saidaRevisao").replaceChildren();
-  $("saidaSala").hidden = true; $("saidaBanco").hidden = true;
-  atualizar(); guardar(); agendarConferencia();
+  const r = rascunho();
+  if (!r) return;
+  r.atualizado = new Date().toISOString();
+  r.pacote.organizacao = texto(inc().organizacao);
+  guardar();
+  $("nomeAberto").textContent = rotuloAberto();
 }
-function carregar(chave) {
-  etapa = "Escolher";
-  origem = chave;
-  const salvo = lerLocal(chave), original = originais[chave];
-  const restauravel = salvo && objeto(salvo.banco) && Array.isArray(salvo.banco.salas) && salvo.banco.salas.every(objeto);
-  banco = copiar(restauravel ? salvo.banco : original.banco);
-  arquivo = restauravel ? salvo.arquivo : original.arquivo;
-  const guardado = restauravel ? Math.max(-1, Math.min(salvo.indice ?? -1, banco.salas.length - 1)) : -1;
-  revisao++; sequencia++; pedidoConferir++; pedidoPool++;
-  selecao.Teste = -1; selecao.Combate = -1;
-  // Reabrir o rascunho tem de cair no lugar onde a sala vive, senão o autor
-  // volta num lugar que não mostra a sala que ele estava escrevendo.
-  if (guardado >= 0) {
-    bancadaEm = lugarDoTipo(banco.salas[guardado].tipo);
-    selecao[bancadaEm] = guardado;
+
+/* ------------------------------------------------------- o código (id)
+
+   O autor não escreve o código: ele sai do nome. Enquanto a dungeon nunca
+   foi baixada, o código acompanha o nome; depois do primeiro download ele
+   fica, porque é por ele que o bot reconhece o reenvio como a MESMA
+   dungeon — renomear não pode virar uma dungeon nova. */
+
+function slug(nome) {
+  return normalizar(nome).replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 48).replace(/_+$/, "");
+}
+function codigoLivre(base) {
+  if (!base) return "";
+  const ocupados = new Set(Object.keys(C.incursoes));
+  let id = base, n = 2;
+  while (ocupados.has(id)) id = `${base}_${n++}`;
+  return id;
+}
+function acompanharNome() {
+  if (!rascunho().idFixo) inc().id = codigoLivre(slug(inc().nome));
+}
+
+/* O chefe é um bando só: a dungeon tem um tier, então criatura por tier ou
+   por tema no chefe é peso morto. Uma dungeon antiga que tenha escrito assim
+   abre com o bando do tier dela, pela mesma queda que o bot usa. */
+function bandoDoTier(porTier, tier) {
+  const tiers = Object.keys(porTier || {}).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!tiers.length) return [];
+  const abaixo = tiers.filter(t => t <= (tier || 0));
+  return porTier[String(abaixo.length ? abaixo[abaixo.length - 1] : tiers[0])] || [];
+}
+function normalizarChefe(i) {
+  if (!objeto(i.objetivo)) i.objetivo = {};
+  const o = i.objetivo;
+  o.id ||= "OBJ"; o.tipo = "Combate";
+  o.nome = texto(o.nome); o.descricao = texto(o.descricao);
+  if (!Array.isArray(o.monstros) || !o.monstros.length) {
+    o.monstros = copiar(bandoDoTier(o.monstros_por_tier, i.tier));
   }
-  $("fBanco").value = chave; $("fBusca").value = "";
-  $("saidaBanco").hidden = true; $("saidaSala").hidden = true;
-  listarIncursoes();
-  entrar(lugar === "Dungeon" || lugar === "Inspecao" ? lugar : bancadaEm);
-  guardar(); agendarConferencia();
-  if (restauravel) aviso("Rascunho restaurado.");
-}
-function agendarConferencia() {
-  clearTimeout(timerConferir);
-  timerConferir = setTimeout(() => conferir(false), 650);
-}
-async function conferir(inteiro = false) {
-  if (!banco) return;
-  if (!inteiro && !sala()) return;
-  const id = ++pedidoConferir, versao = revisao, fonte = origem;
-  const alvo = inteiro ? "saidaBanco" : !avancado && etapa === "Testar" ? "saidaRevisao" : "saidaSala";
-  try {
-    const r = await api("/api/conferir", {dados: inteiro ? banco : sala()});
-    if (id === pedidoConferir && versao === revisao && fonte === origem) recados(alvo, r, inteiro ? "Banco conferido." : "Sala conferida.");
-  } catch (erro) {
-    if (id === pedidoConferir) recados(alvo, {erro: erro.message});
-  }
-}
-function novoId() {
-  const ids = new Set(banco.salas.map(s => s.id));
-  const modelo = banco.salas.map(s => texto(s.id).match(/^(.*?)(\d+)$/)).find(Boolean);
-  const prefixo = modelo ? modelo[1] : "SALA_", largura = modelo ? modelo[2].length : 2;
-  let numero = 1;
-  while (ids.has(prefixo + String(numero).padStart(largura, "0"))) numero++;
-  return prefixo + String(numero).padStart(largura, "0");
-}
-function emBranco() {
-  const tipo = tipoNovo(bancadaEm === "Combate" ? "combate" : "teste") || C.tipos[0];
-  const nova = {id: "", nome: "Nova sala", tipo, descricao: "", temas: []};
-  if (familia(tipo) === "combate") nova.monstros = [];
-  else Object.assign(nova, {dificuldade: C.dificuldades[1], cd: 13, alvo_progresso: 3, pericias: []});
-  return nova;
-}
-function adicionar(duplicar = false) {
-  if (!pronto()) return;
-  if (duplicar && !sala()) return;
-  etapa = "Editar";
-  const nova = duplicar ? copiar(sala()) : emBranco();
-  nova.id = novoId();
-  if (duplicar) nova.nome = `${texto(nova.nome)} (cópia)`;
-  banco.salas.push(nova);
-  indice = banco.salas.length - 1;
-  selecao[lugarDoTipo(nova.tipo)] = indice;
-  $("fBusca").value = "";
-  if (lugarDoTipo(nova.tipo) !== bancadaEm) entrar(lugarDoTipo(nova.tipo));
-  secaoSala("Edicao"); mostrarEditor(); alterado(); $("fNome").focus();
-}
-/* Campo que não pertence ao tipo novo sai: o validador recusa sala de
-   Combate com perícia e sala de teste com criatura, e o autor não tem como
-   ver o resto na tela para apagar à mão. */
-function trocarTipo(s, tipo) {
-  s.tipo = tipo;
-  const fam = familia(tipo);
-  if (fam !== "teste") { s.dificuldade = null; s.cd = null; s.alvo_progresso = null; s.pericias = []; }
-  else s.dificuldade ||= C.dificuldades[1];
-  if (fam !== "combate") { delete s.monstros; delete s.monstros_por_tier; delete s.monstros_por_tema; }
-  linhasAtuais = null; linhasDoIndice = -1;
-}
-function virar() {
-  const s = sala();
-  if (!s) return;
-  const destino = tipoNovo(bancadaEm === "Combate" ? "teste" : "combate");
-  if (!destino) return;
-  trocarTipo(s, destino);
-  selecao[lugarDoTipo(destino)] = indice;
-  secaoCombate = "Edicao";
-  entrar(lugarDoTipo(destino));
-  alterado();
-  aviso(`“${texto(s.nome)}” agora é ${destino}.`);
-}
-function baixar() {
-  if (!pronto()) return;
-  const url = URL.createObjectURL(new Blob([bonito(banco) + "\n"], {type: "application/json"}));
-  const link = no("a"); link.href = url; link.download = arquivo || "banco.json";
-  document.body.append(link); link.click(); link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  aviso("JSON do banco baixado.");
+  delete o.monstros_por_tier; delete o.monstros_por_tema;
 }
 
-/* ------------------------------------------------------ medir e sugerir */
-
-function parametros() {
-  for (const id of ["fNivel", "fReps", "fSemente"]) {
-    if (!$(id).checkValidity()) {
-      if ($("opcoesSimulacao").contains($(id))) {
-        // Um valor digitado no modo avançado precisa continuar corrigível
-        // depois de voltar ao caminho simples.
-        if (!avancado) { avancado = true; atualizarFluxo(); }
-        $("opcoesSimulacao").open = true;
-      }
-      $(id).reportValidity(); return null;
-    }
-  }
-  const p = {tier: Number($("fTierSim").value), classe: $("fClasse").value, nivel: Number($("fNivel").value)};
-  if ($("fSemente").value !== "") p.semente = Number($("fSemente").value);
-  return p;
+function incursaoEmBranco() {
+  return {
+    id: "", nome: "", organizacao: "", tamanho: "Média", tier: null,
+    lore_inicial: "", lore_final: "", recompensa_mes: 10, pontos_conclusao: 10, imagem_capa: null,
+    objetivo: {id: "OBJ", nome: "", tipo: "Combate", descricao: "", monstros: []},
+  };
 }
-const pct = taxa => taxa == null ? "—" : `${Math.round(taxa * 100)}%`;
-
-/* A barra é a MÉDIA das mesas. Sozinha ela responde "a sala é justa?" e
-   esconde a outra pergunta — "existe mesa que ela mata?" —, porque o grupo
-   que sofre vira um pedaço pequeno de uma média alta. Por isso a pior mesa
-   vem logo abaixo, com as classes dela e quantas lutas a mediram. */
-function barra(grupo, taxa, medida) {
-  const n = no("div", "taxa-linha"), trilha = no("div", "trilha"), preenchimento = no("span", taxa < .45 ? "duro" : taxa < .8 ? "medio" : "");
-  preenchimento.style.width = `${Math.max(0, Math.min(100, taxa * 100))}%`;
-  trilha.append(preenchimento); trilha.setAttribute("aria-hidden", "true");
-  n.append(no("span", "", `${grupo} jogadores`), trilha, no("b", "", pct(taxa)));
-  /* O veredito: o que a taxa quer dizer. A porcentagem sozinha deixava o
-     autor adivinhar se 62% era o que ele queria — a régua mora no servidor
-     (tools/simulacao/regua.py), a mesma do sugeridor e do calibrador. */
-  if (medida?.rotulo) {
-    n.append(no("span", `veredito${medida.dificuldade ? "" : " sem-faixa"}`, medida.rotulo));
-  }
-  if (!medida?.pior) return n;
-  const bloco = no("div", "taxa-bloco"), extremos = no("div", "taxa-extremos");
-  const pior = no("span", medida.pior.taxa < .45 ? "duro" : "");
-  // Com o número de lutas junto: a taxa de UMA mesa vem de uma fatia da
-  // amostra, e sem o tamanho dela o autor leria ruído como veredito.
-  pior.append(no("b", "", `pior ${pct(medida.pior.taxa)}`),
-              no("span", "", ` em ${medida.pior.amostras} lutas · ${medida.pior.classes.join(", ")}`));
-  extremos.append(pior, no("span", "", `melhor ${pct(medida.melhor.taxa)}`));
-  // O aviso sai quando a PIOR formação do catálogo fica abaixo do piso. Não
-  // é a chance de encontrar essa mesa no jogo — as classes não são sorteadas
-  // —, é "existe grupo de referência que esta sala mata".
-  if (medida.dizima) extremos.prepend(no("span", "veredito dizima", "risco nos grupos testados"));
-  bloco.append(n, extremos);
-  return bloco;
+function criarNova() {
+  const k = `r${Date.now()}`;
+  rascunhos[k] = novoRascunho(incursaoEmBranco());
+  abrirRascunho(k);
+  $("dNome").focus();
 }
-function conta(rotulo, valor) {
-  const n = no("div", "conta-linha"); n.append(no("span", "", rotulo), no("b", "", valor)); $("contaMedida").append(n);
+function partirDe(id) {
+  const original = C.incursoes[id];
+  if (!original) return;
+  const i = copiar(original);
+  i.nome = `${texto(original.nome)} (cópia)`;
+  normalizarChefe(i);
+  const k = `r${Date.now()}`;
+  rascunhos[k] = novoRascunho(i, {rotulo: `a original, “${texto(original.nome)}”`, incursao: copiar(original)});
+  chave = k;
+  acompanharNome();
+  abrirRascunho(k);
+  aviso(`Cópia de “${texto(original.nome)}” aberta. A original não muda.`);
 }
-async function medir() {
-  if (!pronto()) return;
-  const p = parametros(); if (!p) return;
-  const grupos = [...document.querySelectorAll('[name="grupo"]:checked')].map(n => Number(n.value));
-  if (!grupos.length) { aviso("Escolha pelo menos um tamanho de grupo."); return; }
-  const atual = contexto(), nome = sala().nome;
-  medindo = true; controles(); $("btMedir").textContent = "Simulando…"; $("saidaMedida").hidden = true;
+/* Abrir um arquivo baixado antes continua o trabalho de onde parou. O
+   código dele fica fixo: é o arquivo que já pode ter sido enviado. */
+async function abrirArquivo(evento) {
+  const entrada = evento.target.files[0];
+  evento.target.value = "";
+  if (!entrada || !C) return;
   try {
-    const r = await api("/api/simular", {...p, sala: sala(), tema: $("fTemaSim").value || null, grupos, repeticoes: Number($("fReps").value)});
-    if (atual !== contexto()) { aviso("A sala ou os parâmetros mudaram. Meça novamente."); return; }
-    if (r.erro) { recados("saidaMedida", r); return; }
-    medidaContexto = atual;
-    const primeira = r.medidas[0] || {};
-    $("tituloMedida").textContent = `${texto(nome)} · Tier ${r.tier} · ${primeira.lutas ?? r.repeticoes} combates`;
-    $("barrasMedida").className = ""; $("barrasMedida").replaceChildren(...r.medidas.map(m => barra(m.grupo, m.taxa, m)));
-    $("contaMedida").replaceChildren();
-    r.medidas.forEach(m => conta(`Grupo de ${m.grupo}`, `${m.rodadas == null ? "—" : m.rodadas.toFixed(1)} rodadas · ${m.caidos.toFixed(1)} caídos`));
-    conta(r.predefinido ? "Grupos predefinidos" : "Classe (diagnóstico)",
-      r.predefinido
-        ? `${primeira.mesas ?? "?"} mesas · nível ${r.nivel}`
-        : `${r.classe} · nível ${r.nivel}`);
-    conta("Semente", r.semente);
-    conta("Criaturas", r.criaturas.map(m => m.nome).join(", "));
-    const lista = $("listaGruposMedidos"); lista.replaceChildren();
-    r.medidas.forEach(m => (m.composicoes || []).forEach(c => {
-      lista.append(no("p", "", `${m.grupo} jogadores · ${c.nome || "Diagnóstico"}: ${c.classes.join(", ")}`));
-    }));
-    $("gruposMedidos").hidden = !lista.hasChildNodes();
-  } catch (erro) { if (atual === contexto()) recados("saidaMedida", {erro: erro.message}); }
-  finally { medindo = false; $("btMedir").textContent = "Simular combate"; desatualizar(); }
-}
-async function sugerir() {
-  if (!pronto()) return;
-  const p = parametros(); if (!p) return;
-  const atual = contexto(), tema = $("fTemaSim").value, opcoes = [$("fAmb").value, $("fBicho").value, $("fDifCombate").value];
-  sugerindo = true; controles(); $("recadoSugerir").textContent = "Simulando candidatos…";
-  $("sugestoes").replaceChildren(); $("saidaSugerir").hidden = true;
-  try {
-    const r = await api("/api/sugerir", {...p, ambiente: opcoes[0], tipo: opcoes[1], dificuldade: opcoes[2], quantas: 2});
-    if (atual !== contexto() || opcoes.join() !== [$("fAmb").value, $("fBicho").value, $("fDifCombate").value].join()) {
-      aviso("Os parâmetros mudaram. Gere novas sugestões."); return;
-    }
-    if (r.erro) { recados("saidaSugerir", r); return; }
-    sugestaoContexto = atual;
-    $("recadoSugerir").textContent = `Semente ${r.semente} · ${r.candidatas_no_bestiario} criaturas no filtro`;
-    (r.sugestoes || []).forEach((s, i) => {
-      const card = no("article", "sugestao"), lista = no("ul");
-      card.append(no("h4", "", `Opção ${i + 1} · ${s.na_faixa ? "Na faixa" : "Fora da faixa"}`));
-      s.bando.forEach(m => lista.append(no("li", "", `${m.quantidade}× ${m.nome}`))); card.append(lista);
-      Object.entries(s.por_grupo).forEach(([grupo, taxa]) => card.append(barra(grupo, taxa)));
-      const botao = no("button", "botao usar-sugestao", "Usar neste tier"); botao.type = "button";
-      botao.addEventListener("click", () => {
-        if (!pronto() || contexto() !== atual) { aviso("Gere sugestões para a sala atual."); return; }
-        const alvo = sala();
-        if (tema) {
-          if (!objeto(alvo.monstros_por_tema)) alvo.monstros_por_tema = {};
-          if (!objeto(alvo.monstros_por_tema[tema])) alvo.monstros_por_tema[tema] = {};
-        } else if (!objeto(alvo.monstros_por_tier)) alvo.monstros_por_tier = {};
-        const tiers = tema ? alvo.monstros_por_tema[tema] : alvo.monstros_por_tier;
-        tiers[String(p.tier)] = s.bando.map(m => ({nome: m.nome, quantidade: m.quantidade}));
-        linhasAtuais = null; linhasDoIndice = -1;
-        mostrarEditor(); alterado(); secaoSala("Edicao"); aviso(`Criaturas aplicadas ao tier ${p.tier}${tema ? ` (${tema})` : ""}.`);
-      });
-      card.append(botao); $("sugestoes").append(card);
-    });
-    if (r.nenhuma_na_faixa) recados("saidaSugerir", {avisos: ["Nenhuma opção chegou à faixa pedida. Confira as taxas antes de usar."]});
-  } catch (erro) { if (atual === contexto()) recados("saidaSugerir", {erro: erro.message}); }
-  finally { sugerindo = false; if ($("recadoSugerir").textContent === "Simulando candidatos…") $("recadoSugerir").textContent = ""; controles(); }
-}
-
-/* ------------------------------------------------------- montar dungeon */
-
-/* As fichas do filtro são lidas por `#fichasFiltro`, e não por `.ficha`: a
-   mesma classe desenha os temas e as perícias DA SALA, e varrer a página
-   inteira mandava o tema da sala aberta para dentro do filtro da dungeon. */
-function fichasDoFiltro() { return [...document.querySelectorAll("#fichasFiltro .ficha")]; }
-function filtro() {
-  const ids = id => [...new Set($(id).value.split(",").map(s => s.trim()).filter(Boolean))];
-  const f = {}, incluir = ids("fIncluir"), excluir = ids("fExcluir");
-  const temas = fichasDoFiltro().filter(n => n.getAttribute("aria-pressed") === "true").map(n => n.dataset.tema);
-  if (incluir.length) f.incluir = incluir;
-  else if (temas.length) f.temas = temas;
-  if (excluir.length) f.excluir = excluir;
-  return f;
-}
-function limparPool(mensagem) {
-  $("tabelaPool").replaceChildren(); $("contaPool").textContent = mensagem;
-  $("barraPool").value = 0; $("contaFiltro").textContent = ""; $("selo").textContent = "";
-  $("contaPoolAtalho").textContent = "—";
-  $("saidaFiltro").hidden = true;
-}
-function agendarPool() {
-  clearTimeout(timerPool); pedidoPool++;
-  timerPool = setTimeout(conferirPool, 250);
-}
-async function conferirPool() {
-  const f = filtro(), temIds = !!f.incluir;
-  fichasDoFiltro().forEach(n => { n.disabled = temIds; });
-  $("notaFiltro").textContent = temIds ? "IDs definidos: os temas não entram no filtro." : "Sem temas ou IDs, usa o banco inteiro.";
-  const t = C.tamanhos[$("fTam").value];
-  $("notaTamanho").textContent = t ? `${t.paradas} paradas · ${t.terminar} salas para terminar` : "";
-  if (!banco) { limparPool("Abra um banco para conferir o filtro."); return; }
-  const id = ++pedidoPool;
-  try {
-    const r = await api("/api/pool", {organizacao: banco.organizacao, tamanho: $("fTam").value, filtro: f, salas: banco.salas});
-    if (id !== pedidoPool) return;
-    if (r.erro) { limparPool("Não foi possível conferir."); recados("saidaFiltro", r); return; }
-    $("contaPool").textContent = `${r.pool.length} salas disponíveis`;
-    $("contaPoolAtalho").textContent = r.pool.length;
-    $("barraPool").max = Math.max(1, r.sorteaveis); $("barraPool").value = r.pool.length;
-    $("contaFiltro").textContent = `${r.pool.length} de ${r.sorteaveis} salas · Precisa de ${r.terminar} para terminar e ${r.folga} para manter ${C.limites.opcoes_por_passo} opções.`;
-    $("selo").textContent = r.problemas.length ? "Insuficiente" : r.avisos.length ? "Pouca variedade" : "Suficiente";
-    recados("saidaFiltro", r, "Filtro conferido.");
-    $("tabelaPool").replaceChildren(...r.pool.map(s => {
-      const tr = no("tr"), nome = no("td"); nome.append(no("small", "", s.id), no("span", "", s.nome));
-      tr.append(nome, no("td", "", s.tipo), no("td", "", s.temas.join(", "))); return tr;
-    }));
-  } catch (erro) { if (id === pedidoPool) { limparPool("Não foi possível conferir."); recados("saidaFiltro", {erro: erro.message}); } }
-}
-/* Partir de uma incursão que já existe: o filtro dela entra nos campos para
-   o autor ver o pool que ela monta hoje — e mexer a partir dali. Só as da
-   Organização aberta: filtro de outra organização aponta para IDs que este
-   banco não tem, e o pool sairia vazio sem dizer por quê. */
-function listarIncursoes() {
-  if (!C || !banco) return;
-  preencher("fIncursao", [["", "Começar do zero"], ...Object.values(C.incursoes || {})
-    .filter(i => i.organizacao === banco.organizacao)
-    .map(i => [i.id, `${i.nome} · ${i.tamanho}`])]);
-}
-function carregarIncursao() {
-  const alvo = C.incursoes[$("fIncursao").value];
-  if (!alvo) return;
-  const f = alvo.filtro || {};
-  $("fTam").value = C.tamanhos[alvo.tamanho] ? alvo.tamanho : $("fTam").value;
-  $("fIncluir").value = (f.incluir || []).join(", ");
-  $("fExcluir").value = (f.excluir || []).join(", ");
-  const pedidos = new Set(f.temas || []);
-  fichasDoFiltro().forEach(n => n.setAttribute("aria-pressed", pedidos.has(n.dataset.tema)));
-  agendarPool();
-  aviso(`Filtro de “${texto(alvo.nome)}” carregado.`);
-}
-async function copiarFiltro() {
-  if (!pronto()) return;
-  const conteudo = bonito({filtro: filtro()});
-  try { await navigator.clipboard.writeText(conteudo); aviso("Filtro JSON copiado."); }
-  catch { aviso("Não foi possível copiar. Permita o acesso à área de transferência no navegador."); }
-}
-async function importar(evento) {
-  const entrada = evento.target.files[0]; evento.target.value = "";
-  if (!entrada || !pronto()) return;
-  const versao = sequencia;
-  try {
-    const dados = JSON.parse(await entrada.text()); estrutura(dados, true);
-    if (versao !== sequencia) { aviso("O banco mudou durante a abertura. Abra o arquivo novamente."); return; }
-    guardar();
-    const chave = `importado.${Date.now()}.${entrada.name}`;
-    originais[chave] = {banco: dados, arquivo: entrada.name};
-    const opcao = no("option", "", `${dados.organizacao} · ${entrada.name}`); opcao.value = chave; $("fBanco").append(opcao);
-    carregar(chave); aviso("JSON aberto. O arquivo original permanece no disco.");
+    const dados = JSON.parse(await entrada.text());
+    let pacote;
+    // Uma incursão comum (de data/incursoes) também abre, mas como cópia: o
+    // código dela é de outra dungeon, e não pode ficar travado no rascunho.
+    const doEstudio = objeto(dados) && dados.formato === C.formato.nome;
+    if (doEstudio) pacote = dados;
+    else if (objeto(dados) && objeto(dados.objetivo)) pacote = {incursao: dados, salas: []};
+    else throw new Error("este arquivo não é uma dungeon do Estúdio.");
+    if (!objeto(pacote.incursao)) throw new Error("este arquivo não traz uma dungeon.");
+    const i = pacote.incursao;
+    normalizarChefe(i);
+    if (!doEstudio) i.id = codigoLivre(slug(i.nome));
+    const novo = novoRascunho(i, {rotulo: `o arquivo ${entrada.name}`, incursao: copiar(i)}, doEstudio,
+      Array.isArray(pacote.salas) ? pacote.salas : []);
+    const mesmo = Object.keys(rascunhos).find(k => rascunhos[k].idFixo && i.id && rascunhos[k].pacote.incursao.id === i.id);
+    let k = `r${Date.now()}`;
+    if (mesmo && confirm(`Você já tem um rascunho de “${texto(rascunhos[mesmo].pacote.incursao.nome)}”. Trocar o rascunho pelo arquivo?`)) k = mesmo;
+    rascunhos[k] = novo;
+    abrirRascunho(k);
+    aviso(`“${texto(i.nome) || entrada.name}” aberta.`);
   } catch (erro) { aviso(`Não foi possível abrir: ${erro.message}`); }
 }
+
+/* ------------------------------------------------------------- etapas */
+
+function rotuloAberto() {
+  const i = inc();
+  if (!i || etapa === "Escolher") return "";
+  return [texto(i.nome) || "Dungeon sem nome", texto(i.organizacao)].filter(Boolean).join(" · ");
+}
+function irPara(nome, foco = true) {
+  if (nome !== "Escolher" && !rascunho()) return;
+  etapa = nome;
+  document.body.dataset.etapa = nome;
+  ETAPAS.forEach(e => { $("etapa" + e).hidden = e !== nome; });
+  document.querySelectorAll(".passos [data-etapa]").forEach(b => {
+    b.disabled = b.dataset.etapa !== "Escolher" && !rascunho();
+    if (b.dataset.etapa === nome) b.setAttribute("aria-current", "step");
+    else b.removeAttribute("aria-current");
+  });
+  $("tituloEtapa").textContent = TITULOS[nome];
+  $("nomeAberto").textContent = rotuloAberto();
+  $("btVoltar").hidden = nome === "Escolher";
+  $("btVoltar").textContent = nome === "Dungeon" ? "← Suas dungeons" : "← Voltar";
+  $("btProximo").hidden = !PROXIMO[nome];
+  $("btProximo").textContent = PROXIMO[nome] || "";
+  if (nome === "Escolher") desenharEscolher();
+  if (nome === "Dungeon") mostrarDungeon();
+  if (nome === "Chefe") mostrarChefe();
+  if (nome === "Caminho") mostrarCaminho();
+  if (nome === "Revisar") mostrarRevisao();
+  window.scrollTo(0, 0);
+  if (foco) $("tituloEtapa").focus({preventScroll: true});
+}
+function passo(delta) {
+  const i = ETAPAS.indexOf(etapa) + delta;
+  if (i >= 0 && i < ETAPAS.length) irPara(ETAPAS[i]);
+}
+
+/* ------------------------------------------------------- 1. escolher */
+
+function resumoCurto(i, comOrganizacao = true) {
+  const partes = comOrganizacao ? [texto(i.organizacao) || "sem Organização"] : [];
+  partes.push(i.tier ? `T${i.tier}` : "sem tier");
+  if (i.tamanho) partes.push(i.tamanho);
+  return partes.join(" · ");
+}
+function desenharEscolher() {
+  const lista = $("listaRascunhos");
+  lista.replaceChildren();
+  const chaves = Object.keys(rascunhos).sort((a, b) => texto(rascunhos[b].atualizado).localeCompare(texto(rascunhos[a].atualizado)));
+  chaves.forEach(k => {
+    const r = rascunhos[k], i = r.pacote.incursao;
+    const item = no("li", "cartao");
+    const abrir = no("button", "cartao-abrir");
+    abrir.type = "button";
+    abrir.append(no("span", "cartao-nome", texto(i.nome) || "Dungeon sem nome"),
+      no("span", "cartao-meta", resumoCurto(i)),
+      no("span", "cartao-meta", `editada em ${quando(r.atualizado)}`));
+    abrir.addEventListener("click", () => abrirRascunho(k));
+    const apagar = no("button", "botao discreto pequena perigo", "Apagar");
+    apagar.type = "button";
+    apagar.setAttribute("aria-label", `Apagar o rascunho ${texto(i.nome) || "sem nome"}`);
+    apagar.addEventListener("click", () => {
+      if (!confirm(`Apagar o rascunho “${texto(i.nome) || "sem nome"}” deste navegador? Isso não tem volta — um arquivo que você já baixou continua no seu computador.`)) return;
+      delete rascunhos[k];
+      if (chave === k) chave = null;
+      guardar(); irPara("Escolher", false);
+    });
+    item.append(abrir, apagar);
+    lista.append(item);
+  });
+  $("semRascunhos").hidden = chaves.length > 0;
+
+  const prontas = $("listaProntas");
+  prontas.replaceChildren();
+  C.organizacoes.forEach(org => {
+    const daOrg = Object.entries(C.incursoes).filter(([, i]) => i.organizacao === org)
+      .sort(([, a], [, b]) => (a.tier || 5) - (b.tier || 5) || texto(a.nome).localeCompare(texto(b.nome)));
+    if (!daOrg.length) return;
+    const grupo = no("div", "grupo-prontas");
+    grupo.append(no("h4", "", org));
+    const ul = no("ul", "cartoes compactos");
+    daOrg.forEach(([id, i]) => {
+      const li = no("li", "cartao");
+      const b = no("button", "cartao-abrir");
+      b.type = "button";
+      b.append(no("span", "cartao-nome", texto(i.nome)), no("span", "cartao-meta", resumoCurto(i, false)));
+      b.addEventListener("click", () => partirDe(id));
+      li.append(b); ul.append(li);
+    });
+    grupo.append(ul); prontas.append(grupo);
+  });
+}
+
+/* ------------------------------------------------------ 2. a dungeon */
+
+function tierRotulo(t) {
+  const n = Number(t);
+  return n >= C.limites.tier_maximo
+    ? `Tier ${n} · aberta a todos`
+    : `Tier ${n} · até o nível ${C.nivel_maximo_do_tier[String(n)]}`;
+}
+function familiaDe(tipo) { return (C.tipos_de_sala.find(t => t.id === tipo) || {}).familia; }
+function sorteaveisDe(org) {
+  const b = C.bancos[org];
+  return b ? b.salas.filter(s => familiaDe(s.tipo) !== "parada").length : 0;
+}
+function resumoDoCaminho(tamanho) {
+  // O mesmo texto de `embeds.resumo_do_caminho`, que é o que o grupo lê.
+  const t = C.tamanhos[tamanho];
+  if (!t) return "";
+  const descansos = t.paradas - t.salas;
+  if (!descansos) return `${t.salas} salas até o objetivo, sem descanso`;
+  const quais = {1: "um descanso", 2: "dois descansos"}[descansos] || `${descansos} descansos`;
+  return `${t.salas} salas e ${quais} até o objetivo`;
+}
+function chamada(lore) {
+  // O corte de `embeds.chamada`: o primeiro parágrafo, até o limite do bot.
+  const primeiro = texto(lore).trim().split("\n\n")[0].trim();
+  const limite = C.limites.chamada;
+  if (primeiro.length <= limite) return primeiro;
+  const corte = primeiro.slice(0, limite);
+  const espaco = corte.lastIndexOf(" ");
+  return (espaco > 0 ? corte.slice(0, espaco) : corte) + "…";
+}
+function tituloDoCartao(i) {
+  // `embeds.titulo_da_incursao`: o tier anda colado no nome.
+  const nome = texto(i.nome) || "Sua dungeon";
+  if (!i.tier) return nome;
+  return Number(i.tier) >= C.limites.tier_maximo ? `${nome} (tier livre)` : `${nome} (T${i.tier})`;
+}
+
+function mostrarDungeon() {
+  const i = inc();
+  $("dNome").value = texto(i.nome);
+  preencher($("dOrg"), [["", "Escolha…"], ...C.organizacoes.map(o => [o, `${o} · ${sorteaveisDe(o)} salas`])], i.organizacao);
+  preencher($("dTier"), [["", "Escolha…"], ...Array.from({length: C.limites.tier_maximo}, (_, n) => [String(n + 1), tierRotulo(n + 1)])], i.tier ?? "");
+  preencher($("dTamanho"), Object.keys(C.tamanhos).map(t => {
+    const {salas, paradas} = C.tamanhos[t], descansos = paradas - salas;
+    return [t, `${t} · ${salas} salas${descansos ? ` + ${descansos} descanso${descansos > 1 ? "s" : ""}` : ""}`];
+  }), i.tamanho || "Média");
+  $("dLore").value = texto(i.lore_inicial);
+  $("dLoreFinal").value = texto(i.lore_final);
+  $("dRecompensa").value = i.recompensa_mes ?? "";
+  $("dPontos").value = i.pontos_conclusao ?? "";
+  $("dCapa").value = texto(i.imagem_capa);
+  atualizarDungeon();
+}
+function contar(alvo, quantos, aviso, teto) {
+  $(alvo).textContent = quantos;
+  $(alvo).classList.toggle("invalido", quantos > teto);
+  $(alvo).classList.toggle("atencao", quantos > aviso && quantos <= teto);
+}
+function atualizarDungeon() {
+  const i = inc(), L = C.limites;
+  contar("cNome", texto(i.nome).length, L.aviso_titulo, L.titulo);
+  contar("cLore", texto(i.lore_inicial).length, L.aviso_lore, L.descricao);
+  contar("cLoreFinal", texto(i.lore_final).length, L.aviso_lore, L.descricao);
+  $("dCodigo").textContent = i.id
+    ? `Código: ${i.id}${rascunho().idFixo ? " · fixo" : ""}` : "O código sai do nome.";
+  $("dCodigo").title = rascunho().idFixo
+    ? "Fixo desde o primeiro download: reenviar o arquivo atualiza a mesma dungeon, mesmo com outro nome."
+    : "Acompanha o nome até o primeiro download.";
+
+  // O que cada escolha muda no jogo, dito na hora em que se escolhe.
+  const partes = [];
+  if (i.tier) partes.push(Number(i.tier) >= L.tier_maximo
+    ? "Qualquer personagem pode entrar."
+    : `Entra quem for do tier ${i.tier} ou menor (até o nível ${C.nivel_maximo_do_tier[String(i.tier)]}). O chefe é simulado nesse tier.`);
+  if (i.organizacao) partes.push(`As salas do caminho saem do banco de ${i.organizacao} (${sorteaveisDe(i.organizacao)} salas).`);
+  if (C.tamanhos[i.tamanho]) partes.push(`O caminho tem ${resumoDoCaminho(i.tamanho)}.`);
+  $("dicaDungeon").textContent = partes.join(" ");
+  previaDungeon();
+}
+function campoDiscord(nome, valor, emLinha = true) {
+  const n = no("div", emLinha ? "" : "inteiro");
+  n.append(no("strong", "", nome), no("span", "", valor));
+  return n;
+}
+/* A prévia imita os três cartões de `src/embeds.py`: `recrutamento`,
+   `lore_abertura` e `lore_fecho`. Mudou um deles, muda aqui. */
+function previaDungeon() {
+  const i = inc(), caixa = $("previaDungeon");
+  caixa.replaceChildren();
+  document.querySelectorAll("[data-previa]").forEach(b => b.setAttribute("aria-selected", b.dataset.previa === abaPrevia));
+  const campos = no("div", "discord-campos");
+  let titulo = `🗺️ ${tituloDoCartao(i)}`, corpo = "", nota = "";
+  if (abaPrevia === "anuncio") {
+    corpo = chamada(i.lore_inicial);
+    campos.append(campoDiscord("Organização", i.organizacao || "—"),
+      campoDiscord("Caminho", i.tamanho || "—"),
+      campoDiscord("Recompensa", `${i.recompensa_mes ?? 0} MEs`),
+      campoDiscord("Quem pode entrar", !i.tier ? "—" : Number(i.tier) >= C.limites.tier_maximo
+        ? "🎚️ Tier livre — qualquer personagem entra"
+        : `🎚️ Tier ${i.tier} — entra quem for tier ${i.tier} ou menos`, false));
+    nota = "O anúncio do recrutamento mostra só o primeiro parágrafo da lore.";
+  } else if (abaPrevia === "abertura") {
+    corpo = texto(i.lore_inicial);
+    campos.append(campoDiscord("Organização", i.organizacao || "—"),
+      campoDiscord("Caminho", `${i.tamanho || "—"} — ${resumoDoCaminho(i.tamanho)}`),
+      campoDiscord("Grupo", "5 aventureiro(s)"));
+    nota = "A lore inteira, quando a run começa.";
+  } else {
+    titulo = `📖 ${tituloDoCartao(i)} — epílogo`;
+    corpo = texto(i.lore_final);
+    nota = texto(i.lore_final).trim() ? "Lido quando o grupo vence o chefe." : "Sem epílogo, a vitória sai sem esse cartão.";
+  }
+  caixa.append(no("h3", "", titulo));
+  caixa.append(no("p", corpo ? "" : "vazio-previa", corpo || "Escreva o texto à esquerda."));
+  if (campos.children.length) caixa.append(campos);
+  const capa = texto(i.imagem_capa).trim();
+  if (abaPrevia !== "epilogo" && /^https?:\/\//.test(capa)) {
+    const img = document.createElement("img");
+    img.src = capa; img.alt = "Capa da dungeon"; img.className = "capa";
+    img.addEventListener("error", () => { img.replaceWith(no("p", "legenda", "A imagem não abriu. Confira o endereço.")); });
+    caixa.append(img);
+  }
+  $("notaPrevia").textContent = nota;
+}
+function campoDaDungeon(id, aplicar, evento = "input") {
+  $(id).addEventListener(evento, () => {
+    if (!inc()) return;
+    aplicar(inc(), $(id).value);
+    alterado(); atualizarDungeon();
+  });
+}
+campoDaDungeon("dNome", (i, v) => { i.nome = v; acompanharNome(); });
+campoDaDungeon("dOrg", (i, v) => { i.organizacao = v; }, "change");
+campoDaDungeon("dTier", (i, v) => { i.tier = v ? Number(v) : null; }, "change");
+campoDaDungeon("dTamanho", (i, v) => { i.tamanho = v; }, "change");
+campoDaDungeon("dLore", (i, v) => { i.lore_inicial = v; });
+campoDaDungeon("dLoreFinal", (i, v) => { i.lore_final = v; });
+campoDaDungeon("dRecompensa", i => { i.recompensa_mes = numero("dRecompensa"); });
+campoDaDungeon("dPontos", i => { i.pontos_conclusao = numero("dPontos"); });
+campoDaDungeon("dCapa", (i, v) => { i.imagem_capa = v.trim() || null; });
+document.querySelectorAll("[data-previa]").forEach(b => b.addEventListener("click", () => {
+  abaPrevia = b.dataset.previa; previaDungeon();
+}));
+
+/* --------------------------------------------------------- 3. o chefe */
+
+/* Uma criatura com números escritos à mão é "ficha própria": o bot usa os
+   números dela, e não os do livro. Trocar o nome por um do bestiário troca
+   a ficha pela do livro — senão o Behir sairia com os números do monstro
+   que estava antes na linha. */
+const temFicha = m => ["ca", "ataque", "hp", "dano"].some(c => m[c] != null && m[c] !== "");
+
+function linhas() {
+  if (linhasChefe === null || linhasDe !== chave) {
+    linhasChefe = copiar(chefe().monstros || []).map(m => ({...m}));
+    linhasDe = chave;
+  }
+  return linhasChefe;
+}
+function gravarChefe() {
+  chefe().monstros = linhas().filter(m => texto(m.nome).trim()).map(m => {
+    const limpo = {...m, nome: texto(m.nome).trim()};
+    const q = Number(limpo.quantidade);
+    if (Number.isFinite(q) && q > 1) limpo.quantidade = q; else delete limpo.quantidade;
+    return limpo;
+  });
+  alterado(); atualizarChefe();
+}
+function desenharCriaturas() {
+  const corpo = $("linhasChefe");
+  corpo.replaceChildren();
+  const lista = linhas();
+  lista.forEach((m, i) => {
+    const tr = no("tr");
+    const nome = no("td");
+    const campo = document.createElement("input");
+    campo.type = "text"; campo.value = texto(m.nome);
+    campo.setAttribute("list", "listaCriaturas");
+    campo.setAttribute("aria-label", `Criatura ${i + 1}`);
+    campo.addEventListener("input", () => {
+      const v = campo.value;
+      if (temFicha(lista[i]) && BESTIARIO.has(v.trim())) {
+        lista[i] = {nome: v, ...(lista[i].quantidade ? {quantidade: lista[i].quantidade} : {})};
+        desenharCriaturas(); gravarChefe();
+        $("linhasChefe").querySelectorAll('input[type="text"]')[i]?.focus();
+        return;
+      }
+      lista[i].nome = v;
+      gravarChefe();
+    });
+    nome.append(campo);
+    if (temFicha(m)) {
+      const marca = no("span", "ficha-propria", "ficha própria");
+      marca.title = "Esta criatura tem números escritos no arquivo. Trocar para um nome do bestiário usa os números do livro.";
+      nome.append(marca);
+    }
+    const quantas = no("td", "n");
+    const q = document.createElement("input");
+    q.type = "number"; q.min = "1"; q.max = String(C.limites.inimigos);
+    q.value = String(m.quantidade || 1);
+    q.setAttribute("aria-label", `Quantas de ${texto(m.nome) || "criatura " + (i + 1)}`);
+    q.addEventListener("input", () => { lista[i].quantidade = Number(q.value) || 1; gravarChefe(); });
+    quantas.append(q);
+    const fora = no("td");
+    const tirar = no("button", "botao discreto pequena", "×");
+    tirar.type = "button"; tirar.setAttribute("aria-label", `Remover ${texto(m.nome) || "criatura"}`);
+    tirar.addEventListener("click", () => { lista.splice(i, 1); desenharCriaturas(); gravarChefe(); });
+    fora.append(tirar);
+    tr.append(nome, quantas, fora);
+    corpo.append(tr);
+  });
+}
+function mostrarChefe() {
+  const o = chefe();
+  $("cSala").value = texto(o.nome);
+  $("cDesc").value = texto(o.descricao);
+  desenharCriaturas();
+  atualizarChefe();
+}
+function totalDoBando() {
+  return (chefe().monstros || []).reduce((soma, m) => soma + Math.max(1, Number(m.quantidade) || 1), 0);
+}
+function atualizarChefe() {
+  const o = chefe(), L = C.limites;
+  contar("cSalaConta", texto(o.nome).length, L.aviso_titulo, L.titulo);
+  contar("cDescConta", texto(o.descricao).length, L.aviso_descricao, L.descricao);
+  const total = totalDoBando(), teto = L.inimigos;
+  const desconhecidas = (o.monstros || []).filter(m => !temFicha(m) && !BESTIARIO.has(texto(m.nome).trim()));
+  const recado = $("recadoChefe");
+  recado.textContent = !total ? "O chefe precisa de pelo menos uma criatura."
+    : desconhecidas.length ? `Não estão no bestiário: ${desconhecidas.map(m => m.nome).join(", ")}. Escolha um nome da lista.`
+    : `${total} criatura(s) no bando${total > teto ? ` — o máximo é ${teto}` : ` · máximo ${teto}`}.`;
+  recado.classList.toggle("invalido", total > teto || desconhecidas.length > 0);
+  atualizarSimulacao();
+}
+$("cSala").addEventListener("input", () => { if (!chefe()) return; chefe().nome = $("cSala").value; alterado(); atualizarChefe(); });
+$("cDesc").addEventListener("input", () => { if (!chefe()) return; chefe().descricao = $("cDesc").value; alterado(); atualizarChefe(); });
+$("btCriatura").addEventListener("click", () => {
+  if (!chefe()) return;
+  linhas().push({nome: "", quantidade: 1});
+  desenharCriaturas();
+  const campos = $("linhasChefe").querySelectorAll('input[type="text"]');
+  campos[campos.length - 1]?.focus();
+});
+
+/* A simulação do chefe. O tier vem da dungeon, e não de um campo: o chefe
+   é sempre lutado no tier dela, e um seletor aqui só serviria para medir
+   a luta errada. O nível também não é campo — a ficha não muda dentro do
+   tier, então qualquer nível do tier dá o mesmo combate. */
+function assinatura() {
+  return JSON.stringify([inc().tier, chefe().monstros, $("fSeis").checked, $("fSemente").value]);
+}
+function motivoParaNaoSimular() {
+  if (C.falta_para_simular) return C.falta_para_simular;
+  if (!inc().tier) return "Escolha o tier na etapa A dungeon: o chefe é simulado nele.";
+  if (!totalDoBando()) return "Adicione pelo menos uma criatura ao chefe.";
+  return "";
+}
+function atualizarSimulacao() {
+  const i = inc(), motivo = motivoParaNaoSimular();
+  $("quemSimula").textContent = i.tier
+    ? `Grupos de 5 jogadores do tier ${i.tier}, contra as formações de referência do bot. Pode levar até meio minuto.`
+    : "O grupo é simulado no tier da dungeon.";
+  $("motivoSimular").textContent = motivo;
+  $("motivoSimular").hidden = !motivo;
+  $("btSimular").disabled = simulando || !!motivo;
+  const m = rascunho()?.medida;
+  $("medidaVelha").hidden = !m || m.assinatura === assinatura();
+  desenharResultado();
+}
+async function simular() {
+  if (simulando || motivoParaNaoSimular()) return;
+  const k = chave, feita = assinatura(), o = chefe();
+  // O bot exige nome e texto da sala; para medir o bando eles não importam,
+  // e o autor não deveria ter de escrever a descrição antes de testar a luta.
+  const sala = {...copiar(o), nome: texto(o.nome).trim() || "Chefe", descricao: texto(o.descricao).trim() || "—"};
+  const pedido = {sala, tier: Number(inc().tier), grupos: $("fSeis").checked ? [5, 6] : [5], repeticoes: REPETICOES};
+  if ($("fSemente").value !== "") pedido.semente = Number($("fSemente").value);
+  simulando = true; $("saidaSim").hidden = true;
+  const inicio = Date.now();
+  const marcar = () => { $("btSimular").textContent = `Simulando… ${Math.round((Date.now() - inicio) / 1000)} s`; };
+  marcar(); relogio = setInterval(marcar, 1000);
+  atualizarSimulacao();
+  try {
+    const r = await api("/api/simular", pedido);
+    if (r.erro) { recados("saidaSim", r); return; }
+    if (!rascunhos[k]) return;
+    rascunhos[k].medida = {assinatura: feita, resposta: r, quando: new Date().toISOString()};
+    guardar();
+    if (k === chave && feita !== assinatura()) aviso("O chefe mudou durante a simulação. Simule de novo.");
+  } catch (erro) { recados("saidaSim", {erro: erro.message}); }
+  finally {
+    simulando = false; clearInterval(relogio);
+    $("btSimular").textContent = "Simular o chefe";
+    if (k === chave && etapa === "Chefe") atualizarSimulacao();
+  }
+}
+/* A régua: as três faixas na reta de 0 a 100%, e onde a luta caiu. A
+   porcentagem sozinha deixava o autor adivinhar se 62% era o que ele
+   queria; as faixas vêm do servidor (`tools/simulacao/regua.py`). */
+function escala(taxa) {
+  const n = no("div", "escala");
+  n.setAttribute("aria-hidden", "true");
+  Object.entries(C.dificuldades_de_combate).forEach(([nome, [lo, hi]]) => {
+    const faixa = no("span", `faixa faixa-${nome}`, C.rotulos_de_combate[nome] || nome);
+    faixa.style.left = `${lo * 100}%`; faixa.style.width = `${(hi - lo) * 100}%`;
+    n.append(faixa);
+  });
+  const marca = no("span", "marca");
+  marca.style.left = `${Math.max(0, Math.min(100, taxa * 100))}%`;
+  n.append(marca);
+  return n;
+}
+function proximoPasso(m) {
+  const faixas = Object.values(C.dificuldades_de_combate);
+  const teto = Math.max(...faixas.map(f => f[1])), piso = Math.min(...faixas.map(f => f[0]));
+  const dicas = [];
+  if (m.taxa > teto) dicas.push("Quase nenhum grupo perde. Para endurecer: aumente a quantidade ou troque por uma criatura mais forte.");
+  else if (m.taxa < piso) dicas.push("A maioria dos grupos perde. Para aliviar: tire uma criatura ou troque por uma mais fraca.");
+  else if (!m.dificuldade) dicas.push("Caiu entre duas faixas. Um ajuste pequeno na quantidade costuma levar para uma delas.");
+  else dicas.push(`Dentro da faixa ${m.rotulo}.`);
+  if (m.dizima && m.pior) dicas.push(`Atenção: uma das formações de referência vence só ${pct(m.pior.taxa)} das vezes. A média esconde isso — veja qual é em “Ver as formações”.`);
+  return dicas;
+}
+function desenharResultado() {
+  const caixa = $("resultado"), m = rascunho()?.medida;
+  caixa.replaceChildren();
+  if (!m) {
+    caixa.className = "resultado-vazio";
+    caixa.textContent = "Simule para ver quantas vezes o grupo vence.";
+    return;
+  }
+  caixa.className = "resultado" + (m.assinatura === assinatura() ? "" : " velho");
+  const r = m.resposta;
+  r.medidas.forEach(med => {
+    const bloco = no("div", "medida-grupo");
+    const topo = no("div", "medida-topo");
+    topo.append(no("b", "taxa-grande", pct(med.taxa)),
+      no("span", "", `de vitórias com ${med.grupo} jogadores`),
+      no("span", `veredito${med.dificuldade ? "" : " sem-faixa"}`, med.rotulo || ""));
+    bloco.append(topo, escala(med.taxa));
+    proximoPasso(med).forEach(d => bloco.append(no("p", "dica", d)));
+    if (med.pior && pct(med.pior.taxa) === pct(med.melhor.taxa)) {
+      bloco.append(no("p", "legenda", `Todas as formações de referência vencem ${pct(med.pior.taxa)}.`));
+    } else if (med.pior) {
+      bloco.append(no("p", "legenda", `A formação que mais sofre vence ${pct(med.pior.taxa)} (${med.pior.classes.join(", ")}), em ${med.pior.amostras} lutas. A que menos sofre, ${pct(med.melhor.taxa)}.`));
+    }
+    caixa.append(bloco);
+  });
+  const formacoes = no("details", "formacoes");
+  formacoes.append(no("summary", "", "Ver as formações"));
+  r.medidas.forEach(med => [...(med.composicoes || [])].sort((a, b) => a.taxa - b.taxa).forEach(c => {
+    formacoes.append(no("p", "", `${med.grupo} jogadores · ${pct(c.taxa)} · ${c.classes.join(", ")}`));
+  }));
+  caixa.append(formacoes);
+  const primeira = r.medidas[0] || {};
+  caixa.append(no("p", "legenda meta",
+    `${primeira.lutas ?? r.repeticoes} lutas · ${primeira.rodadas == null ? "—" : primeira.rodadas.toFixed(1)} rodadas em média · ${primeira.caidos?.toFixed(1) ?? "—"} caídos · semente ${r.semente}`));
+}
+$("btSimular").addEventListener("click", simular);
+$("fSeis").addEventListener("change", atualizarSimulacao);
+$("fSemente").addEventListener("input", atualizarSimulacao);
+
+/* -------------------------------------------------------- 4. o caminho */
+
+async function mostrarCaminho() {
+  const i = inc(), id = ++pedidoCaminho;
+  $("tabelaCaminho").replaceChildren();
+  $("saidaCaminho").hidden = true;
+  if (!i.organizacao) {
+    $("contaCaminho").textContent = "Escolha a Organização na etapa A dungeon.";
+    $("notaCaminho").textContent = "As salas do caminho saem do banco dela.";
+    return;
+  }
+  $("contaCaminho").textContent = "Conferindo as salas…";
+  try {
+    const r = await api("/api/pool", {organizacao: i.organizacao, tamanho: i.tamanho || "Média", filtro: i.filtro || {}});
+    if (id !== pedidoCaminho) return;
+    if (r.erro) { recados("saidaCaminho", r); $("contaCaminho").textContent = "Não foi possível conferir."; return; }
+    $("contaCaminho").textContent = `${r.pool.length} salas podem cair no caminho`;
+    $("notaCaminho").textContent = `Uma ${i.tamanho || "Média"} atravessa ${r.terminar} salas; com ${r.folga} ou mais, toda parada oferece ${C.limites.opcoes_por_passo} portas.`
+      + (i.filtro ? " Esta dungeon tem um filtro de salas, herdado da original." : "");
+    if (r.problemas.length || r.avisos.length) recados("saidaCaminho", r);
+    $("tabelaCaminho").replaceChildren(...r.pool.map(s => {
+      const tr = no("tr"), nome = no("td");
+      nome.append(no("small", "", s.id), no("span", "", s.nome));
+      tr.append(nome, no("td", "", s.tipo), no("td", "", s.temas.join(", ") || "—"));
+      return tr;
+    }));
+  } catch (erro) {
+    if (id === pedidoCaminho) { recados("saidaCaminho", {erro: erro.message}); $("contaCaminho").textContent = "Não foi possível conferir."; }
+  }
+}
+
+/* ------------------------------------------------- 5. revisar e baixar */
+
+/* O arquivo que sai: o mesmo formato que o bot lê. Campo opcional vazio
+   sai do arquivo em vez de ir como "" — o arquivo fica legível para quem
+   revisa, e o bot trata ausente e vazio igual. */
+function arquivo() {
+  const p = copiar(rascunho().pacote), i = p.incursao;
+  if (!texto(i.lore_final).trim()) delete i.lore_final;
+  if (!texto(i.imagem_capa).trim()) delete i.imagem_capa;
+  return {
+    formato: C.formato.nome, versao: C.formato.versao,
+    organizacao: texto(i.organizacao), incursao: i, salas: Array.isArray(p.salas) ? p.salas : [],
+  };
+}
+function nomeDoArquivo() { return `${inc().id || "dungeon"}.json`; }
+
+async function conferir() {
+  const id = ++pedidoConferir, k = chave;
+  try {
+    const r = await api("/api/conferir", {dados: arquivo()});
+    if (id !== pedidoConferir || k !== chave) return;
+    recados("saidaRevisar", r, "Pronta para enviar: o bot não encontrou nenhum problema.");
+    const problemas = (r.problemas || []).length;
+    $("btBaixar").textContent = problemas ? "↓ Baixar mesmo assim" : "↓ Baixar arquivo";
+    $("notaArquivo").textContent = notaDoArquivo(problemas);
+  } catch (erro) { if (id === pedidoConferir) recados("saidaRevisar", {erro: erro.message}); }
+}
+function notaDoArquivo(problemas) {
+  const partes = [`${nomeDoArquivo()} — é este arquivo que se envia pelo Discord. Abrindo ele aqui de novo, você continua de onde parou.`];
+  if (!rascunho().idFixo && inc().id) partes.push(`O código “${inc().id}” fica fixo a partir deste download: reenviar o arquivo atualiza a mesma dungeon, mesmo que o nome mude.`);
+  if (problemas) partes.push("O bot recusa o arquivo enquanto houver problema.");
+  return partes.join(" ");
+}
+function linhaDoResumo(rotulo, valor, irPara_) {
+  const dt = no("dt", "", rotulo), dd = no("dd", "", valor);
+  if (irPara_) {
+    const b = no("button", "link", "mudar");
+    b.type = "button";
+    b.addEventListener("click", () => irPara(irPara_));
+    dd.append(" ", b);
+  }
+  $("resumo").append(dt, dd);
+}
+function bandoEmTexto(monstros) {
+  return (monstros || []).map(m => `${m.quantidade || 1}× ${texto(m.nome)}`).join(", ") || "nenhuma criatura";
+}
+function mostrarRevisao() {
+  const i = inc(), o = chefe(), m = rascunho().medida;
+  $("resumo").replaceChildren();
+  linhaDoResumo("Dungeon", `${texto(i.nome) || "sem nome"}${i.id ? ` (${i.id})` : ""}`, "Dungeon");
+  linhaDoResumo("Organização", i.organizacao || "não escolhida", "Dungeon");
+  linhaDoResumo("Quem entra", i.tier ? tierRotulo(i.tier) : "tier não escolhido", "Dungeon");
+  linhaDoResumo("Caminho", `${i.tamanho || "—"}: ${resumoDoCaminho(i.tamanho)}`, "Caminho");
+  linhaDoResumo("Chefe", `${texto(o.nome) || "sala sem nome"} — ${bandoEmTexto(o.monstros)}`, "Chefe");
+  const medida = m?.resposta?.medidas?.[0];
+  linhaDoResumo("Simulação do chefe", !m ? "ainda não simulado"
+    : m.assinatura !== assinatura() ? `desatualizada (${pct(medida?.taxa)} antes da última mudança)`
+    : `${pct(medida?.taxa)} de vitórias com 5 jogadores · ${medida?.rotulo || ""}`, "Chefe");
+  linhaDoResumo("Recompensa", `${i.recompensa_mes ?? 0} MEs por pessoa · ${i.pontos_conclusao ?? 10} pontos para a Organização`);
+  linhaDoResumo("Textos", `abertura com ${texto(i.lore_inicial).length} caracteres · ${texto(i.lore_final).trim() ? `epílogo com ${texto(i.lore_final).length}` : "sem epílogo"}`, "Dungeon");
+  mostrarMudancas();
+  $("btBaixar").textContent = "↓ Baixar arquivo";
+  $("notaArquivo").textContent = notaDoArquivo(0);
+  $("saidaRevisar").hidden = false;
+  $("saidaRevisar").className = "recados largo";
+  $("saidaRevisar").textContent = "Conferindo com as regras do bot…";
+  conferir();
+}
+/* O que mudou em relação ao ponto de partida — a original copiada ou o
+   arquivo aberto. Texto longo diz que mudou e o tamanho, e não o texto
+   inteiro: a revisão tem de caber em trinta segundos. */
+const CAMPOS_DA_REVISAO = [
+  ["Nome", i => i.nome, "curto"], ["Organização", i => i.organizacao, "curto"],
+  ["Tier", i => i.tier, "curto"], ["Tamanho", i => i.tamanho, "curto"],
+  ["Lore de abertura", i => i.lore_inicial, "longo"], ["Epílogo", i => i.lore_final, "longo"],
+  ["Recompensa (MEs)", i => i.recompensa_mes, "curto"], ["Pontos", i => i.pontos_conclusao, "curto"],
+  ["Imagem de capa", i => i.imagem_capa, "curto"],
+  ["Nome da sala do chefe", i => i.objetivo?.nome, "curto"],
+  ["Texto da sala do chefe", i => i.objetivo?.descricao, "longo"],
+  ["Criaturas do chefe", i => bandoEmTexto(i.objetivo?.monstros), "curto"],
+];
+function mostrarMudancas() {
+  const lista = $("mudancas"), base = rascunho().base;
+  lista.replaceChildren();
+  if (!base) {
+    $("baseMudou").textContent = "";
+    lista.append(no("li", "nada", "Dungeon nova: tudo neste arquivo é novo."));
+    return;
+  }
+  $("baseMudou").textContent = `Comparado com ${base.rotulo}.`;
+  const agora = inc(), antes = base.incursao;
+  const iguais = (a, b) => texto(a ?? "").trim() === texto(b ?? "").trim();
+  CAMPOS_DA_REVISAO.forEach(([rotulo, ler, jeito]) => {
+    const a = ler(antes), b = ler(agora);
+    if (iguais(a, b)) return;
+    const li = no("li");
+    li.append(no("strong", "", rotulo), " ");
+    li.append(jeito === "longo"
+      ? `reescrito (${texto(a).length} → ${texto(b).length} caracteres)`
+      : `${texto(a) || "vazio"} → ${texto(b) || "vazio"}`);
+    lista.append(li);
+  });
+  if (!lista.children.length) lista.append(no("li", "nada", "Nada mudou ainda."));
+}
+function baixar() {
+  if (!rascunho()) return;
+  const dados = arquivo();
+  const url = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2) + "\n"], {type: "application/json"}));
+  const link = no("a"); link.href = url; link.download = nomeDoArquivo();
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const fixou = !rascunho().idFixo && inc().id;
+  rascunho().idFixo = true;
+  alterado();
+  if (etapa === "Revisar") $("notaArquivo").textContent = notaDoArquivo(0);
+  aviso(fixou ? `Arquivo baixado. O código “${inc().id}” agora é fixo.` : "Arquivo baixado.");
+}
+$("btBaixar").addEventListener("click", baixar);
+
+/* ------------------------------------------------------------- início */
 
 async function iniciar() {
   try {
     C = await api("/api/conteudo");
-    (C.tipos_de_sala || []).forEach(t => {
-      FAMILIA[t.id] = t.familia; RESUMO[t.id] = t.resumo; DESCONTO[t.id] = t.desconto_cd || 0;
-    });
-    // O subtítulo de cada lugar sai dos tipos do servidor: tipo novo no bot
-    // aparece no cartão sem ninguém reescrever a página.
-    const daFamilia = f => C.tipos.filter(t => familia(t) === f);
-    $("subTeste").textContent = daFamilia("teste").join(", ");
-    $("subCombate").textContent = "Criaturas e simulação";
-    Object.entries(C.bancos).forEach(([nome, b]) => { originais[nome] = {banco: b.original || {organizacao: b.organizacao, salas: b.salas}, arquivo: b.arquivo}; });
-    preencher("fBanco", Object.keys(C.bancos)); $("fBanco").disabled = false;
-    preencher("fTierSim", Array.from({length: C.limites.tier_maximo}, (_, i) => i + 1), 2);
-    /* Grupos fixos como padrão: cinco cópias da mesma classe não é
-       uma mesa que existe, e o número que ela dava dependia de QUAL classe.
-       As classes continuam ali, debaixo de um rótulo que diz o que são. */
-    const quemJoga = $("fClasse");
-    quemJoga.replaceChildren();
-    const padrao = document.createElement("option");
-    padrao.value = ""; padrao.textContent = "Grupos predefinidos";
-    quemJoga.append(padrao);
-    const umaSo = document.createElement("optgroup");
-    umaSo.label = "Uma classe só (diagnóstico)";
-    C.classes.forEach(c => {
-      const o = document.createElement("option");
-      o.value = c; o.textContent = c;
-      umaSo.append(o);
-    });
-    quemJoga.append(umaSo);
-    preencher("fAmb", [["", "Qualquer ambiente"], ...C.ambientes]);
-    preencher("fBicho", [["", "Qualquer tipo"], ...C.tipos_de_bicho.map(t => [t.id, `${t.id} (${t.quantas})`])]);
-    // As 385 do bestiario no campo de criatura: o autor escolhe da lista em
-    // vez de digitar, e nome digitado errado vira sala sem criatura.
+    (C.criaturas || []).forEach(nome => BESTIARIO.add(nome));
     const nomes = $("listaCriaturas");
-    nomes.replaceChildren();
-    (C.criaturas || []).forEach(nome => {
-      const o = document.createElement("option");
-      o.value = nome;
-      nomes.append(o);
-    });
-    preencher("fDifCombate", Object.keys(C.dificuldades_de_combate).map(d => [d, `${d} · ${C.dificuldades_de_combate[d].map(v => Math.round(v * 100)).join("–")}% de vitória`]), "media");
-    preencher("fTam", Object.keys(C.tamanhos));
-    C.temas.forEach(t => {
-      const ficha = no("button", "ficha", t); ficha.type = "button"; ficha.dataset.tema = t; ficha.setAttribute("aria-pressed", "false");
-      ficha.addEventListener("click", () => { ficha.setAttribute("aria-pressed", ficha.getAttribute("aria-pressed") !== "true"); agendarPool(); });
-      $("fichasFiltro").append(ficha);
-    });
-    let ultimo = lerLocal("ultimo");
-    if (typeof ultimo === "string" && ultimo.startsWith("importado.")) {
-      const salvo = lerLocal(ultimo);
-      if (salvo?.original && objeto(salvo.original.banco)) {
-        originais[ultimo] = salvo.original;
-        const opcao = no("option", "", `${salvo.original.banco.organizacao} · ${salvo.original.arquivo}`); opcao.value = ultimo; $("fBanco").append(opcao);
-      }
-    }
-    if (!originais[ultimo]) ultimo = Object.keys(originais)[0];
-    if (ultimo) carregar(ultimo);
-    else throw new Error("Nenhum banco disponível. Confira data/bancos e reinicie o estúdio.");
+    nomes.replaceChildren(...(C.criaturas || []).map(nome => { const o = document.createElement("option"); o.value = nome; return o; }));
+    [["tNome", C.limites.titulo], ["tLore", C.limites.descricao], ["tLoreFinal", C.limites.descricao],
+     ["tSala", C.limites.titulo], ["tDesc", C.limites.descricao]].forEach(([id, n]) => { $(id).textContent = n; });
+    carregarRascunhos();
+    irPara("Escolher", false);
+    guardar();
+    // Ligados só agora: antes do conteúdo, o clique não teria o que criar e
+    // sumiria sem aviso.
+    $("btNova").disabled = false; $("btAbrirArquivo").disabled = false;
     if (C.problemas.length) recados("erroInicial", {avisos: C.problemas});
-  } catch (erro) { recados("erroInicial", {erro: erro.message}); $("estado").textContent = "Não foi possível carregar"; }
+  } catch (erro) {
+    recados("erroInicial", {erro: erro.message});
+    $("estado").textContent = "Não foi possível carregar";
+  }
 }
 
-/* Cada campo escreve o seu pedaco no objeto. O `id` e o `tipo` redesenham o
-   formulario, porque mudam o que ele mostra. */
-lerCampo("fNome", s => { s.nome = $("fNome").value; });
-lerCampo("fDesc", s => { s.descricao = $("fDesc").value; });
-lerCampo("fPontos", s => { s.pontos_organizacao = numero("fPontos") ?? 0; });
-lerCampo("fCd", s => { s.cd = numero("fCd"); });
-lerCampo("fAlvo", s => { s.alvo_progresso = numero("fAlvo"); });
-lerCampo("fRecompensa", s => { s.recompensa = $("fRecompensa").value.trim() || null; });
-lerCampo("fImagem", s => { s.imagem = $("fImagem").value.trim() || null; });
-lerCampo("fId", s => { s.id = $("fId").value.trim(); listar(); });
-$("fDif").addEventListener("change", () => {
-  const s = sala(); if (!s) return;
-  s.dificuldade = $("fDif").value; alterado();
-});
-$("fTipo").addEventListener("change", () => {
-  const s = sala(); if (!s) return;
-  trocarTipo(s, $("fTipo").value);
-  mostrarEditor(); alterado();
-});
-$("btNovaCriatura").addEventListener("click", () => {
-  const s = sala(); if (!s) return;
-  if (linhasAtuais === null || linhasDoIndice !== indice) {
-    linhasAtuais = linhasDaSala(s); linhasDoIndice = indice;
-  }
-  linhasAtuais.push({nome: "", quantidade: 1, tier: "", tema: ""});
-  desenharCriaturas(); alterado();
-});
-$("fBanco").addEventListener("change", evento => {
-  const destino = evento.target.value;
-  if (!pronto()) { evento.target.value = origem; return; }
-  guardar(); carregar(destino);
-});
-$("fBusca").addEventListener("input", () => { if (banco) listar(); });
-$("fBuscaInspecao").addEventListener("input", () => { if (banco) inspecionar(); });
-$("btAbrir").addEventListener("click", () => { if (pronto()) $("fArquivo").click(); });
-$("fArquivo").addEventListener("change", importar);
-$("btBaixar").addEventListener("click", baixar);
-$("btConferir").addEventListener("click", () => { if (pronto()) conferir(); });
-$("btConferirBanco").addEventListener("click", () => { if (pronto()) conferir(true); });
-$("btNova").addEventListener("click", () => adicionar());
-$("btDuplicar").addEventListener("click", () => adicionar(true));
-$("btVirar").addEventListener("click", virar);
-$("btExcluir").addEventListener("click", () => {
-  if (!pronto() || !sala() || !confirm(`Excluir “${texto(sala().nome)}” do rascunho?`)) return;
-  banco.salas.splice(indice, 1);
-  // Todo índice depois do removido andou um: guardar os antigos abriria a
-  // sala errada. O do lugar atual vira a vizinha, e `entrar` confere.
-  selecao.Teste = -1; selecao.Combate = -1;
-  selecao[bancadaEm] = Math.min(indice, banco.salas.length - 1);
-  indice = -1;
-  entrar(bancadaEm); alterado();
-});
-$("btRecarregar").addEventListener("click", () => {
-  if (!banco || !confirm("Descartar o rascunho deste banco e restaurar o JSON original?")) return;
-  const original = originais[origem];
-  banco = copiar(original.banco); arquivo = original.arquivo;
-  selecao.Teste = -1; selecao.Combate = -1; indice = -1;
-  entrar(bancadaEm); alterado(); aviso("JSON original restaurado.");
-});
-$("btModo").addEventListener("click", () => {
-  avancado = !avancado;
-  if (!avancado) {
-    etapa = sala() ? "Editar" : "Escolher";
-    entrar(bancadaEm);
-  }
-  atualizarFluxo();
-});
-document.querySelectorAll(".passos [data-etapa]").forEach(botao => botao.addEventListener("click", () => irParaEtapa(botao.dataset.etapa)));
-$("btFluxoVoltar").addEventListener("click", () => irParaEtapa(etapa === "Testar" ? "Editar" : "Escolher"));
-$("btFluxoProximo").addEventListener("click", () => {
-  if (etapa === "Testar") baixar();
-  else irParaEtapa(etapa === "Escolher" ? "Editar" : "Testar");
-});
-const cartoes = [...document.querySelectorAll("[data-lugar]")];
-cartoes.forEach((n, i) => {
-  n.addEventListener("click", () => entrar(n.dataset.lugar));
-  n.addEventListener("keydown", evento => {
-    const visiveis = cartoes.filter(b => avancado || ["Teste", "Combate"].includes(b.dataset.lugar)), posicao = visiveis.indexOf(n);
-    const destinos = {ArrowRight: (posicao + 1) % visiveis.length, ArrowLeft: (posicao + visiveis.length - 1) % visiveis.length, Home: 0, End: visiveis.length - 1};
-    if (destinos[evento.key] !== undefined) { evento.preventDefault(); entrar(visiveis[destinos[evento.key]].dataset.lugar, true); }
-  });
-});
-const abasSala = [...document.querySelectorAll("[data-secao]")];
-abasSala.forEach((botao, i) => {
-  botao.addEventListener("click", () => secaoSala(botao.dataset.secao));
-  botao.addEventListener("keydown", evento => {
-    const destinos = {ArrowRight: (i + 1) % abasSala.length, ArrowLeft: (i + abasSala.length - 1) % abasSala.length, Home: 0, End: abasSala.length - 1};
-    if (destinos[evento.key] !== undefined) { evento.preventDefault(); secaoSala(abasSala[destinos[evento.key]].dataset.secao, true); }
-  });
-});
-$("fTierSim").addEventListener("change", () => { $("fNivel").value = Math.min(10, Number($("fTierSim").value) * 2); desatualizar(); });
-["fTemaSim", "fClasse", "fNivel", "fReps", "fSemente"].forEach(id => $(id).addEventListener("input", desatualizar));
-document.querySelectorAll('[name="grupo"]').forEach(n => n.addEventListener("change", desatualizar));
-["fAmb", "fBicho", "fDifCombate"].forEach(id => $(id).addEventListener("change", () => { sugestaoContexto = null; controles(); }));
-$("btMedir").addEventListener("click", medir);
-$("btSugerir").addEventListener("click", sugerir);
-["fTam", "fIncluir", "fExcluir"].forEach(id => $(id).addEventListener("input", agendarPool));
-$("fIncursao").addEventListener("change", carregarIncursao);
-$("btCopiarFiltro").addEventListener("click", copiarFiltro);
+document.querySelectorAll(".passos [data-etapa]").forEach(b => b.addEventListener("click", () => irPara(b.dataset.etapa)));
+$("btVoltar").addEventListener("click", () => passo(-1));
+$("btProximo").addEventListener("click", () => passo(1));
+$("btNova").addEventListener("click", () => { if (C) criarNova(); });
+$("btAbrirArquivo").addEventListener("click", () => { if (C) $("fArquivo").click(); });
+$("fArquivo").addEventListener("change", abrirArquivo);
 document.addEventListener("keydown", evento => {
-  if (!(evento.ctrlKey || evento.metaKey)) return;
-  if (evento.key.toLowerCase() === "s") { evento.preventDefault(); baixar(); }
-  if (evento.key === "Enter") { evento.preventDefault(); if (pronto()) conferir(); }
+  if ((evento.ctrlKey || evento.metaKey) && evento.key.toLowerCase() === "s") {
+    evento.preventDefault();
+    if (rascunho()) baixar();
+  }
 });
 window.addEventListener("beforeunload", guardar);
-// A bancada entra no lugar antes do primeiro pintar: ela mora no fim do HTML
-// e apareceria sob os paineis durante o `await` do conteúdo.
-$("ancoraTeste").append($("bancada"));
-controles();
 iniciar();

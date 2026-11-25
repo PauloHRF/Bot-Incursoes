@@ -30,11 +30,12 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(RAIZ / "tools"))
 
-from src import bestiario, incursoes as I  # noqa: E402
-from src.rules import TIER_MAXIMO  # noqa: E402
+from src import bestiario, incursoes as I, pacotes  # noqa: E402
+from src.rules import TIER_MAXIMO, nivel_maximo_do_tier  # noqa: E402
 
 import estudio as E  # noqa: E402
 from tools.simulacao import regua  # noqa: E402
+import validar_conteudo as V  # noqa: E402
 
 
 CRIATURA = {"nome": "Coisa", "ca": 13, "ataque": 4, "dano": "1d6", "hp": 12}
@@ -72,6 +73,18 @@ def caso_o_conteudo_vem_do_codigo():
     assert c["limites"]["descricao"] == I.LIMITE_DESCRICAO
     assert c["limites"]["inimigos"] == I.MAX_INIMIGOS
     assert c["limites"]["tier_maximo"] == TIER_MAXIMO
+    # Os avisos de texto e o corte do anúncio: a prévia da página mostra o
+    # mesmo que o bot e o validador, sem número copiado no JavaScript.
+    assert c["limites"]["aviso_titulo"] == V.AVISO_TITULO
+    assert c["limites"]["aviso_descricao"] == V.AVISO_DESCRICAO_SALA
+    assert c["limites"]["aviso_lore"] == V.AVISO_LORE
+    assert c["limites"]["chamada"] == I.LIMITE_CHAMADA
+    assert c["nivel_maximo_do_tier"] == {
+        str(t): nivel_maximo_do_tier(t) for t in range(1, TIER_MAXIMO + 1)
+    }
+    assert c["formato"] == {"nome": pacotes.FORMATO, "versao": pacotes.VERSAO}
+    assert c["rotulos_de_combate"] == regua.ROTULOS
+    assert set(c["rotulos_de_combate"]) == set(c["dificuldades_de_combate"])
     print("  o conteúdo da página vem do código, não de cópia: ok")
 
 
@@ -124,6 +137,30 @@ def caso_o_conteudo_le_o_disco_e_tolera_arquivo_ruim():
     assert c["incursoes"], "nenhuma incursão foi lida de data/"
     assert c["problemas"] == [], c["problemas"]
     print(f"  leu {len(c['bancos'])} bancos e {len(c['incursoes'])} incursões: ok")
+
+
+def caso_as_incursoes_vem_como_estao_escritas():
+    """Partir de uma dungeon pronta abre uma CÓPIA do arquivo, e não a ficha.
+
+    `para_dict` expandiria a criatura chamada pelo nome na ficha inteira, e a
+    cópia do autor viria com números que não acompanham mais o bestiário.
+    """
+    c = E.conteudo()
+    for arquivo in sorted(E.PASTA_INCURSOES.glob("*.json")):
+        dados = json.loads(arquivo.read_text(encoding="utf-8"))
+        assert c["incursoes"][dados["id"]] == dados, arquivo.name
+    with tempfile.TemporaryDirectory() as pasta:
+        nome = {"nome": "Behir"}
+        dados = {"id": "so_nome", "nome": "Só nome", "organizacao": "Vórtice Oculto",
+                 "tier": 3, "lore_inicial": "x", "recompensa_mes": 1,
+                 "objetivo": sala_de_combate(id="OBJ", monstros=[nome])}
+        (Path(pasta) / "a.json").write_text(json.dumps(dados), encoding="utf-8")
+        (Path(pasta) / "quebrada.json").write_text("{", encoding="utf-8")
+        with patch.object(E, "PASTA_INCURSOES", Path(pasta)):
+            lidas = E._incursoes()
+    assert list(lidas) == ["so_nome"], list(lidas)
+    assert lidas["so_nome"]["objetivo"]["monstros"] == [nome]
+    print("  as incursões vêm cruas, como estão no arquivo: ok")
 
 
 def caso_o_editor_recebe_o_json_original_sem_expandir_criaturas():
@@ -189,6 +226,40 @@ def caso_conferir_devolve_os_problemas_de_verdade():
     assert any("vulcanico" in p for p in r["problemas"]), r
     assert E.conferir({"dados": "não é objeto"})["problemas"], "payload torto passou"
     print("  conferir devolve os problemas do validador: ok")
+
+
+def _pacote(**extra):
+    incursao = {
+        "id": "dungeon_do_teste", "nome": "Dungeon do Teste",
+        "organizacao": "Vórtice Oculto", "tamanho": "Curta", "tier": 2,
+        "lore_inicial": "x", "recompensa_mes": 10,
+        "objetivo": sala_de_combate(id="OBJ"),
+    }
+    incursao.update(extra)
+    return pacotes.novo("Vórtice Oculto", incursao)
+
+
+def caso_conferir_o_arquivo_do_estudio_usa_a_regua_do_bot():
+    """O arquivo que a página baixa é conferido pela régua que o bot vai usar.
+
+    E contra o disco: o código de uma dungeon do repositório não pode ser
+    tomado, e o autor descobre isso escrevendo, não enviando.
+    """
+    r = E.conferir({"dados": _pacote()})
+    assert r["tipo"] == "pacote" and r["problemas"] == [], r
+    existente = next(iter(E._incursoes()))
+    r = E.conferir({"dados": _pacote(id=existente)})
+    assert any(existente in p for p in r["problemas"]), r
+    r = E.conferir({"dados": _pacote(tier=None)})
+    assert any("tier" in p for p in r["problemas"]), r
+    # Os avisos de texto vêm junto: da lore e da sala do chefe.
+    longa = E.conferir({"dados": _pacote(
+        lore_inicial="x" * 1600,
+        objetivo=sala_de_combate(id="OBJ", descricao="y" * 700),
+    )})
+    assert any("lore de abertura" in a for a in longa["avisos"]), longa
+    assert any("do chefe" in a for a in longa["avisos"]), longa
+    print("  o arquivo do Estúdio é conferido pela régua do bot: ok")
 
 
 # ----------------------------------------------------------------- pool
@@ -517,10 +588,12 @@ for caso in (
     caso_cada_tipo_de_sala_tem_familia_e_resumo,
     caso_os_minimos_por_tamanho_saem_da_conta_do_sorteio,
     caso_o_conteudo_le_o_disco_e_tolera_arquivo_ruim,
+    caso_as_incursoes_vem_como_estao_escritas,
     caso_o_editor_recebe_o_json_original_sem_expandir_criaturas,
     caso_conferir_reconhece_os_tres_tipos,
     caso_a_sala_sozinha_nao_leva_bronca_do_banco,
     caso_conferir_devolve_os_problemas_de_verdade,
+    caso_conferir_o_arquivo_do_estudio_usa_a_regua_do_bot,
     caso_o_pool_usa_as_salas_em_edicao,
     caso_o_pool_traz_o_veredito_do_bot,
     caso_o_pool_recusa_pedido_torto,

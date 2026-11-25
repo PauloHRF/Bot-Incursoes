@@ -5,10 +5,10 @@ cliques. O pacote é para **Windows 10/11 de 64 bits** e já inclui Python e
 as dependências, incluindo `aiosqlite`. Funciona sem internet e não precisa
 de conta no GitHub.
 
-A página abre em **Escolher → Editar → Testar**. Em **Ferramentas avançadas**
-continuam disponíveis filtros de dungeon, inspeção, sugestão de criaturas e
-opções de simulação. Os combates usam sete formações fixas, conferíveis
-em **Ver grupos usados**. **Baixar JSON** guarda o banco completo para enviar.
+A página abre na lista de dungeons e segue em cinco etapas: **Escolher → A
+dungeon → O chefe → O caminho → Revisar e baixar**. O chefe é simulado no tier
+da dungeon, contra as sete formações fixas do bot. **Baixar arquivo** gera o
+arquivo único da dungeon, que é o que se envia.
 Mantenha a janela de abertura aberta durante o uso e feche-a ao terminar.
 
 ## Gerar uma nova distribuição

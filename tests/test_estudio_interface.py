@@ -1,23 +1,23 @@
-"""Regressões da bancada no navegador (dependência opcional).
+"""Regressões do Estúdio no navegador (dependência opcional).
 
     pip install -r requirements-estudio.txt
     python -m playwright install chromium
     python tests/test_estudio_interface.py
 
-Usa o servidor e os bancos reais; só as buscas demoradas de combate recebem
-respostas controladas. Não exige iniciar o estúdio separadamente.
+Usa o servidor e o conteúdo reais; só a simulação recebe respostas
+controladas, porque uma luta de verdade leva meio minuto. Não exige iniciar o
+estúdio separadamente.
 
-O que estes casos protegem, e que não é óbvio: o estúdio é dividido em quatro
-LUGARES — escrever sala de teste, montar combate, montar a dungeon e
-inspecionar o banco. A divisão não é enfeite: cada lugar esconde campo que não
-é dele, e o que cola um no outro (o tema da sala vazando para o filtro da
-dungeon, a sala sumindo da lista ao trocar de tipo) é o que quebra calado.
+O que estes casos protegem, e que não é óbvio: o Estúdio escreve UMA coisa, a
+dungeon, em cinco etapas, e o que sai dele é o arquivo que o bot vai receber.
+Por isso o caso principal não para no clique de baixar: ele confere o arquivo
+baixado com a mesma régua do bot (`src/pacotes.py`). Uma página que baixa um
+arquivo que o bot recusa é a falha que o autor só descobriria no envio.
 """
 from __future__ import annotations
 
 import json
 import os
-import re
 import shutil
 import sys
 import threading
@@ -25,13 +25,30 @@ import unittest
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(RAIZ))
 sys.path.insert(0, str(RAIZ / "tools"))
 import estudio as E  # noqa: E402
+from src import incursoes as I, pacotes  # noqa: E402
 
 try:
     from playwright.sync_api import expect, sync_playwright
 except ImportError:
     sync_playwright = None
+
+# Uma medida com a forma da de verdade, para a simulação não levar meio minuto.
+MEDIDA = {
+    "sala": "OBJ", "tema": None, "tier": 3, "classe": "predefinido", "sorteado": False,
+    "predefinido": True, "nivel": 6, "repeticoes": 240, "semente": 9,
+    "criaturas": [{"nome": "Behir", "ca": 17, "hp": 168}],
+    "medidas": [{
+        "grupo": 5, "taxa": .7, "rodadas": 4.2, "caidos": 1.1, "lutas": 238, "mesas": 7,
+        "composicoes": [{"classes": ["bardo", "mago"], "taxa": .4, "amostras": 34},
+                        {"classes": ["guerreiro", "clerigo"], "taxa": .9, "amostras": 34}],
+        "pior": {"classes": ["bardo", "mago"], "taxa": .4, "amostras": 34},
+        "melhor": {"classes": ["guerreiro", "clerigo"], "taxa": .9, "amostras": 34},
+        "azarada": .4, "dificuldade": "media", "rotulo": "Média", "dizima": True,
+    }],
+}
 
 
 @unittest.skipUnless(sync_playwright, "instale playwright para testar a interface")
@@ -55,6 +72,7 @@ class Interface(unittest.TestCase):
             cls.tarefa.join()
             raise
         cls.conteudo = E.conteudo()
+        cls.bancos, _ = I.carregar_bancos_tolerante(E.PASTA_BANCOS)
 
     @classmethod
     def tearDownClass(cls):
@@ -65,631 +83,176 @@ class Interface(unittest.TestCase):
         cls.tarefa.join()
 
     def setUp(self):
-        self.context = self.browser.new_context(viewport={"width": 1440, "height": 1000})
+        self.context = self.browser.new_context(viewport={"width": 1366, "height": 900})
         self.page = self.context.new_page()
         self.erros = []
         self.page.on("pageerror", lambda e: self.erros.append(str(e)))
-        self.page.goto(self.url + ("" if self._testMethodName.startswith("test_fluxo_") else "?modo=avancado"))
-        expect(self.page.locator(".sala-btn").first).to_be_visible()
-        self.inicial = self.conteudo["bancos"][self.page.locator("#fBanco").input_value()]["original"]
-        self.salas = self.inicial["salas"]
-        # Os dois lugares de escrita, pela MESMA família que o servidor manda
-        # para a página: o teste e a tela leem a divisão da mesma fonte.
-        self.combates = [i for i, s in enumerate(self.salas) if self.lugar_de(s) == "Combate"]
-        self.teste = [i for i, s in enumerate(self.salas) if self.lugar_de(s) == "Teste"]
+        self.page.on("dialog", lambda d: d.accept())
+        self.page.goto(self.url)
+        expect(self.page.locator("#listaProntas .cartao").first).to_be_visible()
 
     def tearDown(self):
         self.context.close()
         self.assertEqual(self.erros, [])
 
-    @staticmethod
-    def lugar_de(sala):
-        return "Combate" if E.FAMILIA_DO_TIPO[sala["tipo"]] == "combate" else "Teste"
-
-    def abrir(self, indice):
-        """Abre a sala de índice `indice` NO BANCO, indo ao lugar dela.
-
-        Cada lugar lista só a família dele, então a posição na lista não é
-        mais a posição no arquivo — e é essa separação que se quer testar.
-        """
-        sala = self.salas[indice]
-        lugar = self.lugar_de(sala)
-        irmas = self.combates if lugar == "Combate" else self.teste
-        self.page.locator("#lugar" + lugar).click()
-        self.page.locator(".sala-btn").nth(irmas.index(indice)).click()
-        return sala
-
-    def json(self):
-        """A sala aberta, como o estúdio a tem na memória.
-
-        Lida e não digitada: o formulário é dirigido pelos campos (que é o
-        que se quer testar), e o objeto serve para CONFERIR o que eles
-        fizeram.
-        """
-        return self.page.evaluate("JSON.parse(JSON.stringify(sala() || null))")
-
-    def opcoes(self, campo):
-        return self.page.locator(campo).evaluate("n => [...n.options].map(o => o.value)")
+    # ------------------------------------------------------------ apoio
 
     def escrever(self, campo, valor):
-        """Digita num campo do formulário, como o autor faz."""
         self.page.locator(campo).fill(valor)
-        self.page.locator(campo).dispatch_event("input")
 
-    def semear(self, dados):
-        """Põe dados na sala aberta sem passar pelo formulário.
+    def etapa(self, nome):
+        self.page.locator(f'.passos [data-etapa="{nome}"]').click()
+        expect(self.page.locator(f"#etapa{nome}")).to_be_visible()
 
-        Só para montar o cenário de campos que o formulário NÃO mostra — a
-        prova de que editar o nome não apaga o resto do arquivo precisa que
-        exista um resto. O que se testa depois disso continua sendo a UI.
-        """
-        self.page.evaluate(
-            "d => { Object.assign(sala(), d); mostrarEditor(); alterado(); }", dados
-        )
+    def incursao(self):
+        """A dungeon aberta, como o estúdio a tem na memória."""
+        return self.page.evaluate("JSON.parse(JSON.stringify(inc() || null))")
+
+    def nova_dungeon(self, nome="A Cripta de Teste", tier="3", org="Vórtice Oculto"):
+        self.page.locator("#btNova").click()
+        expect(self.page.locator("#dNome")).to_be_focused()
+        self.escrever("#dNome", nome)
+        if org:
+            self.page.select_option("#dOrg", org)
+        if tier:
+            self.page.select_option("#dTier", tier)
+        self.escrever("#dLore", "O primeiro parágrafo.\n\nO segundo, que o anúncio não mostra.")
+
+    def chefe_com(self, criatura="Behir", quantas=None):
+        self.etapa("Chefe")
+        self.escrever("#cSala", "A Sala Final")
+        self.escrever("#cDesc", "O chefe espera.")
+        self.page.locator("#btCriatura").click()
+        self.page.locator("#linhasChefe input[type=text]").last.fill(criatura)
+        if quantas:
+            self.page.locator("#linhasChefe input[type=number]").last.fill(str(quantas))
 
     def baixar(self):
-        expect(self.page.locator("#btBaixar")).to_be_enabled()
         with self.page.expect_download() as evento:
             self.page.locator("#btBaixar").click()
-        return json.loads(Path(evento.value.path()).read_text(encoding="utf-8"))
+        return evento.value.suggested_filename, json.loads(
+            Path(evento.value.path()).read_text(encoding="utf-8"))
 
-    # ------------------------------------------------- os quatro lugares
+    def conferir_como_o_bot(self, dados):
+        return pacotes.conferir(dados, self.bancos, ocupadas=set(self.conteudo["incursoes"]))
 
-    def test_fluxo_so_mostra_a_etapa_atual_e_exporta_as_edicoes(self):
-        expect(self.page.locator("#tituloEtapa")).to_have_text("Escolha uma sala")
-        expect(self.page.locator("#formSala")).to_be_hidden()
-        expect(self.page.locator("#lugarDungeon")).to_be_hidden()
-        expect(self.page.locator("#btBaixar")).to_be_hidden()
-        self.page.locator(".sala-btn").first.click()
-        expect(self.page.locator("#tituloEtapa")).to_have_text("Edite a sala")
-        expect(self.page.locator("#listaSalas")).to_be_hidden()
-        self.escrever("#fNome", "Sala por etapas")
-        self.page.locator("#btFluxoProximo").click()
-        expect(self.page.locator("#formSala")).to_be_hidden()
-        expect(self.page.locator("#dTitulo")).to_have_text("Sala por etapas")
-        expect(self.page.locator("#saidaRevisao")).to_contain_text("Sala conferida.")
-        self.page.locator("#btFluxoVoltar").click()
-        expect(self.page.locator("#fNome")).to_have_value("Sala por etapas")
-        self.page.locator("#btFluxoProximo").click()
-        with self.page.expect_download() as evento:
-            self.page.locator("#btFluxoProximo").click()
-        dados = json.loads(Path(evento.value.path()).read_text())
-        self.assertEqual(dados["salas"][self.teste[0]]["nome"], "Sala por etapas")
-        self.assertEqual(len(dados["salas"]), len(self.salas))
+    # ------------------------------------------------------------ casos
 
-    def test_fluxo_combates_simula_e_troca_de_modo_sem_perder_a_sala(self):
-        self.page.locator("#lugarCombate").click()
-        self.page.locator(".sala-btn").first.click()
-        self.escrever("#fNome", "Combate guiado")
-        expect(self.page.locator("#btMedir")).to_be_hidden()
-        self.page.locator("#btFluxoProximo").click()
-        expect(self.page.locator("#btMedir")).to_be_visible()
-        expect(self.page.locator("#fNome")).to_be_hidden()
-        expect(self.page.locator("#opcoesSimulacao")).to_be_hidden()
-        self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
-            "sala": "X", "tier": 2, "classe": "predefinido", "sorteado": False, "predefinido": True,
-            "nivel": 4, "repeticoes": 240, "semente": 9, "criaturas": [{"nome": "Teste"}],
-            "medidas": [{"grupo": 5, "taxa": .75, "rodadas": 3, "caidos": .5, "lutas": 240}]}))
-        self.page.locator("#btMedir").click()
-        expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
-        self.page.locator("#btModo").click()
-        expect(self.page.locator("#lugarDungeon")).to_be_visible()
-        expect(self.page.locator(".passos")).to_be_hidden()
-        self.assertEqual(self.json()["nome"], "Combate guiado")
-        self.page.locator("#btModo").click()
-        expect(self.page.locator("#fNome")).to_have_value("Combate guiado")
-        self.page.locator("#btFluxoProximo").click()
-        expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
+    def test_dungeon_nova_atravessa_as_etapas_e_baixa_o_que_o_bot_aceita(self):
+        self.nova_dungeon()
+        # O código sai do nome, sem acento, e a prévia mostra o que o bot mostra.
+        expect(self.page.locator("#dCodigo")).to_contain_text("a_cripta_de_teste")
+        expect(self.page.locator("#previaDungeon h3")).to_have_text("🗺️ A Cripta de Teste (T3)")
+        expect(self.page.locator("#previaDungeon")).to_contain_text("O primeiro parágrafo.")
+        expect(self.page.locator("#previaDungeon")).not_to_contain_text("O segundo")
+        self.page.locator('[data-previa="abertura"]').click()
+        expect(self.page.locator("#previaDungeon")).to_contain_text("O segundo")
 
-    def test_fluxo_vazio_cria_sala_e_funciona_no_celular(self):
-        self.page.set_viewport_size({"width": 390, "height": 844})
-        dados = {"organizacao": self.inicial["organizacao"], "salas": []}
-        self.page.locator("#fArquivo").set_input_files({"name": "vazio.json", "mimeType": "application/json", "buffer": json.dumps(dados).encode()})
-        expect(self.page.locator("#btFluxoProximo")).to_be_disabled()
-        self.page.locator("#btNova").click()
-        expect(self.page.locator("#fNome")).to_be_focused()
-        self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
-        self.page.locator("#btFluxoProximo").click()
-        expect(self.page.locator("#saidaRevisao")).to_be_visible()
-        self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
-        self.page.locator('.passos [data-etapa="Escolher"]').click()
-        expect(self.page.locator(".sala-btn")).to_have_count(1)
-        expect(self.page.locator("#formSala")).to_be_hidden()
+        self.chefe_com("Behir")
+        self.etapa("Revisar")
+        expect(self.page.locator("#saidaRevisar")).to_contain_text("Pronta para enviar")
+        expect(self.page.locator("#mudancas")).to_contain_text("Dungeon nova")
 
-    def test_fluxo_parametro_avancado_invalido_fica_corrigivel(self):
-        self.page.locator("#lugarCombate").click()
-        self.page.locator(".sala-btn").first.click()
-        self.page.locator("#btFluxoProximo").click()
-        self.page.locator("#btModo").click()
-        self.page.locator("#opcoesSimulacao summary").click()
-        self.page.locator("#fReps").fill("61")
-        self.page.locator("#btModo").click()
-        self.page.locator("#btFluxoProximo").click()
-        self.page.locator("#btMedir").click()
-        expect(self.page.locator("#fReps")).to_be_visible()
-        expect(self.page.locator("#fReps")).to_be_focused()
-        expect(self.page.locator("#btModo")).to_have_text("Voltar ao modo simples")
+        nome, dados = self.baixar()
+        self.assertEqual(nome, "a_cripta_de_teste.json")
+        self.assertEqual(dados["formato"], pacotes.FORMATO)
+        self.assertEqual(dados["organizacao"], "Vórtice Oculto")
+        self.assertEqual(dados["incursao"]["objetivo"]["monstros"], [{"nome": "Behir"}])
+        self.assertNotIn("lore_final", dados["incursao"], "campo vazio foi no arquivo")
+        r = self.conferir_como_o_bot(dados)
+        self.assertTrue(r.aprovado, r.problemas)
 
-    def test_fluxo_mostra_os_grupos_fixos_sem_encher_a_tela(self):
-        self.page.locator("#lugarCombate").click()
-        self.page.locator(".sala-btn").first.click()
-        self.page.locator("#btFluxoProximo").click()
-        medida = {"grupo": 5, "taxa": .75, "rodadas": 3, "caidos": .5, "mesas": 4,
-                  "dizima": True,
-                  "pior": {"classes": ["guerreiro", "clerigo", "mago", "ladino", "patrulheiro"], "taxa": .4, "amostras": 60},
-                  "melhor": {"classes": ["barbaro", "xama", "feiticeiro", "monge", "druida"], "taxa": .9, "amostras": 60},
-                  "composicoes": [{"nome": "Clássica", "classes": ["guerreiro", "clerigo", "mago", "ladino", "patrulheiro"]}]}
-        self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
-            "tier": 2, "classe": "predefinido", "predefinido": True, "sorteado": False,
-            "nivel": 4, "repeticoes": 240, "semente": 9, "criaturas": [], "medidas": [medida]}))
-        self.page.locator("#btMedir").click()
-        expect(self.page.locator("#contaMedida")).to_contain_text("Grupos predefinidos")
-        expect(self.page.locator("#barrasMedida")).to_contain_text("risco nos grupos testados")
-        expect(self.page.locator("#gruposMedidos summary")).to_be_visible()
-        expect(self.page.locator("#listaGruposMedidos")).to_be_hidden()
-        self.page.locator("#gruposMedidos summary").click()
-        expect(self.page.locator("#listaGruposMedidos")).to_contain_text("Clássica: guerreiro, clerigo, mago, ladino, patrulheiro")
+        # Depois do download o código fica: renomear não vira dungeon nova.
+        self.etapa("Dungeon")
+        self.escrever("#dNome", "Outro Nome")
+        self.assertEqual(self.incursao()["id"], "a_cripta_de_teste")
+        expect(self.page.locator("#dCodigo")).to_contain_text("fixo")
 
-    def test_cada_lugar_mostra_so_o_que_se_escreve_nele(self):
-        """A separação que o estúdio promete, cobrada campo a campo.
+    def test_o_que_falta_aparece_com_as_palavras_do_bot(self):
+        self.nova_dungeon(tier="")
+        self.etapa("Chefe")
+        expect(self.page.locator("#motivoSimular")).to_contain_text("Escolha o tier")
+        expect(self.page.locator("#btSimular")).to_be_disabled()
+        self.etapa("Revisar")
+        expect(self.page.locator("#saidaRevisar")).to_contain_text("o bot recusa")
+        expect(self.page.locator("#saidaRevisar")).to_contain_text("tier")
+        # A sala final é "a sala do chefe", e não o nome do campo no arquivo.
+        expect(self.page.locator("#saidaRevisar")).to_contain_text("sala do chefe")
+        expect(self.page.locator("#saidaRevisar")).not_to_contain_text("objetivo (sala")
+        expect(self.page.locator("#btBaixar")).to_have_text("↓ Baixar mesmo assim")
 
-        Antes era uma lista só com tudo dentro e três abas por cima: quem ia
-        escrever um Evento rolava por cinco combates para achar a sala, e o
-        formulário trazia os dois conjuntos de campos de uma vez.
+    def test_partir_de_uma_pronta_abre_uma_copia_com_codigo_proprio(self):
+        original = self.page.locator("#listaProntas .cartao-nome").first.inner_text()
+        self.page.locator("#listaProntas .cartao-abrir").first.click()
+        expect(self.page.locator("#dNome")).to_have_value(f"{original} (cópia)")
+        copia = self.incursao()
+        self.assertNotIn(copia["id"], self.conteudo["incursoes"], "a cópia tomou o código de outra")
+        self.escrever("#dRecompensa", "99")
+        self.etapa("Revisar")
+        expect(self.page.locator("#baseMudou")).to_contain_text(original)
+        expect(self.page.locator("#mudancas")).to_contain_text("Recompensa (MEs)")
+        expect(self.page.locator("#mudancas")).to_contain_text("→ 99")
+        expect(self.page.locator("#saidaRevisar")).to_contain_text("Pronta para enviar")
+
+    def test_criatura_com_ficha_propria_vira_a_do_livro_ao_trocar_o_nome(self):
+        """A troca de nome não pode deixar a ficha da criatura anterior.
+
+        O chefe de uma dungeon pronta pode vir com os números escritos. Se o
+        autor troca o nome para um do bestiário e a ficha fica, o Behir sai
+        com os números do bicho de antes — e nada na tela mostra isso.
         """
-        expect(self.page.locator("#contaTeste")).to_have_text(str(len(self.teste)))
-        expect(self.page.locator("#contaCombate")).to_have_text(str(len(self.combates)))
-        expect(self.page.locator("#contaTudo")).to_have_text(str(len(self.salas)))
+        com_ficha = next(i for i, d in self.conteudo["incursoes"].items()
+                         if any(len(m) > 2 for m in d["objetivo"].get("monstros", [])))
+        self.page.evaluate("id => partirDe(id)", com_ficha)
+        self.etapa("Chefe")
+        expect(self.page.locator(".ficha-propria").first).to_be_visible()
+        antes = len(self.incursao()["objetivo"]["monstros"])
+        campo = self.page.locator("#linhasChefe input[type=text]").first
+        campo.fill("Behir")
+        expect(campo).to_be_focused()
+        primeira = self.incursao()["objetivo"]["monstros"][0]
+        self.assertEqual(set(primeira) - {"quantidade"}, {"nome"}, primeira)
+        self.assertEqual(primeira["nome"], "Behir")
+        self.assertEqual(len(self.incursao()["objetivo"]["monstros"]), antes)
 
-        expect(self.page.locator(".sala-btn")).to_have_count(len(self.teste))
-        expect(self.page.locator("#blocoTeste")).to_be_visible()
-        expect(self.page.locator("#blocoCriaturas")).to_be_hidden()
-        expect(self.page.locator("#painelCombate")).to_be_hidden()
-        self.assertNotIn("Combate", self.opcoes("#fTipo"))
-
-        self.page.locator("#lugarCombate").click()
-        expect(self.page.locator(".sala-btn")).to_have_count(len(self.combates))
-        expect(self.page.locator("#blocoCriaturas")).to_be_visible()
-        expect(self.page.locator("#blocoTeste")).to_be_hidden()
-        expect(self.page.locator("#btMedir")).to_be_enabled()
-        self.assertEqual(self.opcoes("#fTipo"), ["Combate"])
-
-        # E voltar reencontra a sala onde ela foi deixada, não a primeira.
-        esperado = self.abrir(self.teste[1])
-        self.page.locator("#lugarDungeon").click()
-        self.page.locator("#lugarTeste").click()
-        self.assertEqual(self.json()["id"], esperado["id"])
-
-    def test_abrir_descanso_mostra_o_tipo_que_a_sala_tem(self):
-        """O select não pode mostrar um tipo que a sala não tem.
-
-        Descanso não é oferecido para sala nova — é parada fixa, e o banco
-        quer uma só. Mas a sala que JÁ é Descanso tem de aparecer como tal: o
-        select montado sem ela caía na primeira opção e dizia "Armadilha"
-        sobre um Descanso, calado, com o arquivo intacto por baixo.
-        """
-        indice = next(i for i, s in enumerate(self.salas) if s["tipo"] == "Descanso")
-        self.abrir(indice)
-        self.assertEqual(self.json()["tipo"], "Descanso")
-        self.assertEqual(self.page.locator("#fTipo").input_value(), "Descanso")
-        expect(self.page.locator("#blocoTeste")).to_be_hidden()
-        expect(self.page.locator("#blocoCriaturas")).to_be_hidden()
-        self.assertEqual(self.baixar(), self.inicial)
-
-    def test_virar_combate_leva_a_sala_para_o_outro_lugar(self):
-        """Trocar de família é mudar de lugar, e tem de ser visível.
-
-        Com o tipo num select solto, virar Combate deixava a sala fora da
-        lista que o autor estava olhando — ela "sumia" sem ter sumido.
-        """
-        self.abrir(self.teste[0])
-        self.page.locator("#btVirar").click()
-        expect(self.page.locator("#lugarCombate")).to_have_attribute("aria-selected", "true")
-        expect(self.page.locator(".sala-btn")).to_have_count(len(self.combates) + 1)
-        virada = self.json()
-        self.assertEqual(virada["tipo"], "Combate")
-        self.assertIsNone(virada["cd"])
-        self.assertEqual(virada["pericias"], [])
-        expect(self.page.locator("#blocoCriaturas")).to_be_visible()
-
-        self.page.locator("#btVirar").click()
-        expect(self.page.locator("#lugarTeste")).to_have_attribute("aria-selected", "true")
-        expect(self.page.locator(".sala-btn")).to_have_count(len(self.teste))
-        self.assertEqual(self.json()["tipo"], self.conteudo["sala_nova"]["teste"])
-
-    def test_inspecionar_lista_o_banco_inteiro_e_abre_a_sala(self):
-        self.page.locator("#lugarInspecao").click()
-        expect(self.page.locator("#tabelaInspecao tr")).to_have_count(len(self.salas))
-        expect(self.page.locator("#saidaBanco")).to_be_visible()
-
-        # A CD da Armadilha aparece com o desconto que a mesa rola de fato.
-        armadilha = next(s for s in self.salas if s["tipo"] == "Armadilha" and s.get("cd"))
-        desconto = E.I.DESCONTO_CD_ARMADILHA
-        expect(self.page.locator("#tabelaInspecao")).to_contain_text(
-            f"CD {armadilha['cd']} → {max(1, armadilha['cd'] - desconto)}"
-        )
-
-        # Filtrar por tipo encolhe a tabela, e abrir leva ao lugar da sala.
-        self.page.locator("#fichasTipos .ficha", has_text="Combate").click()
-        expect(self.page.locator("#tabelaInspecao tr")).to_have_count(len(self.combates))
-        self.page.locator("#tabelaInspecao .abrir-sala").first.click()
-        expect(self.page.locator("#lugarCombate")).to_have_attribute("aria-selected", "true")
-        self.assertEqual(self.json()["id"], self.salas[self.combates[0]]["id"])
-
-    def test_o_tema_da_sala_nao_entra_no_filtro_da_dungeon(self):
-        """Dois conjuntos de fichas, duas coisas diferentes.
-
-        Os temas da sala, as perícias dela e os temas da dungeon usam a mesma
-        ficha na tela. Lendo `.ficha` da página inteira, o filtro da dungeon
-        saía com o tema da sala ABERTA dentro — e com as perícias, que nem
-        tema são, viravam `null` no pedido e o pool voltava vazio.
-        """
-        self.context.grant_permissions(["clipboard-read", "clipboard-write"])
-        self.page.locator('#fichasSala .ficha[aria-pressed="false"]').first.click()
-        self.page.locator('#fichasPericias .ficha[aria-pressed="false"]').first.click()
-
-        self.page.locator("#lugarDungeon").click()
-        self.page.locator("#btCopiarFiltro").click()
-        expect(self.page.locator("#toast")).to_have_text("Filtro JSON copiado.")
-        self.assertEqual(
-            json.loads(self.page.evaluate("navigator.clipboard.readText()")), {"filtro": {}}
-        )
-
-        # E a ficha que É do filtro entra.
-        ficha = self.page.locator("#fichasFiltro .ficha").first
-        tema = ficha.get_attribute("data-tema")
-        ficha.click()
-        self.page.locator("#btCopiarFiltro").click()
-        copiado = json.loads(self.page.evaluate("navigator.clipboard.readText()"))
-        self.assertEqual(copiado, {"filtro": {"temas": [tema]}})
-
-    def test_partir_de_uma_incursao_carrega_o_filtro_dela(self):
-        """Montar dungeon quase nunca começa do zero.
-
-        O que a incursão usa hoje entra nos campos para o autor ver o pool
-        que ela monta — e mexer a partir dali, em vez de reescrever de
-        memória um JSON que já está em data/. Só as da Organização aberta:
-        filtro de outra aponta para IDs que este banco não tem, e o pool
-        sairia vazio sem dizer por quê.
-        """
-        self.page.locator("#lugarDungeon").click()
-        daqui = {
-            i["id"] for i in self.conteudo["incursoes"].values()
-            if i["organizacao"] == self.inicial["organizacao"]
-        }
-        self.assertTrue(daqui, "o banco de teste não tem incursão nenhuma")
-        self.assertEqual(set(self.opcoes("#fIncursao")) - {""}, daqui)
-
-        tema = self.conteudo["temas"][0]
-        escrita = {"temas": [tema], "excluir": ["NAO_EXISTE"]}
-        self.page.evaluate(
-            "d => { C.incursoes[d.id] = d; listarIncursoes(); }",
-            {"id": "prova", "nome": "Prova", "organizacao": self.inicial["organizacao"],
-             "tamanho": "Longa", "filtro": escrita},
-        )
-        self.page.locator("#fIncursao").select_option("prova")
-        expect(self.page.locator("#toast")).to_contain_text("Prova")
-        self.assertEqual(self.page.locator("#fTam").input_value(), "Longa")
-        self.assertEqual(self.page.evaluate("filtro()"), escrita)
-        expect(self.page.locator("#notaTamanho")).to_contain_text(
-            str(self.conteudo["tamanhos"]["Longa"]["paradas"])
-        )
-
-    def test_filtro_utiliza_edicoes_e_exporta_json(self):
-        dados = self.abrir(self.teste[0])
-        self.escrever("#fNome", "Sala do filtro")
-        self.page.locator("#lugarDungeon").click()
-        self.page.locator("#fIncluir").fill(dados["id"])
-        expect(self.page.locator("#tabelaPool tr")).to_have_count(1)
-        expect(self.page.locator("#tabelaPool")).to_contain_text("Sala do filtro")
-        expect(self.page.locator("#fichasFiltro .ficha").first).to_be_disabled()
-        self.context.grant_permissions(["clipboard-read", "clipboard-write"])
-        self.page.locator("#btCopiarFiltro").click()
-        copiado = self.page.evaluate("navigator.clipboard.readText()")
-        self.assertEqual(json.loads(copiado), {"filtro": {"incluir": [dados["id"]]}})
-
-    # ------------------------------------------------------- o formulário
-
-    def test_editar_no_formulario_nao_apaga_o_resto_da_sala(self):
-        """Escrever no formulário mexe no campo escrito, e em mais nada.
-
-        O editor de JSON mostrava a sala inteira, então o autor via o que
-        sobrevivia. O formulário mostra uma parte — e é por isso que isto
-        precisa de prova: campo que ele não desenha (uma extensão do arquivo,
-        uma chave que o bot ainda não lê) tem de continuar lá depois de o
-        autor trocar o nome.
-        """
-        primeira, segunda = self.teste[0], self.teste[1]
-        self.abrir(primeira)
-        self.semear({"extensao": {"valor": [1, 2]}})
-        self.escrever("#fNome", 'Sala "revisada" <tag>')
-        expect(self.page.locator("#dTitulo")).to_have_text('Sala "revisada" <tag>')
-        self.escrever("#fDesc", "Texto curto.")
-        expect(self.page.locator("#dCorpo")).to_have_text("Texto curto.")
-
-        atual = self.json()
-        self.assertEqual(atual["extensao"], {"valor": [1, 2]})
-        self.assertEqual(atual["nome"], 'Sala "revisada" <tag>')
-        self.assertEqual(atual["id"], self.salas[primeira]["id"])
-
-        # E o que foi escrito acompanha a troca de sala e volta inteiro.
-        self.abrir(segunda)
-        self.escrever("#fNome", "Outra sala alterada")
-        expect(self.page.locator(".sala-btn").nth(1)).to_contain_text("Outra sala alterada")
-        self.abrir(primeira)
-        self.assertEqual(self.json()["nome"], 'Sala "revisada" <tag>')
-        self.assertEqual(self.json()["extensao"], {"valor": [1, 2]})
-
-        baixado = self.baixar()
-        self.assertEqual(baixado["salas"][primeira]["extensao"], {"valor": [1, 2]})
-        self.assertEqual(baixado["salas"][segunda]["nome"], "Outra sala alterada")
-
-    def test_o_formulario_nao_tem_estado_de_sintaxe_quebrada(self):
-        """O estado que este arquivo mais testava deixou de existir.
-
-        Com o editor de JSON, metade de uma chave travava trocar de sala, de
-        banco e o download. Nada disso existe num formulário: cada campo
-        escreve direto no objeto, e não há momento em que a sala esteja
-        ilegível. Fica como prova de que a troca valeu.
-        """
-        self.escrever("#fNome", "Meio de uma frase")
-        expect(self.page.locator("#btBaixar")).to_be_enabled()
-        self.abrir(self.teste[1])
-        expect(self.page.locator("#btBaixar")).to_be_enabled()
-        self.abrir(self.teste[0])
-        self.assertEqual(self.json()["nome"], "Meio de uma frase")
-
-        self.page.reload()
-        expect(self.page.locator(".sala-btn").first).to_be_visible()
-        self.assertEqual(self.json()["nome"], "Meio de uma frase")
-        self.assertEqual(self.baixar()["salas"][self.teste[0]]["nome"], "Meio de uma frase")
-
-    def test_rascunho_por_banco_e_busca(self):
-        primeiro = self.page.locator("#fBanco").input_value()
-        dados = self.json()
-        self.escrever("#fNome", "Rascunho persistido")
-        dados["nome"] = "Rascunho persistido"
-        outra = self.page.locator("#fBanco option").nth(1).get_attribute("value")
-        self.page.locator("#fBanco").select_option(outra)
-        self.page.locator("#fBanco").select_option(primeiro)
-        expect(self.page.locator("#dTitulo")).to_have_text(dados["nome"])
-        self.page.reload()
-        expect(self.page.locator("#dTitulo")).to_have_text(dados["nome"])
-        self.page.locator("#fBusca").fill(dados["id"].lower())
-        expect(self.page.locator(".sala-btn")).to_have_count(1)
-        self.assertEqual(self.json(), dados)
-
-    def test_duplicar_criar_excluir_e_restaurar(self):
-        original = self.json()
-        self.page.locator("#btDuplicar").click()
-        copia = self.json()
-        self.assertNotEqual(copia["id"], original["id"])
-        self.assertEqual(copia["descricao"], original["descricao"])
-        self.page.locator("#btNova").click()
-        self.assertNotEqual(self.json()["id"], copia["id"])
-        self.assertEqual(self.json()["tipo"], self.conteudo["sala_nova"]["teste"])
-        expect(self.page.locator(".sala-btn")).to_have_count(len(self.teste) + 2)
-        # A nova é de teste: a conta do outro lugar não pode ter andado.
-        expect(self.page.locator("#contaCombate")).to_have_text(str(len(self.combates)))
-        self.page.once("dialog", lambda d: d.accept())
-        self.page.locator("#btExcluir").click()
-        expect(self.page.locator(".sala-btn")).to_have_count(len(self.teste) + 1)
-        self.page.once("dialog", lambda d: d.accept())
-        self.page.locator("#btRecarregar").click()
-        self.assertEqual(self.baixar(), self.inicial)
-
-    def test_importar_banco_vazio_e_restaurar_importacao(self):
-        dados = {"organizacao": self.inicial["organizacao"], "salas": [], "extra": 7}
-        self.page.locator("#fArquivo").set_input_files({"name": "meu-banco.json", "mimeType": "application/json", "buffer": json.dumps(dados).encode()})
-        expect(self.page.locator(".sala-btn")).to_have_count(0)
-        expect(self.page.locator("#formSala")).to_be_hidden()
-        self.assertEqual(self.baixar(), dados)
-        self.page.locator("#btNova").click()
-        self.assertEqual(self.json()["tipo"], self.conteudo["sala_nova"]["teste"])
-        self.page.reload()
-        expect(self.page.locator(".sala-btn")).to_have_count(1)
-        self.page.once("dialog", lambda d: d.accept())
-        self.page.locator("#btRecarregar").click()
-        self.assertEqual(self.baixar(), dados)
-
-    # --------------------------------------------------- medir e sugerir
-
-    def test_alternar_edicao_e_simulacao_preserva_a_sala_e_os_parametros(self):
-        original = self.abrir(self.combates[0])
-        expect(self.page.locator("#painelEdicao")).to_be_visible()
-        expect(self.page.locator("#painelSimulacao")).to_be_hidden()
-        expect(self.page.locator("#fId")).to_be_hidden()
-        self.escrever("#fNome", "Combate revisado")
-        self.page.locator("#abaEdicao").focus()
-        self.page.keyboard.press("ArrowRight")
-        expect(self.page.locator("#abaSimulacao")).to_be_focused()
-        expect(self.page.locator("#painelEdicao")).to_be_hidden()
-        expect(self.page.locator("#btMedir")).to_be_visible()
-        expect(self.page.locator("#fSemente")).to_be_hidden()
-        self.page.locator("#fNivel").fill("6")
-        self.page.locator("#opcoesSimulacao summary").click()
-        self.page.locator("#fSemente").fill("88")
-
-        self.page.locator("#abaEdicao").click()
-        expect(self.page.locator("#fNome")).to_have_value("Combate revisado")
-        self.page.locator(".bloco-extra summary").first.click()
-        self.escrever("#fPontos", "7")
-        self.page.locator("#abaSimulacao").click()
-        expect(self.page.locator("#fNivel")).to_have_value("6")
-        expect(self.page.locator("#fSemente")).to_have_value("88")
-        self.assertEqual(self.json(), {**original, "nome": "Combate revisado", "pontos_organizacao": 7})
-
-        # Mesmo saindo da medição, criar pede primeiro a edição da nova sala.
-        self.page.locator("#btNova").click()
-        expect(self.page.locator("#painelEdicao")).to_be_visible()
-        expect(self.page.locator("#painelSimulacao")).to_be_hidden()
-        self.assertNotEqual(self.json()["id"], original["id"])
-
-    def test_parametro_invalido_reabre_as_opcoes_avancadas(self):
-        self.abrir(self.combates[0])
-        self.page.locator("#abaSimulacao").click()
-        self.page.locator("#opcoesSimulacao summary").click()
-        self.page.locator("#fReps").fill("61")  # fora do passo de 60
-        self.page.locator("#opcoesSimulacao summary").click()
+    def test_simular_usa_o_tier_da_dungeon_e_avisa_resultado_velho(self):
         pedidos = []
-        self.page.route("**/api/simular", lambda rota: (pedidos.append(rota.request), rota.abort()))
-        self.page.locator("#btMedir").click()
-        expect(self.page.locator("#fReps")).to_be_visible()
-        expect(self.page.locator("#fReps")).to_be_focused()
-        self.assertEqual(pedidos, [])
 
-    def test_medida_respeita_parametros_e_sinaliza_resultado_antigo(self):
-        self.abrir(self.combates[0])
-        self.page.locator("#abaSimulacao").click()
-        expect(self.page.locator("#fAmb option:checked")).to_have_text("Qualquer ambiente")
-        expect(self.page.locator("#fBicho option:checked")).to_have_text("Qualquer tipo")
-        pedidos = []
         def responder(rota):
-            pedido = rota.request.post_data_json; pedidos.append(pedido)
-            rota.fulfill(json={"sala": pedido["sala"]["id"], "tier": pedido["tier"], "classe": "predefinido", "sorteado": False, "predefinido": True, "nivel": pedido["nivel"], "repeticoes": pedido["repeticoes"], "semente": pedido["semente"], "criaturas": [{"nome": "Teste"}], "medidas": [{"grupo": 6, "taxa": .75, "rodadas": 2.5, "caidos": .3, "mesas": 4, "lutas": 240, "pior": {"classes": ["bardo", "mago", "monge", "ladino", "artifice", "bruxo"], "taxa": .41, "amostras": 60}, "melhor": {"classes": ["clerigo", "guerreiro", "paladino", "barbaro", "monge", "bardo"], "taxa": .94, "amostras": 60}}]})
+            pedidos.append(rota.request.post_data_json)
+            rota.fulfill(json=MEDIDA)
+
         self.page.route("**/api/simular", responder)
-        # Marcar o seis e desmarcar o cinco: a lista que vai no pedido e a
-        # que esta na tela, e nao o padrao do servidor.
-        self.page.locator('[name="grupo"][value="6"]').check()
-        self.page.locator('[name="grupo"][value="5"]').uncheck()
-        self.page.locator("#opcoesSimulacao summary").click()
-        self.page.locator("#fSemente").fill("123")
-        self.page.locator("#btMedir").click()
-        expect(self.page.locator("#barrasMedida")).to_contain_text("75%")
-        expect(self.page.locator("#contaMedida")).to_contain_text("Grupo de 6")
-        self.assertEqual(pedidos[0]["grupos"], [6])
-        self.assertEqual(pedidos[0]["semente"], 123)
-        # O grupo predefinido é o PADRÃO: ninguém escolheu classe nenhuma.
-        self.assertEqual(pedidos[0]["classe"], "")
-        self.page.locator("#fNivel").fill("5")
-        expect(self.page.locator("#medidaDesatualizada")).to_be_visible()
+        self.nova_dungeon(tier="3")
+        self.chefe_com("Behir")
+        self.page.locator("#btSimular").click()
+        expect(self.page.locator("#resultado")).to_contain_text("70%")
+        expect(self.page.locator("#resultado .veredito")).to_have_text("Média")
+        # A pior formação aparece, e a média não esconde a mesa que sofre.
+        expect(self.page.locator("#resultado")).to_contain_text("vence só 40%")
+        self.assertEqual(pedidos[0]["tier"], 3)
+        self.assertNotIn("nivel", pedidos[0], "o nível é do tier, não um campo")
+        self.assertEqual(pedidos[0]["grupos"], [5])
 
-    def test_a_medida_mostra_a_pior_mesa_e_nao_so_a_media(self):
-        """A média responde "a sala é justa?" e esconde a outra pergunta.
+        # Mudar SÓ o tier desatualiza: o chefe é lutado no tier da dungeon.
+        expect(self.page.locator("#medidaVelha")).to_be_hidden()
+        self.etapa("Revisar")
+        expect(self.page.locator("#resumo")).to_contain_text("70% de vitórias")
+        self.etapa("Dungeon")
+        self.page.select_option("#dTier", "4")
+        self.etapa("Revisar")
+        expect(self.page.locator("#resumo")).to_contain_text("desatualizada")
+        self.etapa("Chefe")
+        expect(self.page.locator("#medidaVelha")).to_be_visible()
 
-        Um grupo que vence 75% das vezes na média pode ter uma composição em
-        41% dentro dele — a diferença entre "difícil" e "a mesa morre". Com
-        só a barra na tela, as duas salas se parecem.
-        """
-        self.abrir(self.combates[0])
-        self.page.locator("#abaSimulacao").click()
-        self.assertEqual(self.page.locator("#fClasse").input_value(), "")
-        # Os padrões do formulário têm de passar na própria validação dele:
-        # um `step` que não fecha com o `min` reprova o campo, e `medir`
-        # desiste sem dizer nada — o botão vira enfeite.
-        for campo in ("#fReps", "#fNivel"):
-            self.assertTrue(self.page.locator(campo).evaluate("n => n.checkValidity()"), campo)
-        medida = {"grupo": 5, "taxa": .75, "rodadas": 3.0, "caidos": .5, "mesas": 4,
-                  "lutas": 240,
-                  "pior": {"classes": ["guerreiro", "clerigo", "mago", "ladino", "patrulheiro"],
-                           "taxa": .41, "amostras": 60},
-                  "melhor": {"classes": ["clerigo", "druida", "guerreiro", "ladino",
-                                         "paladino"], "taxa": .94, "amostras": 60}}
-        self.page.route("**/api/simular", lambda rota: rota.fulfill(json={
-            "sala": "X", "tier": 2, "classe": "predefinido", "sorteado": False, "predefinido": True, "nivel": 4,
-            "repeticoes": 240, "semente": 9, "criaturas": [{"nome": "Teste"}],
-            "medidas": [medida]}))
-        self.page.locator("#btMedir").click()
-        barras = self.page.locator("#barrasMedida")
-        expect(barras).to_contain_text("75%")
-        expect(barras).to_contain_text("pior 41%")
-        expect(barras).to_contain_text("guerreiro, clerigo")
-        expect(barras).to_contain_text("60 lutas")
-        expect(barras).to_contain_text("melhor 94%")
-        expect(self.page.locator("#contaMedida")).to_contain_text("4 mesas")
+        # E mudar SÓ o bando também.
+        self.page.locator("#btSimular").click()
+        expect(self.page.locator("#medidaVelha")).to_be_hidden()
+        self.assertEqual(pedidos[-1]["tier"], 4)
+        self.page.locator("#linhasChefe input[type=number]").first.fill("2")
+        expect(self.page.locator("#medidaVelha")).to_be_visible()
 
-    def test_o_limite_de_criaturas_e_por_bando_e_nao_a_soma_da_sala(self):
-        """Seis no tier 1 e dois no tier 2 é sala válida.
-
-        O bot cobra o máximo POR TIER, porque é um tier por incursão. O
-        estúdio somava os tiers e pintava de vermelho um arquivo que ele
-        mesmo aprova na conferência ao lado — mandando o autor apagar
-        criatura que não sobrava.
-        """
-        indice = next(
-            i for i in self.combates
-            if len(self.salas[i].get("monstros_por_tier") or {}) > 1
-        )
-        self.abrir(indice)
-        expect(self.page.locator("#saidaSala")).to_contain_text("Sala conferida.")
-        recado = self.page.locator("#recadoCriaturas")
-        expect(recado).not_to_have_class(re.compile("invalido"))
-        self.assertNotIn("máximo", recado.inner_text())
-
-        # E um bando que estoura de verdade continua sendo acusado.
-        quantas = self.page.locator("#linhasCriaturas input[type=number]").first
-        quantas.fill(str(self.conteudo["limites"]["inimigos"] + 3))
-        expect(recado).to_have_class(re.compile("invalido"))
-        expect(recado).to_contain_text("máximo")
-
-    def test_sugestao_aplica_somente_o_tier_da_variante_escolhida(self):
-        self.abrir(self.combates[0])
-        tema = self.conteudo["temas"][0]
-        antes = self.json()
-        self.semear({
-            "temas": [tema],
-            "monstros_por_tema": {tema: {"1": [{"nome": "Aarakocra"}]}},
-            "extra": "preservado",
-        })
-        self.page.locator("#abaSimulacao").click()
-        self.page.locator("#fTemaSim").select_option(tema)
-        self.page.locator(".sugeridor summary").click()
-        self.page.route("**/api/sugerir", lambda rota: rota.fulfill(json={"semente": 7, "candidatas_no_bestiario": 1, "sugestoes": [{"bando": [{"nome": "Aarakocra", "quantidade": 2}], "na_faixa": True, "por_grupo": {"5": .9, "3": .7}}]}))
-        self.page.locator("#btSugerir").click()
-        self.page.locator(".usar-sugestao").click()
-        novo = self.json()
-        self.assertEqual(novo["monstros_por_tema"][tema]["2"], [{"nome": "Aarakocra", "quantidade": 2}])
-        self.assertEqual(novo["monstros_por_tema"][tema]["1"], [{"nome": "Aarakocra"}])
-        self.assertEqual(novo["monstros_por_tier"], antes["monstros_por_tier"])
-        self.assertEqual(novo["extra"], "preservado")
-        # A sala mudou: a sugestão medida na sala de antes não vale mais.
-        expect(self.page.locator("#painelEdicao")).to_be_visible()
-        self.page.locator("#abaSimulacao").click()
-        expect(self.page.locator(".usar-sugestao")).to_be_disabled()
-
-    def test_respostas_atrasadas_nao_entram_em_outra_sala(self):
-        self.abrir(self.combates[0])
-        self.page.locator("#abaSimulacao").click()
-        pendentes = []
-        self.page.route("**/api/sugerir", lambda rota: pendentes.append(rota))
-        self.page.locator(".sugeridor summary").click()
-        with self.page.expect_request("**/api/sugerir"):
-            self.page.locator("#btSugerir").click()
-        # Mudar de lugar é mudar de sala: a resposta que volta é de outra.
-        self.page.locator("#lugarTeste").click()
-        pendentes[0].fulfill(json={"semente": 7, "candidatas_no_bestiario": 1, "sugestoes": [{"bando": [{"nome": "Aarakocra", "quantidade": 2}], "na_faixa": True, "por_grupo": {"3": .7}}]})
-        expect(self.page.locator("#toast")).to_have_text("Os parâmetros mudaram. Gere novas sugestões.")
-        expect(self.page.locator(".usar-sugestao")).to_have_count(0)
-        self.assertEqual(self.baixar(), self.inicial)
-
-    # -------------------------------------------------------------- geral
-
-    def test_lugares_pelo_teclado_e_mobile_sem_rolagem_horizontal(self):
-        self.page.locator("#lugarTeste").focus()
-        self.page.keyboard.press("ArrowRight")
-        expect(self.page.locator("#lugarCombate")).to_be_focused()
-        expect(self.page.locator("#painelCombate")).to_be_visible()
-        self.page.keyboard.press("End")
-        expect(self.page.locator("#painelInspecao")).to_be_visible()
-        self.page.set_viewport_size({"width": 390, "height": 844})
-        self.page.emulate_media(color_scheme="dark")
-        for lugar in ("Teste", "Combate", "Dungeon", "Inspecao"):
-            self.page.locator("#lugar" + lugar).click()
-            self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
-            if lugar == "Combate":
-                self.page.locator("#abaSimulacao").click()
-                self.page.locator("#opcoesSimulacao summary").click()
-                expect(self.page.locator("#btMedir")).to_be_visible()
-                self.assertLessEqual(self.page.evaluate("document.documentElement.scrollWidth"), 390)
-
-    def test_sem_o_motor_a_bancada_diz_em_vez_de_esperar_o_clique(self):
-        """Quem abre o estúdio fora do ambiente do bot escreve tudo e só
-
-        descobre no clique de "Medir combate" — e o que chegava era o
-        ModuleNotFoundError cru. O resto da bancada funciona sem o motor, e é
-        por isso que o aviso tem de estar na tela ANTES: nada mais quebra
-        para avisar por ele.
-        """
+    def test_sem_o_motor_o_chefe_diz_antes_do_clique(self):
         recado = "Medir e sugerir precisam de 'aiosqlite'"
 
         def responder(rota):
@@ -699,20 +262,72 @@ class Interface(unittest.TestCase):
 
         self.page.route("**/api/conteudo", responder)
         self.page.reload()
-        # A bancada abre inteira: escrever e exportar não dependem do motor.
-        expect(self.page.locator(".sala-btn").first).to_be_visible()
-        expect(self.page.locator("#btBaixar")).to_be_enabled()
+        self.nova_dungeon()
+        self.chefe_com("Behir")
+        expect(self.page.locator("#motivoSimular")).to_contain_text(recado)
+        expect(self.page.locator("#btSimular")).to_be_disabled()
+        # O resto não depende do motor: a dungeon ainda se baixa.
+        self.etapa("Revisar")
+        _, dados = self.baixar()
+        self.assertTrue(self.conferir_como_o_bot(dados).aprovado)
 
-        self.page.locator("#lugarCombate").click()
-        expect(self.page.locator("#avisoCombate")).to_contain_text(recado)
-        expect(self.page.locator("#btMedir")).to_be_disabled()
-        expect(self.page.locator("#btSugerir")).to_be_disabled()
+    def test_rascunho_sobrevive_e_arquivo_baixado_reabre(self):
+        self.nova_dungeon(nome="Volta Depois")
+        self.chefe_com("Behir")
+        self.page.reload()
+        expect(self.page.locator("#listaRascunhos")).to_contain_text("Volta Depois")
+        self.page.locator("#listaRascunhos .cartao-abrir").first.click()
+        expect(self.page.locator("#dNome")).to_have_value("Volta Depois")
+        self.etapa("Revisar")
+        _, dados = self.baixar()
+
+        # Abrir o arquivo baixado continua de onde parou, com o código fixo.
+        self.etapa("Escolher")
+        self.page.locator("#fArquivo").set_input_files({
+            "name": "volta_depois.json", "mimeType": "application/json",
+            "buffer": json.dumps(dados).encode()})
+        expect(self.page.locator("#dNome")).to_have_value("Volta Depois")
+        self.escrever("#dNome", "Volta Depois, Renomeada")
+        self.assertEqual(self.incursao()["id"], "volta_depois")
+        # O rascunho do mesmo código foi trocado, e não duplicado.
+        self.etapa("Escolher")
+        expect(self.page.locator("#listaRascunhos .cartao")).to_have_count(1)
+
+        # Um arquivo de incursão comum abre como cópia, com código próprio.
+        existente = next(iter(self.conteudo["incursoes"].values()))
+        self.page.locator("#fArquivo").set_input_files({
+            "name": "comum.json", "mimeType": "application/json",
+            "buffer": json.dumps(existente).encode()})
+        expect(self.page.locator("#dNome")).to_have_value(existente["nome"])
+        self.assertNotEqual(self.incursao()["id"], existente["id"])
+
+    def test_apagar_rascunho(self):
+        self.nova_dungeon(nome="Para Apagar")
+        self.etapa("Escolher")
+        expect(self.page.locator("#listaRascunhos .cartao")).to_have_count(1)
+        self.page.locator("#listaRascunhos .botao.perigo").click()
+        expect(self.page.locator("#listaRascunhos .cartao")).to_have_count(0)
+        expect(self.page.locator("#semRascunhos")).to_be_visible()
+        expect(self.page.locator('.passos [data-etapa="Dungeon"]')).to_be_disabled()
 
     def test_sem_armazenamento_local_ainda_e_possivel_baixar(self):
         self.page.add_init_script("Storage.prototype.setItem = () => { throw new Error('indisponível'); };")
         self.page.reload()
-        expect(self.page.locator("#estado")).to_have_text("Baixe o JSON para salvar")
-        self.assertEqual(self.baixar(), self.inicial)
+        expect(self.page.locator("#estado")).to_have_text("Baixe o arquivo para não perder o trabalho")
+        self.nova_dungeon()
+        self.chefe_com("Behir")
+        self.etapa("Revisar")
+        _, dados = self.baixar()
+        self.assertEqual(dados["incursao"]["nome"], "A Cripta de Teste")
+
+    def test_celular_sem_rolagem_horizontal(self):
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        largura = "document.documentElement.scrollWidth"
+        self.assertLessEqual(self.page.evaluate(largura), 390)
+        self.nova_dungeon()
+        for etapa in ("Dungeon", "Chefe", "Caminho", "Revisar"):
+            self.etapa(etapa)
+            self.assertLessEqual(self.page.evaluate(largura), 390, etapa)
 
 
 # O runner lê o código de saída, e `unittest` sai com 0 mesmo pulando tudo:
