@@ -35,6 +35,7 @@ sala.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import random
 import sys
@@ -43,7 +44,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Optional
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
@@ -331,8 +332,70 @@ def conteudo() -> dict[str, Any]:
         "falta_para_simular": _falta_para_simular(),
         "bancos": do_disco["bancos"],
         "incursoes": _incursoes(),
+        # Os tiers em que cada Organização tem dungeon: uma sala de combate
+        # nova cai em todas elas, e o editor marca quais tiers pedem bando.
+        "tiers_por_organizacao": _tiers_por_organizacao(),
         "problemas": do_disco["problemas"] + ruins,
     }
+
+
+def _tiers_por_organizacao() -> dict[str, list[int]]:
+    usados: dict[str, set[int]] = {org: set() for org in I.ORGANIZACOES}
+    for dados in _incursoes().values():
+        incursao = I.de_dict(dados)
+        usados.setdefault(incursao.organizacao, set()).add(incursao.tier)
+    return {org: sorted(tiers) for org, tiers in usados.items()}
+
+
+def _salas_do_autor(
+    brutas: Any, existentes: set[str]
+) -> tuple[list[I.Sala], list[str]]:
+    """As salas novas do autor, que ainda não estão no bot, para entrar na conta.
+
+    Elas vão num arquivo próprio e chegam ao bot ANTES da dungeon que conta
+    com elas; enquanto isso, o Estúdio as soma ao banco para o autor ver o
+    caminho que a dungeon vai ter. Sala com problema fica fora da conta, com
+    aviso — somá-la daria ao autor um caminho que o bot não vai montar.
+    """
+    salas: list[I.Sala] = []
+    avisos: list[str] = []
+    if not isinstance(brutas, list):
+        return salas, avisos
+    for bruta in brutas:
+        if not isinstance(bruta, dict):
+            continue
+        rotulo = str(bruta.get("id") or "?")
+        try:
+            sala = I.sala_de_dict(bruta)
+        except I.ErroDeValidacao:
+            avisos.append(
+                f"sua sala {rotulo} tem problema e ficou fora da conta. "
+                f"Corrija na parte Salas."
+            )
+            continue
+        if sala.id in existentes:
+            avisos.append(
+                f"sua sala {rotulo} usa um código que o banco já tem e ficou "
+                f"fora da conta."
+            )
+            continue
+        existentes.add(sala.id)
+        salas.append(sala)
+    return salas, avisos
+
+
+def _tier_do_bando(sala: I.Sala, tier: int) -> Optional[int]:
+    """Qual tier escrito a sala usa quando a dungeon é daquele tier.
+
+    Pergunta à própria sala (`monstros_do_tier`) e acha de qual lista veio a
+    resposta, em vez de repetir aqui a regra da queda — uma cópia dela
+    envelheceria calada. None quando a sala só tem a lista solta.
+    """
+    escolhidos = sala.monstros_do_tier(tier)
+    for escrito, lista in sala.monstros_por_tier.items():
+        if lista is escolhidos:
+            return escrito
+    return None
 
 
 # ------------------------------------------------------------ conferir
@@ -361,7 +424,7 @@ def conferir(payload: dict[str, Any]) -> dict[str, Any]:
 
     tipo = _tipo_do_payload(dados)
     if tipo == "pacote":
-        return conferir_pacote(dados)
+        return conferir_pacote(dados, payload.get("salas_do_autor"))
     conversor = {
         "banco": I.banco_de_dict,
         "incursao": I.de_dict,
@@ -374,16 +437,43 @@ def conferir(payload: dict[str, Any]) -> dict[str, Any]:
     return {"tipo": tipo, "problemas": [], "avisos": _avisos(tipo, dados)}
 
 
-def conferir_pacote(dados: dict[str, Any]) -> dict[str, Any]:
+def conferir_pacote(dados: dict[str, Any], do_autor: Any = None) -> dict[str, Any]:
     """O arquivo do Estúdio, pela MESMA conferência que o bot vai usar.
 
     Contra os bancos e as dungeons do disco: o código de uma dungeon do
     repositório não pode ser tomado por um arquivo novo — e o Estúdio é onde
     o autor tem de saber disso, e não no envio.
+
+    `do_autor` são as salas novas que ele escreveu e ainda não enviou: elas
+    vão num arquivo próprio, ANTES da dungeon, e entram aqui como se já
+    estivessem no bot — com o aviso de que a dungeon depende delas, porque
+    enviada antes delas a dungeon é recusada.
     """
     bancos, _ = I.carregar_bancos_tolerante(PASTA_BANCOS)
+    organizacao = I._INDICE_ORGS.get(
+        I.chave_comparacao(str(dados.get("organizacao") or ""))
+    )
+    avisos_extras: list[str] = []
+    extras: list[I.Sala] = []
+    if organizacao in bancos and isinstance(dados.get("incursao"), dict):
+        banco = bancos[organizacao]
+        extras, avisos_extras = _salas_do_autor(do_autor, {s.id for s in banco.salas})
+        if extras:
+            bancos = {**bancos, organizacao: I.BancoDeSalas(
+                organizacao=organizacao, salas=banco.salas + extras)}
     r = pacotes.conferir(dados, bancos, ocupadas=set(_incursoes()))
-    avisos = list(r.avisos)
+    avisos = list(r.avisos) + avisos_extras
+    caminho = None
+    if r.incursao is not None and organizacao in bancos:
+        deixadas = r.incursao.filtro.aplicar(I.salas_sorteaveis(bancos[organizacao]))
+        caminho = len(deixadas)
+        usadas = sorted({s.id for s in deixadas} & {s.id for s in extras})
+        if usadas:
+            avisos.append(
+                f"esta dungeon conta com {len(usadas)} sala(s) suas que ainda não "
+                f"estão no bot ({', '.join(usadas)}). Envie o arquivo de salas de "
+                f"{organizacao} ANTES desta dungeon, senão o bot a recusa."
+            )
     bruta = dados.get("incursao")
     if isinstance(bruta, dict):
         avisos[:0] = V.avisos(Path("incursao.json"), bruta)
@@ -392,7 +482,8 @@ def conferir_pacote(dados: dict[str, Any]) -> dict[str, Any]:
     for sala in dados.get("salas") or []:
         if isinstance(sala, dict):
             avisos.extend(V.avisos_da_sala(sala))
-    return {"tipo": "pacote", "problemas": r.problemas, "avisos": avisos}
+    return {"tipo": "pacote", "problemas": r.problemas, "avisos": avisos,
+            "caminho": caminho}
 
 
 def _avisos(tipo: str, dados: dict[str, Any]) -> list[str]:
@@ -443,21 +534,41 @@ def pool(payload: dict[str, Any]) -> dict[str, Any]:
     if problemas:
         return {"erro": "o filtro não está válido.", "problemas": problemas}
 
+    extras, avisos_extras = _salas_do_autor(
+        payload.get("extras"), {s.id for s in banco.salas}
+    )
+    if extras:
+        banco = I.BancoDeSalas(organizacao=banco.organizacao,
+                               salas=banco.salas + extras)
+    novas = {s.id for s in extras}
+    tier = payload.get("tier")
+    tier = tier if isinstance(tier, int) and 1 <= tier <= TIER_MAXIMO else None
+
+    def resumo(s: I.Sala) -> dict[str, Any]:
+        saida = {"id": s.id, "nome": s.nome, "tipo": s.tipo, "temas": s.temas,
+                 "nova": s.id in novas, "combate": s.e_combate}
+        if s.e_combate and tier:
+            saida["tier_do_bando"] = _tier_do_bando(s, tier)
+        return saida
+
     incursao = SimpleNamespace(filtro=filtro, tamanho=tamanho,
                                passos=I.TAMANHOS[tamanho])
     cruzados, avisos = I.conferir_filtro(incursao, banco)
     sorteaveis = I.salas_sorteaveis(banco)
     deixadas = filtro.aplicar(sorteaveis)
+    # As que o tema deixa, ANTES de tirar as excluídas: a página mostra as
+    # tiradas desmarcadas, para o autor poder pôr de volta.
+    candidatas = dataclasses.replace(filtro, excluir=[]).aplicar(sorteaveis)
     passos = I.TAMANHOS[tamanho]
     return {
-        "pool": [{"id": s.id, "nome": s.nome, "tipo": s.tipo, "temas": s.temas}
-                 for s in deixadas],
+        "pool": [resumo(s) for s in deixadas],
+        "candidatas": [resumo(s) for s in candidatas],
         "sorteaveis": len(sorteaveis),
         "no_banco": len(banco.salas),
         "terminar": passos,
         "folga": passos + I.OPCOES_POR_PASSO - 1,
         "problemas": cruzados,
-        "avisos": avisos,
+        "avisos": avisos + avisos_extras,
     }
 
 
@@ -625,8 +736,14 @@ class Bancada(BaseHTTPRequestHandler):
         # cruzada para liberar — e liberar seria dar a qualquer aba aberta um
         # jeito de rodar simulacao nesta maquina.
         self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(corpo)
+        try:
+            self.end_headers()
+            self.wfile.write(corpo)
+        except ConnectionError:
+            # A aba fechou antes da resposta — o autor saiu no meio de uma
+            # simulação. Não há a quem responder, e o traceback na janela do
+            # estúdio só o faria achar que algo quebrou.
+            self.close_connection = True
 
     def _json(self, codigo: int, dados: Any) -> None:
         self._responder(

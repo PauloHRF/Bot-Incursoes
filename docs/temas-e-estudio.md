@@ -483,9 +483,14 @@ caminho da dungeon, em cinco etapas, uma de cada vez:
    (`tools/simulacao/regua.py`) com a marca de onde a luta caiu, o próximo
    passo (endurecer, aliviar, ajustar) e a pior formação. Mexer no bando ou no
    tier deixa o resultado esmaecido, com o aviso de simular de novo.
-4. **O caminho** — por enquanto só mostra as salas que podem cair (o banco da
-   Organização, ou o filtro herdado da original). Escolher os temas e as salas
-   é a próxima fatia.
+4. **O caminho** — os temas da dungeon (fichas com quantas salas da
+   Organização carregam cada um), a conta contra o que o tamanho pede e a
+   lista das salas que podem cair. Desmarcar uma sala a tira (`excluir`); ela
+   continua na lista, riscada, para poder voltar. Cada sala de combate mostra
+   o bando que cai **no tier da dungeon**, pela queda do bot — e avisa quando
+   não tem bando daquele tier e usa o de outro —, com um botão para simular
+   só ela. O caminho escolhe, não escreve: quando faltam salas de um tema, ele
+   diz quantas e manda escrevê-las na parte Salas, sem atalho entre as duas.
 5. **Revisar e baixar** — a conferência do bot, o resumo do que a dungeon tem,
    o que mudou em relação ao ponto de partida (a original copiada ou o arquivo
    aberto) e o download.
@@ -503,9 +508,26 @@ caminho da dungeon, em cinco etapas, uma de cada vez:
 ```
 
 Um arquivo, e não incursão mais banco, porque é ele que o autor vai enviar
-pelo Discord sem depender de ninguém: dois arquivos que precisam casar é
-convite a mandar um sem o outro, e devolver o banco inteiro apagaria o
-trabalho de outro autor. `salas` leva só as salas *novas*. A conferência desse
+pelo Discord sem depender de ninguém, e devolver o banco inteiro apagaria o
+trabalho de outro autor.
+
+**A parte Salas** é separada da dungeon, de propósito: a sala não pertence a
+uma dungeon — ela cai em todas as da Organização cujo tema bata. Ali o autor
+escolhe a Organização e vê as salas do bot, só para leitura (**Copiar como
+sala nova** parte de uma delas), e as salas novas dele, que ele escreve:
+nome, tipo, descrição, temas, a CD e as perícias de um teste, ou os bandos de
+um combate — **um por tier**, como as salas de hoje, com as abas dos tiers que
+as dungeons da Organização usam marcadas e o aviso dos que estão sem bando
+próprio. Cada aba simula o bando dela. O código da sala nova leva um pedaço
+aleatório (`VO-K7Q2`), e não o próximo número: dois autores escrevendo ao
+mesmo tempo pegariam os dois o `VO15`.
+
+As salas novas saem num **arquivo próprio** (o mesmo formato, sem
+`incursao`), e o da dungeon vai com `salas` vazia. A ordem importa: o arquivo
+de salas tem de chegar ao bot **antes** da dungeon que conta com elas, senão
+o filtro dela não fecha e ela é recusada. O Estúdio soma as salas do autor ao
+banco para mostrar o caminho que a dungeon vai ter, marca cada uma como
+"sua", e a revisão avisa a ordem. A conferência desse
 arquivo mora em `src/pacotes.py`, e não no Estúdio, para a página e o bot
 dizerem a mesma coisa; ela cobra o que `de_dict` cobra, mais três regras que
 são só deste arquivo — o tier é obrigatório (a falta dele valeria "aberta a
@@ -513,9 +535,10 @@ todos"), o código não pode ser de uma dungeon que já existe, e sala nova não
 pode tomar id do banco. Os avisos de texto continuam vindo de
 `tools/validar_conteudo.py`.
 
-Rascunhos ficam no armazenamento local do navegador (`incursoes.estudio.v3.*`),
-um por dungeon. Sem armazenamento, o Estúdio avisa e o download continua
-funcionando. **Ctrl+S** baixa o arquivo. O [pacote portátil](estudio-portatil.md)
+Rascunhos ficam no armazenamento local do navegador (`incursoes.estudio.v3.*`):
+um por dungeon, e as salas novas por Organização. Sem armazenamento, o Estúdio avisa e o download continua
+funcionando. **Ctrl+S** baixa o arquivo da parte aberta. O Estúdio é feito
+para o computador; não há versão para celular. O [pacote portátil](estudio-portatil.md)
 inclui Python e dependências para entregar o Estúdio num ZIP privado.
 
 Nas simulações, a conexão SQLite descartável reutiliza a parte fixa das

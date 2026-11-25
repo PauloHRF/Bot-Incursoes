@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="/estudio.css">
 <script src="/estudio.js" defer></script>
 </head>
-<body data-etapa="Escolher">
+<body data-parte="Dungeons" data-etapa="Escolher">
 <div class="app">
   <header class="cabecalho">
     <div class="marca"><span class="marca-icone" aria-hidden="true">✦</span><div><h1>Estúdio de Incursões</h1><p>Escreva a dungeon, teste o chefe e baixe o arquivo para enviar.</p></div></div>
@@ -16,158 +16,289 @@
 
   <div id="erroInicial" class="recados" role="alert" hidden></div>
 
-  <!-- Uma etapa por vez. O que não é daquela etapa não aparece nela: quem
-       escreve a lore não precisa ver a tabela de criaturas. -->
-  <nav class="passos" aria-label="Etapas da dungeon">
-    <button type="button" data-etapa="Escolher"><span>1</span> Escolher</button>
-    <button type="button" data-etapa="Dungeon" disabled><span>2</span> A dungeon</button>
-    <button type="button" data-etapa="Chefe" disabled><span>3</span> O chefe</button>
-    <button type="button" data-etapa="Caminho" disabled><span>4</span> O caminho</button>
-    <button type="button" data-etapa="Revisar" disabled><span>5</span> Revisar e baixar</button>
+  <!-- Duas partes, e separadas de propósito: escrever a dungeon e escrever
+       salas para o banco são trabalhos diferentes, com arquivos diferentes. -->
+  <nav class="partes" aria-label="Partes do Estúdio">
+    <button type="button" data-parte="Dungeons" aria-current="page">Dungeons</button>
+    <button type="button" data-parte="Salas">Salas</button>
   </nav>
-  <div class="titulo-linha">
-    <h2 id="tituloEtapa" class="titulo-etapa" tabindex="-1">Escolha a dungeon</h2>
-    <span id="nomeAberto" class="nome-aberto"></span>
+
+  <!-- ================================================= parte: dungeons -->
+  <div id="parteDungeons">
+    <!-- Uma etapa por vez. O que não é daquela etapa não aparece nela: quem
+         escreve a lore não precisa ver a tabela de criaturas. -->
+    <nav class="passos" aria-label="Etapas da dungeon">
+      <button type="button" data-etapa="Escolher"><span>1</span> Escolher</button>
+      <button type="button" data-etapa="Dungeon" disabled><span>2</span> A dungeon</button>
+      <button type="button" data-etapa="Chefe" disabled><span>3</span> O chefe</button>
+      <button type="button" data-etapa="Caminho" disabled><span>4</span> O caminho</button>
+      <button type="button" data-etapa="Revisar" disabled><span>5</span> Revisar e baixar</button>
+    </nav>
+    <div class="titulo-linha">
+      <h2 id="tituloEtapa" class="titulo-etapa" tabindex="-1">Escolha a dungeon</h2>
+      <span id="nomeAberto" class="nome-aberto"></span>
+    </div>
+
+    <main>
+      <!-- 1. Escolher -->
+      <section id="etapaEscolher" class="etapa" aria-labelledby="tituloEtapa">
+        <div class="painel">
+          <div class="painel-cabecalho">
+            <div><h3>Suas dungeons</h3><p class="legenda">Rascunhos guardados neste navegador.</p></div>
+            <div class="linha">
+              <button id="btAbrirArquivo" class="botao" type="button" disabled>Abrir arquivo…</button>
+              <input id="fArquivo" type="file" accept=".json,application/json" hidden>
+              <button id="btNova" class="botao principal" type="button" disabled>+ Nova dungeon</button>
+            </div>
+          </div>
+          <ul id="listaRascunhos" class="cartoes"></ul>
+          <p id="semRascunhos" class="vazio">Nenhuma dungeon começada. Crie uma nova ou parta de uma pronta.</p>
+        </div>
+        <div class="painel">
+          <div class="painel-cabecalho">
+            <div><h3>Partir de uma dungeon pronta</h3><p class="legenda">Abre uma cópia para você mudar à vontade. A original não muda.</p></div>
+          </div>
+          <div id="listaProntas" class="prontas"></div>
+        </div>
+      </section>
+
+      <!-- 2. A dungeon -->
+      <section id="etapaDungeon" class="etapa" aria-labelledby="tituloEtapa" hidden>
+        <div class="duas-colunas">
+          <div class="painel formulario">
+            <div class="campo">
+              <label for="dNome">Nome da dungeon</label>
+              <input id="dNome" type="text" autocomplete="off">
+              <p class="medida"><span id="dCodigo" class="codigo"></span><span><b id="cNome">0</b> / <span id="tNome">256</span></span></p>
+            </div>
+            <div class="form-linha tres">
+              <div class="campo"><label for="dOrg">Organização</label><select id="dOrg"></select></div>
+              <div class="campo"><label for="dTier">Tier</label><select id="dTier"></select></div>
+              <div class="campo"><label for="dTamanho">Tamanho</label><select id="dTamanho"></select></div>
+            </div>
+            <p id="dicaDungeon" class="explicacao"></p>
+            <div class="campo">
+              <label for="dLore">Lore de abertura</label>
+              <textarea id="dLore" rows="8"></textarea>
+              <p class="medida"><span class="legenda">O primeiro parágrafo vira o anúncio. Separe os parágrafos com uma linha em branco.</span><span><b id="cLore">0</b> / <span id="tLore">4096</span></span></p>
+            </div>
+            <div class="campo">
+              <label for="dLoreFinal">Epílogo <span class="legenda">(opcional · lido quando o grupo vence)</span></label>
+              <textarea id="dLoreFinal" rows="5"></textarea>
+              <p class="medida"><span></span><span><b id="cLoreFinal">0</b> / <span id="tLoreFinal">4096</span></span></p>
+            </div>
+            <div class="form-linha tres">
+              <div class="campo"><label for="dRecompensa">Recompensa <span class="legenda">(MEs por pessoa)</span></label><input id="dRecompensa" type="number" min="0" step="1"></div>
+              <div class="campo"><label for="dPontos">Pontos para a Organização</label><input id="dPontos" type="number" min="0" step="1"></div>
+              <div class="campo"><label for="dCapa">Imagem de capa <span class="legenda">(URL, opcional)</span></label><input id="dCapa" type="url" spellcheck="false"></div>
+            </div>
+          </div>
+          <aside class="previa-coluna" aria-label="Prévia no Discord">
+            <div class="painel previa">
+              <div class="painel-cabecalho"><h3>Como aparece no Discord</h3></div>
+              <div class="abas-previa" role="tablist" aria-label="Qual mensagem">
+                <button type="button" role="tab" data-previa="anuncio" aria-selected="true">Anúncio</button>
+                <button type="button" role="tab" data-previa="abertura" aria-selected="false">Abertura</button>
+                <button type="button" role="tab" data-previa="epilogo" aria-selected="false">Epílogo</button>
+              </div>
+              <div class="discord" id="previaDungeon" role="tabpanel"></div>
+              <p id="notaPrevia" class="legenda nota-previa"></p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 3. O chefe -->
+      <section id="etapaChefe" class="etapa" aria-labelledby="tituloEtapa" hidden>
+        <div class="duas-colunas largo">
+          <div class="painel formulario">
+            <div class="campo">
+              <label for="cSala">Nome da sala final</label>
+              <input id="cSala" type="text" autocomplete="off">
+              <p class="medida"><span></span><span><b id="cSalaConta">0</b> / <span id="tSala">256</span></span></p>
+            </div>
+            <div class="campo">
+              <label for="cDesc">O que o grupo lê ao entrar</label>
+              <textarea id="cDesc" rows="6"></textarea>
+              <p class="medida"><span></span><span><b id="cDescConta">0</b> / <span id="tDesc">4096</span></span></p>
+            </div>
+            <fieldset class="bloco">
+              <legend>Criaturas do chefe</legend>
+              <table class="tabela-criaturas">
+                <thead><tr><th>criatura</th><th class="n">quantas</th><th><span class="sr-only">remover</span></th></tr></thead>
+                <tbody id="linhasChefe"></tbody>
+              </table>
+              <div class="linha"><button id="btCriatura" class="botao pequena" type="button">+ Criatura</button><span id="recadoChefe" class="legenda"></span></div>
+            </fieldset>
+          </div>
+          <aside class="painel simulacao" aria-label="Simulação do chefe">
+            <div class="painel-cabecalho"><div><h3>Simular o chefe</h3><p class="legenda" id="quemSimula"></p></div></div>
+            <div class="sim-corpo">
+              <button id="btSimular" class="botao principal largo" type="button">Simular o chefe</button>
+              <p id="motivoSimular" class="aviso-inline" hidden></p>
+              <details id="ajustesSim" class="bloco-extra">
+                <summary>Ajustes da simulação</summary>
+                <label class="check"><input id="fSeis" type="checkbox"> Medir também com 6 jogadores</label>
+                <div class="campo"><label for="fSemente">Semente <span class="legenda">(repete a mesma rolagem para comparar mudanças)</span></label><input id="fSemente" type="number" min="0" placeholder="Automática"></div>
+              </details>
+              <p id="medidaVelha" class="aviso-inline" hidden>Você mudou o chefe ou o tier depois desta simulação. Simule de novo.</p>
+              <div id="resultado" class="resultado-vazio">Simule para ver quantas vezes o grupo vence.</div>
+              <div id="saidaSim" class="recados" aria-live="polite" hidden></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 4. O caminho -->
+      <section id="etapaCaminho" class="etapa" aria-labelledby="tituloEtapa" hidden>
+        <div class="painel">
+          <div class="painel-cabecalho"><div><h3>Temas da dungeon</h3><p class="legenda">Uma sala entra se tiver qualquer um dos temas marcados. Sem tema marcado, entram todas as salas da Organização.</p></div></div>
+          <div id="fichasCaminho" class="fichas recuo" role="group" aria-label="Temas da dungeon"></div>
+          <p id="notaIncluir" class="explicacao recuo" hidden></p>
+          <div class="conta-caminho">
+            <div><b id="contaCaminho">Conferindo as salas…</b><p id="notaCaminho" class="legenda"></p></div>
+            <progress id="barraCaminho" max="1" value="0" aria-label="Salas no caminho, perto do que o tamanho pede"></progress>
+          </div>
+          <div id="saidaCaminho" class="recados" aria-live="polite" hidden></div>
+        </div>
+        <div class="painel">
+          <div class="painel-cabecalho"><div><h3>Salas que podem cair</h3><p class="legenda" id="legendaSalasCaminho">Desmarque uma sala para tirá-la desta dungeon.</p></div></div>
+          <div class="rolagem">
+            <table class="tabela-caminho">
+              <thead><tr><th class="entra">entra</th><th>Sala</th><th>Tipo</th><th>Temas</th><th id="colunaBando">No tier da dungeon</th></tr></thead>
+              <tbody id="tabelaCaminho"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Revisar e baixar -->
+      <section id="etapaRevisar" class="etapa" aria-labelledby="tituloEtapa" hidden>
+        <div id="saidaRevisar" class="recados largo" aria-live="polite" hidden></div>
+        <div class="duas-colunas metade">
+          <div class="painel"><div class="painel-cabecalho"><h3>O que a dungeon tem</h3></div><dl id="resumo" class="resumo"></dl></div>
+          <div class="painel"><div class="painel-cabecalho"><div><h3>O que mudou</h3><p class="legenda" id="baseMudou"></p></div></div><ul id="mudancas" class="mudancas"></ul></div>
+        </div>
+        <div class="painel entrega">
+          <div><h3>O arquivo da dungeon</h3><p class="legenda" id="notaArquivo"></p></div>
+          <button id="btBaixar" class="botao principal" type="button">↓ Baixar arquivo</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="fluxo-acoes"><button id="btVoltar" class="botao" type="button" hidden>← Voltar</button><button id="btProximo" class="botao principal" type="button" hidden>Próximo →</button></div>
   </div>
 
-  <main>
-    <!-- 1. Escolher -->
-    <section id="etapaEscolher" class="etapa" aria-labelledby="tituloEtapa">
-      <div class="painel">
-        <div class="painel-cabecalho">
-          <div><h3>Suas dungeons</h3><p class="legenda">Rascunhos guardados neste navegador.</p></div>
+  <!-- =================================================== parte: salas -->
+  <div id="parteSalas" hidden>
+    <div class="titulo-linha">
+      <h2 class="titulo-etapa">Salas da Organização</h2>
+      <span class="nome-aberto">Salas novas para o banco. Elas vão num arquivo próprio, enviado antes de qualquer dungeon que conte com elas.</span>
+    </div>
+    <div class="salas-layout">
+      <aside class="painel navegador" aria-label="Salas">
+        <div class="navegador-topo">
+          <div class="campo"><label for="sOrg">Organização</label><select id="sOrg"></select></div>
           <div class="linha">
-            <button id="btAbrirArquivo" class="botao" type="button" disabled>Abrir arquivo…</button>
-            <input id="fArquivo" type="file" accept=".json,application/json" hidden>
-            <button id="btNova" class="botao principal" type="button" disabled>+ Nova dungeon</button>
+            <button id="btNovaSala" class="botao principal" type="button">+ Nova sala</button>
+            <button id="btAbrirSalas" class="botao" type="button">Abrir arquivo…</button>
+            <input id="fArquivoSalas" type="file" accept=".json,application/json" hidden>
           </div>
         </div>
-        <ul id="listaRascunhos" class="cartoes"></ul>
-        <p id="semRascunhos" class="vazio">Nenhuma dungeon começada. Crie uma nova ou parta de uma pronta.</p>
-      </div>
-      <div class="painel">
-        <div class="painel-cabecalho">
-          <div><h3>Partir de uma dungeon pronta</h3><p class="legenda">Abre uma cópia para você mudar à vontade. A original não muda.</p></div>
-        </div>
-        <div id="listaProntas" class="prontas"></div>
-      </div>
-    </section>
+        <h4 class="grupo-titulo">Suas salas novas <span id="contaNovas" class="contador">0</span></h4>
+        <ul id="listaNovas" class="lista-salas"></ul>
+        <p id="semNovas" class="vazio">Nenhuma sala nova nesta Organização.</p>
+        <h4 class="grupo-titulo">Salas do bot <span class="legenda">(só leitura)</span></h4>
+        <div class="busca"><label class="sr-only" for="sBusca">Buscar sala do bot</label><input id="sBusca" type="search" placeholder="Buscar nome, código ou tema"></div>
+        <ul id="listaDoBot" class="lista-salas"></ul>
+      </aside>
 
-    <!-- 2. A dungeon -->
-    <section id="etapaDungeon" class="etapa" aria-labelledby="tituloEtapa" hidden>
-      <div class="duas-colunas">
-        <div class="painel formulario">
-          <div class="campo">
-            <label for="dNome">Nome da dungeon</label>
-            <input id="dNome" type="text" autocomplete="off">
-            <p class="medida"><span id="dCodigo" class="codigo"></span><span><b id="cNome">0</b> / <span id="tNome">256</span></span></p>
+      <div class="mesa">
+        <div id="salaVazia" class="painel vazio">Escolha uma sala na lista ou crie uma nova.</div>
+
+        <!-- Sala do bot: só leitura, com a cópia como saída. -->
+        <div id="salaDoBot" class="painel" hidden>
+          <div class="painel-cabecalho">
+            <div><h3 id="botNome"></h3><p class="legenda" id="botMeta"></p></div>
+            <button id="btCopiarSala" class="botao" type="button">Copiar como sala nova</button>
           </div>
-          <div class="form-linha tres">
-            <div class="campo"><label for="dOrg">Organização</label><select id="dOrg"></select></div>
-            <div class="campo"><label for="dTier">Tier</label><select id="dTier"></select></div>
-            <div class="campo"><label for="dTamanho">Tamanho</label><select id="dTamanho"></select></div>
-          </div>
-          <p id="dicaDungeon" class="explicacao"></p>
-          <div class="campo">
-            <label for="dLore">Lore de abertura</label>
-            <textarea id="dLore" rows="8"></textarea>
-            <p class="medida"><span class="legenda">O primeiro parágrafo vira o anúncio. Separe os parágrafos com uma linha em branco.</span><span><b id="cLore">0</b> / <span id="tLore">4096</span></span></p>
-          </div>
-          <div class="campo">
-            <label for="dLoreFinal">Epílogo <span class="legenda">(opcional · lido quando o grupo vence)</span></label>
-            <textarea id="dLoreFinal" rows="5"></textarea>
-            <p class="medida"><span></span><span><b id="cLoreFinal">0</b> / <span id="tLoreFinal">4096</span></span></p>
-          </div>
-          <div class="form-linha tres">
-            <div class="campo"><label for="dRecompensa">Recompensa <span class="legenda">(MEs por pessoa)</span></label><input id="dRecompensa" type="number" min="0" step="1"></div>
-            <div class="campo"><label for="dPontos">Pontos para a Organização</label><input id="dPontos" type="number" min="0" step="1"></div>
-            <div class="campo"><label for="dCapa">Imagem de capa <span class="legenda">(URL, opcional)</span></label><input id="dCapa" type="url" spellcheck="false"></div>
-          </div>
+          <p class="explicacao recuo">Esta sala já está no bot e não muda por aqui. Para partir dela, copie: a cópia é uma sala nova sua, com código próprio.</p>
+          <div class="discord recuo-discord" id="botPrevia"></div>
         </div>
-        <aside class="previa-coluna" aria-label="Prévia no Discord">
-          <div class="painel previa">
-            <div class="painel-cabecalho"><h3>Como aparece no Discord</h3></div>
-            <div class="abas-previa" role="tablist" aria-label="Qual mensagem">
-              <button type="button" role="tab" data-previa="anuncio" aria-selected="true">Anúncio</button>
-              <button type="button" role="tab" data-previa="abertura" aria-selected="false">Abertura</button>
-              <button type="button" role="tab" data-previa="epilogo" aria-selected="false">Epílogo</button>
+
+        <!-- Sala nova: o editor. -->
+        <div id="editorSala" class="duas-colunas" hidden>
+          <div class="painel formulario">
+            <div class="form-linha nome-tipo">
+              <div class="campo">
+                <label for="sNome">Nome da sala</label>
+                <input id="sNome" type="text" autocomplete="off">
+                <p class="medida"><span id="sCodigo" class="codigo"></span><span><b id="sNomeConta">0</b> / <span id="tSNome">256</span></span></p>
+              </div>
+              <div class="campo"><label for="sTipo">Tipo</label><select id="sTipo"></select></div>
             </div>
-            <div class="discord" id="previaDungeon" role="tabpanel"></div>
-            <p id="notaPrevia" class="legenda nota-previa"></p>
-          </div>
-        </aside>
-      </div>
-    </section>
+            <p id="sRegras" class="explicacao"></p>
+            <div class="campo">
+              <label for="sDesc">Descrição</label>
+              <textarea id="sDesc" rows="4"></textarea>
+              <p class="medida"><span></span><span><b id="sDescConta">0</b> / <span id="tSDesc">4096</span></span></p>
+            </div>
+            <div class="campo">
+              <span class="rotulo">Temas <span class="legenda">(marque todos os lugares em que a sala cabe)</span></span>
+              <div id="sTemas" class="fichas" role="group" aria-label="Temas da sala"></div>
+            </div>
 
-    <!-- 3. O chefe -->
-    <section id="etapaChefe" class="etapa" aria-labelledby="tituloEtapa" hidden>
-      <div class="duas-colunas largo">
-        <div class="painel formulario">
-          <div class="campo">
-            <label for="cSala">Nome da sala final</label>
-            <input id="cSala" type="text" autocomplete="off">
-            <p class="medida"><span></span><span><b id="cSalaConta">0</b> / <span id="tSala">256</span></span></p>
+            <fieldset id="sBlocoTeste" class="bloco">
+              <legend>Teste</legend>
+              <div class="form-linha tres">
+                <div class="campo"><label for="sDif">Dificuldade</label><select id="sDif"></select></div>
+                <div class="campo"><label for="sCd">CD <span class="legenda">(no tier 1)</span></label><input id="sCd" type="number" min="1" max="40" step="1"><p class="legenda" id="sDicaCd"></p></div>
+                <div class="campo"><label for="sAlvo">Sucessos necessários</label><input id="sAlvo" type="number" min="1" max="99" step="1"></div>
+              </div>
+              <div class="campo"><span class="rotulo">Perícias aceitas</span><div id="sPericias" class="fichas" role="group" aria-label="Perícias da sala"></div></div>
+            </fieldset>
+
+            <fieldset id="sBlocoCombate" class="bloco">
+              <legend>Criaturas por tier</legend>
+              <p class="legenda" id="sTiersUsados"></p>
+              <div id="abasTier" class="abas-tier" role="tablist" aria-label="Tier do bando"></div>
+              <table class="tabela-criaturas">
+                <thead><tr><th>criatura</th><th class="n">quantas</th><th><span class="sr-only">remover</span></th></tr></thead>
+                <tbody id="linhasSala"></tbody>
+              </table>
+              <div class="linha"><button id="btCriaturaSala" class="botao pequena" type="button">+ Criatura</button><span id="recadoSala" class="legenda"></span></div>
+              <div class="sim-sala">
+                <button id="btSimularSala" class="botao" type="button">Simular neste tier</button>
+                <p id="motivoSimularSala" class="legenda" hidden></p>
+                <p id="medidaVelhaSala" class="aviso-inline" hidden>Você mudou este bando depois da simulação. Simule de novo.</p>
+                <div id="resultadoSala"></div>
+              </div>
+            </fieldset>
+
+            <div class="form-linha tres">
+              <div class="campo"><label for="sRecompensa">Recompensa <span class="legenda">(texto do cartão, opcional)</span></label><input id="sRecompensa" type="text"></div>
+              <div class="campo"><label for="sPontos">Pontos para a Organização</label><input id="sPontos" type="number" min="0" max="99" step="1"></div>
+            </div>
+            <div class="linha fim"><button id="btApagarSala" class="botao discreto pequena perigo" type="button">Apagar esta sala</button></div>
           </div>
-          <div class="campo">
-            <label for="cDesc">O que o grupo lê ao entrar</label>
-            <textarea id="cDesc" rows="6"></textarea>
-            <p class="medida"><span></span><span><b id="cDescConta">0</b> / <span id="tDesc">4096</span></span></p>
-          </div>
-          <fieldset class="bloco">
-            <legend>Criaturas do chefe</legend>
-            <table class="tabela-criaturas">
-              <thead><tr><th>criatura</th><th class="n">quantas</th><th><span class="sr-only">remover</span></th></tr></thead>
-              <tbody id="linhasChefe"></tbody>
-            </table>
-            <datalist id="listaCriaturas"></datalist>
-            <div class="linha"><button id="btCriatura" class="botao pequena" type="button">+ Criatura</button><span id="recadoChefe" class="legenda"></span></div>
-          </fieldset>
+          <aside class="previa-coluna" aria-label="Prévia da sala">
+            <div class="painel previa">
+              <div class="painel-cabecalho"><h3>Como aparece no Discord</h3></div>
+              <div class="discord" id="previaSala"></div>
+            </div>
+          </aside>
         </div>
-        <aside class="painel simulacao" aria-label="Simulação do chefe">
-          <div class="painel-cabecalho"><div><h3>Simular o chefe</h3><p class="legenda" id="quemSimula"></p></div></div>
-          <div class="sim-corpo">
-            <button id="btSimular" class="botao principal largo" type="button">Simular o chefe</button>
-            <p id="motivoSimular" class="aviso-inline" hidden></p>
-            <details id="ajustesSim" class="bloco-extra">
-              <summary>Ajustes da simulação</summary>
-              <label class="check"><input id="fSeis" type="checkbox"> Medir também com 6 jogadores</label>
-              <div class="campo"><label for="fSemente">Semente <span class="legenda">(repete a mesma rolagem para comparar mudanças)</span></label><input id="fSemente" type="number" min="0" placeholder="Automática"></div>
-            </details>
-            <p id="medidaVelha" class="aviso-inline" hidden>Você mudou o chefe ou o tier depois desta simulação. Simule de novo.</p>
-            <div id="resultado" class="resultado-vazio">Simule para ver quantas vezes o grupo vence.</div>
-            <div id="saidaSim" class="recados" aria-live="polite" hidden></div>
-          </div>
-        </aside>
       </div>
-    </section>
+    </div>
 
-    <!-- 4. O caminho -->
-    <section id="etapaCaminho" class="etapa" aria-labelledby="tituloEtapa" hidden>
-      <div class="painel">
-        <div class="painel-cabecalho"><div><h3 id="contaCaminho">Conferindo as salas…</h3><p class="legenda" id="notaCaminho"></p></div></div>
-        <p class="explicacao recuo">Escolher os temas e as salas do caminho chega na próxima versão do Estúdio. Por enquanto, a dungeon sorteia entre todas as salas do banco da Organização.</p>
-        <div id="saidaCaminho" class="recados" aria-live="polite" hidden></div>
-        <div class="rolagem"><table><thead><tr><th>Sala</th><th>Tipo</th><th>Temas</th></tr></thead><tbody id="tabelaCaminho"></tbody></table></div>
-      </div>
-    </section>
+    <div class="painel entrega">
+      <div><h3 id="tituloArquivoSalas">O arquivo de salas</h3><p class="legenda" id="notaArquivoSalas"></p><div id="saidaSalas" class="recados largo" aria-live="polite" hidden></div></div>
+      <button id="btBaixarSalas" class="botao principal" type="button" disabled>↓ Baixar arquivo de salas</button>
+    </div>
+  </div>
 
-    <!-- 5. Revisar e baixar -->
-    <section id="etapaRevisar" class="etapa" aria-labelledby="tituloEtapa" hidden>
-      <div id="saidaRevisar" class="recados largo" aria-live="polite" hidden></div>
-      <div class="duas-colunas metade">
-        <div class="painel"><div class="painel-cabecalho"><h3>O que a dungeon tem</h3></div><dl id="resumo" class="resumo"></dl></div>
-        <div class="painel"><div class="painel-cabecalho"><div><h3>O que mudou</h3><p class="legenda" id="baseMudou"></p></div></div><ul id="mudancas" class="mudancas"></ul></div>
-      </div>
-      <div class="painel entrega">
-        <div><h3>O arquivo da dungeon</h3><p class="legenda" id="notaArquivo"></p></div>
-        <button id="btBaixar" class="botao principal" type="button">↓ Baixar arquivo</button>
-      </div>
-    </section>
-  </main>
-
-  <div class="fluxo-acoes"><button id="btVoltar" class="botao" type="button" hidden>← Voltar</button><button id="btProximo" class="botao principal" type="button" hidden>Próximo →</button></div>
-
-  <footer>Os rascunhos ficam neste navegador. Baixe o arquivo para guardar o trabalho e para enviar a dungeon.</footer>
+  <datalist id="listaCriaturas"></datalist>
+  <footer>Os rascunhos ficam neste navegador. Baixe os arquivos para guardar o trabalho e para enviar.</footer>
 </div>
 <div id="toast" role="status" class="toast" hidden></div>
 </body>

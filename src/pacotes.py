@@ -39,6 +39,15 @@ VERSAO = 1
 # página e o bot dizerem igual.
 _DO_OBJETIVO = re.compile(r"^objetivo \(sala [^)]*\)")
 
+# A sala solta é "a sala (sala VO15)" no validador; no arquivo do Estúdio ela
+# é uma entre várias, e o autor a acha pelo código.
+_DA_SALA = re.compile(r"^a sala \(sala ([^)]*)\)")
+
+
+def _da_sala(problema: str, rotulo: str) -> str:
+    curto = _DA_SALA.sub(r"sala \1", problema)
+    return curto if curto != problema else f"sala {rotulo}: {problema}"
+
 
 @dataclass(frozen=True)
 class Conferencia:
@@ -193,7 +202,7 @@ def _as_salas(
         try:
             sala = I.sala_de_dict(bruta)
         except I.ErroDeValidacao as erro:
-            problemas.extend(f"sala {rotulo}: {p}" for p in erro.problemas)
+            problemas.extend(_da_sala(p, rotulo) for p in erro.problemas)
             continue
         if sala.id in vistos:
             problemas.append(f"a sala '{sala.id}' aparece duas vezes no arquivo.")

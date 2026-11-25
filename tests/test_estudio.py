@@ -262,6 +262,40 @@ def caso_conferir_o_arquivo_do_estudio_usa_a_regua_do_bot():
     print("  o arquivo do Estúdio é conferido pela régua do bot: ok")
 
 
+def caso_a_dungeon_que_conta_com_salas_do_autor_avisa_a_ordem():
+    """As salas novas vão num arquivo próprio, ANTES da dungeon.
+
+    O Estúdio as soma ao banco para o autor ver a dungeon que vai ter — e
+    diz que elas precisam chegar antes, porque a dungeon enviada sem elas é
+    recusada por falta de sala.
+    """
+    pacote = _pacote(tamanho="Média", filtro={"temas": ["agua"]})
+    sem = E.conferir({"dados": pacote})
+    assert sem["problemas"], "o filtro de água passou sem sala suficiente"
+    novas = [sala_de_teste(id=f"VO-N{n}", temas=["agua"]) for n in range(1, 6)]
+    com = E.conferir({"dados": pacote, "salas_do_autor": novas})
+    assert com["problemas"] == [], com
+    assert any("ANTES" in a and "VO-N1" in a for a in com["avisos"]), com["avisos"]
+    assert com["caminho"] >= 5, com
+    # Sala do autor com problema fica fora da conta, com aviso.
+    # Duas novas mais as duas de água do banco: 4, uma a menos que a Média pede.
+    torta = E.conferir({"dados": pacote, "salas_do_autor": novas[:2] + [{"id": "VO-T"}]})
+    assert any("VO-T" in a for a in torta["avisos"]), torta["avisos"]
+    assert torta["problemas"], "a sala torta entrou na conta"
+    print("  a dungeon que conta com salas do autor avisa a ordem do envio: ok")
+
+
+def caso_os_tiers_de_cada_organizacao_vem_das_dungeons():
+    esperado = {org: set() for org in I.ORGANIZACOES}
+    for dados in E._incursoes().values():
+        incursao = I.de_dict(dados)
+        esperado[incursao.organizacao].add(incursao.tier)
+    c = E.conteudo()
+    assert c["tiers_por_organizacao"] == {o: sorted(t) for o, t in esperado.items()}, (
+        c["tiers_por_organizacao"])
+    print("  os tiers de cada Organização vêm das dungeons dela: ok")
+
+
 # ----------------------------------------------------------------- pool
 
 
@@ -281,6 +315,44 @@ def caso_o_pool_usa_as_salas_em_edicao():
     assert [s["id"] for s in r["pool"]] == ["T01", "T02", "T03"], r["pool"]
     assert r["sorteaveis"] == 6 and r["terminar"] == 3 and r["folga"] == 5
     print("  o pool enxerga as salas em edição: ok")
+
+
+def caso_o_caminho_conta_as_salas_do_autor_e_mostra_as_tiradas():
+    nova = sala_de_teste(id="VO-NOVA", temas=["agua"])
+    r = E.pool({"organizacao": "Vórtice Oculto", "tamanho": "Média", "tier": 2,
+                "filtro": {"temas": ["agua"], "excluir": ["VO02"]},
+                "extras": [nova, {"id": "VO-TORTA", "nome": "sem o resto"}]})
+    pool = {s["id"]: s for s in r["pool"]}
+    candidatas = {s["id"] for s in r["candidatas"]}
+    assert pool["VO-NOVA"]["nova"] is True, pool
+    assert "VO02" in candidatas and "VO02" not in pool, (sorted(candidatas), sorted(pool))
+    assert not any(s["nova"] for i, s in pool.items() if i != "VO-NOVA")
+    assert any("VO-TORTA" in a for a in r["avisos"]), r["avisos"]
+    assert "VO-TORTA" not in candidatas
+    # Sem as do autor, o caminho é só o banco.
+    so_banco = E.pool({"organizacao": "Vórtice Oculto", "tamanho": "Média",
+                       "filtro": {"temas": ["agua"]}})
+    assert "VO-NOVA" not in {s["id"] for s in so_banco["pool"]}
+    print("  o caminho conta as salas do autor e mostra as tiradas: ok")
+
+
+def caso_o_caminho_diz_qual_tier_de_bando_cai():
+    """O caminho mostra o bando que a dungeon vai lutar, pela queda do bot.
+
+    Sala sem bando do tier da dungeon usa o maior escrito abaixo dele — e é
+    assim que a dungeon de tier 5 luta o bando do tier 4 sem ninguém saber.
+    """
+    combate = sala_de_combate(id="VO-C", temas=["agua"], monstros=[], monstros_por_tier={
+        "1": [dict(CRIATURA)], "4": [dict(CRIATURA)]})
+    def tier_que_cai(tier):
+        r = E.pool({"organizacao": "Vórtice Oculto", "tamanho": "Curta", "tier": tier,
+                    "filtro": {"incluir": ["VO-C"]}, "extras": [combate]})
+        return next(s for s in r["pool"] if s["id"] == "VO-C")["tier_do_bando"]
+    assert [tier_que_cai(t) for t in (1, 2, 4, 5)] == [1, 1, 4, 4]
+    r = E.pool({"organizacao": "Vórtice Oculto", "tamanho": "Curta",
+                "filtro": {"incluir": ["VO-C"]}, "extras": [combate]})
+    assert "tier_do_bando" not in r["pool"][0], "sem tier pedido, não há tier que cai"
+    print("  o caminho diz qual tier de bando cai: ok")
 
 
 def caso_o_pool_traz_o_veredito_do_bot():
@@ -594,7 +666,11 @@ for caso in (
     caso_a_sala_sozinha_nao_leva_bronca_do_banco,
     caso_conferir_devolve_os_problemas_de_verdade,
     caso_conferir_o_arquivo_do_estudio_usa_a_regua_do_bot,
+    caso_a_dungeon_que_conta_com_salas_do_autor_avisa_a_ordem,
+    caso_os_tiers_de_cada_organizacao_vem_das_dungeons,
     caso_o_pool_usa_as_salas_em_edicao,
+    caso_o_caminho_conta_as_salas_do_autor_e_mostra_as_tiradas,
+    caso_o_caminho_diz_qual_tier_de_bando_cai,
     caso_o_pool_traz_o_veredito_do_bot,
     caso_o_pool_recusa_pedido_torto,
     caso_simular_mede_a_sala_de_combate,

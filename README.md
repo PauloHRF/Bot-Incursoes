@@ -120,8 +120,10 @@ para você mandar.
 A página segue **Escolher → A dungeon → O chefe → O caminho → Revisar e
 baixar**, uma etapa por vez. O chefe é simulado no tier da dungeon, contra
 sete formações fixas com frente, cura e dano. Os rascunhos ficam no
-navegador; **Baixar arquivo** gera um arquivo só, com a dungeon e as salas
-novas, conferido pela mesma régua que o bot usa (`src/pacotes.py`). O
+navegador; **Baixar arquivo** gera o arquivo da dungeon, conferido pela
+mesma régua que o bot usa (`src/pacotes.py`). Salas novas para o banco se
+escrevem na parte **Salas**, à parte, e saem num arquivo delas, que vai antes
+de qualquer dungeon que conte com elas. O
 porquê de cada escolha está na seção 11 de
 [`docs/temas-e-estudio.md`](docs/temas-e-estudio.md).
 

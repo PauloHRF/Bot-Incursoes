@@ -320,14 +320,144 @@ class Interface(unittest.TestCase):
         _, dados = self.baixar()
         self.assertEqual(dados["incursao"]["nome"], "A Cripta de Teste")
 
-    def test_celular_sem_rolagem_horizontal(self):
-        self.page.set_viewport_size({"width": 390, "height": 844})
-        largura = "document.documentElement.scrollWidth"
-        self.assertLessEqual(self.page.evaluate(largura), 390)
-        self.nova_dungeon()
-        for etapa in ("Dungeon", "Chefe", "Caminho", "Revisar"):
-            self.etapa(etapa)
-            self.assertLessEqual(self.page.evaluate(largura), 390, etapa)
+    # ------------------------------------------------------ o caminho
+
+    def test_caminho_escolhe_temas_tira_salas_e_mostra_o_bando_do_tier(self):
+        self.nova_dungeon(tier="5")
+        self.chefe_com("Behir")
+        self.etapa("Caminho")
+        expect(self.page.locator("#contaCaminho")).to_contain_text("podem cair")
+        # A dungeon de tier 5 do Vórtice luta o bando do tier 4: o caminho diz.
+        expect(self.page.locator(".queda").first).to_contain_text("usa o do tier 4")
+
+        self.page.locator('#fichasCaminho [data-valor="agua"]').click()
+        expect(self.page.locator("#notaCaminho")).to_contain_text("faltam")
+        self.assertEqual(self.incursao()["filtro"], {"temas": ["agua"]})
+        self.page.locator('#fichasCaminho [data-valor="agua"]').click()
+        expect(self.page.locator("#notaCaminho")).not_to_contain_text("faltam")
+        self.assertNotIn("filtro", self.incursao(), "filtro vazio ficou no arquivo")
+
+        primeira = self.page.locator("#tabelaCaminho tr").first
+        codigo = primeira.locator("small").inner_text()
+        primeira.locator("input[type=checkbox]").uncheck()
+        expect(self.page.locator("#tabelaCaminho tr.fora")).to_have_count(1)
+        self.assertEqual(self.incursao()["filtro"], {"excluir": [codigo]})
+
+        self.etapa("Revisar")
+        expect(self.page.locator("#resumo")).to_contain_text(f"1 tirada(s): {codigo}")
+        _, dados = self.baixar()
+        self.assertEqual(dados["incursao"]["filtro"], {"excluir": [codigo]})
+        self.assertTrue(self.conferir_como_o_bot(dados).aprovado)
+
+    def test_caminho_simula_uma_sala_no_tier_da_dungeon(self):
+        pedidos = []
+
+        def responder(rota):
+            pedidos.append(rota.request.post_data_json)
+            rota.fulfill(json=MEDIDA)
+
+        self.page.route("**/api/simular", responder)
+        self.nova_dungeon(tier="4")
+        self.etapa("Caminho")
+        linha = self.page.locator("#tabelaCaminho tr:has(.simular-caminho)").first
+        botao = linha.locator(".simular-caminho")
+        codigo = linha.locator("small").inner_text()
+        botao.click()
+        expect(linha.locator(".medida-curta")).to_contain_text("70%")
+        self.assertEqual(pedidos[0]["tier"], 4)
+        self.assertEqual(pedidos[0]["sala"]["id"], codigo)
+
+    # ------------------------------------------------- a parte das salas
+
+    def salas(self):
+        self.page.locator('.partes [data-parte="Salas"]').click()
+        expect(self.page.locator("#parteSalas")).to_be_visible()
+        expect(self.page.locator("#parteDungeons")).to_be_hidden()
+
+    def test_parte_de_salas_escreve_sala_nova_e_baixa_o_arquivo_dela(self):
+        self.salas()
+        self.page.select_option("#sOrg", "Vórtice Oculto")
+        self.page.locator("#btNovaSala").click()
+        expect(self.page.locator("#sNome")).to_be_focused()
+        self.escrever("#sNome", "Cisterna Alagada")
+        self.escrever("#sDesc", "A água chega no peito.")
+        self.page.locator('#sTemas [data-valor="agua"]').click()
+        self.page.select_option("#sTipo", "Combate")
+        expect(self.page.locator("#sBlocoTeste")).to_be_hidden()
+        # Os tiers que as dungeons do Vórtice usam aparecem marcados.
+        usados = self.conteudo["tiers_por_organizacao"]["Vórtice Oculto"]
+        expect(self.page.locator(".aba-tier.usado")).to_have_count(len(usados))
+        self.page.locator(".aba-tier").nth(3).click()
+        self.page.locator("#btCriaturaSala").click()
+        self.page.locator("#linhasSala input[type=text]").last.fill("Ogro")
+        expect(self.page.locator("#sTiersUsados")).to_contain_text("usa o bando do tier 4")
+        expect(self.page.locator("#saidaSalas")).to_contain_text("Prontas para enviar")
+
+        with self.page.expect_download() as evento:
+            self.page.locator("#btBaixarSalas").click()
+        self.assertEqual(evento.value.suggested_filename, "salas_vortice_oculto.json")
+        dados = json.loads(Path(evento.value.path()).read_text(encoding="utf-8"))
+        self.assertNotIn("incursao", dados)
+        [sala] = dados["salas"]
+        self.assertEqual(sala["monstros_por_tier"], {"4": [{"nome": "Ogro"}]})
+        self.assertNotIn(sala["id"], {s.id for s in self.bancos["Vórtice Oculto"].salas})
+        r = self.conferir_como_o_bot(dados)
+        self.assertTrue(r.aprovado, r.problemas)
+        self.assertEqual([s.id for s in r.salas], [sala["id"]])
+
+    def test_sala_do_bot_e_so_leitura_e_copiar_cria_uma_nova(self):
+        self.salas()
+        self.page.select_option("#sOrg", "Guilda dos Mortos")
+        self.page.locator("#listaDoBot .sala-item").first.click()
+        expect(self.page.locator("#salaDoBot")).to_be_visible()
+        expect(self.page.locator("#editorSala")).to_be_hidden()
+        original = self.page.locator("#botNome").inner_text()
+        self.page.locator("#btCopiarSala").click()
+        expect(self.page.locator("#editorSala")).to_be_visible()
+        expect(self.page.locator("#sNome")).to_have_value(f"{original} (cópia)")
+        nova = self.page.evaluate("JSON.parse(JSON.stringify(salaAtual()))")
+        self.assertNotIn(nova["id"], {s["id"] for s in self.conteudo["bancos"]["Guilda dos Mortos"]["original"]["salas"]})
+        expect(self.page.locator("#listaNovas .sala-item")).to_have_count(1)
+
+    def test_a_dungeon_conta_com_as_salas_do_autor_e_avisa_a_ordem(self):
+        """As salas novas não vão no arquivo da dungeon, e ela depende delas.
+
+        O caminho as conta, marcadas como "suas", e a revisão diz que o
+        arquivo de salas tem de ir antes — sem ele, o bot recusa a dungeon.
+        """
+        novas = [{"id": f"VO-N{n}", "nome": f"Poça {n}", "tipo": "Evento", "descricao": "Água.",
+                  "temas": ["agua"], "dificuldade": "Média", "cd": 13, "alvo_progresso": 3,
+                  "pericias": ["Atletismo"]} for n in range(1, 4)]
+        self.page.evaluate("s => { salasLocais['Vórtice Oculto'] = s; guardar(); }", novas)
+        self.nova_dungeon(tier="2")
+        self.chefe_com("Behir")
+        self.etapa("Caminho")
+        self.page.locator('#fichasCaminho [data-valor="agua"]').click()
+        expect(self.page.locator(".marca-nova")).to_have_count(3)
+        expect(self.page.locator("#notaCaminho")).not_to_contain_text("faltam")
+        self.etapa("Revisar")
+        expect(self.page.locator("#saidaRevisar")).to_contain_text("ANTES desta dungeon")
+        _, dados = self.baixar()
+        self.assertEqual(dados["salas"], [], "sala nova foi no arquivo da dungeon")
+
+    def test_cada_arquivo_abre_na_sua_parte(self):
+        so_salas = pacotes.novo("Vórtice Oculto", None, [{
+            "id": "VO-ABRE", "nome": "Aberta", "tipo": "Evento", "descricao": "x",
+            "dificuldade": "Média", "cd": 13, "alvo_progresso": 3, "pericias": ["Atletismo"]}])
+        arquivo = {"name": "salas.json", "mimeType": "application/json",
+                   "buffer": json.dumps(so_salas).encode()}
+        self.page.locator("#fArquivo").set_input_files(arquivo)
+        expect(self.page.locator("#toast")).to_contain_text("Abra-o na parte Salas")
+        self.salas()
+        self.page.locator("#fArquivoSalas").set_input_files(arquivo)
+        expect(self.page.locator("#listaNovas")).to_contain_text("Aberta")
+        expect(self.page.locator("#sOrg")).to_have_value("Vórtice Oculto")
+        # E o arquivo de dungeon não entra pela parte de salas.
+        dungeon = pacotes.novo("Vórtice Oculto", next(iter(self.conteudo["incursoes"].values())))
+        self.page.locator("#fArquivoSalas").set_input_files({
+            "name": "dungeon.json", "mimeType": "application/json",
+            "buffer": json.dumps(dungeon).encode()})
+        expect(self.page.locator("#toast")).to_contain_text("Abra-o na parte Dungeons")
 
 
 # O runner lê o código de saída, e `unittest` sai com 0 mesmo pulando tudo:

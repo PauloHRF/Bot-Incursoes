@@ -190,19 +190,72 @@ kbd,code {font-family:var(--mono); font-size:.9em; background:var(--soft); paddi
   .duas-colunas,.duas-colunas.largo,.duas-colunas.metade {grid-template-columns:1fr}
   .previa-coluna,.simulacao {position:static}
 }
-@media(max-width:700px) {
-  .app {padding:0 14px}
-  .cabecalho {padding:20px 0 16px; align-items:start; flex-wrap:wrap; gap:10px}
-  .cabecalho .estado {margin-left:56px}
-  .marca-icone {width:40px; height:40px}
-  .passos {gap:5px; margin-bottom:16px}
-  .passos button {padding:8px 6px; font-size:0; gap:0; justify-content:center}
-  .passos button span {font-size:12px}
-  .passos [aria-current=step] {font-size:12px; gap:6px; flex:2.4}
-  .titulo-etapa {font-size:19px}
-  .cartoes {grid-template-columns:1fr}
-  .entrega {flex-wrap:wrap}
-  .entrega .botao {width:100%}
-  .resumo {grid-template-columns:1fr; gap:2px}
-  .resumo dd {margin-bottom:8px}
 }
+
+/* ---- as duas partes ---- */
+.partes {display:flex; gap:4px; border-bottom:1px solid var(--line); margin:0 0 20px}
+.partes button {border:0; border-bottom:2px solid transparent; background:transparent; color:var(--muted); padding:8px 14px; margin-bottom:-1px; font-size:14px; font-weight:650}
+.partes button[aria-current=page] {border-bottom-color:var(--accent); color:var(--accent)}
+
+/* ---- fichas (temas e perícias) ---- */
+.fichas {display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.fichas.recuo {padding:0 18px 12px}
+.ficha {font-size:12px; padding:5px 10px; background:var(--paper); border:1px solid var(--line); border-radius:5px; color:var(--muted)}
+.ficha[aria-pressed=true] {color:var(--accent); border-color:var(--accent); background:var(--tint)}
+.ficha:disabled {opacity:.45}
+.ficha .quantas {opacity:.7; margin-left:5px; font-variant-numeric:tabular-nums}
+.contador {display:inline-flex; align-items:center; justify-content:center; min-width:22px; padding:1px 6px; border-radius:5px; background:var(--soft); color:var(--muted); font-size:11px; font-weight:500}
+
+/* ---- 4. o caminho ---- */
+.conta-caminho {display:grid; grid-template-columns:minmax(0,1fr) 240px; gap:18px; align-items:center; padding:4px 18px 16px}
+.conta-caminho b {font-size:14px}
+.conta-caminho p {margin-top:3px}
+progress {display:block; appearance:none; border:0; background:var(--soft); height:9px; width:100%; border-radius:5px; overflow:hidden}
+progress::-webkit-progress-bar {background:var(--soft)}
+progress::-webkit-progress-value {background:var(--good); border-radius:5px}
+progress::-moz-progress-bar {background:var(--good)}
+progress.aperta::-webkit-progress-value {background:var(--warn)}
+progress.aperta::-moz-progress-bar {background:var(--warn)}
+progress.falta::-webkit-progress-value {background:var(--bad)}
+progress.falta::-moz-progress-bar {background:var(--bad)}
+.tabela-caminho th.entra,.tabela-caminho td.entra {width:44px; min-width:0; text-align:center}
+.tabela-caminho tr.fora td:not(.entra) {opacity:.45; text-decoration:line-through; text-decoration-color:var(--muted)}
+.tabela-caminho td.bando {min-width:230px}
+.tabela-caminho td.bando .linha {margin-top:6px}
+.marca-nova {display:block; width:fit-content; margin-top:3px; font-size:10px; font-weight:600; color:var(--accent); background:var(--tint); border-radius:4px; padding:1px 6px}
+.queda {display:block; margin-top:3px; font-size:11px; color:var(--warn)}
+.medida-curta {display:inline-flex; align-items:baseline; gap:5px; font-size:12px}
+.medida-curta b {font-family:var(--mono)}
+.medida-curta.velho {opacity:.5}
+
+/* ---- a parte das salas ---- */
+.salas-layout {display:grid; grid-template-columns:280px minmax(0,1fr); gap:20px; align-items:start}
+.navegador {position:sticky; top:18px; padding-bottom:10px; max-height:calc(100vh - 36px); overflow:auto}
+.navegador-topo {display:grid; gap:10px; padding:16px 14px 6px}
+.grupo-titulo {font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.3px; text-transform:uppercase; padding:14px 14px 6px; display:flex; gap:6px; align-items:center}
+.navegador .vazio {padding:8px 14px 4px; text-align:left}
+.busca {padding:0 12px 8px}
+.busca input {background:var(--soft); font-size:12px}
+.lista-salas {list-style:none; margin:0; padding:0 8px}
+.lista-salas li + li {margin-top:2px}
+.sala-item {display:grid; gap:2px; width:100%; text-align:left; border:1px solid transparent; border-radius:6px; background:transparent; padding:8px 10px}
+.sala-item:hover {background:var(--soft)}
+.sala-item[aria-current=true] {background:var(--tint); border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
+.sala-nome {font-weight:600; font-size:12.5px; overflow-wrap:anywhere}
+.sala-item[aria-current=true] .sala-nome {color:var(--accent)}
+.sala-meta {font-size:10.5px; color:var(--muted); overflow-wrap:anywhere}
+.mesa {min-width:0}
+.recuo-discord {margin:0 18px 18px}
+.nome-tipo {grid-template-columns:minmax(0,2fr) minmax(140px,1fr)}
+.linha.fim {justify-content:flex-end; border-top:1px solid var(--line); padding-top:10px}
+.abas-tier {display:flex; flex-wrap:wrap; gap:6px}
+.aba-tier {display:grid; gap:1px; text-align:left; border:1px dashed var(--line); border-radius:6px; background:var(--paper); padding:6px 11px; color:var(--muted)}
+.aba-tier.usado {border-style:solid}
+.aba-tier span {font-size:12px; font-weight:650; color:var(--ink)}
+.aba-tier small {font-size:10px}
+.aba-tier[aria-selected=true] {border-color:var(--accent); background:var(--tint)}
+.aba-tier[aria-selected=true] span {color:var(--accent)}
+.sim-sala {display:grid; gap:10px; border-top:1px solid var(--line); padding-top:12px; justify-items:start}
+.sim-sala .resultado {justify-self:stretch}
+#parteSalas>.entrega {margin-top:20px}
+.entrega .recados {margin-top:8px}

@@ -145,6 +145,9 @@ def caso_sala_do_arquivo_nao_toma_id_nem_repete():
     assert any("duas vezes" in p for p in r.problemas), r.problemas
     r = conferir(P.novo(ORG, dungeon(), [sala("NV1", tipo="Combate", monstros=[])]))
     assert any(p.startswith("sala NV1:") for p in r.problemas), r.problemas
+    # O código uma vez só: "sala NV1: a sala (sala NV1): ..." era o validador
+    # e o arquivo dizendo a mesma coisa um por cima do outro.
+    assert not any("a sala (sala" in p for p in r.problemas), r.problemas
     print("  sala do arquivo não repete nem toma id do banco: ok")
 
 

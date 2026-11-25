@@ -8,7 +8,9 @@ de conta no GitHub.
 A página abre na lista de dungeons e segue em cinco etapas: **Escolher → A
 dungeon → O chefe → O caminho → Revisar e baixar**. O chefe é simulado no tier
 da dungeon, contra as sete formações fixas do bot. **Baixar arquivo** gera o
-arquivo único da dungeon, que é o que se envia.
+arquivo da dungeon, que é o que se envia. Salas novas se escrevem na parte
+**Salas** e saem num arquivo próprio, enviado antes da dungeon que conte com
+elas.
 Mantenha a janela de abertura aberta durante o uso e feche-a ao terminar.
 
 ## Gerar uma nova distribuição
