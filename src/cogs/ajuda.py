@@ -44,6 +44,9 @@ ORDEM_COMANDOS = (
     "incursao listar",
     "incursao status",
     "incursao buffs",
+    # De quem escreve: publica o arquivo do Estúdio. Não é de admin — o
+    # cargo de autores escolhido no /config autores também usa.
+    "incursao enviar",
     "mercado vitrine",
     "mercado comprar",
     "mercado equipar",
@@ -60,6 +63,7 @@ ORDEM_COMANDOS = (
     "organizacao ajustar",
     "organizacao extrato",
     "config intervalo",
+    "config autores",
 )
 
 

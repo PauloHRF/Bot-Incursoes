@@ -13,6 +13,7 @@ continua respondendo pelo nome de antes.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 
 from datetime import datetime
@@ -27,6 +28,7 @@ from ... import (
     config,
     database as db,
     embeds as E,
+    envios,
     incursoes,
     mercado,
     motor,
@@ -57,6 +59,10 @@ from .views import (
 from .votacao import maioria_de, Votacao
 
 log = logging.getLogger("incursoes.run")
+
+# O arquivo do Estúdio tem poucos KB; isto é folga larga, e o teto existe para
+# um anexo errado (uma imagem, um banco inteiro) não ser lido para a memória.
+LIMITE_DO_ENVIO = 512 * 1024
 
 
 def _texto_digitado(interaction: discord.Interaction, campo: str) -> str:
@@ -109,8 +115,19 @@ class Incursoes(
         self._recuperacao: dict[int, dict[int, Any]] = {}
         # A retomada dos combates decididos, guardada para o loop nao a soltar.
         self._retomada: Optional[asyncio.Task] = None
+        # O que chegou pelo `/incursao enviar`, e o catalogo de `data/` antes
+        # de juntar os dois: o envio confere contra o repositorio puro (que e
+        # intocavel) e contra o que ja foi enviado (que tem dono).
+        self.enviados: list[envios.Enviado] = []
+        self.repositorio_incursoes: dict[str, Any] = {}
+        self.repositorio_bancos: dict[str, Any] = {}
+        # Um envio por vez. Transacao nao isolaria: o bot usa uma conexao so,
+        # e dois envios do mesmo autor juntos (o clique duplo) confeririam os
+        # dois contra o bot de antes do outro.
+        self._fila_de_envio = asyncio.Lock()
 
     async def cog_load(self) -> None:
+        self.enviados = await self._ler_enviados()
         self._carregar_tolerante()
         await self.restaurar_views()
         # Numa tarefa, e so depois de conectar: o `cog_load` roda dentro do
@@ -169,6 +186,14 @@ class Incursoes(
             problemas.extend(ruins)
         else:
             self.bancos = {}
+        # O repositorio puro, guardado antes de juntar o que veio pelo
+        # Discord: e contra ele que o proximo envio confere.
+        self.repositorio_incursoes = dict(self.incursoes)
+        self.repositorio_bancos = dict(self.bancos)
+        self.incursoes, self.bancos, dos_envios = envios.mesclar(
+            self.repositorio_incursoes, self.repositorio_bancos, self.enviados
+        )
+        problemas.extend(dos_envios)
         for problema in problemas:
             log.error("arquivo de conteúdo ficou de fora — %s", problema)
         sem_caminho: list[str] = []
@@ -209,6 +234,27 @@ class Incursoes(
             ", ".join(self.incursoes),
         )
         return problemas
+
+    async def _ler_enviados(self) -> list[envios.Enviado]:
+        """O que chegou pelo Discord, como esta no banco de dados.
+
+        Linha que nao le (JSON quebrado a mao, por exemplo) fica de fora com
+        log: ela nao pode impedir o bot de subir, como o arquivo ruim de
+        `data/` tambem nao impede.
+        """
+        lidos = []
+        for linha in await db.conteudo_enviado(self.bot.db):
+            try:
+                dados = json.loads(linha["dados"])
+            except (TypeError, ValueError):
+                log.error("conteúdo enviado %s ilegível no banco — ficou de fora",
+                          linha["conteudo_id"])
+                continue
+            lidos.append(envios.Enviado(
+                linha["tipo"], linha["organizacao"], linha["conteudo_id"],
+                linha["autor_id"], dados,
+            ))
+        return lidos
 
     def _carregar_tolerante(self) -> None:
         """No boot, nada do conteúdo pode impedir o bot de subir.
@@ -970,6 +1016,112 @@ class Incursoes(
             "\n".join(linhas)[:1900], ephemeral=True
         )
 
+    @grupo.command(
+        name="enviar",
+        description="Publica uma dungeon ou salas feitas no Estúdio de Incursões",
+    )
+    @app_commands.describe(arquivo="O arquivo .json que o Estúdio baixou")
+    async def enviar(
+        self, interaction: discord.Interaction, arquivo: discord.Attachment
+    ) -> None:
+        """O autor publica sem passar por ninguém: conferiu, está no ar.
+
+        Vale em todos os servidores do bot. As regras de quem mexe em quê
+        estão em `src/envios.py`; aqui fica o que é do Discord — quem pode
+        usar, ler o anexo, gravar e responder.
+        """
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        if interaction.guild_id is None:
+            await interaction.edit_original_response(
+                content="Envie num servidor, no canal que quiser.")
+            return
+        if not await self._pode_enviar(interaction):
+            await interaction.edit_original_response(content=(
+                "Só quem tem o cargo de autores, ou administra o servidor, publica "
+                "dungeons. Quem administra escolhe o cargo com `/config autores`."
+            ))
+            return
+        if arquivo.size > LIMITE_DO_ENVIO:
+            await interaction.edit_original_response(content=(
+                f"O arquivo tem {arquivo.size // 1024} KB, e o do Estúdio tem poucos. "
+                "Confira se anexou o .json que o Estúdio baixou."
+            ))
+            return
+        try:
+            dados = json.loads(await arquivo.read())
+        except (UnicodeDecodeError, ValueError):
+            await interaction.edit_original_response(content=(
+                "Não consegui ler o anexo como JSON. Anexe o arquivo .json que o "
+                "Estúdio baixou, sem abrir e salvar em outro programa."
+            ))
+            return
+
+        async with self._fila_de_envio:
+            dungeons, salas = await db.em_uso_pelas_runs(self.bot.db)
+            em_uso = envios.EmUso(
+                incursoes=frozenset(dungeons),
+                salas=frozenset(
+                    (self.incursoes[d].organizacao, s)
+                    for d, s in salas if d in self.incursoes
+                ),
+            )
+            plano = envios.planejar(
+                dados,
+                autor_id=interaction.user.id,
+                incursoes_do_repositorio=set(self.repositorio_incursoes),
+                bancos_do_repositorio=self.repositorio_bancos,
+                enviados=self.enviados,
+                em_uso=em_uso,
+            )
+            if plano.aprovado and plano.gravar:
+                await db.gravar_conteudo_enviado(self.bot.db, interaction.guild_id, [
+                    (e.tipo, e.organizacao, e.id, e.autor_id,
+                     json.dumps(e.dados, ensure_ascii=False))
+                    for e in plano.gravar
+                ])
+                self.enviados = await self._ler_enviados()
+                self.recarregar_incursoes()
+        await interaction.edit_original_response(content=self._resposta_do_envio(plano))
+
+    async def _pode_enviar(self, interaction: discord.Interaction) -> bool:
+        permissoes = getattr(interaction.user, "guild_permissions", None)
+        if permissoes is not None and permissoes.manage_guild:
+            return True
+        cargo = await db.cargo_de_autor(self.bot.db, interaction.guild_id)
+        return cargo is not None and any(
+            r.id == cargo for r in getattr(interaction.user, "roles", ())
+        )
+
+    @staticmethod
+    def _resposta_do_envio(plano: envios.Plano) -> str:
+        """O que o autor lê: o que entrou, ou por que não entrou.
+
+        Recusado, o bot diz TODOS os problemas de uma vez, nas palavras do
+        Estúdio — o autor corrige tudo numa ida só, e não um por envio.
+        """
+        def lista(itens: list[str], limite: int = 12) -> list[str]:
+            linhas = [f"- {i}" for i in itens[:limite]]
+            if len(itens) > limite:
+                linhas.append(f"- …e mais {len(itens) - limite}.")
+            return linhas
+
+        if not plano.aprovado:
+            linhas = ["**Não publiquei.** O que o bot encontrou:", *lista(plano.problemas)]
+            linhas.append("\nCorrija no Estúdio, baixe o arquivo de novo e reenvie.")
+            return "\n".join(linhas)[:1900]
+        if not plano.gravar:
+            return "Nada mudou: o bot já tem este arquivo exatamente assim."
+        linhas = ["**Publicado.** Já está no ar, em todos os servidores do bot."]
+        if plano.novas:
+            linhas += ["", "Novo:", *lista(plano.novas)]
+        if plano.atualizadas:
+            linhas += ["", "Atualizado:", *lista(plano.atualizadas)]
+        if plano.iguais:
+            linhas += ["", f"Sem mudança: {len(plano.iguais)} item(ns)."]
+        if plano.avisos:
+            linhas += ["", "Vale olhar:", *lista(plano.avisos, 5)]
+        return "\n".join(linhas)[:1900]
+
     config_grupo = app_commands.Group(
         name="config", description="Ajustes do bot (admin)", default_permissions=discord.Permissions(manage_guild=True)
     )
@@ -989,6 +1141,30 @@ class Incursoes(
                 f"Intervalo ajustado para **{semanas} semana(s)**, contadas da "
                 "segunda-feira: quem entrar no sábado joga de novo na segunda."
             )
+        await interaction.response.send_message(texto, ephemeral=True)
+
+
+    @config_grupo.command(
+        name="autores",
+        description="Cargo que pode publicar dungeons e salas com /incursao enviar",
+    )
+    @app_commands.describe(
+        cargo="O cargo dos autores. Sem cargo, só quem administra o servidor publica."
+    )
+    async def config_autores(
+        self, interaction: discord.Interaction, cargo: Optional[discord.Role] = None
+    ) -> None:
+        await db.definir_cargo_de_autor(
+            self.bot.db, interaction.guild_id, cargo.id if cargo else None
+        )
+        if cargo:
+            texto = (
+                f"Quem tem o cargo {cargo.mention} publica dungeons e salas com "
+                "`/incursao enviar`. O que eles publicam vale em todos os "
+                "servidores do bot, e entra no ar na hora."
+            )
+        else:
+            texto = "Sem cargo de autores: só quem administra o servidor publica."
         await interaction.response.send_message(texto, ephemeral=True)
 
 

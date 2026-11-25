@@ -209,6 +209,7 @@
   ],
   "banco": {
    "config_guilda": [],
+   "conteudo_enviado": [],
    "jogadores": [],
    "ouro_lancamentos": [],
    "personagem_equipamento": [],

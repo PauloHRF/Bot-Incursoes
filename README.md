@@ -183,6 +183,7 @@ O desenho de tudo isso, e do que ainda falta, está em
 | `/incursao desistir` | Propõe abandonar a run (precisa de maioria) |
 | `/incursao encerrar <pagar> <devolver_vaga>` | (admin) Encerra a run do canal, pagando ou não as salas vencidas |
 | `/incursao recarregar` | (admin) Relê os JSON de incursão do disco |
+| `/incursao enviar <arquivo>` | (autores) Publica uma dungeon ou salas feitas no Estúdio; vale na hora, em todos os servidores do bot |
 | `/mercado vitrine [personagem]` | A prateleira da semana: 6 equipamentos e 3 poções |
 | `/mercado bolsa [personagem]` | Ouro, o que está vestido e o que está guardado |
 | `/mercado comprar <item> [personagem]` | Leva um item da sua vitrine da semana |
@@ -192,6 +193,7 @@ O desenho de tudo isso, e do que ainda falta, está em
 | `/organizacao extrato [organizacao] [quantidade]` | (admin) Últimos lançamentos, com o motivo de cada um |
 | `/organizacao ajustar <organizacao> <pontos> <motivo>` | (admin) Lança pontos na mão, para correções |
 | `/config intervalo <semanas>` | (admin) Semanas entre incursões do mesmo jogador; 0 libera geral |
+| `/config autores [cargo]` | (admin) O cargo que pode usar o `/incursao enviar`; sem cargo, só quem administra |
 
 Rolar o teste, atacar e usar habilidade são **botões** do cartão da sala e do painel do
 combate, e não comandos: os comandos que só repetiam botão saíram. A tabela acima é

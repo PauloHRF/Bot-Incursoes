@@ -993,7 +993,7 @@ async function conferir() {
   } catch (erro) { if (id === pedidoConferir) recados("saidaRevisar", {erro: erro.message}); }
 }
 function notaDoArquivo(problemas) {
-  const partes = [`${nomeDoArquivo()} — é este arquivo que se envia pelo Discord. Abrindo ele aqui de novo, você continua de onde parou.`];
+  const partes = [`${nomeDoArquivo()} — é este arquivo que se envia pelo Discord, com o comando “/incursao enviar”. Abrindo ele aqui de novo, você continua de onde parou.`];
   if (!rascunho().idFixo && inc().id) partes.push(`O código “${inc().id}” fica fixo a partir deste download: reenviar o arquivo atualiza a mesma dungeon, mesmo que o nome mude.`);
   if (problemas) partes.push("O bot recusa o arquivo enquanto houver problema.");
   return partes.join(" ");
@@ -1415,7 +1415,7 @@ async function conferirSalas() {
   $("btBaixarSalas").disabled = !lista.length;
   $("btBaixarSalas").textContent = "↓ Baixar arquivo de salas";
   $("notaArquivoSalas").textContent = lista.length
-    ? `${nomeArquivoSalas(org)} — ${lista.length} sala(s) nova(s). Envie este arquivo pelo Discord antes de qualquer dungeon que conte com elas.`
+    ? `${nomeArquivoSalas(org)} — ${lista.length} sala(s) nova(s). Envie este arquivo pelo Discord, com o comando “/incursao enviar”, antes de qualquer dungeon que conte com elas.`
     : "Sem sala nova nesta Organização, não há arquivo para baixar.";
   if (!lista.length) { $("saidaSalas").hidden = true; return; }
   try {

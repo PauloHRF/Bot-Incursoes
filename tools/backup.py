@@ -64,10 +64,14 @@ CONTAGENS = ("personagens", "runs", "pontos_lancamentos")
 # `DiscordBot ($url, $versao)`.
 USER_AGENT = "DiscordBot (https://github.com/PauloHRF/Bot-Incursoes, 2.0)"
 
-# As seis tabelas que carregam `guild_id`. Todas as outras dezenove penduram
+# As sete tabelas que carregam `guild_id`. Todas as outras dezenove penduram
 # nelas por `run_id` ou `personagem_id` com ON DELETE CASCADE — então apagar
-# estas seis leva o resto junto. É por isso que esta lista pode ser curta sem
+# estas sete leva o resto junto. É por isso que esta lista pode ser curta sem
 # deixar órfão: quem garante o resto é o esquema, não esta linha.
+#
+# `conteudo_enviado` vale em todos os servidores, mas a linha sabe de onde
+# veio: a fatia de um servidor leva o que foi enviado por ele, e o resto fica
+# na cópia inteira, que é a que restaura o bot.
 TABELAS_DA_GUILDA = (
     "personagens",
     "runs",
@@ -75,6 +79,7 @@ TABELAS_DA_GUILDA = (
     "placar_organizacoes",
     "pontos_lancamentos",
     "config_guilda",
+    "conteudo_enviado",
 )
 
 

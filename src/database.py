@@ -422,7 +422,31 @@ CREATE TABLE IF NOT EXISTS personagem_equipamento (
 
 CREATE TABLE IF NOT EXISTS config_guilda (
     guild_id          INTEGER PRIMARY KEY,
-    intervalo_semanas INTEGER NOT NULL
+    intervalo_semanas INTEGER NOT NULL,
+    -- O cargo que publica pelo /incursao enviar. NULL: so quem administra.
+    cargo_autor       INTEGER
+);
+
+-- O que os autores mandaram pelo Discord (`/incursao enviar`): uma linha por
+-- dungeon e por sala, com o JSON como o autor escreveu. Mora aqui, e nao em
+-- data/, porque o deploy e `git pull` — arquivo gravado pelo bot dentro do
+-- repositorio brigaria com a proxima atualizacao — e porque aqui ele entra no
+-- backup diario junto com o resto.
+--
+-- O conteudo vale em todos os servidores do bot; `guild_id` e so o servidor
+-- de onde veio, e e ele que faz a copia do backup de um servidor nao levar o
+-- que chegou pelo outro. A chave tem a Organizacao porque o codigo da sala so
+-- e unico dentro do banco dela.
+CREATE TABLE IF NOT EXISTS conteudo_enviado (
+    tipo          TEXT    NOT NULL,
+    organizacao   TEXT    NOT NULL,
+    conteudo_id   TEXT    NOT NULL,
+    autor_id      INTEGER NOT NULL,
+    guild_id      INTEGER NOT NULL,
+    dados         TEXT    NOT NULL,
+    enviado_em    TEXT    NOT NULL DEFAULT (datetime('now')),
+    atualizado_em TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (tipo, organizacao, conteudo_id)
 );
 
 -- Um canal so pode ter uma run viva por vez.
@@ -698,6 +722,11 @@ async def criar_schema(conn: aiosqlite.Connection) -> None:
         await conn.execute(
             "ALTER TABLE run_turnos ADD COLUMN resolvida INTEGER NOT NULL DEFAULT 1"
         )
+
+    # O cargo de autor chegou com o envio pelo Discord. Guilda sem ele
+    # continua como estava: so quem administra publica.
+    if "cargo_autor" not in await _colunas(conn, "config_guilda"):
+        await conn.execute("ALTER TABLE config_guilda ADD COLUMN cargo_autor INTEGER")
 
     if faltava_run_salas:
         # Runs em andamento nao guardavam por onde o grupo passou. Reconstroi o
@@ -1598,6 +1627,93 @@ async def definir_intervalo(conn: aiosqlite.Connection, guild_id: int, semanas: 
         (guild_id, semanas),
     )
     await conn.commit()
+
+
+async def cargo_de_autor(conn: aiosqlite.Connection, guild_id: int) -> Optional[int]:
+    async with conn.execute(
+        "SELECT cargo_autor FROM config_guilda WHERE guild_id = ?", (guild_id,)
+    ) as cur:
+        row = await cur.fetchone()
+    return row["cargo_autor"] if row else None
+
+
+async def definir_cargo_de_autor(
+    conn: aiosqlite.Connection, guild_id: int, cargo_id: Optional[int]
+) -> None:
+    # A linha nova leva o intervalo padrao porque a coluna e obrigatoria; e o
+    # mesmo numero que `intervalo_semanas` devolveria sem linha nenhuma.
+    await conn.execute(
+        "INSERT INTO config_guilda (guild_id, intervalo_semanas, cargo_autor)"
+        " VALUES (?, ?, ?)"
+        " ON CONFLICT (guild_id) DO UPDATE SET cargo_autor = excluded.cargo_autor",
+        (guild_id, config.INTERVALO_SEMANAS, cargo_id),
+    )
+    await conn.commit()
+
+
+# ------------------------------------------------------ conteudo enviado
+
+
+async def conteudo_enviado(conn: aiosqlite.Connection) -> list[dict[str, Any]]:
+    """Tudo que chegou pelo `/incursao enviar`, do mais antigo ao mais novo."""
+    async with conn.execute(
+        "SELECT tipo, organizacao, conteudo_id, autor_id, guild_id, dados,"
+        " enviado_em, atualizado_em FROM conteudo_enviado"
+        " ORDER BY enviado_em, tipo, conteudo_id"
+    ) as cur:
+        return [dict(r) for r in await cur.fetchall()]
+
+
+async def gravar_conteudo_enviado(
+    conn: aiosqlite.Connection,
+    guild_id: int,
+    itens: list[tuple[str, str, str, int, str]],
+) -> None:
+    """Grava um envio inteiro: (tipo, organizacao, id, autor_id, dados).
+
+    Um comando so, e nao um por item: o bot usa uma conexao, e entre dois
+    `await` outra corrotina poderia fazer `commit` de metade do envio — a
+    dungeon sem as salas dela. Quem ja existe e atualizado no lugar; o autor e
+    o servidor de origem ficam os do primeiro envio.
+    """
+    await conn.executemany(
+        "INSERT INTO conteudo_enviado"
+        " (tipo, organizacao, conteudo_id, autor_id, guild_id, dados)"
+        " VALUES (?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT (tipo, organizacao, conteudo_id) DO UPDATE SET"
+        "   dados = excluded.dados, atualizado_em = datetime('now')",
+        [(tipo, org, cid, autor, guild_id, dados) for tipo, org, cid, autor, dados in itens],
+    )
+    await conn.commit()
+
+
+async def em_uso_pelas_runs(
+    conn: aiosqlite.Connection,
+) -> tuple[set[str], set[tuple[str, str]]]:
+    """As dungeons e as salas que as runs em andamento estão usando.
+
+    Sala em uso é a que a run já tocou: oferecida numa parada, atravessada ou
+    aberta agora. As salas que ela ainda não sorteou podem mudar sem risco — o
+    bot as lê quando chegar a vez delas. Devolve (dungeons, pares
+    (dungeon, sala)): a sala só tem nome dentro do banco da Organização da
+    dungeon, e quem sabe a Organização é o catálogo, não o banco de dados.
+    """
+    marcadores = ", ".join("?" * len(STATUS_VIVOS))
+    async with conn.execute(
+        f"SELECT incursao_id FROM runs WHERE status IN ({marcadores})", STATUS_VIVOS
+    ) as cur:
+        dungeons = {r["incursao_id"] for r in await cur.fetchall()}
+    async with conn.execute(
+        f"SELECT r.incursao_id, m.sala_id FROM runs r JOIN run_mapa m ON m.run_id = r.id"
+        f" WHERE r.status IN ({marcadores})"
+        f" UNION SELECT r.incursao_id, s.sala_id FROM runs r JOIN run_salas s ON s.run_id = r.id"
+        f" WHERE r.status IN ({marcadores})"
+        f" UNION SELECT incursao_id, sala_atual FROM runs"
+        f" WHERE status IN ({marcadores}) AND sala_atual IS NOT NULL",
+        STATUS_VIVOS * 3,
+    ) as cur:
+        salas = {(r[0], r[1]) for r in await cur.fetchall()}
+    return dungeons, salas
 
 
 async def devolver_a_vaga(

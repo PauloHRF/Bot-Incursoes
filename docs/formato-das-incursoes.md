@@ -426,11 +426,41 @@ de validar. Por isso são recusa, e não aviso. O validador ainda avisa bem
 antes do teto (80 num nome, 600 numa descrição de sala, 1500 numa lore), porque
 parede de texto na tela de um celular é ruim muito antes de ser inválida.
 
-## Depois de escrever
+## Enviar pelo Discord
+
+Quem escreve pelo Estúdio publica sozinho: `/incursao enviar` com o arquivo
+que o Estúdio baixou anexado. O bot confere com as mesmas regras que o Estúdio
+mostrou e, se passar, a dungeon ou as salas entram no ar **na hora**, em todos
+os servidores do bot. Se não passar, a resposta traz todos os problemas de uma
+vez, e nada do arquivo entra.
+
+- **Quem pode:** quem administra o servidor, ou quem tem o cargo escolhido com
+  `/config autores`.
+- **Salas antes da dungeon.** As salas novas vão num arquivo próprio. A dungeon
+  que conta com elas é recusada se chegar antes delas, porque o filtro dela
+  não fecha sem elas.
+- **Cada um mexe no que é seu.** Reenviar o próprio arquivo atualiza a dungeon
+  ou as salas, pelo código. O que está em `data/` e o que outro autor enviou
+  não mudam por envio.
+- **Run em andamento segura a mudança.** O que uma run está usando — a dungeon
+  dela, as salas já oferecidas, atravessadas ou abertas — não muda enquanto
+  ela anda: o envio é recusado com o pedido de esperar. O que é só novo passa
+  sempre.
+- **Envio só acrescenta.** Sala que já foi enviada e não veio no arquivo
+  continua no bot. Não há comando de retirar: o que foi enviado sai mexendo no
+  banco de dados (`conteudo_enviado`).
+
+O enviado mora no banco de dados do bot, e não em `data/`: o deploy é `git
+pull`, e arquivo gravado pelo bot dentro do repositório brigaria com ele. Se um
+dia o repositório ganhar um código que um autor já usava, vale o do
+repositório, e o enviado fica de fora com aviso no log.
+
+## Depois de escrever à mão
+
+Para quem escreve JSON direto no repositório, sem o Estúdio:
 
 1. `python tools/validar_conteudo.py meu_arquivo.json` até sair `[ok]`.
-2. Mande o arquivo para quem administra o bot.
-3. O arquivo vai para `data/incursoes/` (ou `data/bancos/`), e `/incursao
+2. O arquivo vai para `data/incursoes/` (ou `data/bancos/`), e `/incursao
    recarregar` relê do disco **sem reiniciar** o bot.
 
 O `/incursao recarregar` responde com o erro de validação quando algo está

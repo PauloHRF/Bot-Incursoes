@@ -670,13 +670,16 @@ puderam ir primeiro. Do 5 em diante o tema começa a decidir sorteio.
 
 ## 14. O que isto não resolve
 
-**A entrega.** Depois de tudo isto, o colaborador ainda produz um JSON e **manda
-para você**, que copia para `data/` e roda `/incursao recarregar`. O estúdio
-encurta o trabalho dele e a sua revisão (12.7), mas não existe caminho
-automático de fora para dentro, e desenhar um é outra conversa — anexo em canal
-de admin, pull request no repositório, ou pasta compartilhada, cada um com um
-custo e um risco bem diferente.
+**A entrega — resolvida pelo Discord em novembro de 2026.** O autor anexa o
+arquivo do Estúdio no `/incursao enviar`, e o bot publica na hora, sem
+revisão de ninguém, em todos os servidores. As regras de quem mexe em quê
+moram em `src/envios.py` e estão no fim de
+[`formato-das-incursoes.md`](formato-das-incursoes.md#enviar-pelo-discord).
 
-**Quem pode escrever.** Nada aqui é controle de acesso. Quem recebe o estúdio
-pode escrever qualquer coisa; o que impede conteúdo ruim de entrar é a sua
-revisão, não o programa.
+**Quem pode escrever.** O Estúdio continua sem controle de acesso — quem o
+recebe escreve o que quiser. O controle está na publicação: só quem
+administra o servidor ou tem o cargo de `/config autores` envia, e o que
+impede conteúdo quebrado de entrar é a mesma conferência do Estúdio, rodando
+no bot. O que impede conteúdo *ruim* — fácil demais, texto que não combina —
+não é programa nenhum: o envio publica sem revisão, por decisão, e não há
+comando de retirar.
