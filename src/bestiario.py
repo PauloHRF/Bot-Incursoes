@@ -1,9 +1,17 @@
 """O bestiário: as criaturas prontas que uma sala pode chamar só pelo nome.
 
-O arquivo `data/bestiario.json` sai de `tools/importar_bestiario.py`, que lê o
-Monster Manual no formato do 5etools e padroniza o que o bot entende. Cada
-entrada já tem o formato que `incursoes._monstros_de_dict` lê, então a sala que
-diz só "Lobo" recebe os números do livro no lugar das colunas vazias.
+São duas fontes, lidas juntas:
+
+- `data/bestiario.json`, as 385 do Monster Manual. Saiu de
+  `tools/importar_fichas.py` (a tabela de fichas do grupo) mais
+  `tools/importar_ambientes.py`; rodar `importar_bestiario.py` de novo apagaria
+  o `meta` e as condições delas.
+- `data/criaturas/<livro>.json`, um arquivo por livro 2024 do 5etools, que sai
+  de `tools/importar_livro.py`. Os importadores do Monster Manual não tocam
+  nessa pasta, e tirar um livro é apagar o arquivo dele.
+
+Cada entrada já tem o formato que `incursoes._monstros_de_dict` lê, então a sala
+que diz só "Lobo" recebe os números do livro no lugar das colunas vazias.
 
 A busca aceita o nome em português e o original em inglês, com ou sem acento.
 """
@@ -16,6 +24,7 @@ from typing import Any, Optional
 from .rules import chave_comparacao
 
 ARQUIVO = Path(__file__).resolve().parent.parent / "data" / "bestiario.json"
+PASTA_DOS_LIVROS = Path(__file__).resolve().parent.parent / "data" / "criaturas"
 
 _indice: Optional[dict[str, dict[str, Any]]] = None
 
@@ -57,9 +66,12 @@ def ambientes_de(criatura: dict[str, Any]) -> list[str]:
     """Os ambientes daquela criatura. Lista vazia quer dizer algo.
 
     Vazia NÃO é dado faltando: o livro não dá bioma a quem não é nativo de
-    bioma nenhum — demônio, golem, celestial. São 70 das 385, e elas formam o
-    balde "de lugar nenhum", que serve a qualquer ambiente escolhido. Um
-    demônio cabe numa cripta tão bem quanto numa floresta.
+    bioma nenhum — demônio, golem, celestial. São 70 das 385 do Monster
+    Manual, e elas formam o balde "de lugar nenhum", que serve a qualquer
+    ambiente escolhido. Um demônio cabe numa cripta tão bem quanto numa
+    floresta. Nos livros de 2024 o plano ("planar, nine hells") e o "any"
+    também caem aqui; quem o livro deixou sem ambiente por descuido recebe
+    um na revisão de cada livro (`tools/livros_traducao.py`).
 
     Criatura importada antes de `meta.ambientes` existir também cai aqui, e
     por isso quem filtra precisa tratar a lista vazia como "serve a tudo" e
@@ -87,8 +99,8 @@ def candidatas(
     O AMBIENTE tem uma regra que não é óbvia. Criatura sem ambiente nenhum
     entra em TODO ambiente pedido, porque a lista vazia não é dado faltando —
     o livro não prende a bioma quem não é nativo de bioma: demônio, golem,
-    celestial. São 70 das 385, e sem essa regra uma cripta ou um templo não
-    acharia quase nada.
+    celestial. São 70 das 385 do Monster Manual, e sem essa regra uma cripta
+    ou um templo não acharia quase nada.
 
     O TIER vira faixa de CR por `FAIXAS_DE_CR`, que é a mesma tabela que
     `tools/balanco.py` usa para medir as classes. Quem decide a dificuldade
@@ -124,12 +136,23 @@ def tier_do_cr(cr: float) -> int:
     return max(FAIXAS_DE_CR)
 
 
-def carregar(arquivo: Path = ARQUIVO) -> list[dict[str, Any]]:
-    """Todas as criaturas do bestiário. Sem o arquivo, o bestiário está vazio."""
-    if not arquivo.exists():
-        return []
-    with arquivo.open(encoding="utf-8") as f:
-        return json.load(f)["criaturas"]
+def carregar(
+    arquivo: Path = ARQUIVO, livros: Optional[Path] = PASTA_DOS_LIVROS
+) -> list[dict[str, Any]]:
+    """Todas as criaturas: o Monster Manual e os livros, nessa ordem.
+
+    `livros=None` lê só o arquivo — é como o importador dos livros separa o
+    que já é do Monster Manual. Sem nada no disco, o bestiário está vazio.
+    """
+    criaturas: list[dict[str, Any]] = []
+    if arquivo.exists():
+        with arquivo.open(encoding="utf-8") as f:
+            criaturas.extend(json.load(f)["criaturas"])
+    if livros is not None and livros.is_dir():
+        for livro in sorted(livros.glob("*.json")):
+            with livro.open(encoding="utf-8") as f:
+                criaturas.extend(json.load(f)["criaturas"])
+    return criaturas
 
 
 def _montar_indice() -> dict[str, dict[str, Any]]:

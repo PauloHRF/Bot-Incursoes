@@ -1,0 +1,500 @@
+{
+ "livro": "HOTB",
+ "criaturas": [
+  {
+   "id": "gray-ooze-glob",
+   "nome": "Glóbulo de Gosma Cinzenta",
+   "nome_en": "Gray Ooze Glob",
+   "cr": "1/2",
+   "ca": 9,
+   "hp": 19,
+   "golpes": [
+    {
+     "nome": "Pseudópode",
+     "ataque": 3,
+     "dano": "2d8+1",
+     "tipo": "ácido"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": -2,
+    "CON": 3,
+    "INT": -5,
+    "SAB": -2,
+    "CAR": -4
+   },
+   "fora": "traços: Amorphous, Corrosive Form",
+   "meta": {
+    "tipo": "ooze",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "HotB",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "lizardfolk-warden",
+   "nome": "Guardião do Povo-Lagarto",
+   "nome_en": "Lizardfolk Warden",
+   "cr": "1",
+   "ca": 15,
+   "hp": 32,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 4,
+     "dano": "1d6+2+1d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Pique de Osso",
+     "ataque": 4,
+     "dano": "1d10+2",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 1,
+    "CON": 2,
+    "INT": 0,
+    "SAB": 1,
+    "CAR": -1
+   },
+   "fora": "traços: Hold Breath | ações do livro: Poison Spit",
+   "meta": {
+    "tipo": "elemental",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "swamp"
+    ],
+    "fonte": "HotB",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ivlis",
+   "nome": "Ivlis",
+   "nome_en": "Ivlis",
+   "cr": "2",
+   "ca": 13,
+   "hp": 49,
+   "golpes": [
+    {
+     "nome": "Rajada do Caos",
+     "ataque": 4,
+     "dano": "2d6"
+    },
+    {
+     "nome": "Rajada do Caos",
+     "ataque": 4,
+     "dano": "2d6"
+    },
+    {
+     "nome": "Rajada do Caos",
+     "ataque": 4,
+     "dano": "2d6"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Comando Sinistro",
+    "save": "SAB",
+    "cd": 12,
+    "atordoa": 1,
+    "alvos": 1,
+    "recarga": 5
+   },
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 3,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "hill",
+     "underdark"
+    ],
+    "fonte": "HotB",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "jacko",
+   "nome": "Jacko",
+   "nome_en": "Jacko",
+   "cr": "1",
+   "ca": 13,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Adaga Envenenada",
+     "ataque": 5,
+     "dano": "1d4+3+1d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Adaga Envenenada",
+     "ataque": 5,
+     "dano": "1d4+3+1d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 3,
+    "CON": 0,
+    "INT": 1,
+    "SAB": 2,
+    "CAR": 3
+   },
+   "fora": "traços: Quick Disguise | bônus: Cunning Action",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "halfling"
+    ],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "HotB",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "narthus",
+   "nome": "Narthus",
+   "nome_en": "Narthus",
+   "cr": "1",
+   "ca": 13,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Maça Vil",
+     "ataque": 4,
+     "dano": "1d6+2+1d6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Maça Vil",
+     "ataque": 4,
+     "dano": "1d6+2+1d6",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 0,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 0
+   },
+   "fora": "ações do livro: Fateful Bolt",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "hill",
+     "underdark"
+    ],
+    "fonte": "HotB",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "pral",
+   "nome": "Pral",
+   "nome_en": "Pral",
+   "cr": "1",
+   "ca": 14,
+   "hp": 52,
+   "golpes": [
+    {
+     "nome": "Rapieira",
+     "ataque": 5,
+     "dano": "1d8+3",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 5,
+    "CON": 2,
+    "INT": 2,
+    "SAB": 0,
+    "CAR": 2
+   },
+   "fora": "reações: Parry | ações do livro: Light Crossbow",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "HotB",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "curate",
+   "nome": "Pároco",
+   "nome_en": "Curate",
+   "cr": "6",
+   "ca": 12,
+   "hp": 97,
+   "golpes": [
+    {
+     "nome": "Radiância Celestial",
+     "ataque": 7,
+     "dano": "4d8",
+     "tipo": "radiante"
+    },
+    {
+     "nome": "Radiância Celestial",
+     "ataque": 7,
+     "dano": "4d8",
+     "tipo": "radiante"
+    },
+    {
+     "nome": "Radiância Celestial",
+     "ataque": 7,
+     "dano": "4d8",
+     "tipo": "radiante"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 2,
+    "CON": 2,
+    "INT": 5,
+    "SAB": 7,
+    "CAR": 5
+   },
+   "fora": "traços: Magic Resistance, Raise the Dead | ações do livro: Healer's Touch",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "HotB",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "kuo-toa-marauder",
+   "nome": "Saqueador Kuo-toa",
+   "nome_en": "Kuo-toa Marauder",
+   "cr": "1/2",
+   "ca": 12,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Cortador Salgado",
+     "ataque": 4,
+     "dano": "2d6+2",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 0,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": 0
+   },
+   "fora": "traços: Amphibious, Sunlight Sensitivity | bônus: Slippery",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "underdark",
+     "coastal"
+    ],
+    "fonte": "HotB",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "sprite-skirmisher",
+   "nome": "Sprite Escaramuçador",
+   "nome_en": "Sprite Skirmisher",
+   "cr": "1/4",
+   "ca": 15,
+   "hp": 10,
+   "golpes": [
+    {
+     "nome": "Arco Encantador",
+     "ataque": 6,
+     "dano": "1",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Arco Encantador",
+      "save": "CON",
+      "cd": 18,
+      "atordoa": 1
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -4,
+    "DES": 4,
+    "CON": 0,
+    "INT": 2,
+    "SAB": 1,
+    "CAR": 0
+   },
+   "fora": "ações do livro: Needle Sword, Heart Sight, Invisibility",
+   "meta": {
+    "tipo": "fey",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 50,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "HotB",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "vinx",
+   "nome": "Vinx",
+   "nome_en": "Vinx",
+   "cr": "1/4",
+   "ca": 13,
+   "hp": 11,
+   "golpes": [
+    {
+     "nome": "Espada Curta",
+     "ataque": 4,
+     "dano": "1d6+2",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Espada Curta",
+     "ataque": 4,
+     "dano": "1d6+2",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 1,
+    "CAR": 0
+   },
+   "fora": "ações do livro: Sling",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "dwarf"
+    ],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 50,
+    "ambientes": [
+     "hill",
+     "mountain"
+    ],
+    "fonte": "HotB",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "wight-lifedrinker",
+   "nome": "Wight Bebedor de Vida",
+   "nome_en": "Wight Lifedrinker",
+   "cr": "3",
+   "ca": 14,
+   "hp": 82,
+   "golpes": [
+    {
+     "nome": "Espada Necrótica",
+     "ataque": 4,
+     "dano": "1d8+2+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Espada Necrótica",
+     "ataque": 4,
+     "dano": "1d8+2+1d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 2,
+    "CON": 3,
+    "INT": 0,
+    "SAB": 1,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Beber Vida",
+    "save": "CON",
+    "cd": 13,
+    "dano": "1d8+2",
+    "tipo": "necrótico",
+    "alvos": 1,
+    "recarga": 5
+   },
+   "fora": "traços: Sunlight Sensitivity | ações do livro: Necrotic Bow",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "hill",
+     "underdark"
+    ],
+    "fonte": "HotB",
+    "nomeada": false
+   }
+  }
+ ]
+}

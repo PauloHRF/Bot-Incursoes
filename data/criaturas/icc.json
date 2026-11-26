@@ -1,0 +1,1196 @@
+{
+ "livro": "ICC",
+ "criaturas": [
+  {
+   "id": "val-kyr-herald",
+   "nome": "Arauto Val'kyr",
+   "nome_en": "Val'kyr Herald",
+   "cr": "14",
+   "ca": 18,
+   "hp": 168,
+   "golpes": [
+    {
+     "nome": "Lança do Ceifador",
+     "ataque": 11,
+     "dano": "2d6+6+6d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Lança do Ceifador",
+     "ataque": 11,
+     "dano": "2d6+6+6d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 4,
+    "CON": 5,
+    "INT": 9,
+    "SAB": 10,
+    "CAR": 11
+   },
+   "habilidade": {
+    "nome": "Essência Cortada",
+    "save": "CAR",
+    "cd": 19,
+    "dano": "4d8",
+    "tipo": "psíquico",
+    "metade": true,
+    "alvos": 1,
+    "recarga": 4
+   },
+   "fora": "traços: Flyby, Magic Resistance",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "angel"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "blood-queen-lana-thel",
+   "nome": "Blood-Queen Lana'thel",
+   "nome_en": "Blood-Queen Lana'thel",
+   "cr": "23",
+   "ca": 16,
+   "hp": 315,
+   "golpes": [
+    {
+     "nome": "Mordida Sanguinária",
+     "ataque": 13,
+     "dano": "2d8+6+2d8",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Mordida Sanguinária",
+      "save": "CON",
+      "cd": 25,
+      "debuff": [
+       "deterioracao"
+      ]
+     }
+    },
+    {
+     "nome": "Mordida Sanguinária",
+     "ataque": 13,
+     "dano": "2d8+6+2d8",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Mordida Sanguinária",
+      "save": "CON",
+      "cd": 25,
+      "debuff": [
+       "deterioracao"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 13,
+    "DES": 4,
+    "CON": 5,
+    "INT": 4,
+    "SAB": 10,
+    "CAR": 13
+   },
+   "fora": "traços: Legendary Resistance, Shadow Escape, Shroud of Sorrow, Sunlight Weakness | conjuração: Incite Terror, Hunger of Hadar, Dominate Prey | bônus: Blood Mirror, Pact of the Darkfallen | lendárias: Umbral Strike | ações do livro: Twilight Bloodbolt",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "elf",
+     "vampire"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 50000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "the-damned",
+   "nome": "Condenado",
+   "nome_en": "The Damned",
+   "cr": "12",
+   "ca": 16,
+   "hp": 170,
+   "golpes": [
+    {
+     "nome": "Garra Ceifadora",
+     "ataque": 9,
+     "dano": "3d10+5+2d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra Ceifadora",
+     "ataque": 9,
+     "dano": "3d10+5+2d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 7,
+    "CON": 7,
+    "INT": 1,
+    "SAB": 6,
+    "CAR": -1
+   },
+   "fora": "traços: Blood Frenzy, Shattered Bones | reações: Deadly Reach",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "plague-dog",
+   "nome": "Cão da Praga",
+   "nome_en": "Plague-Dog",
+   "cr": "14",
+   "ca": 16,
+   "hp": 189,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 11,
+     "dano": "4d6+6+4d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 11,
+     "dano": "4d6+6+4d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 2,
+    "CON": 4,
+    "INT": -4,
+    "SAB": 1,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Dizimar",
+    "save": "CON",
+    "cd": 17,
+    "dano": "7d8+30",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 6
+   },
+   "matilha": true,
+   "fora": "traços: Plague Stench | bônus: Eerie Howl",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "deathbringer-saurfang",
+   "nome": "Deathbringer Saurfang",
+   "nome_en": "Deathbringer Saurfang",
+   "cr": "21",
+   "ca": 20,
+   "hp": 266,
+   "golpes": [
+    {
+     "nome": "Lâmina de Runa Sangrenta",
+     "ataque": 13,
+     "dano": "2d6+6+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina de Runa Sangrenta",
+     "ataque": 13,
+     "dano": "2d6+6+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina de Runa Sangrenta",
+     "ataque": 13,
+     "dano": "2d6+6+1d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 7,
+    "CON": 5,
+    "INT": 1,
+    "SAB": 10,
+    "CAR": 6
+   },
+   "habilidade": {
+    "nome": "Sangue Fervente",
+    "save": "CON",
+    "cd": 21,
+    "dano": "10d12",
+    "tipo": "necrótico",
+    "metade": true,
+    "debuff": [
+     "exaustao"
+    ],
+    "alvos": 1,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance, Magic Resistance | conjuração: Spellcasting | bônus: Mark of the Fallen Champion | reações: Parry | lendárias: Blood Nova, Frenzied Strike, Lunge",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "death knight"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 33000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "frost-wyrm",
+   "nome": "Dragão Gélido",
+   "nome_en": "Frost Wyrm",
+   "cr": "17",
+   "ca": 20,
+   "hp": 162,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 13,
+     "dano": "2d10+7+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 13,
+     "dano": "2d10+7+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 13,
+     "dano": "2d10+7+1d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 6,
+    "CON": 6,
+    "INT": 4,
+    "SAB": 8,
+    "CAR": 5
+   },
+   "habilidade": {
+    "nome": "Sopro Congelante",
+    "save": "CON",
+    "cd": 20,
+    "dano": "6d12",
+    "tipo": "gélido",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance, Life Suppression, Magic Resistance | lendárias: Pounce, Terrifying Roar | ações do livro: Icy Blast",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 18000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "festergut",
+   "nome": "Festergut",
+   "nome_en": "Festergut",
+   "cr": "17",
+   "ca": 14,
+   "hp": 207,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 11,
+     "dano": "6d10+5+4d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 11,
+     "dano": "6d10+5+4d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 1,
+    "CON": 5,
+    "INT": -1,
+    "SAB": 1,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Gás Vil",
+    "save": "CON",
+    "cd": 19,
+    "dano": "10d6",
+    "tipo": "veneno",
+    "metade": true,
+    "debuff": [
+     "envenenado"
+    ],
+    "atordoa": 1,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Gaseous Blight, Legendary Resistance | bônus: Inhale Blight, Pungent Blight | ações do livro: Gastric Bloat",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 18000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "vengeful-geist",
+   "nome": "Geist Vingativo",
+   "nome_en": "Vengeful Geist",
+   "cr": "3",
+   "ca": 14,
+   "hp": 66,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 6,
+     "dano": "2d6+4",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 6,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": -1
+   },
+   "matilha": true,
+   "fora": "traços: Avoidance | bônus: Leap",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "plagueworks-ooze",
+   "nome": "Gosma da Pestilência",
+   "nome_en": "Plagueworks Ooze",
+   "cr": "4",
+   "ca": 7,
+   "hp": 67,
+   "golpes": [
+    {
+     "nome": "Pseudópode Grudento",
+     "ataque": 5,
+     "dano": "4d6+3",
+     "tipo": "ácido"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": -3,
+    "CON": 3,
+    "INT": -5,
+    "SAB": -2,
+    "CAR": -5
+   },
+   "fora": "traços: Amorphous, Corrosive Form, Spider Climb | ações do livro: Merge",
+   "meta": {
+    "tipo": "ooze",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "pustulating-horror",
+   "nome": "Horror Pustulento",
+   "nome_en": "Pustulating Horror",
+   "cr": "7",
+   "ca": 9,
+   "hp": 152,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 7,
+     "dano": "2d8+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 7,
+     "dano": "2d8+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": -1,
+    "CON": 4,
+    "INT": -4,
+    "SAB": -1,
+    "CAR": -3
+   },
+   "habilidade": {
+    "nome": "Cuspir Praga",
+    "save": "DES",
+    "cd": 15,
+    "dano": "3d6",
+    "tipo": "veneno",
+    "debuff": [
+     "envenenado"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Blight Bomb, Pestilent Pustules",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "lady-deathwhisper",
+   "nome": "Lady Deathwhisper",
+   "nome_en": "Lady Deathwhisper",
+   "cr": "21",
+   "ca": 20,
+   "hp": 150,
+   "golpes": [
+    {
+     "nome": "Seta Sombria",
+     "ataque": 13,
+     "dano": "3d12+6",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Seta Sombria",
+     "ataque": 13,
+     "dano": "3d12+6",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Seta Sombria",
+     "ataque": 13,
+     "dano": "3d12+6",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 3,
+    "CON": 9,
+    "INT": 13,
+    "SAB": 9,
+    "CAR": 6
+   },
+   "fora": "traços: Legendary Resistance, Mana Shield | conjuração: Spellcasting, Dominate Mind, Protective Magic | lendárias: Death and Decay, Deathly Teleport, Shadow Strike | ações do livro: Paralyzing Touch, Frostbolt",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "lich",
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 33000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "lord-marrowgar",
+   "nome": "Lord Marrowgar",
+   "nome_en": "Lord Marrowgar",
+   "cr": "21",
+   "ca": 21,
+   "hp": 345,
+   "golpes": [
+    {
+     "nome": "Machado do Trono de Gelo",
+     "ataque": 14,
+     "dano": "1d12+7+1d12",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Corte de Osso",
+     "ataque": 14,
+     "dano": "2d10+7",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Corte de Osso",
+     "ataque": 14,
+     "dano": "2d10+7",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 5,
+    "CON": 6,
+    "INT": 2,
+    "SAB": 9,
+    "CAR": 10
+   },
+   "habilidade": {
+    "nome": "Cemitério de Espinhos de Osso",
+    "save": "DES",
+    "cd": 21,
+    "dano": "4d6",
+    "tipo": "perfurante",
+    "metade": true,
+    "atordoa": 1,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Bone Storm, Legendary Resistance | lendárias: Coldflame, Strike",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 33000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "prince-keleseth",
+   "nome": "Prince Keleseth",
+   "nome_en": "Prince Keleseth",
+   "cr": "18",
+   "ca": 16,
+   "hp": 475,
+   "golpes": [
+    {
+     "nome": "Golpe Sepulcral",
+     "ataque": 12,
+     "dano": "1d8+6+4d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Golpe Sepulcral",
+     "ataque": 12,
+     "dano": "1d8+6+4d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 12,
+    "DES": 10,
+    "CON": 5,
+    "INT": 4,
+    "SAB": 9,
+    "CAR": 12
+   },
+   "habilidade": {
+    "nome": "Dreno Sanguíneo",
+    "save": "CON",
+    "cd": 20,
+    "dano": "4d6",
+    "tipo": "necrótico",
+    "debuff": [
+     "deterioracao"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Invocation of Blood, Legendary Resistance, Sunlight Weakness | conjuração: Hunger of Hadar, Beguile | lendárias: Umbral Strike | ações do livro: Shadow Lance",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "elf",
+     "vampire"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 20000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "prince-taldaram",
+   "nome": "Prince Taldaram",
+   "nome_en": "Prince Taldaram",
+   "cr": "18",
+   "ca": 16,
+   "hp": 475,
+   "golpes": [
+    {
+     "nome": "Golpe Sepulcral",
+     "ataque": 12,
+     "dano": "1d8+6+4d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Golpe Sepulcral",
+     "ataque": 12,
+     "dano": "1d8+6+4d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 12,
+    "DES": 10,
+    "CON": 5,
+    "INT": 4,
+    "SAB": 9,
+    "CAR": 12
+   },
+   "habilidade": {
+    "nome": "Fagulhas Cintilantes",
+    "save": "DES",
+    "cd": 20,
+    "dano": "7d8",
+    "tipo": "fogo",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Invocation of Blood, Legendary Resistance, Sunlight Weakness | conjuração: Beguile | bônus: Sanguine Drain | lendárias: Umbral Strike | ações do livro: Conjure Flame",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "elf",
+     "vampire"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 20000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "prince-valanar",
+   "nome": "Prince Valanar",
+   "nome_en": "Prince Valanar",
+   "cr": "18",
+   "ca": 16,
+   "hp": 475,
+   "golpes": [
+    {
+     "nome": "Golpe Sepulcral",
+     "ataque": 12,
+     "dano": "1d8+6+4d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Golpe Sepulcral",
+     "ataque": 12,
+     "dano": "1d8+6+4d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 12,
+    "DES": 10,
+    "CON": 5,
+    "INT": 4,
+    "SAB": 9,
+    "CAR": 12
+   },
+   "habilidade": {
+    "nome": "Bomba Cinética",
+    "save": "DES",
+    "cd": 20,
+    "dano": "12d6",
+    "tipo": "energia",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Invocation of Blood, Legendary Resistance, Sunlight Weakness | conjuração: Beguile | bônus: Sanguine Drain | lendárias: Umbral Strike | ações do livro: Shock Vortex",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "elf",
+     "vampire"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 20000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "professor-putricide-phase-1",
+   "nome": "Professor Putricide, Phase 1",
+   "nome_en": "Professor Putricide, Phase 1",
+   "cr": "20",
+   "ca": 17,
+   "hp": 299,
+   "golpes": [
+    {
+     "nome": "Debater-se",
+     "ataque": 12,
+     "dano": "2d12+6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Debater-se",
+     "ataque": 12,
+     "dano": "2d12+6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 9,
+    "CON": 6,
+    "INT": 12,
+    "SAB": 11,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Gerar Gosma Volátil",
+    "save": "DES",
+    "cd": 20,
+    "dano": "12d12",
+    "tipo": "ácido",
+    "metade": true,
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Legendary Resistance, Magic Resistance, Unstable Mutation | bônus: Bounding Enthusiasm, Mutated Slime | ações do livro: Spawn Gas Cloud",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 25000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "rotface",
+   "nome": "Rotface",
+   "nome_en": "Rotface",
+   "cr": "17",
+   "ca": 14,
+   "hp": 250,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 12,
+     "dano": "6d10+6+4d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 12,
+     "dano": "6d10+6+4d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 1,
+    "CON": 6,
+    "INT": -1,
+    "SAB": 1,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Jato de Lodo",
+    "save": "DES",
+    "cd": 20,
+    "dano": "4d12",
+    "tipo": "ácido",
+    "metade": true,
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Legendary Resistance, Ooze Flood | bônus: Mutated Infection",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 18000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "servant-of-the-throne",
+   "nome": "Servo do Trono",
+   "nome_en": "Servant of the Throne",
+   "cr": "12",
+   "ca": 17,
+   "hp": 195,
+   "golpes": [
+    {
+     "nome": "Rajada Gélida",
+     "ataque": 9,
+     "dano": "4d10+5",
+     "tipo": "gélido"
+    },
+    {
+     "nome": "Rajada Gélida",
+     "ataque": 9,
+     "dano": "4d10+5",
+     "tipo": "gélido"
+    },
+    {
+     "nome": "Rajada Gélida",
+     "ataque": 9,
+     "dano": "4d10+5",
+     "tipo": "gélido"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 1,
+    "INT": 5,
+    "SAB": 6,
+    "CAR": 3
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting, Misty Step, Protective Magic",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "lich",
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "sindragosa",
+   "nome": "Sindragosa",
+   "nome_en": "Sindragosa",
+   "cr": "23",
+   "ca": 20,
+   "hp": 367,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 14,
+     "dano": "2d10+7+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 14,
+     "dano": "2d10+7+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 14,
+     "dano": "2d10+7+1d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 7,
+    "CON": 7,
+    "INT": 5,
+    "SAB": 2,
+    "CAR": 5
+   },
+   "habilidade": {
+    "nome": "Sopro Congelante",
+    "save": "CON",
+    "cd": 22,
+    "dano": "8d12",
+    "tipo": "gélido",
+    "metade": true,
+    "atordoa": 1,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance, Life Suppression, Magic Resistance | conjuração: Unchained Magic | bônus: Blistering Cold | lendárias: Pounce, Terrifying Roar | ações do livro: Icy Grip, Ice Tombs",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 50000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "sister-svalna",
+   "nome": "Sister Svalna",
+   "nome_en": "Sister Svalna",
+   "cr": "16",
+   "ca": 19,
+   "hp": 262,
+   "golpes": [
+    {
+     "nome": "Lança de Osso",
+     "ataque": 12,
+     "dano": "2d6+7+4d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Lança de Osso",
+     "ataque": 12,
+     "dano": "2d6+7+4d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Lança de Osso",
+     "ataque": 12,
+     "dano": "2d6+7+4d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 12,
+    "DES": 5,
+    "CON": 12,
+    "INT": 4,
+    "SAB": 11,
+    "CAR": 12
+   },
+   "habilidade": {
+    "nome": "Onda Divina",
+    "save": "DES",
+    "cd": 20,
+    "dano": "7d6",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "angel"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 15000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "deathspeaker-high-priest",
+   "nome": "Sumo Sacerdote Fala-Morte",
+   "nome_en": "Deathspeaker High Priest",
+   "cr": "10",
+   "ca": 17,
+   "hp": 180,
+   "golpes": [
+    {
+     "nome": "Rajada Sombria",
+     "ataque": 10,
+     "dano": "2d10+6",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Rajada Sombria",
+     "ataque": 10,
+     "dano": "2d10+6",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 5,
+    "CON": 3,
+    "INT": 1,
+    "SAB": 10,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Acerto Sombrio",
+    "alvos": 1,
+    "save": "ATK",
+    "dano": "6d10",
+    "tipo": "necrótico",
+    "recarga": 5
+   },
+   "fora": "traços: Aura of Darkness",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "cleric",
+     "nerubian"
+    ],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 5900,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "tirion-fordring",
+   "nome": "Tirion Fordring",
+   "nome_en": "Tirion Fordring",
+   "cr": "15",
+   "ca": 18,
+   "hp": 202,
+   "golpes": [
+    {
+     "nome": "Ashbringer",
+     "ataque": 13,
+     "dano": "2d6+8+5d10",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Ashbringer",
+     "ataque": 13,
+     "dano": "2d6+8+5d10",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Ashbringer",
+     "ataque": 13,
+     "dano": "2d6+8+5d10",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 10,
+    "DES": 3,
+    "CON": 8,
+    "INT": 2,
+    "SAB": 8,
+    "CAR": 9
+   },
+   "fora": "traços: Aura of Bravery | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human",
+     "paladin"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 13000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "ICC",
+    "nomeada": true
+   }
+  }
+ ]
+}

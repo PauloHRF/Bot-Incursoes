@@ -317,10 +317,10 @@ def conteudo() -> dict[str, Any]:
         # Os tipos de bicho com quantas criaturas cada um tem: sem o número, o
         # autor não sabe que 'ooze' corta o bestiário para quatro.
         "tipos_de_bicho": _tipos_de_bicho(),
-        # Os nomes das 385, para o campo de criatura oferecer o que existe em
-        # vez de aceitar o que foi digitado. Sao ~8 KB e vao uma vez so: a
-        # alternativa, uma rota de busca por tecla, custaria uma ida ao
-        # servidor por letra para escolher entre 385 nomes.
+        # Os nomes do bestiário inteiro (Monster Manual e livros), para o
+        # campo de criatura oferecer o que existe em vez de aceitar o que foi
+        # digitado. Sao poucos KB e vao uma vez so: a alternativa, uma rota de
+        # busca por tecla, custaria uma ida ao servidor por letra.
         "criaturas": sorted(
             c["nome"] for c in bestiario.carregar() if c.get("nome")
         ),

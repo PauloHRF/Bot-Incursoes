@@ -1,0 +1,2052 @@
+{
+ "livro": "FRAIF",
+ "criaturas": [
+  {
+   "id": "phaerimm-agent",
+   "nome": "Agente Phaerimm",
+   "nome_en": "Phaerimm Agent",
+   "cr": "8",
+   "ca": 15,
+   "hp": 123,
+   "golpes": [
+    {
+     "nome": "Ferrão do Pavor",
+     "ataque": 7,
+     "dano": "1d6+4+2d12",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Ferrão do Pavor",
+     "ataque": 7,
+     "dano": "1d6+4+2d12",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Ferrão do Pavor",
+     "ataque": 7,
+     "dano": "1d6+4+2d12",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 4,
+    "CON": 4,
+    "INT": 6,
+    "SAB": 6,
+    "CAR": 7
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting, Protective Magic | bônus: Teleport | ações do livro: Mindwarp Ray",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "aranea",
+   "nome": "Aranea",
+   "nome_en": "Aranea",
+   "cr": "2",
+   "ca": 14,
+   "hp": 66,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 5,
+     "dano": "1d6+3+1d4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Mordida",
+     "ataque": 5,
+     "dano": "1d6+3+1d4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 3,
+    "CON": 1,
+    "INT": 1,
+    "SAB": 0,
+    "CAR": 2
+   },
+   "fora": "traços: Spider Climb, Web Walker | conjuração: Spellcasting | bônus: Shape-Shift | ações do livro: Slam, Sling",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "rusted-behemoth",
+   "nome": "Beemote Enferrujado",
+   "nome_en": "Rusted Behemoth",
+   "cr": "9",
+   "ca": 18,
+   "hp": 157,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 10,
+     "dano": "4d6+6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 10,
+     "dano": "4d6+6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 10,
+     "dano": "4d6+6",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 0,
+    "CON": 4,
+    "INT": -2,
+    "SAB": 1,
+    "CAR": -2
+   },
+   "fora": "reações: Rust-Riddled Hide | ações do livro: Rusted Shot Put",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 5000,
+    "ambientes": [
+     "coastal",
+     "forest"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "rusted-berserker",
+   "nome": "Berserker Enferrujado",
+   "nome_en": "Rusted Berserker",
+   "cr": "4",
+   "ca": 16,
+   "hp": 82,
+   "golpes": [
+    {
+     "nome": "Espada Grande",
+     "ataque": 6,
+     "dano": "2d6+4",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Espada Grande",
+      "save": "CON",
+      "cd": 18,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Espada Grande",
+     "ataque": 6,
+     "dano": "2d6+4",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Espada Grande",
+      "save": "CON",
+      "cd": 18,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 2,
+    "CON": 3,
+    "INT": -2,
+    "SAB": 0,
+    "CAR": -2
+   },
+   "fora": "ações do livro: Javelin",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "coastal",
+     "forest"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "biha-babir",
+   "nome": "Biha Babir",
+   "nome_en": "Biha Babir",
+   "cr": "12",
+   "ca": 17,
+   "hp": 229,
+   "golpes": [
+    {
+     "nome": "Rajada Marinha",
+     "ataque": 10,
+     "dano": "2d10+6",
+     "tipo": "gélido"
+    },
+    {
+     "nome": "Rajada Marinha",
+     "ataque": 10,
+     "dano": "2d10+6",
+     "tipo": "gélido"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 5,
+    "CON": 8,
+    "INT": 4,
+    "SAB": 7,
+    "CAR": 9
+   },
+   "fora": "traços: Amphibious, Elemental Restoration, Legendary Resistance, Wishes | conjuração: Spellcasting | bônus: Fluid Form | lendárias: Misty Burst, Whirlpool | ações do livro: Tail",
+   "meta": {
+    "tipo": "elemental",
+    "subtipo": [
+     "genie"
+    ],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "nimblewright-hulk",
+   "nome": "Colosso Nimblewright",
+   "nome_en": "Nimblewright Hulk",
+   "cr": "7",
+   "ca": 18,
+   "hp": 104,
+   "golpes": [
+    {
+     "nome": "Pancada Paralisante",
+     "ataque": 7,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada Paralisante",
+     "ataque": 7,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada Paralisante",
+     "ataque": 7,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada Paralisante",
+     "ataque": 7,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 7,
+    "CON": 4,
+    "INT": 0,
+    "SAB": 1,
+    "CAR": -2
+   },
+   "fora": "traços: Evasion, Magic Resistance | ações do livro: Radiant Ray",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 4,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "cultist-of-bane",
+   "nome": "Cultista de Bane",
+   "nome_en": "Cultist of Bane",
+   "cr": "9",
+   "ca": 16,
+   "hp": 142,
+   "golpes": [
+    {
+     "nome": "Manopla",
+     "ataque": 8,
+     "dano": "3d8+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Manopla",
+     "ataque": 8,
+     "dano": "3d8+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Manopla",
+     "ataque": 8,
+     "dano": "3d8+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 2,
+    "CON": 7,
+    "INT": 1,
+    "SAB": 8,
+    "CAR": 6
+   },
+   "fora": "traços: Determined Survivor | conjuração: Spellcasting | reações: Counterattack | ações do livro: Oppressive Burst",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 5000,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "cultist-of-bhaal",
+   "nome": "Cultista de Bhaal",
+   "nome_en": "Cultist of Bhaal",
+   "cr": "7",
+   "ca": 16,
+   "hp": 144,
+   "golpes": [
+    {
+     "nome": "Lâmina Amaldiçoada",
+     "ataque": 7,
+     "dano": "3d6+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina Amaldiçoada",
+     "ataque": 7,
+     "dano": "3d6+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina Amaldiçoada",
+     "ataque": 7,
+     "dano": "3d6+4",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 7,
+    "CON": 4,
+    "INT": 5,
+    "SAB": 3,
+    "CAR": 2
+   },
+   "fora": "traços: Blood-Soaked Resolve | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "cultist-of-myrkul",
+   "nome": "Cultista de Myrkul",
+   "nome_en": "Cultist of Myrkul",
+   "cr": "11",
+   "ca": 16,
+   "hp": 204,
+   "golpes": [
+    {
+     "nome": "Rajada Necrótica",
+     "ataque": 9,
+     "dano": "5d10",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada Necrótica",
+     "ataque": 9,
+     "dano": "5d10",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada Necrótica",
+     "ataque": 9,
+     "dano": "5d10",
+     "tipo": "necrótico"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 2,
+    "CON": 8,
+    "INT": 9,
+    "SAB": 8,
+    "CAR": 6
+   },
+   "fora": "traços: Nearer to the Dead | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 7200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "swanmay",
+   "nome": "Donzela-Cisne",
+   "nome_en": "Swanmay",
+   "cr": "3",
+   "ca": 14,
+   "hp": 71,
+   "golpes": [
+    {
+     "nome": "Bico",
+     "ataque": 6,
+     "dano": "1d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Bico",
+     "ataque": 6,
+     "dano": "1d6+4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 4,
+    "CON": 4,
+    "INT": 0,
+    "SAB": 5,
+    "CAR": 2
+   },
+   "fora": "traços: Flyby | conjuração: Spellcasting | bônus: Shape-Shift | ações do livro: Scimitar, Longbow",
+   "meta": {
+    "tipo": "fey",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "rusted-wyrm",
+   "nome": "Dragão Enferrujado",
+   "nome_en": "Rusted Wyrm",
+   "cr": "14",
+   "ca": 20,
+   "hp": 231,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 12,
+     "dano": "4d10+7",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Mordida",
+     "ataque": 12,
+     "dano": "4d10+7",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 1,
+    "CON": 6,
+    "INT": -1,
+    "SAB": 2,
+    "CAR": -2
+   },
+   "habilidade": {
+    "nome": "Sopro de Vapor",
+    "save": "DES",
+    "cd": 19,
+    "dano": "7d12",
+    "tipo": "fogo",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance | bônus: Encasing Rust",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [
+     "coastal",
+     "forest"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "adult-spirit-dragon",
+   "nome": "Dragão Espiritual Adulto",
+   "nome_en": "Adult Spirit Dragon",
+   "cr": "15",
+   "ca": 18,
+   "hp": 207,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 11,
+     "dano": "2d8+6+2d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 11,
+     "dano": "2d8+6+2d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 11,
+     "dano": "2d8+6+2d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 7,
+    "CON": 10,
+    "INT": 5,
+    "SAB": 2,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Sopro Ruinoso",
+    "save": "CON",
+    "cd": 18,
+    "dano": "14d8",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance | conjuração: Spellcasting | lendárias: Pounce, Shattering Wave, Unearth Ruins | ações do livro: Time-Warping Breath",
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 13000,
+    "ambientes": [],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ancient-spirit-dragon",
+   "nome": "Dragão Espiritual Ancião",
+   "nome_en": "Ancient Spirit Dragon",
+   "cr": "22",
+   "ca": 21,
+   "hp": 420,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 15,
+     "dano": "2d10+8+2d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 15,
+     "dano": "2d10+8+2d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 15,
+     "dano": "2d10+8+2d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 8,
+    "DES": 9,
+    "CON": 14,
+    "INT": 7,
+    "SAB": 4,
+    "CAR": 6
+   },
+   "habilidade": {
+    "nome": "Sopro Ruinoso",
+    "save": "CON",
+    "cd": 22,
+    "dano": "16d8",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance | conjuração: Spellcasting | lendárias: Pounce, Shattering Wave, Unearth Ruins | ações do livro: Time-Warping Breath",
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 41000,
+    "ambientes": [],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "young-spirit-dragon",
+   "nome": "Dragão Espiritual Jovem",
+   "nome_en": "Young Spirit Dragon",
+   "cr": "8",
+   "ca": 17,
+   "hp": 152,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 7,
+     "dano": "3d6+4+2d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 7,
+     "dano": "3d6+4+2d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 7,
+     "dano": "3d6+4+2d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 4,
+    "CON": 7,
+    "INT": 3,
+    "SAB": 2,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Sopro Ruinoso",
+    "save": "CON",
+    "cd": 15,
+    "dano": "8d8",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "ações do livro: Time-Warping Breath",
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "adult-deep-dragon",
+   "nome": "Dragão Profundo Adulto",
+   "nome_en": "Adult Deep Dragon",
+   "cr": "11",
+   "ca": 17,
+   "hp": 161,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 9,
+     "dano": "2d8+5+1d10",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 9,
+     "dano": "2d8+5+1d10",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 9,
+     "dano": "2d8+5+1d10",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 6,
+    "CON": 3,
+    "INT": 3,
+    "SAB": 7,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Sopro de Pesadelo",
+    "save": "SAB",
+    "cd": 15,
+    "dano": "7d10",
+    "tipo": "psíquico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance | bônus: Shape-Shift | lendárias: Pounce, Spore Salvo",
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 7200,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ancient-deep-dragon",
+   "nome": "Dragão Profundo Ancião",
+   "nome_en": "Ancient Deep Dragon",
+   "cr": "18",
+   "ca": 20,
+   "hp": 247,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 12,
+     "dano": "2d10+6+1d10",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 12,
+     "dano": "2d10+6+1d10",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 12,
+     "dano": "2d10+6+1d10",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 9,
+    "CON": 6,
+    "INT": 4,
+    "SAB": 10,
+    "CAR": 5
+   },
+   "habilidade": {
+    "nome": "Sopro de Pesadelo",
+    "save": "SAB",
+    "cd": 20,
+    "dano": "8d10",
+    "tipo": "psíquico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance | bônus: Shape-Shift | lendárias: Pounce, Spore Salvo",
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 20000,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "young-deep-dragon",
+   "nome": "Dragão Profundo Jovem",
+   "nome_en": "Young Deep Dragon",
+   "cr": "5",
+   "ca": 16,
+   "hp": 93,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 7,
+     "dano": "2d6+4+1d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 7,
+     "dano": "2d6+4+1d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 7,
+     "dano": "2d6+4+1d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 4,
+    "CON": 3,
+    "INT": 1,
+    "SAB": 5,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Sopro de Pesadelo",
+    "save": "SAB",
+    "cd": 14,
+    "dano": "4d10",
+    "tipo": "psíquico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 5
+   },
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "drow-of-lolth",
+   "nome": "Drow de Lolth",
+   "nome_en": "Drow of Lolth",
+   "cr": "1/4",
+   "ca": 15,
+   "hp": 13,
+   "golpes": [
+    {
+     "nome": "Besta de Mão Drow",
+     "ataque": 4,
+     "dano": "1d4+2",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Besta de Mão Drow",
+      "save": "CON",
+      "cd": 12,
+      "debuff": [
+       "envenenado"
+      ],
+      "atordoa": 1
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 0,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": 1
+   },
+   "fora": "traços: Fey Ancestry, Sunlight Sensitivity | conjuração: Spellcasting | ações do livro: Rapier",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "elf"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 50,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "spore-of-moander",
+   "nome": "Esporo de Moander",
+   "nome_en": "Spore of Moander",
+   "cr": "12",
+   "ca": 19,
+   "hp": 230,
+   "golpes": [
+    {
+     "nome": "Gavinha",
+     "ataque": 10,
+     "dano": "1d10+6+3d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Gavinha",
+     "ataque": 10,
+     "dano": "1d10+6+3d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Gavinha",
+     "ataque": 10,
+     "dano": "1d10+6+3d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Gavinha",
+     "ataque": 10,
+     "dano": "1d10+6+3d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 10,
+    "DES": -1,
+    "CON": 9,
+    "INT": -3,
+    "SAB": 0,
+    "CAR": -2
+   },
+   "habilidade": {
+    "nome": "Consumir",
+    "save": "FOR",
+    "cd": 18,
+    "dano": "5d6",
+    "tipo": "ácido",
+    "debuff": [
+     "perdicao"
+    ],
+    "atordoa": 1,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Explosive Core, Rolling Mass",
+   "meta": {
+    "tipo": "plant",
+    "subtipo": [],
+    "num_acoes": 4,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "beast-of-malar",
+   "nome": "Fera de Malar",
+   "nome_en": "Beast of Malar",
+   "cr": "11",
+   "ca": 17,
+   "hp": 168,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 9,
+     "dano": "4d8+5",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Mordida",
+     "ataque": 9,
+     "dano": "4d8+5",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Mordida",
+     "ataque": 9,
+     "dano": "4d8+5",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 9,
+    "DES": 3,
+    "CON": 6,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 1
+   },
+   "regeneracao": 20,
+   "fora": "traços: Amphibious, Divine Immortality, Legendary Resistance, Magic Resistance | bônus: Recuperative Shape-Shift | ações do livro: Claws",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 7200,
+    "ambientes": [
+     "coastal",
+     "forest",
+     "hill"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "spirit-dragon-wyrmling",
+   "nome": "Filhote de Dragão Espiritual",
+   "nome_en": "Spirit Dragon Wyrmling",
+   "cr": "2",
+   "ca": 16,
+   "hp": 52,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 4,
+     "dano": "2d6+2+1d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 3,
+    "CON": 4,
+    "INT": 2,
+    "SAB": 0,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Sopro Ruinoso",
+    "save": "CON",
+    "cd": 12,
+    "dano": "3d8",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "ações do livro: Time-Warping Breath",
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "deep-dragon-wyrmling",
+   "nome": "Filhote de Dragão Profundo",
+   "nome_en": "Deep Dragon Wyrmling",
+   "cr": "1",
+   "ca": 15,
+   "hp": 27,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 2,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 3,
+    "CAR": 1
+   },
+   "habilidade": {
+    "nome": "Sopro de Pesadelo",
+    "save": "SAB",
+    "cd": 11,
+    "dano": "2d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 5
+   },
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "phaerimm-hatchling",
+   "nome": "Filhote de Phaerimm",
+   "nome_en": "Phaerimm Hatchling",
+   "cr": "1/4",
+   "ca": 12,
+   "hp": 13,
+   "golpes": [
+    {
+     "nome": "Ferrão",
+     "ataque": 3,
+     "dano": "1d4+1",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Ferrão",
+     "ataque": 3,
+     "dano": "1d4+1",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 1,
+    "CON": 1,
+    "INT": 2,
+    "SAB": 3,
+    "CAR": 2
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 50,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "nimblewright-guard",
+   "nome": "Guarda Nimblewright",
+   "nome_en": "Nimblewright Guard",
+   "cr": "3",
+   "ca": 16,
+   "hp": 67,
+   "golpes": [
+    {
+     "nome": "Cimitarra",
+     "ataque": 6,
+     "dano": "1d6+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Cimitarra",
+     "ataque": 6,
+     "dano": "1d6+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Cimitarra",
+     "ataque": 6,
+     "dano": "1d6+4",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 6,
+    "CON": 3,
+    "INT": -1,
+    "SAB": 1,
+    "CAR": -2
+   },
+   "fora": "traços: Evasion | reações: Parry | ações do livro: Clockwork Crossbow",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "drow-elite-warrior-of-lolth",
+   "nome": "Guerreiro de Elite Drow de Lolth",
+   "nome_en": "Drow Elite Warrior of Lolth",
+   "cr": "5",
+   "ca": 18,
+   "hp": 71,
+   "golpes": [
+    {
+     "nome": "Espada Curta",
+     "ataque": 7,
+     "dano": "2d6+4+3d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Espada Curta",
+     "ataque": 7,
+     "dano": "2d6+4+3d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 7,
+    "CON": 5,
+    "INT": 0,
+    "SAB": 4,
+    "CAR": 1
+   },
+   "fora": "traços: Fey Ancestry, Sunlight Sensitivity | conjuração: Underdark Magic | ações do livro: Drow Hand Crossbow",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "elf"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "werewyvern",
+   "nome": "Homem-Serpe",
+   "nome_en": "Werewyvern",
+   "cr": "8",
+   "ca": 16,
+   "hp": 152,
+   "golpes": [
+    {
+     "nome": "Azagaia",
+     "ataque": 7,
+     "dano": "4d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Azagaia",
+     "ataque": 7,
+     "dano": "4d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Azagaia",
+     "ataque": 7,
+     "dano": "4d6+4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 5,
+    "CON": 5,
+    "INT": 0,
+    "SAB": 4,
+    "CAR": 1
+   },
+   "fora": "traços: Flyby | bônus: Shape-Shift | ações do livro: Rend, Stinger",
+   "meta": {
+    "tipo": "dragon",
+    "subtipo": [
+     "lycanthrope"
+    ],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "hill",
+     "mountain"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "karas-chembryl",
+   "nome": "Karas Chembryl",
+   "nome_en": "Karas Chembryl",
+   "cr": "8",
+   "ca": 17,
+   "hp": 104,
+   "golpes": [
+    {
+     "nome": "Adaga do Pavor",
+     "ataque": 8,
+     "dano": "2d4+5+1d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Adaga do Pavor",
+     "ataque": 8,
+     "dano": "2d4+5+1d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 8,
+    "CON": 4,
+    "INT": 7,
+    "SAB": 5,
+    "CAR": 3
+   },
+   "fora": "traços: Evasion, Legendary Resistance | conjuração: Spellcasting | bônus: Withdraw | lendárias: Harrow, Stealth Attack | ações do livro: Tyrant's Blade",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "drow-mage-of-lolth",
+   "nome": "Mago Drow de Lolth",
+   "nome_en": "Drow Mage of Lolth",
+   "cr": "7",
+   "ca": 15,
+   "hp": 81,
+   "golpes": [
+    {
+     "nome": "Rajada Abissal",
+     "ataque": 6,
+     "dano": "4d8+3",
+     "tipo": "veneno"
+    },
+    {
+     "nome": "Rajada Abissal",
+     "ataque": 6,
+     "dano": "4d8+3",
+     "tipo": "veneno"
+    },
+    {
+     "nome": "Rajada Abissal",
+     "ataque": 6,
+     "dano": "4d8+3",
+     "tipo": "veneno"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 5,
+    "CON": 0,
+    "INT": 3,
+    "SAB": 4,
+    "CAR": 1
+   },
+   "fora": "traços: Fey Ancestry, Sunlight Sensitivity | conjuração: Spellcasting, Underdark Magic",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "elf"
+    ],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "manshoon",
+   "nome": "Manshoon",
+   "nome_en": "Manshoon",
+   "cr": "13",
+   "ca": 15,
+   "hp": 214,
+   "golpes": [
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 11,
+     "dano": "4d12+6",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 11,
+     "dano": "4d12+6",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 11,
+     "dano": "4d12+6",
+     "tipo": "energia"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 2,
+    "INT": 11,
+    "SAB": 7,
+    "CAR": 3
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting, Misty Step, Protective Magic",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human",
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 10000,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "nimblewright-steed",
+   "nome": "Montaria Nimblewright",
+   "nome_en": "Nimblewright Steed",
+   "cr": "2",
+   "ca": 16,
+   "hp": 47,
+   "golpes": [
+    {
+     "nome": "Cascos",
+     "ataque": 6,
+     "dano": "1d8+3",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 6,
+    "CON": 4,
+    "INT": -2,
+    "SAB": 0,
+    "CAR": -2
+   },
+   "fora": "traços: Evasion | bônus: Nimble Movement",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "zhentilar-paladin-of-bane",
+   "nome": "Paladino Zhentilar de Bane",
+   "nome_en": "Zhentilar Paladin of Bane",
+   "cr": "4",
+   "ca": 18,
+   "hp": 58,
+   "golpes": [
+    {
+     "nome": "Lâmina da Perdição",
+     "ataque": 5,
+     "dano": "1d8+3+2d6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Lâmina da Perdição",
+     "ataque": 5,
+     "dano": "1d8+3+2d6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Lâmina da Perdição",
+     "ataque": 5,
+     "dano": "1d8+3+2d6",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 0,
+    "CON": 2,
+    "INT": 1,
+    "SAB": 1,
+    "CAR": 5
+   },
+   "fora": "traços: Aura of Dread | conjuração: Spellcasting | ações do livro: Oppressive Ray",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "queen-forfallen",
+   "nome": "Queen Forfallen",
+   "nome_en": "Queen Forfallen",
+   "cr": "10",
+   "ca": 16,
+   "hp": 153,
+   "golpes": [
+    {
+     "nome": "Machado Grande",
+     "ataque": 9,
+     "dano": "2d12+5",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Machado Grande",
+      "save": "CON",
+      "cd": 21,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Machado Grande",
+     "ataque": 9,
+     "dano": "2d12+5",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Machado Grande",
+      "save": "CON",
+      "cd": 21,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Machado Grande",
+     "ataque": 9,
+     "dano": "2d12+5",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Machado Grande",
+      "save": "CON",
+      "cd": 21,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 2,
+    "CON": 4,
+    "INT": 2,
+    "SAB": 7,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Aperto da Ferrugem",
+    "save": "CON",
+    "cd": 16,
+    "debuff": [
+     "envenenado"
+    ],
+    "atordoa": 2,
+    "save_repete": true,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Inspiring Presence, Magic Resistance | ações do livro: Handaxe",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 5900,
+    "ambientes": [
+     "coastal",
+     "forest"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "dead-three-scion",
+   "nome": "Rebento dos Três Mortos",
+   "nome_en": "Dead Three Scion",
+   "cr": "16",
+   "ca": 17,
+   "hp": 221,
+   "golpes": [
+    {
+     "nome": "Toque da Morte",
+     "ataque": 12,
+     "dano": "4d8+7",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Toque da Morte",
+     "ataque": 12,
+     "dano": "4d8+7",
+     "tipo": "necrótico"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 2,
+    "CON": 9,
+    "INT": 4,
+    "SAB": 10,
+    "CAR": 7
+   },
+   "fora": "traços: Culling Aura, Legendary Resistance, Magic Resistance | conjuração: Spellcasting, Command | lendárias: Attack | ações do livro: Mindwrack Bolt",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 15000,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "sammaster-dracolich-form",
+   "nome": "Sammaster (Dracolich Form)",
+   "nome_en": "Sammaster (Dracolich Form)",
+   "cr": "22",
+   "ca": 20,
+   "hp": 276,
+   "golpes": [
+    {
+     "nome": "Dilacerar",
+     "ataque": 14,
+     "dano": "2d10+7+4d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 14,
+     "dano": "2d10+7+4d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Dilacerar",
+     "ataque": 14,
+     "dano": "2d10+7+4d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 7,
+    "CON": 12,
+    "INT": 13,
+    "SAB": 9,
+    "CAR": 5
+   },
+   "habilidade": {
+    "nome": "Sopro Corrosivo",
+    "save": "CON",
+    "cd": 20,
+    "dano": "8d12",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance, Life Suppression, Magic Resistance, Soul Gem | conjuração: Spellcasting | lendárias: Pounce, Sickening Ray, Terrifying Presence",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 41000,
+    "ambientes": [
+     "mountain",
+     "underdark"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "sammaster-lich-form",
+   "nome": "Sammaster (Lich Form)",
+   "nome_en": "Sammaster (Lich Form)",
+   "cr": "22",
+   "ca": 18,
+   "hp": 322,
+   "golpes": [
+    {
+     "nome": "Rajada Corrosiva",
+     "ataque": 13,
+     "dano": "5d12+6",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada Corrosiva",
+     "ataque": 13,
+     "dano": "5d12+6",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada Corrosiva",
+     "ataque": 13,
+     "dano": "5d12+6",
+     "tipo": "necrótico"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 9,
+    "CON": 10,
+    "INT": 13,
+    "SAB": 9,
+    "CAR": 5
+   },
+   "fora": "traços: Legendary Resistance, Life Suppression, Magic Resistance, Soul Gem | conjuração: Spellcasting, Protective Magic | lendárias: Deathly Teleport, Dissolve, Terrifying Presence | ações do livro: Paralyzing Touch",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 41000,
+    "ambientes": [
+     "mountain",
+     "underdark"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "polar-serpent",
+   "nome": "Serpente Polar",
+   "nome_en": "Polar Serpent",
+   "cr": "3",
+   "ca": 14,
+   "hp": 58,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 6,
+     "dano": "1d8+4+1d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 4,
+    "CON": 1,
+    "INT": -3,
+    "SAB": 1,
+    "CAR": -2
+   },
+   "habilidade": {
+    "nome": "Constrição",
+    "save": "FOR",
+    "cd": 14,
+    "dano": "1d6+2d6",
+    "tipo": "contundente",
+    "atordoa": 1,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Misty Slithering",
+   "meta": {
+    "tipo": "elemental",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "arctic",
+     "underdark"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "zhentilar-soldier",
+   "nome": "Soldado Zhentilar",
+   "nome_en": "Zhentilar Soldier",
+   "cr": "1",
+   "ca": 13,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Espada Curta",
+     "ataque": 4,
+     "dano": "1d6+2+1d4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Espada Curta",
+     "ataque": 4,
+     "dano": "1d6+2+1d4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 4,
+    "CON": 3,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Derrubar",
+    "save": "FOR",
+    "cd": 12,
+    "dano": "1d4+2",
+    "tipo": "contundente",
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "ações do livro: Pistol",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [],
+    "fonte": "FRAiF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "valindra-shadowmantle",
+   "nome": "Valindra Shadowmantle",
+   "nome_en": "Valindra Shadowmantle",
+   "cr": "21",
+   "ca": 20,
+   "hp": 315,
+   "golpes": [
+    {
+     "nome": "Rajada Mística",
+     "ataque": 12,
+     "dano": "4d12+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Mística",
+     "ataque": 12,
+     "dano": "4d12+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Mística",
+     "ataque": 12,
+     "dano": "4d12+5",
+     "tipo": "energia"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 10,
+    "CON": 10,
+    "INT": 12,
+    "SAB": 9,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Agarrão Mortal",
+    "save": "DES",
+    "cd": 20,
+    "dano": "6d12+6d12",
+    "tipo": "energia",
+    "atordoa": 2,
+    "save_repete": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance, Spirit Gem | conjuração: Spellcasting, Illusory Disguise, Protective Magic | lendárias: Disrupt Life, Eldritch Jaunt, Life-Rending Gaze | ações do livro: Paralyzing Touch",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 33000,
+    "ambientes": [
+     "urban",
+     "underdark"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "zlan",
+   "nome": "Zlan",
+   "nome_en": "Zlan",
+   "cr": "18",
+   "ca": 18,
+   "hp": 199,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 11,
+     "dano": "3d4+5+4d10",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 11,
+     "dano": "3d4+5+4d10",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 11,
+     "dano": "3d4+5+4d10",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 7,
+    "CON": 10,
+    "INT": 11,
+    "SAB": 10,
+    "CAR": 2
+   },
+   "fora": "traços: Chardalyn Sense, Legendary Resistance, Magic Resistance, Next of the Seven | conjuração: Spellcasting, Counterspell | lendárias: Retaliation, Stoke Paranoia | ações do livro: Bewildering Bolt",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 20000,
+    "ambientes": [
+     "arctic"
+    ],
+    "fonte": "FRAiF",
+    "nomeada": true
+   }
+  }
+ ]
+}

@@ -1,0 +1,1326 @@
+{
+ "livro": "EFA",
+ "criaturas": [
+  {
+   "id": "shadow-marked-agent",
+   "nome": "Agente da Marca da Sombra",
+   "nome_en": "Shadow-Marked Agent",
+   "cr": "7",
+   "ca": 17,
+   "hp": 132,
+   "golpes": [
+    {
+     "nome": "Faca Sombria",
+     "ataque": 8,
+     "dano": "2d4+5+4d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Faca Sombria",
+     "ataque": 8,
+     "dano": "2d4+5+4d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 8,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 6,
+    "CAR": 3
+   },
+   "fora": "conjuração: Spellcasting | bônus: Shadow Cloak",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "elf"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "umbragen-shadow-walker",
+   "nome": "Andarilho das Sombras Umbragen",
+   "nome_en": "Umbragen Shadow Walker",
+   "cr": "9",
+   "ca": 14,
+   "hp": 162,
+   "golpes": [
+    {
+     "nome": "Rajada Lúgubre",
+     "ataque": 9,
+     "dano": "2d8+5",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Rajada Lúgubre",
+     "ataque": 9,
+     "dano": "2d8+5",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Rajada Lúgubre",
+     "ataque": 9,
+     "dano": "2d8+5",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 8,
+    "CON": 2,
+    "INT": 1,
+    "SAB": 6,
+    "CAR": 5
+   },
+   "habilidade": {
+    "nome": "Capuz Sombrio",
+    "save": "SAB",
+    "cd": 17,
+    "dano": "4d6",
+    "tipo": "necrótico",
+    "debuff": [
+     "perdicao"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Fey Ancestry, Sunlight Sensitivity | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "elf"
+    ],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 5000,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "cannith-artificer",
+   "nome": "Artífice Cannith",
+   "nome_en": "Cannith Artificer",
+   "cr": "4",
+   "ca": 16,
+   "hp": 71,
+   "golpes": [
+    {
+     "nome": "Maça Aríete",
+     "ataque": 6,
+     "dano": "3d6+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Maça Aríete",
+     "ataque": 6,
+     "dano": "3d6+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 1,
+    "CON": 4,
+    "INT": 6,
+    "SAB": 2,
+    "CAR": 0
+   },
+   "fora": "conjuração: Spellcasting | ações do livro: Artillery Strike",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "dreaming-dark-mindkiller",
+   "nome": "Assassino Mental do Sonho Sombrio",
+   "nome_en": "Dreaming Dark Mindkiller",
+   "cr": "11",
+   "ca": 19,
+   "hp": 180,
+   "golpes": [
+    {
+     "nome": "Sussurro de Pesadelo",
+     "ataque": 9,
+     "dano": "5d8+5",
+     "tipo": "psíquico",
+     "efeito": {
+      "nome": "Sussurro de Pesadelo",
+      "save": "SAB",
+      "cd": 21,
+      "debuff": [
+       "medo"
+      ]
+     }
+    },
+    {
+     "nome": "Sussurro de Pesadelo",
+     "ataque": 9,
+     "dano": "5d8+5",
+     "tipo": "psíquico",
+     "efeito": {
+      "nome": "Sussurro de Pesadelo",
+      "save": "SAB",
+      "cd": 21,
+      "debuff": [
+       "medo"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 8,
+    "CON": 3,
+    "INT": 9,
+    "SAB": 8,
+    "CAR": 7
+   },
+   "habilidade": {
+    "nome": "Medo Primordial",
+    "save": "SAB",
+    "cd": 17,
+    "dano": "10d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "conjuração: Slayer's Puppet",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 7200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "daask-bruiser",
+   "nome": "Brutamontes Daask",
+   "nome_en": "Daask Bruiser",
+   "cr": "9",
+   "ca": 17,
+   "hp": 150,
+   "golpes": [
+    {
+     "nome": "Socar",
+     "ataque": 9,
+     "dano": "2d6+5",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Socar",
+     "ataque": 9,
+     "dano": "2d6+5",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Socar",
+     "ataque": 9,
+     "dano": "2d6+5",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 9,
+    "DES": 1,
+    "CON": 7,
+    "INT": 0,
+    "SAB": 5,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Olhar Feroz",
+    "save": "SAB",
+    "cd": 14,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Blood Frenzy | reações: Smackback",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "gnoll"
+    ],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 5000,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "emerald-claw-knight",
+   "nome": "Cavaleiro da Garra Esmeralda",
+   "nome_en": "Emerald Claw Knight",
+   "cr": "2",
+   "ca": 18,
+   "hp": 52,
+   "golpes": [
+    {
+     "nome": "Mangual",
+     "ataque": 5,
+     "dano": "1d8+3",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Mangual",
+     "ataque": 5,
+     "dano": "1d8+3",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 0,
+    "CON": 2,
+    "INT": 1,
+    "SAB": 2,
+    "CAR": 1
+   },
+   "fora": "ações do livro: Javelin",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "tharashk-hunter",
+   "nome": "Caçador Tharashk",
+   "nome_en": "Tharashk Hunter",
+   "cr": "6",
+   "ca": 16,
+   "hp": 97,
+   "golpes": [
+    {
+     "nome": "Espada Curta",
+     "ataque": 7,
+     "dano": "2d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Espada Curta",
+     "ataque": 7,
+     "dano": "2d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Espada Curta",
+     "ataque": 7,
+     "dano": "2d6+4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 7,
+    "CON": 5,
+    "INT": 0,
+    "SAB": 3,
+    "CAR": 0
+   },
+   "fora": "bônus: Mark of Tharashk | reações: Uncanny Dodge | ações do livro: Longbow",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human",
+     "orc"
+    ],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "swamp",
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "emerald-claw-commander",
+   "nome": "Comandante da Garra Esmeralda",
+   "nome_en": "Emerald Claw Commander",
+   "cr": "4",
+   "ca": 20,
+   "hp": 78,
+   "golpes": [
+    {
+     "nome": "Mangual",
+     "ataque": 6,
+     "dano": "1d8+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Mangual",
+     "ataque": 6,
+     "dano": "1d8+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 0,
+    "CON": 4,
+    "INT": 2,
+    "SAB": 3,
+    "CAR": 2
+   },
+   "fora": "traços: Aura of Authority | ações do livro: Javelin",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "boromar-smuggler",
+   "nome": "Contrabandista Boromar",
+   "nome_en": "Boromar Smuggler",
+   "cr": "1/2",
+   "ca": 13,
+   "hp": 27,
+   "golpes": [
+    {
+     "nome": "Espada Curta",
+     "ataque": 4,
+     "dano": "1d6+2+1d4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 4,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 2
+   },
+   "fora": "traços: Hustle | ações do livro: Pistol",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "halfling"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "sivis-scribe",
+   "nome": "Escriba Sivis",
+   "nome_en": "Sivis Scribe",
+   "cr": "3",
+   "ca": 15,
+   "hp": 56,
+   "golpes": [
+    {
+     "nome": "Sigilo Explosivo",
+     "ataque": 5,
+     "dano": "3d6+3",
+     "tipo": "radiante"
+    },
+    {
+     "nome": "Sigilo Explosivo",
+     "ataque": 5,
+     "dano": "3d6+3",
+     "tipo": "radiante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 0,
+    "INT": 3,
+    "SAB": 3,
+    "CAR": 0
+   },
+   "fora": "traços: Words of Reason | conjuração: Spellcasting | reações: Word of Stasis",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "gnome"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "orien-enforcer",
+   "nome": "Executor Orien",
+   "nome_en": "Orien Enforcer",
+   "cr": "4",
+   "ca": 16,
+   "hp": 55,
+   "golpes": [
+    {
+     "nome": "Adaga",
+     "ataque": 6,
+     "dano": "2d4+4+2d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Adaga",
+     "ataque": 6,
+     "dano": "2d4+4+2d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Adaga",
+     "ataque": 6,
+     "dano": "2d4+4+2d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 6,
+    "CON": 1,
+    "INT": 3,
+    "SAB": 4,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Gaiola de Relâmpagos",
+    "save": "CON",
+    "cd": 13,
+    "dano": "3d8",
+    "tipo": "elétrico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "conjuração: Misty Step | reações: Temporal Disruption",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 3,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "urban",
+     "grassland"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "kundarak-warden",
+   "nome": "Guardião Kundarak",
+   "nome_en": "Kundarak Warden",
+   "cr": "5",
+   "ca": 14,
+   "hp": 82,
+   "golpes": [
+    {
+     "nome": "Chicote Arcano",
+     "ataque": 6,
+     "dano": "3d6+3",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Chicote Arcano",
+     "ataque": 6,
+     "dano": "3d6+3",
+     "tipo": "energia"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 4,
+    "CON": 6,
+    "INT": 6,
+    "SAB": 4,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Glifo Algemador",
+    "save": "FOR",
+    "cd": 14,
+    "atordoa": 1,
+    "alvos": 1,
+    "recarga": 6
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting, Protective Magic",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "dwarf"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "lyrandar-scion",
+   "nome": "Herdeiro Lyrandar",
+   "nome_en": "Lyrandar Scion",
+   "cr": "4",
+   "ca": 13,
+   "hp": 60,
+   "golpes": [
+    {
+     "nome": "Raio Trovejante",
+     "ataque": 6,
+     "dano": "2d6+4+2d8",
+     "tipo": "elétrico"
+    },
+    {
+     "nome": "Raio Trovejante",
+     "ataque": 6,
+     "dano": "2d6+4+2d8",
+     "tipo": "elétrico"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 5,
+    "CON": 1,
+    "INT": 1,
+    "SAB": 2,
+    "CAR": 4
+   },
+   "fora": "conjuração: Spellcasting, Jump, Feather Fall",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "khoravar"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "urban",
+     "coastal"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "vadalis-heir",
+   "nome": "Herdeiro Vadalis",
+   "nome_en": "Vadalis Heir",
+   "cr": "4",
+   "ca": 14,
+   "hp": 52,
+   "golpes": [
+    {
+     "nome": "Cimitarra",
+     "ataque": 5,
+     "dano": "1d6+3+1d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Cimitarra",
+     "ataque": 5,
+     "dano": "1d6+3+1d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Cimitarra",
+     "ataque": 5,
+     "dano": "1d6+3+1d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Cimitarra",
+     "ataque": 5,
+     "dano": "1d6+3+1d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 5,
+    "CON": 4,
+    "INT": 0,
+    "SAB": 5,
+    "CAR": 1
+   },
+   "matilha": true,
+   "fora": "conjuração: Spellcasting | bônus: Spur Beast | ações do livro: Lunar Wisp",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 4,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "urban",
+     "grassland"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "dreaming-dark-infiltrator",
+   "nome": "Infiltrador do Sonho Sombrio",
+   "nome_en": "Dreaming Dark Infiltrator",
+   "cr": "7",
+   "ca": 15,
+   "hp": 104,
+   "golpes": [
+    {
+     "nome": "Lâmina Mental",
+     "ataque": 7,
+     "dano": "3d6+4",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Lâmina Mental",
+     "ataque": 7,
+     "dano": "3d6+4",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Lâmina Mental",
+     "ataque": 7,
+     "dano": "3d6+4",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 3,
+    "CON": 2,
+    "INT": 7,
+    "SAB": 6,
+    "CAR": 6
+   },
+   "habilidade": {
+    "nome": "Maldição Mental",
+    "save": "SAB",
+    "cd": 15,
+    "dano": "4d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "medani-inquisitive",
+   "nome": "Investigador Medani",
+   "nome_en": "Medani Inquisitive",
+   "cr": "3",
+   "ca": 14,
+   "hp": 45,
+   "golpes": [
+    {
+     "nome": "Cajado Torto",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Cajado Torto",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Cajado Torto",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 0,
+    "CON": 4,
+    "INT": 2,
+    "SAB": 5,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Olho Inquisitivo",
+    "save": "SAB",
+    "cd": 13,
+    "dano": "3d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "conjuração: Spellcasting | reações: Spontaneous Barrier",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "khoravar"
+    ],
+    "num_acoes": 3,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "vulkoori-stingblade",
+   "nome": "Lâmina-Ferrão Vulkoori",
+   "nome_en": "Vulkoori Stingblade",
+   "cr": "1/2",
+   "ca": 14,
+   "hp": 27,
+   "golpes": [
+    {
+     "nome": "Lâmina-Ferrão",
+     "ataque": 4,
+     "dano": "1d6+2+1d4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 4,
+    "CON": 0,
+    "INT": 0,
+    "SAB": 1,
+    "CAR": 1
+   },
+   "fora": "traços: Fey Ancestry | ações do livro: Boomerang",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "elf"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "forest",
+     "desert"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "sentinel-marshal",
+   "nome": "Marechal Sentinela",
+   "nome_en": "Sentinel Marshal",
+   "cr": "6",
+   "ca": 16,
+   "hp": 110,
+   "golpes": [
+    {
+     "nome": "Espada Longa",
+     "ataque": 7,
+     "dano": "2d8+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Espada Longa",
+     "ataque": 7,
+     "dano": "2d8+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Espada Longa",
+     "ataque": 7,
+     "dano": "2d8+4",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 7,
+    "CON": 4,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 0
+   },
+   "fora": "conjuração: Shield | ações do livro: Pistol",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "jorasco-medic",
+   "nome": "Médico Jorasco",
+   "nome_en": "Jorasco Medic",
+   "cr": "4",
+   "ca": 16,
+   "hp": 58,
+   "golpes": [
+    {
+     "nome": "Rajada Radiante",
+     "ataque": 5,
+     "dano": "2d6",
+     "tipo": "radiante",
+     "efeito": {
+      "nome": "Rajada Radiante",
+      "save": "CAR",
+      "cd": 17,
+      "debuff": [
+       "perdicao"
+      ]
+     }
+    },
+    {
+     "nome": "Rajada Radiante",
+     "ataque": 5,
+     "dano": "2d6",
+     "tipo": "radiante",
+     "efeito": {
+      "nome": "Rajada Radiante",
+      "save": "CAR",
+      "cd": 17,
+      "debuff": [
+       "perdicao"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 2,
+    "CON": 5,
+    "INT": 2,
+    "SAB": 5,
+    "CAR": 2
+   },
+   "fora": "traços: Lucky | conjuração: Mark of Healing",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "halfling"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "tarkanan-ruffian",
+   "nome": "Rufião Tarkanan",
+   "nome_en": "Tarkanan Ruffian",
+   "cr": "1",
+   "ca": 13,
+   "hp": 32,
+   "golpes": [
+    {
+     "nome": "Lança",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 3,
+    "CON": 4,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": 1
+   },
+   "fora": "traços: Aberrant Surge | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "vulkoori-venom-priest",
+   "nome": "Sacerdote do Veneno Vulkoori",
+   "nome_en": "Vulkoori Venom Priest",
+   "cr": "2",
+   "ca": 15,
+   "hp": 44,
+   "golpes": [
+    {
+     "nome": "Cajado Venenoso",
+     "ataque": 4,
+     "dano": "2d6+2",
+     "tipo": "contundente",
+     "efeito": {
+      "nome": "Cajado Venenoso",
+      "save": "CON",
+      "cd": 16,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 3,
+    "CON": 3,
+    "INT": 0,
+    "SAB": 5,
+    "CAR": 1
+   },
+   "fora": "traços: Fey Ancestry | conjuração: Spellcasting | bônus: Intensify Poison",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "elf"
+    ],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "desert"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "daask-raider",
+   "nome": "Saqueador Daask",
+   "nome_en": "Daask Raider",
+   "cr": "1",
+   "ca": 15,
+   "hp": 33,
+   "golpes": [
+    {
+     "nome": "Socar",
+     "ataque": 5,
+     "dano": "1d4+3",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 1,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": -1
+   },
+   "matilha": true,
+   "fora": "reações: Smackback",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "gnoll"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "tarkanan-marauder",
+   "nome": "Saqueador Tarkanan",
+   "nome_en": "Tarkanan Marauder",
+   "cr": "11",
+   "ca": 16,
+   "hp": 247,
+   "golpes": [
+    {
+     "nome": "Golpe Aberrante",
+     "ataque": 7,
+     "dano": "3d6+3",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Golpe Aberrante",
+     "ataque": 7,
+     "dano": "3d6+3",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Golpe Aberrante",
+     "ataque": 7,
+     "dano": "3d6+3",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 7,
+    "CON": 9,
+    "INT": 3,
+    "SAB": 6,
+    "CAR": 1
+   },
+   "habilidade": {
+    "nome": "Rasgar o Espaço",
+    "save": "CON",
+    "cd": 17,
+    "debuff": [
+     "perdicao"
+    ],
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Evasion | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 7200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ghallanda-troubleshooter",
+   "nome": "Solucionador Ghallanda",
+   "nome_en": "Ghallanda Troubleshooter",
+   "cr": "3",
+   "ca": 14,
+   "hp": 78,
+   "golpes": [
+    {
+     "nome": "Adaga Envenenada",
+     "ataque": 5,
+     "dano": "1d4+3",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Adaga Envenenada",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Adaga Envenenada",
+     "ataque": 5,
+     "dano": "1d4+3",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Adaga Envenenada",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 5,
+    "CON": 5,
+    "INT": 1,
+    "SAB": 4,
+    "CAR": 5
+   },
+   "fora": "traços: Hustle | conjuração: Spellcasting | bônus: Nimble Escape",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "halfling"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "boromar-underboss",
+   "nome": "Subchefe Boromar",
+   "nome_en": "Boromar Underboss",
+   "cr": "8",
+   "ca": 16,
+   "hp": 104,
+   "golpes": [
+    {
+     "nome": "Lâmina Envenenada",
+     "ataque": 7,
+     "dano": "2d8+4+2d6",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Lâmina Envenenada",
+      "save": "CON",
+      "cd": 19,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Lâmina Envenenada",
+     "ataque": 7,
+     "dano": "2d8+4+2d6",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Lâmina Envenenada",
+      "save": "CON",
+      "cd": 19,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Lâmina Envenenada",
+     "ataque": 7,
+     "dano": "2d8+4+2d6",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Lâmina Envenenada",
+      "save": "CON",
+      "cd": 19,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 7,
+    "CON": 5,
+    "INT": 1,
+    "SAB": 5,
+    "CAR": 3
+   },
+   "fora": "traços: Hustle | reações: Uncanny Dodge | ações do livro: Arcane Firearm",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "halfling"
+    ],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "EFA",
+    "nomeada": false
+   }
+  }
+ ]
+}

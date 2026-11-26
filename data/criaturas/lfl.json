@@ -1,0 +1,412 @@
+{
+ "livro": "LFL",
+ "criaturas": [
+  {
+   "id": "incarnation-of-transience",
+   "nome": "Encarnação da Transitoriedade",
+   "nome_en": "Incarnation of Transience",
+   "cr": "7",
+   "ca": 16,
+   "hp": 142,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 8,
+     "dano": "2d8+5",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Mordida",
+     "ataque": 8,
+     "dano": "2d8+5",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Mordida",
+     "ataque": 8,
+     "dano": "2d8+5",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 8,
+    "CON": 6,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Debandada Espectral",
+    "save": "DES",
+    "cd": 16,
+    "dano": "4d8",
+    "tipo": "energia",
+    "metade": true,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Ephemeral Movement, Magic Resistance | bônus: Shape-Shift | ações do livro: Miasmic Globule",
+   "meta": {
+    "tipo": "fey",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "forest",
+     "grassland"
+    ],
+    "fonte": "LFL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "incarnation-of-vibrance",
+   "nome": "Encarnação da Vivacidade",
+   "nome_en": "Incarnation of Vibrance",
+   "cr": "10",
+   "ca": 14,
+   "hp": 230,
+   "golpes": [
+    {
+     "nome": "Vinha",
+     "ataque": 9,
+     "dano": "3d8+5",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Vinha",
+     "ataque": 9,
+     "dano": "3d8+5",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 3,
+    "CON": 9,
+    "INT": 0,
+    "SAB": 3,
+    "CAR": 9
+   },
+   "habilidade": {
+    "nome": "Explosão Radiante",
+    "save": "CON",
+    "cd": 17,
+    "dano": "2d8+5",
+    "tipo": "radiante",
+    "metade": true,
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting | bônus: Shape-Shift, Teleport",
+   "meta": {
+    "tipo": "fey",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 5900,
+    "ambientes": [
+     "forest",
+     "grassland"
+    ],
+    "fonte": "LFL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "lorwyn-giant",
+   "nome": "Gigante de Lorwyn",
+   "nome_en": "Lorwyn Giant",
+   "cr": "6",
+   "ca": 13,
+   "hp": 115,
+   "golpes": [
+    {
+     "nome": "Espada de Pedra",
+     "ataque": 8,
+     "dano": "3d10+5",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Espada de Pedra",
+     "ataque": 8,
+     "dano": "3d10+5",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 1,
+    "CON": 7,
+    "INT": -1,
+    "SAB": 6,
+    "CAR": -1
+   },
+   "fora": "bônus: Name Sleep | ações do livro: Boulder",
+   "meta": {
+    "tipo": "giant",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "hill",
+     "mountain"
+    ],
+    "fonte": "LFL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "shadowmoor-giant",
+   "nome": "Gigante de Shadowmoor",
+   "nome_en": "Shadowmoor Giant",
+   "cr": "8",
+   "ca": 14,
+   "hp": 172,
+   "golpes": [
+    {
+     "nome": "Clava de Árvore",
+     "ataque": 9,
+     "dano": "2d10+6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Clava de Árvore",
+     "ataque": 9,
+     "dano": "2d10+6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Clava de Árvore",
+     "ataque": 9,
+     "dano": "2d10+6",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 2,
+    "CON": 8,
+    "INT": -2,
+    "SAB": 7,
+    "CAR": -1
+   },
+   "habilidade": {
+    "nome": "Cataclismo de Magia Selvagem",
+    "save": "DES",
+    "cd": 15,
+    "dano": "8d6",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "ações do livro: Boulder",
+   "meta": {
+    "tipo": "giant",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "forest",
+     "hill"
+    ],
+    "fonte": "LFL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "merrow-haranguer",
+   "nome": "Merrow Arengador",
+   "nome_en": "Merrow Haranguer",
+   "cr": "5",
+   "ca": 14,
+   "hp": 90,
+   "golpes": [
+    {
+     "nome": "Cetro de Coral",
+     "ataque": 7,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Cetro de Coral",
+     "ataque": 7,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Cetro de Coral",
+     "ataque": 7,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 7,
+    "CON": 3,
+    "INT": 2,
+    "SAB": 2,
+    "CAR": 7
+   },
+   "habilidade": {
+    "nome": "Invectiva",
+    "save": "SAB",
+    "cd": 15,
+    "dano": "4d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Amphibious | ações do livro: Poisoned Longbow",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ],
+    "fonte": "LFL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "merrow-doublespeaker",
+   "nome": "Merrow Língua-Dupla",
+   "nome_en": "Merrow Doublespeaker",
+   "cr": "4",
+   "ca": 14,
+   "hp": 67,
+   "golpes": [
+    {
+     "nome": "Cauda Espinhosa",
+     "ataque": 6,
+     "dano": "3d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Cauda Espinhosa",
+     "ataque": 6,
+     "dano": "3d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Cauda Espinhosa",
+     "ataque": 6,
+     "dano": "3d6+4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 5,
+    "CON": 3,
+    "INT": 1,
+    "SAB": 1,
+    "CAR": 5
+   },
+   "fora": "traços: Amphibious, Mimicry | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "coastal",
+     "underwater"
+    ],
+    "fonte": "LFL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "noggle-wild-mage",
+   "nome": "Noggle Mago Selvagem",
+   "nome_en": "Noggle Wild Mage",
+   "cr": "1",
+   "ca": 13,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Bastão Noggle",
+     "ataque": 5,
+     "dano": "1d4+3+1d4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Bastão Noggle",
+     "ataque": 5,
+     "dano": "1d4+3+1d4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 3,
+    "CON": 4,
+    "INT": 0,
+    "SAB": 1,
+    "CAR": 5
+   },
+   "fora": "traços: Bloodied Wild Magic | ações do livro: Befuddling Ray",
+   "meta": {
+    "tipo": "fey",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "LFL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "noggle-ransacker",
+   "nome": "Noggle Saqueador",
+   "nome_en": "Noggle Ransacker",
+   "cr": "1/4",
+   "ca": 12,
+   "hp": 13,
+   "golpes": [
+    {
+     "nome": "Golpe Sabotador",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 2,
+    "CON": 1,
+    "INT": -1,
+    "SAB": 0,
+    "CAR": 1
+   },
+   "fora": "traços: Siege Monster | bônus: Nimble Escape",
+   "meta": {
+    "tipo": "fey",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 50,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "LFL",
+    "nomeada": false
+   }
+  }
+ ]
+}

@@ -7,8 +7,9 @@ comando depois de cada importação:
 
     .venv/Scripts/python.exe tools/gerar_criaturas_md.py
 
-Tudo que sai daqui vem de data/bestiario.json e de src/bestiario.py. Para
-mudar o documento, importe o bestiário de novo — não edite o arquivo.
+Tudo que sai daqui vem de data/bestiario.json, dos livros de data/criaturas/
+e de src/bestiario.py. Para mudar o documento, importe de novo — não edite o
+arquivo.
 """
 from __future__ import annotations
 
@@ -111,6 +112,10 @@ def notas_de(criatura: dict[str, Any]) -> str:
     meta = criatura.get("meta") or {}
     if meta.get("funcao"):
         notas.append(", ".join(meta["funcao"]).lower())
+    # O livro de origem, para quem escolhe saber que a criatura não é do
+    # Monster Manual (e onde ler a ficha inteira, com o que ficou de fora).
+    if meta.get("fonte"):
+        notas.append(f"livro {meta['fonte']}")
     return " · ".join(notas) or "—"
 
 
@@ -132,6 +137,7 @@ def tabela(cabecalho: list[str], linhas: list[list[str]]) -> list[str]:
 
 def documento() -> str:
     criaturas = bestiario.carregar()
+    do_mm = bestiario.carregar(livros=None)
     por_tier: dict[int, list[dict[str, Any]]] = {t: [] for t in bestiario.FAIXAS_DE_CR}
     for c in criaturas:
         por_tier[bestiario.tier_do_cr(bestiario.cr_de(c))].append(c)
@@ -152,12 +158,16 @@ def documento() -> str:
         "de como isso funciona está em [mecanicas/bestiario.md](mecanicas/bestiario.md);",
         "aqui estão as fichas.",
         "",
+        f"{len(do_mm)} são do *Monster Manual* (`data/bestiario.json`) e "
+        f"{len(criaturas) - len(do_mm)} dos",
+        "livros de 2024 (`data/criaturas/`, uma por livro, com o livro nas notas).",
+        "",
         "## Como ler",
         "",
         "**Os números valem como estão escritos.** Nada aqui é multiplicado por tier:",
         "a criatura de 52 HP tem 52 HP em qualquer incursão. O tier está em QUEM a sala",
         "chama — cada sala de combate tem uma lista por tier, e se a criatura não serve",
-        "ao tier o conteúdo usa outra, que é para isso que estas 385 existem. (Havia um",
+        f"ao tier o conteúdo usa outra, que é para isso que estas {len(criaturas)} existem. (Havia um",
         "multiplicador até aqui: ele batia em cima de fichas já em força cheia de",
         "*Monster Manual* e dizimava o grupo — cinco Gárgulas de 52 HP viravam 416 HP",
         "numa sala de tier 2.)",
@@ -212,7 +222,8 @@ def documento() -> str:
     L += [
         "---",
         "",
-        "Gerado por `tools/gerar_criaturas_md.py` a partir de `data/bestiario.json`.",
+        "Gerado por `tools/gerar_criaturas_md.py` a partir de `data/bestiario.json`",
+        "e de `data/criaturas/`.",
         "Não edite à mão: rode o gerador.",
         "",
     ]

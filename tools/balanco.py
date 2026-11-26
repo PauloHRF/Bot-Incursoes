@@ -57,7 +57,8 @@ def referencia_do_bestiario() -> dict[int, tuple[int, int, int]]:
     """CA, ataque e dano por rodada da criatura típica de cada tier.
 
     Sai da mediana da faixa de CR que aquele tier encontra, e não de um número
-    escolhido: é o bestiário de 385 criaturas que define a dificuldade.
+    escolhido: é o bestiário que define a dificuldade — o Monster Manual e os
+    livros de `data/criaturas/`, que entram na conta (decidido em 26/11/2026).
     """
     criaturas = bestiario.carregar()
 
@@ -417,8 +418,9 @@ def documento() -> str:
         "célula, contra a CA da criatura típica do tier. Não é fórmula: é o que",
         "acontece na mesa, com 1 natural errando e crítico dobrando dados.",
         "",
-        "A criatura típica sai do bestiário de 385 — a mediana da faixa de CR que",
-        "cada tier encontra, não um número escolhido a dedo:",
+        f"A criatura típica sai do bestiário de {len(bestiario.carregar())} (Monster Manual",
+        "e livros de `data/criaturas/`) — a mediana da faixa de CR que cada tier",
+        "encontra, não um número escolhido a dedo:",
         "",
     ]
     L += tabela(

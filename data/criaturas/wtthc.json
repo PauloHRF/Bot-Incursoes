@@ -1,0 +1,623 @@
+{
+ "livro": "WTTHC",
+ "criaturas": [
+  {
+   "id": "demogorgon-spawn",
+   "nome": "Cria de Demogorgon",
+   "nome_en": "Demogorgon Spawn",
+   "cr": "2",
+   "ca": 15,
+   "hp": 44,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 5,
+     "dano": "1d6+3",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 5,
+     "dano": "1d6+3",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 2,
+    "CON": 1,
+    "INT": -1,
+    "SAB": 1,
+    "CAR": -2
+   },
+   "regeneracao": 5,
+   "fora": "traços: Baleful Presence, Running Leap | ações do livro: Bite",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "demon"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "cultist-of-demogorgon",
+   "nome": "Cultista de Demogorgon",
+   "nome_en": "Cultist of Demogorgon",
+   "cr": "1/8",
+   "ca": 12,
+   "hp": 9,
+   "golpes": [
+    {
+     "nome": "Foice Ritual",
+     "ataque": 4,
+     "dano": "1d4+2+1",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 0,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 0
+   },
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 25,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "dardew",
+   "nome": "Dardew",
+   "nome_en": "Dardew",
+   "cr": "5",
+   "ca": 19,
+   "hp": 105,
+   "golpes": [
+    {
+     "nome": "Garra Flamejante",
+     "ataque": 7,
+     "dano": "1d8+4+2d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra Flamejante",
+     "ataque": 7,
+     "dano": "1d8+4+2d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 4,
+    "CON": 3,
+    "INT": 5,
+    "SAB": 1,
+    "CAR": 6
+   },
+   "habilidade": {
+    "nome": "Acorde Poderoso",
+    "save": "CON",
+    "cd": 14,
+    "dano": "3d6+3",
+    "tipo": "trovejante",
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "bônus: Silver Tongue",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "demodog",
+   "nome": "Democão",
+   "nome_en": "Demodog",
+   "cr": "1",
+   "ca": 14,
+   "hp": 27,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 5,
+     "dano": "1d10+3",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 2,
+    "CON": 1,
+    "INT": -2,
+    "SAB": 1,
+    "CAR": -2
+   },
+   "matilha": true,
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "demon"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "forest",
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "demodragon",
+   "nome": "Demodragão",
+   "nome_en": "Demodragon",
+   "cr": "5",
+   "ca": 16,
+   "hp": 102,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 7,
+     "dano": "2d6+4+1d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Mordida",
+     "ataque": 7,
+     "dano": "2d6+4+1d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 0,
+    "CON": 5,
+    "INT": -1,
+    "SAB": 4,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Sopro Ácido",
+    "save": "DES",
+    "cd": 13,
+    "dano": "4d10",
+    "tipo": "ácido",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "regeneracao": 10,
+   "fora": "traços: Baleful Presence",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "demon"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "forest",
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "demobat",
+   "nome": "Demomorcego",
+   "nome_en": "Demobat",
+   "cr": "1/2",
+   "ca": 13,
+   "hp": 21,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 5,
+     "dano": "2d6+3",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": -3,
+    "DES": 3,
+    "CON": 1,
+    "INT": -4,
+    "SAB": 0,
+    "CAR": -2
+   },
+   "fora": "ações do livro: Tentacles",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "demon"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "forest",
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "imp-trickster",
+   "nome": "Diabrete Trapaceiro",
+   "nome_en": "Imp Trickster",
+   "cr": "1",
+   "ca": 13,
+   "hp": 21,
+   "golpes": [
+    {
+     "nome": "Ferroada",
+     "ataque": 5,
+     "dano": "1d6+3+2d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": -2,
+    "DES": 3,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 1,
+    "CAR": 2
+   },
+   "fora": "traços: Magic Resistance | ações do livro: Invisibility, Shape-Shift",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "devil"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "swarm-of-corrupted-rats",
+   "nome": "Enxame de Ratos Corrompidos",
+   "nome_en": "Swarm of Corrupted Rats",
+   "cr": "1",
+   "ca": 12,
+   "hp": 27,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 4,
+     "dano": "2d4+2",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 4,
+    "CON": 0,
+    "INT": -4,
+    "SAB": 0,
+    "CAR": -3
+   },
+   "fora": "traços: Death Burst, Swarm",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "flizzlebin",
+   "nome": "Flizzlebin",
+   "nome_en": "Flizzlebin",
+   "cr": "1",
+   "ca": 12,
+   "hp": 38,
+   "golpes": [
+    {
+     "nome": "Confete Ofuscante",
+     "ataque": 5,
+     "dano": "2d6+3",
+     "tipo": "radiante"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 2,
+    "CON": 2,
+    "INT": 3,
+    "SAB": 0,
+    "CAR": 1
+   },
+   "fora": "traços: Magic Resistance, Ventriloquist | reações: Distracting Glitter | ações do livro: Vanishing Trick",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "gnome"
+    ],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "korex",
+   "nome": "Korex",
+   "nome_en": "Korex",
+   "cr": "2",
+   "ca": 13,
+   "hp": 52,
+   "golpes": [
+    {
+     "nome": "Faca Rançosa",
+     "ataque": 5,
+     "dano": "2d4+3+2d6",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Faca Rançosa",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 3,
+    "CON": 2,
+    "INT": -1,
+    "SAB": 1,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Flauta Hipnótica",
+    "save": "SAB",
+    "cd": 12,
+    "dano": "4d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "atordoa": 1,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Sewer Speech | bônus: Skitter",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "elf"
+    ],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "vine-blight-tangler",
+   "nome": "Praga de Vinhas Enredadora",
+   "nome_en": "Vine Blight Tangler",
+   "cr": "1/2",
+   "ca": 12,
+   "hp": 19,
+   "golpes": [
+    {
+     "nome": "Vinha Constritora",
+     "ataque": 4,
+     "dano": "1d10+2",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": -1,
+    "CON": 2,
+    "INT": -3,
+    "SAB": 0,
+    "CAR": -4
+   },
+   "habilidade": {
+    "nome": "Vinhas Enredadoras",
+    "save": "FOR",
+    "cd": 12,
+    "atordoa": 1,
+    "alvos": 1,
+    "recarga": 5
+   },
+   "meta": {
+    "tipo": "plant",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "corrupted-rat",
+   "nome": "Rato Corrompido",
+   "nome_en": "Corrupted Rat",
+   "cr": "0",
+   "ca": 10,
+   "hp": 1,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 2,
+     "dano": "1",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": -4,
+    "DES": 0,
+    "CON": -1,
+    "INT": -4,
+    "SAB": 0,
+    "CAR": -3
+   },
+   "fora": "traços: Agile, Death Burst",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 10,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "giant-corrupted-rat",
+   "nome": "Rato Corrompido Gigante",
+   "nome_en": "Giant Corrupted Rat",
+   "cr": "1/2",
+   "ca": 13,
+   "hp": 18,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 5,
+     "dano": "1d6+3+2d4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": -2,
+    "DES": 3,
+    "CON": 1,
+    "INT": -4,
+    "SAB": 0,
+    "CAR": -3
+   },
+   "fora": "traços: Death Burst",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "WttHC",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "rilly-june",
+   "nome": "Rilly June",
+   "nome_en": "Rilly June",
+   "cr": "1/2",
+   "ca": 12,
+   "hp": 13,
+   "golpes": [
+    {
+     "nome": "Forcado de Feno",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Forcado de Feno",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 2,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 3,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Xô, Fora Daqui!",
+    "save": "SAB",
+    "cd": 11,
+    "dano": "3d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 1,
+    "recarga": 6
+   },
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "halfling"
+    ],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "grassland"
+    ],
+    "fonte": "WttHC",
+    "nomeada": true
+   }
+  }
+ ]
+}

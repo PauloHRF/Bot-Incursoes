@@ -70,6 +70,9 @@ def copiar_app(raiz: Path, destino: Path) -> None:
         ("tools/simulacao", "*.json"), ("tools/estudio", "*.html"),
         ("tools/estudio", "*.css"), ("tools/estudio", "*.js"),
         ("data/bancos", "*.json"), ("data/incursoes", "*.json"),
+        # Os livros de 2024: sem eles, o colaborador que chama "Diabo
+        # Ceifador" pelo nome tinha a sala recusada no Estúdio e aceita no bot.
+        ("data/criaturas", "*.json"),
     ):
         arquivos.extend((raiz / pasta).glob(padrao))
     # `validar_conteudo` entra porque o estúdio confere com ele: sem ele no

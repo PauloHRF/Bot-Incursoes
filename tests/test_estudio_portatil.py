@@ -22,6 +22,7 @@ class Pacote(unittest.TestCase):
                 "tools/estudio/index.html",
                 "tools/simulacao/execucao.py", "tools/simulacao/medidas.json",
                 "data/bestiario.json", "data/bancos/banco.json", "data/incursoes/a.json",
+                "data/criaturas/livro.json",
             ]
             privados = [".env", "data/incursoes.db", "data/incursoes.db-wal",
                         "data/backups/segredo.json", "src/__pycache__/x.pyc", "tests/segredo.py"]

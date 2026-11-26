@@ -1116,20 +1116,23 @@ sopro do dragão ainda leva metade.
 ### Bestiário
 
 Uma sala não precisa escrever os números da criatura: **com só o nome e as colunas de
-número vazias** (`ca`, `ataque`, `dano`, `hp`), o importador busca a criatura em
-`data/bestiario.json` — `Lobo` e quantidade 3 viram três lobos do livro. O nome vale em
+número vazias** (`ca`, `ataque`, `dano`, `hp`), o importador busca a criatura no
+bestiário — `Lobo` e quantidade 3 viram três lobos do livro. O nome vale em
 português ou em inglês, com ou sem acento, e a criatura entra com o nome em português.
 Preenchendo os números, a criatura é a da planilha, feita à mão, mesmo que o nome coincida.
 
-O bestiário tem **385 criaturas do Monster Manual**, de CR 1/8 a 19 (o CR fica registrado
-em cada uma, e a lista inteira está em [docs/CRIATURAS.md](docs/CRIATURAS.md)), geradas a
-partir do arquivo do 5etools:
+O bestiário junta duas fontes (a lista inteira está em [docs/CRIATURAS.md](docs/CRIATURAS.md)):
 
-```bash
-.venv/Scripts/python.exe tools/importar_bestiario.py bestiary-mm.json
-```
+- **`data/bestiario.json`, as 385 criaturas do Monster Manual**, de CR 1/8 a 19. Elas
+  saíram de `tools/importar_bestiario.py` e depois foram refeitas pela tabela de fichas
+  do grupo (`tools/importar_fichas.py`) e por `tools/importar_ambientes.py`. **Não rode
+  o `importar_bestiario.py` de novo:** ele reescreve o arquivo inteiro e apaga o `meta` e
+  as condições que vieram das fichas.
+- **`data/criaturas/<livro>.json`, um arquivo por livro de 2024 do 5etools** (veja
+  "Livros de 2024" abaixo).
 
-O livro tem mais regra do que o bot joga, então a conversão padroniza:
+A conversão original do Monster Manual padronizou assim o que o livro tem a mais do que
+o bot joga:
 
 | No livro | No bot |
 | --- | --- |
@@ -1155,6 +1158,37 @@ O livro tem mais regra do que o bot joga, então a conversão padroniza:
 Seis criaturas não entram por não terem nenhum ataque que o bot jogue (Demilich, Sapo,
 Pixie, Tapete Sufocante, Cavalo-Marinho e Guinchador). Os nomes em português seguem a edição
 brasileira da 5e e ficam em `tools/bestiario_traducao.py`; o texto das regras não entra.
+
+#### Livros de 2024
+
+Os livros novos do 5etools (formato 2024, `{@atkr m}` e `{@actSave}`) entram um por vez,
+cada um no seu arquivo, pelo `tools/importar_livro.py`. Primeiro a prévia, que não grava
+nada; depois a gravação, que recusa nome repetido e criatura que a sala recusaria:
+
+```bash
+.venv/Scripts/python.exe -I tools/importar_livro.py bestiary-abh.json --previa
+.venv/Scripts/python.exe -I tools/importar_livro.py bestiary-abh.json
+.venv/Scripts/python.exe tools/gerar_criaturas_md.py
+```
+
+As regras são as do Monster Manual, com o que mudou (decidido em 26/11/2026):
+
+| No livro | No bot |
+| --- | --- |
+| Amedrontado · Envenenado · Cego · Exaustão | `medo` · `envenenado` · `perdicao` · `exaustao` |
+| HP máximo reduzido | `deterioracao` |
+| Paralisado, atordoado, incapacitado, impedido, inconsciente, petrificado, enfeitiçado | perde a vez: 1 rodada, ou 2 com novo teste no fim do turno se o livro manda refazer |
+| Derrubado, agarrado, velocidade, sem reação, desvantagem | sem efeito |
+| Condição imposta pelo golpe **sem teste** | ganha um teste de CD **12 + o bônus do golpe**, com o atributo vindo do debuff |
+| "Faz dois golpes e usa X" | os golpes, e X vira a habilidade (no ritmo dela, tomando a vez) |
+| Ataque com recarga | habilidade que rola ataque (`ATK`) |
+| Ação bônus | vira a habilidade só se não houver ação especial |
+| Dano extra "se estiver Sangrando" | fica de fora |
+| Reimpressão, sem CR, invocação, sem ataque | não entra |
+
+Os nomes das criaturas genéricas e dos golpes são traduzidos em `tools/livros_traducao.py`;
+personagem com nome (Strahd, Szass Tam) fica como o livro escreve. As criaturas dos livros
+**entram na criatura típica** que o `BALANCO.md` usa para medir as classes.
 
 **Quantas salas escrever no banco**: o caminho é sorteado passo a passo, quando o passo
 abre, e **nenhuma sala que o grupo já atravessou volta a ser oferecida**. Uma sala recusada

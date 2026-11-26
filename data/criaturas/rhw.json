@@ -1,0 +1,3732 @@
+{
+ "livro": "RHW",
+ "criaturas": [
+  {
+   "id": "mist-wanderer",
+   "nome": "Andarilho da Névoa",
+   "nome_en": "Mist Wanderer",
+   "cr": "3",
+   "ca": 13,
+   "hp": 52,
+   "golpes": [
+    {
+     "nome": "Rajada Radiante",
+     "ataque": 5,
+     "dano": "2d10+3",
+     "tipo": "radiante"
+    },
+    {
+     "nome": "Rajada Radiante",
+     "ataque": 5,
+     "dano": "2d10+3",
+     "tipo": "radiante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 2,
+    "INT": 1,
+    "SAB": 3,
+    "CAR": 1
+   },
+   "fora": "traços: Death Curse, Mist Walker | conjuração: Spellcasting, Evil Eye",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ankhtepot",
+   "nome": "Ankhtepot",
+   "nome_en": "Ankhtepot",
+   "cr": "17",
+   "ca": 17,
+   "hp": 202,
+   "golpes": [
+    {
+     "nome": "Rajada de Energia Negativa",
+     "ataque": 11,
+     "dano": "6d6+5",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada de Energia Negativa",
+     "ataque": 11,
+     "dano": "6d6+5",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada de Energia Negativa",
+     "ataque": 11,
+     "dano": "6d6+5",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada de Energia Negativa",
+     "ataque": 11,
+     "dano": "6d6+5",
+     "tipo": "necrótico"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 0,
+    "CON": 3,
+    "INT": 8,
+    "SAB": 11,
+    "CAR": 3
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance, Magic Resistance | conjuração: Spellcasting | lendárias: Death Strike, Hand of Fate, Sands of Time | ações do livro: Touch of Death",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 4,
+    "tier": 5,
+    "xp": 18000,
+    "ambientes": [
+     "desert"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "azalin-rex",
+   "nome": "Azalin Rex",
+   "nome_en": "Azalin Rex",
+   "cr": "23",
+   "ca": 20,
+   "hp": 390,
+   "golpes": [
+    {
+     "nome": "Rajada Mística",
+     "ataque": 12,
+     "dano": "4d12+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Mística",
+     "ataque": 12,
+     "dano": "4d12+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Mística",
+     "ataque": 12,
+     "dano": "4d12+5",
+     "tipo": "energia"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 10,
+    "CON": 10,
+    "INT": 12,
+    "SAB": 10,
+    "CAR": 3
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance | conjuração: Spellcasting, Siphon Spell | lendárias: Eldritch Teleport, Forbidden Knowledge | ações do livro: Paralyzing Touch",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 50000,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "bodytaker-podling",
+   "nome": "Broto Toma-Corpos",
+   "nome_en": "Bodytaker Podling",
+   "cr": "1/2",
+   "ca": 12,
+   "hp": 26,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 5,
+     "dano": "1d6+3",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 0,
+    "CON": 2,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": 0
+   },
+   "fora": "traços: Semblance of Life",
+   "meta": {
+    "tipo": "plant",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill",
+     "swamp"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "death-s-head",
+   "nome": "Cabeça da Morte",
+   "nome_en": "Death's Head",
+   "cr": "1/2",
+   "ca": 16,
+   "hp": 17,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 3,
+     "dano": "1d4+1+2d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 1,
+    "CON": 1,
+    "INT": -3,
+    "SAB": 2,
+    "CAR": -4
+   },
+   "fora": "traços: Flyby",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "forest",
+     "swamp",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "aberrant-death-s-head",
+   "nome": "Cabeça da Morte Aberrante",
+   "nome_en": "Aberrant Death's Head",
+   "cr": "1",
+   "ca": 16,
+   "hp": 24,
+   "golpes": [
+    {
+     "nome": "Mordida Rasga-Mente",
+     "ataque": 3,
+     "dano": "1d4+1+1d6",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Mordida Rasga-Mente",
+      "save": "SAB",
+      "cd": 15,
+      "debuff": [
+       "medo"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 1,
+    "CON": 1,
+    "INT": 1,
+    "SAB": 4,
+    "CAR": -4
+   },
+   "fora": "traços: Flyby",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "forest",
+     "swamp",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "petrifying-death-s-head",
+   "nome": "Cabeça da Morte Petrificante",
+   "nome_en": "Petrifying Death's Head",
+   "cr": "1",
+   "ca": 16,
+   "hp": 21,
+   "golpes": [
+    {
+     "nome": "Mordida Petrificante",
+     "ataque": 3,
+     "dano": "1d4+1+1d6",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Mordida Petrificante",
+      "save": "CON",
+      "cd": 11,
+      "atordoa": 2,
+      "save_repete": true
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 1,
+    "CON": 3,
+    "INT": -3,
+    "SAB": 2,
+    "CAR": -4
+   },
+   "fora": "traços: Flyby",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "forest",
+     "swamp",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "carrionette",
+   "nome": "Carrionete",
+   "nome_en": "Carrionette",
+   "cr": "1",
+   "ca": 15,
+   "hp": 17,
+   "golpes": [
+    {
+     "nome": "Agulha de Prata",
+     "ataque": 4,
+     "dano": "1+1d6",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Agulha de Prata",
+      "save": "CAR",
+      "cd": 11,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 2,
+    "CON": 1,
+    "INT": -1,
+    "SAB": 2,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Troca de Almas",
+    "save": "CAR",
+    "cd": 11,
+    "atordoa": 1,
+    "alvos": 1,
+    "recarga": 5
+   },
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "chakuna",
+   "nome": "Chakuna",
+   "nome_en": "Chakuna",
+   "cr": "11",
+   "ca": 16,
+   "hp": 210,
+   "golpes": [
+    {
+     "nome": "Arranhão",
+     "ataque": 8,
+     "dano": "2d8+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Arranhão",
+     "ataque": 8,
+     "dano": "2d8+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Arranhão",
+     "ataque": 8,
+     "dano": "2d8+4",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 4,
+    "CON": 7,
+    "INT": 0,
+    "SAB": 6,
+    "CAR": 0
+   },
+   "fora": "traços: Darklord Restoration, Experienced Hunter, Legendary Resistance | bônus: Prowl, Shape-Shift | lendárias: Pounce, Strike from Shadows, Sudden Bite | ações do livro: Bite, Barbed Spear",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [
+     "lycanthrope"
+    ],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 7200,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "elder-thing",
+   "nome": "Coisa Ancestral",
+   "nome_en": "Elder Thing",
+   "cr": "14",
+   "ca": 16,
+   "hp": 209,
+   "golpes": [
+    {
+     "nome": "Tentáculo Calmante",
+     "ataque": 10,
+     "dano": "2d8+5",
+     "tipo": "psíquico",
+     "efeito": {
+      "nome": "Tentáculo Calmante",
+      "save": "CON",
+      "cd": 22,
+      "atordoa": 1
+     }
+    },
+    {
+     "nome": "Tentáculo Calmante",
+     "ataque": 10,
+     "dano": "2d8+5",
+     "tipo": "psíquico",
+     "efeito": {
+      "nome": "Tentáculo Calmante",
+      "save": "CON",
+      "cd": 22,
+      "atordoa": 1
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 0,
+    "CON": 9,
+    "INT": 10,
+    "SAB": 3,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Esporos Raspa-Mente",
+    "save": "INT",
+    "cd": 18,
+    "dano": "10d10+3d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "traços: Magic Resistance | conjuração: Eldritch Magic | ações do livro: Psychic Skewer",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [
+     "mountain",
+     "underdark"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "relentless-juggernaut",
+   "nome": "Colosso Implacável",
+   "nome_en": "Relentless Juggernaut",
+   "cr": "12",
+   "ca": 16,
+   "hp": 168,
+   "golpes": [
+    {
+     "nome": "Lâmina do Carrasco",
+     "ataque": 10,
+     "dano": "3d8+6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina do Carrasco",
+     "ataque": 10,
+     "dano": "3d8+6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 5,
+    "CON": 5,
+    "INT": -1,
+    "SAB": 6,
+    "CAR": 7
+   },
+   "regeneracao": 10,
+   "fora": "traços: Legendary Resistance, Siege Monster | lendárias: Implacable Advance, Sweeping Blade | ações do livro: Crushing Stone",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "zombie-clot",
+   "nome": "Coágulo de Zumbis",
+   "nome_en": "Zombie Clot",
+   "cr": "6",
+   "ca": 12,
+   "hp": 104,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 8,
+     "dano": "3d6+5",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 8,
+     "dano": "3d6+5",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 0,
+    "CON": 6,
+    "INT": -4,
+    "SAB": -1,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Sepultura de Carne",
+    "save": "FOR",
+    "cd": 16,
+    "dano": "3d10+3d6",
+    "tipo": "contundente",
+    "atordoa": 1,
+    "alvos": 1,
+    "recarga": 5
+   },
+   "fora": "traços: Deathly Stench, Undead Fortitude",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "cthulhu",
+   "nome": "Cthulhu",
+   "nome_en": "Cthulhu",
+   "cr": "25",
+   "ca": 19,
+   "hp": 385,
+   "golpes": [
+    {
+     "nome": "Garra Mística",
+     "ataque": 17,
+     "dano": "2d8+9+2d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra Mística",
+     "ataque": 17,
+     "dano": "2d8+9+2d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra Mística",
+     "ataque": 17,
+     "dano": "2d8+9+2d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 9,
+    "DES": 1,
+    "CON": 15,
+    "INT": 9,
+    "SAB": 12,
+    "CAR": 15
+   },
+   "habilidade": {
+    "nome": "Tentáculo",
+    "save": "CON",
+    "cd": 25,
+    "dano": "6d6+3d8",
+    "tipo": "ácido",
+    "metade": true,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Amphibious, Darklord Restoration, Impossible Geometry, Legendary Resistance, Magic Resistance | conjuração: Spellcasting | bônus: Warp | lendárias: Clamp, Fold Space",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 75000,
+    "ambientes": [
+     "underwater",
+     "coastal"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "brain-in-a-jar",
+   "nome": "Cérebro no Pote",
+   "nome_en": "Brain in a Jar",
+   "cr": "3",
+   "ca": 11,
+   "hp": 55,
+   "golpes": [
+    {
+     "nome": "Rajada Disruptiva",
+     "ataque": 6,
+     "dano": "2d6+4",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Rajada Disruptiva",
+     "ataque": 6,
+     "dano": "2d6+4",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": -5,
+    "DES": -4,
+    "CON": 2,
+    "INT": 6,
+    "SAB": 0,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Rajada Mental",
+    "save": "INT",
+    "cd": 14,
+    "dano": "4d6",
+    "tipo": "psíquico",
+    "metade": true,
+    "atordoa": 1,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Detect Intelligence, Magic Resistance | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "boneless",
+   "nome": "Desossado",
+   "nome_en": "Boneless",
+   "cr": "1",
+   "ca": 12,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Sufocar",
+     "ataque": 4,
+     "dano": "2d4+2",
+     "tipo": "contundente",
+     "efeito": {
+      "nome": "Sufocar",
+      "save": "CON",
+      "cd": 16,
+      "debuff": [
+       "perdicao"
+      ],
+      "atordoa": 1
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 2,
+    "CON": 1,
+    "INT": -5,
+    "SAB": 0,
+    "CAR": -5
+   },
+   "habilidade": {
+    "nome": "Carne Desfiada",
+    "save": "SAB",
+    "cd": 11,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "traços: Abduct, Compression",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "vampire-mind-flayer",
+   "nome": "Devorador de Mentes Vampiro",
+   "nome_en": "Vampire Mind Flayer",
+   "cr": "5",
+   "ca": 15,
+   "hp": 85,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 7,
+     "dano": "1d8+4+3d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 7,
+     "dano": "1d8+4+3d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 7,
+     "dano": "1d8+4+3d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Tentáculos",
+     "ataque": 7,
+     "dano": "2d6+4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 7,
+    "CON": 4,
+    "INT": -3,
+    "SAB": 5,
+    "CAR": 7
+   },
+   "habilidade": {
+    "nome": "Explosão Mental",
+    "save": "INT",
+    "cd": 15,
+    "atordoa": 2,
+    "save_repete": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Spider Climb, Sunlight Hypersensitivity | ações do livro: Drink Sapience",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 4,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "dullahan",
+   "nome": "Dullahan",
+   "nome_en": "Dullahan",
+   "cr": "10",
+   "ca": 15,
+   "hp": 127,
+   "golpes": [
+    {
+     "nome": "Lâmina Decapitadora",
+     "ataque": 8,
+     "dano": "1d10+4+2d10",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina Decapitadora",
+     "ataque": 8,
+     "dano": "1d10+4+2d10",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 2,
+    "CON": 7,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Lamento sem Cabeça",
+    "save": "CON",
+    "cd": 15,
+    "dano": "2d12",
+    "tipo": "psíquico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Mounted Adept, Terrorizer | ações do livro: Fiery Skull",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 5900,
+    "ambientes": [
+     "grassland",
+     "hill",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ebonbane",
+   "nome": "Ebonbane",
+   "nome_en": "Ebonbane",
+   "cr": "13",
+   "ca": 17,
+   "hp": 130,
+   "golpes": [
+    {
+     "nome": "Corte de Chama Sombria",
+     "ataque": 9,
+     "dano": "1d10+4+3d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Corte de Chama Sombria",
+     "ataque": 9,
+     "dano": "1d10+4+3d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Corte de Chama Sombria",
+     "ataque": 9,
+     "dano": "1d10+4+3d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 4,
+    "CON": 6,
+    "INT": 3,
+    "SAB": 7,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Portador Digno",
+    "save": "CAR",
+    "cd": 17,
+    "dano": "8d8",
+    "tipo": "energia",
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance, Magic Resistance | reações: Parry | lendárias: Retaliate, Runic Flare | ações do livro: Possess Dead",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 10000,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "greater-star-spawn-emissary",
+   "nome": "Emissário Maior da Cria Estelar",
+   "nome_en": "Greater Star Spawn Emissary",
+   "cr": "21",
+   "ca": 15,
+   "hp": 304,
+   "golpes": [
+    {
+     "nome": "Bocarra Açoitante",
+     "ataque": 14,
+     "dano": "4d12+7+4d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Bocarra Açoitante",
+     "ataque": 14,
+     "dano": "4d12+7+4d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 1,
+    "CON": 15,
+    "INT": 15,
+    "SAB": 13,
+    "CAR": 14
+   },
+   "habilidade": {
+    "nome": "Bile Sobrenatural",
+    "save": "DES",
+    "cd": 23,
+    "dano": "12d8",
+    "tipo": "ácido",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Aberrant Restoration, Legendary Resistance | lendárias: Forced Mutations, Teleporting Lash | ações do livro: Coagulated Nodule",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 33000,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "lesser-star-spawn-emissary",
+   "nome": "Emissário Menor da Cria Estelar",
+   "nome_en": "Lesser Star Spawn Emissary",
+   "cr": "19",
+   "ca": 19,
+   "hp": 241,
+   "golpes": [
+    {
+     "nome": "Bocarra Açoitante",
+     "ataque": 11,
+     "dano": "2d10+5+3d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Bocarra Açoitante",
+     "ataque": 11,
+     "dano": "2d10+5+3d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Bocarra Açoitante",
+     "ataque": 11,
+     "dano": "2d10+5+3d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 4,
+    "CON": 7,
+    "INT": 13,
+    "SAB": 11,
+    "CAR": 12
+   },
+   "habilidade": {
+    "nome": "Inverter Carne",
+    "save": "CON",
+    "cd": 21,
+    "dano": "4d10+7",
+    "tipo": "energia",
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Legendary Resistance | bônus: Shape-Shift | lendárias: Teleporting Lash, Twist, Warp Body",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 22000,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "swarm-of-gremishkas",
+   "nome": "Enxame de Gremishkas",
+   "nome_en": "Swarm of Gremishkas",
+   "cr": "2",
+   "ca": 14,
+   "hp": 31,
+   "golpes": [
+    {
+     "nome": "Mordidas em Enxame",
+     "ataque": 4,
+     "dano": "3d6+2+2d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 2,
+    "CON": 2,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": -3
+   },
+   "fora": "traços: Magic Resistance, Swarm",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "swarm-of-infesting-insects",
+   "nome": "Enxame de Insetos Infestantes",
+   "nome_en": "Swarm of Infesting Insects",
+   "cr": "2",
+   "ca": 13,
+   "hp": 33,
+   "golpes": [
+    {
+     "nome": "Infestação",
+     "ataque": 4,
+     "dano": "4d4+2",
+     "tipo": "veneno",
+     "efeito": {
+      "nome": "Infestação",
+      "save": "CON",
+      "cd": 11,
+      "debuff": [
+       "perdicao",
+       "exaustao",
+       "deterioracao",
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -4,
+    "DES": 2,
+    "CON": 1,
+    "INT": -5,
+    "SAB": -2,
+    "CAR": -5
+   },
+   "fora": "traços: Swarm",
+   "meta": {
+    "tipo": "beast",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "coastal",
+     "forest",
+     "grassland",
+     "swamp",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "swarm-of-ravenous-insects",
+   "nome": "Enxame de Insetos Vorazes",
+   "nome_en": "Swarm of Ravenous Insects",
+   "cr": "3",
+   "ca": 13,
+   "hp": 39,
+   "golpes": [
+    {
+     "nome": "Mordidas Vorazes",
+     "ataque": 4,
+     "dano": "4d8+2",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Mordidas Vorazes",
+      "save": "CON",
+      "cd": 16,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -4,
+    "DES": 2,
+    "CON": 2,
+    "INT": -5,
+    "SAB": 1,
+    "CAR": -5
+   },
+   "fora": "traços: Skeletonize, Swarm",
+   "meta": {
+    "tipo": "beast",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "coastal",
+     "forest",
+     "grassland",
+     "swamp",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "swarm-of-zombie-limbs",
+   "nome": "Enxame de Membros de Zumbi",
+   "nome_en": "Swarm of Zombie Limbs",
+   "cr": "1",
+   "ca": 12,
+   "hp": 26,
+   "golpes": [
+    {
+     "nome": "Carne Podre",
+     "ataque": 4,
+     "dano": "2d6+2",
+     "tipo": "necrótico",
+     "efeito": {
+      "nome": "Carne Podre",
+      "save": "CON",
+      "cd": 16,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 2,
+    "CON": 2,
+    "INT": -5,
+    "SAB": -3,
+    "CAR": -4
+   },
+   "fora": "traços: Swarm",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "carrion-stalker",
+   "nome": "Espreitador da Carniça",
+   "nome_en": "Carrion Stalker",
+   "cr": "3",
+   "ca": 15,
+   "hp": 55,
+   "golpes": [
+    {
+     "nome": "Tentáculo",
+     "ataque": 5,
+     "dano": "2d4+3",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Tentáculo",
+     "ataque": 5,
+     "dano": "2d4+3",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Ferrão",
+     "ataque": 5,
+     "dano": "2d6",
+     "tipo": "veneno",
+     "efeito": {
+      "nome": "Ferrão",
+      "save": "CON",
+      "cd": 13,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -2,
+    "DES": 3,
+    "CON": 3,
+    "INT": -4,
+    "SAB": 1,
+    "CAR": -2
+   },
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "swamp",
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "strahd-skeleton",
+   "nome": "Esqueleto de Strahd",
+   "nome_en": "Strahd Skeleton",
+   "cr": "4",
+   "ca": 16,
+   "hp": 65,
+   "golpes": [
+    {
+     "nome": "Espada Longa Vampírica",
+     "ataque": 5,
+     "dano": "1d8+3+2d6",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Espada Longa Vampírica",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "deterioracao"
+      ]
+     }
+    },
+    {
+     "nome": "Espada Longa Vampírica",
+     "ataque": 5,
+     "dano": "1d8+3+2d6",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Espada Longa Vampírica",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "deterioracao"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 1,
+    "CON": 2,
+    "INT": 1,
+    "SAB": 2,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Golpe de Escudo",
+    "save": "FOR",
+    "cd": 13,
+    "dano": "2d6+3",
+    "tipo": "contundente",
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Undead Fortitude",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ez-d-avenir",
+   "nome": "Ez d'Avenir",
+   "nome_en": "Ez d'Avenir",
+   "cr": "8",
+   "ca": 14,
+   "hp": 120,
+   "golpes": [
+    {
+     "nome": "Lâmina do Caçador",
+     "ataque": 7,
+     "dano": "1d8+4+2d10",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Lâmina do Caçador",
+     "ataque": 7,
+     "dano": "1d8+4+2d10",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Lâmina do Caçador",
+     "ataque": 7,
+     "dano": "1d8+4+2d10",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 7,
+    "CON": 3,
+    "INT": 4,
+    "SAB": 3,
+    "CAR": 3
+   },
+   "fora": "conjuração: Spellcasting, Shield | bônus: Bolster Allies, Curse of the All-Seeing Eye, Inspiring Rally | ações do livro: Fiery Bolt",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "waxwork",
+   "nome": "Figura de Cera",
+   "nome_en": "Waxwork",
+   "cr": "3",
+   "ca": 14,
+   "hp": 52,
+   "golpes": [
+    {
+     "nome": "Faca de Escultor",
+     "ataque": 5,
+     "dano": "2d6+3",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Faca de Escultor",
+     "ataque": 5,
+     "dano": "2d6+3",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 1,
+    "CON": 3,
+    "INT": -5,
+    "SAB": 0,
+    "CAR": -5
+   },
+   "fora": "traços: Meltable | bônus: Shape-Shift | ações do livro: Wax Lob",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "gennifer-weathermay-foxgrove",
+   "nome": "Gennifer Weathermay-Foxgrove",
+   "nome_en": "Gennifer Weathermay-Foxgrove",
+   "cr": "3",
+   "ca": 14,
+   "hp": 44,
+   "golpes": [
+    {
+     "nome": "Adaga Abençoada",
+     "ataque": 4,
+     "dano": "1d4+2+2d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Adaga Abençoada",
+     "ataque": 4,
+     "dano": "1d4+2+2d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 1,
+    "INT": 2,
+    "SAB": 3,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Proteção Esotérica",
+    "save": "CON",
+    "cd": 13,
+    "dano": "4d8",
+    "tipo": "radiante",
+    "atordoa": 1,
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "traços: Suppressed Lycanthropy | conjuração: Spellcasting, Occult Aid | ações do livro: Radiant Wisp",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human",
+     "lycanthrope"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban",
+     "forest"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "gremishka",
+   "nome": "Gremishka",
+   "nome_en": "Gremishka",
+   "cr": "2",
+   "ca": 14,
+   "hp": 31,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 4,
+     "dano": "1d6+2+2d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 2,
+    "CON": 2,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": -3
+   },
+   "fora": "traços: Magic Resistance | reações: Magic Allergy",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "gug",
+   "nome": "Gug",
+   "nome_en": "Gug",
+   "cr": "12",
+   "ca": 16,
+   "hp": 250,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 10,
+     "dano": "3d10+6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 10,
+     "dano": "3d10+6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 10,
+    "DES": 2,
+    "CON": 10,
+    "INT": -2,
+    "SAB": 3,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Mastigar",
+    "save": "DES",
+    "cd": 18,
+    "dano": "3d6",
+    "tipo": "perfurante",
+    "atordoa": 1,
+    "alvos": 1,
+    "cada": 2
+   },
+   "matilha": true,
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "harkon-lukas",
+   "nome": "Harkon Lukas",
+   "nome_en": "Harkon Lukas",
+   "cr": "14",
+   "ca": 15,
+   "hp": 187,
+   "golpes": [
+    {
+     "nome": "Patada",
+     "ataque": 10,
+     "dano": "2d10+5",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Patada",
+     "ataque": 10,
+     "dano": "2d10+5",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 4,
+    "CON": 9,
+    "INT": 2,
+    "SAB": 8,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Apresentação Cativante",
+    "save": "SAB",
+    "cd": 17,
+    "atordoa": 1,
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Blood Frenzy, Darklord Restoration, Legendary Resistance | bônus: Shape-Shift | lendárias: Crushing Insult, Pounce, Surprise Bite | ações do livro: Bite",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [
+     "lycanthrope"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "hazlik",
+   "nome": "Hazlik",
+   "nome_en": "Hazlik",
+   "cr": "14",
+   "ca": 16,
+   "hp": 154,
+   "golpes": [
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 10,
+     "dano": "3d10+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 10,
+     "dano": "3d10+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 10,
+     "dano": "3d10+5",
+     "tipo": "energia"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 3,
+    "CON": 1,
+    "INT": 10,
+    "SAB": 7,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Surto de Magia Selvagem",
+    "save": "CON",
+    "cd": 18,
+    "dano": "2d12+3d6",
+    "tipo": "psíquico",
+    "debuff": [
+     "perdicao"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance, Magic Resistance | conjuração: Spellcasting, Protective Magic | lendárias: Arcane Strike, Arcane Teleport",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human",
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [
+     "urban",
+     "mountain"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "wereraven",
+   "nome": "Homem-Corvo",
+   "nome_en": "Wereraven",
+   "cr": "2",
+   "ca": 12,
+   "hp": 54,
+   "golpes": [
+    {
+     "nome": "Arranhão",
+     "ataque": 4,
+     "dano": "2d4+2",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Arranhão",
+     "ataque": 4,
+     "dano": "2d4+2",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 0,
+    "INT": 1,
+    "SAB": 2,
+    "CAR": 2
+   },
+   "fora": "traços: Mimicry | bônus: Shape-Shift | ações do livro: Beak, Shortbow",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [
+     "lycanthrope"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "forest",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "unspeakable-horror",
+   "nome": "Horror Indizível",
+   "nome_en": "Unspeakable Horror",
+   "cr": "8",
+   "ca": 13,
+   "hp": 126,
+   "golpes": [
+    {
+     "nome": "Ataque Fantasmagórico",
+     "ataque": 8,
+     "dano": "4d6",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Ataque Fantasmagórico",
+     "ataque": 8,
+     "dano": "4d6",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Ataque Fantasmagórico",
+     "ataque": 8,
+     "dano": "4d6",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 1,
+    "CON": 7,
+    "INT": -4,
+    "SAB": 5,
+    "CAR": 3
+   },
+   "regeneracao": 10,
+   "fora": "traços: Incomprehensible Form, Terrifying Aura | reações: Warp Mind",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "mist-horror",
+   "nome": "Horror da Névoa",
+   "nome_en": "Mist Horror",
+   "cr": "3",
+   "ca": 13,
+   "hp": 45,
+   "golpes": [
+    {
+     "nome": "Rasgo Mental",
+     "ataque": 5,
+     "dano": "1d10+3",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Rasgo Mental",
+     "ataque": 5,
+     "dano": "1d10+3",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": -5,
+    "DES": 2,
+    "CON": 1,
+    "INT": -2,
+    "SAB": 1,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Incutir Pavor",
+    "save": "SAB",
+    "cd": 13,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 4
+   },
+   "fora": "traços: Air Form, One with the Mists | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "inquisitor-of-the-sword",
+   "nome": "Inquisidor da Espada",
+   "nome_en": "Inquisitor of the Sword",
+   "cr": "8",
+   "ca": 16,
+   "hp": 120,
+   "golpes": [
+    {
+     "nome": "Espada Longa Prateada",
+     "ataque": 7,
+     "dano": "2d8+4+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Espada Longa Prateada",
+     "ataque": 7,
+     "dano": "2d8+4+1d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Espada Longa Prateada",
+     "ataque": 7,
+     "dano": "2d8+4+1d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 2,
+    "CON": 3,
+    "INT": 5,
+    "SAB": 7,
+    "CAR": 6
+   },
+   "fora": "traços: Metabolic Control | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "inquisitor-of-the-mind-fire",
+   "nome": "Inquisidor do Fogo Mental",
+   "nome_en": "Inquisitor of the Mind Fire",
+   "cr": "8",
+   "ca": 16,
+   "hp": 104,
+   "golpes": [
+    {
+     "nome": "Espada Longa Prateada",
+     "ataque": 8,
+     "dano": "2d8+5+1d8",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Espada Longa Prateada",
+      "save": "SAB",
+      "cd": 20,
+      "debuff": [
+       "medo"
+      ]
+     }
+    },
+    {
+     "nome": "Espada Longa Prateada",
+     "ataque": 8,
+     "dano": "2d8+5+1d8",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Espada Longa Prateada",
+      "save": "SAB",
+      "cd": 20,
+      "debuff": [
+       "medo"
+      ]
+     }
+    },
+    {
+     "nome": "Espada Longa Prateada",
+     "ataque": 8,
+     "dano": "2d8+5+1d8",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Espada Longa Prateada",
+      "save": "SAB",
+      "cd": 20,
+      "debuff": [
+       "medo"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 2,
+    "INT": 6,
+    "SAB": 6,
+    "CAR": 8
+   },
+   "habilidade": {
+    "nome": "Comando do Inquisidor",
+    "save": "SAB",
+    "cd": 16,
+    "atordoa": 1,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "conjuração: Spellcasting | ações do livro: Mind Fire",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "inquisitor-of-the-tome",
+   "nome": "Inquisidor do Tomo",
+   "nome_en": "Inquisitor of the Tome",
+   "cr": "8",
+   "ca": 14,
+   "hp": 88,
+   "golpes": [
+    {
+     "nome": "Lâmina de Energia",
+     "ataque": 7,
+     "dano": "4d8+4",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Lâmina de Energia",
+     "ataque": 7,
+     "dano": "4d8+4",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Lâmina de Energia",
+     "ataque": 7,
+     "dano": "4d8+4",
+     "tipo": "energia"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 1,
+    "CON": 1,
+    "INT": 7,
+    "SAB": 6,
+    "CAR": 5
+   },
+   "habilidade": {
+    "nome": "Implodir",
+    "save": "DES",
+    "cd": 15,
+    "dano": "6d8",
+    "tipo": "energia",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 4
+   },
+   "fora": "conjuração: Spellcasting",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ivan-dilisnya",
+   "nome": "Ivan Dilisnya",
+   "nome_en": "Ivan Dilisnya",
+   "cr": "5",
+   "ca": 12,
+   "hp": 90,
+   "golpes": [
+    {
+     "nome": "Pata Dianteira",
+     "ataque": 7,
+     "dano": "2d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Pata Dianteira",
+     "ataque": 7,
+     "dano": "2d6+4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 5,
+    "CON": 3,
+    "INT": 4,
+    "SAB": 4,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Engenhoca Mortal",
+    "save": "DES",
+    "cd": 15,
+    "dano": "3d8",
+    "tipo": "cortante",
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance | lendárias: Retaliate, Trapped Ground",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "ivana-boritsi",
+   "nome": "Ivana Boritsi",
+   "nome_en": "Ivana Boritsi",
+   "cr": "5",
+   "ca": 17,
+   "hp": 104,
+   "golpes": [
+    {
+     "nome": "Toque Tóxico",
+     "ataque": 7,
+     "dano": "1d8+4",
+     "tipo": "veneno"
+    },
+    {
+     "nome": "Toque Tóxico",
+     "ataque": 7,
+     "dano": "1d8+4",
+     "tipo": "veneno"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 6,
+    "CON": 5,
+    "INT": 4,
+    "SAB": 2,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Perfume Sufocante",
+    "save": "CON",
+    "cd": 15,
+    "dano": "3d8",
+    "tipo": "veneno",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance | conjuração: Charm | bônus: Tree Stride | lendárias: Retaliate, Toxin Wave",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "jiangshi",
+   "nome": "Jiangshi",
+   "nome_en": "Jiangshi",
+   "cr": "9",
+   "ca": 16,
+   "hp": 119,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 8,
+     "dano": "2d8+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 8,
+     "dano": "2d8+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 8,
+     "dano": "2d8+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": -4,
+    "CON": 8,
+    "INT": 7,
+    "SAB": 6,
+    "CAR": 5
+   },
+   "habilidade": {
+    "nome": "Consumir Energia",
+    "save": "CON",
+    "cd": 16,
+    "dano": "4d8",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Jiangshi Weaknesses | bônus: Hungering Stride, Shape-Shift",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 5000,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "laurie-weathermay-foxgrove",
+   "nome": "Laurie Weathermay-Foxgrove",
+   "nome_en": "Laurie Weathermay-Foxgrove",
+   "cr": "3",
+   "ca": 16,
+   "hp": 65,
+   "golpes": [
+    {
+     "nome": "Teia Fina",
+     "ataque": 6,
+     "dano": "1d8+4+1d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Teia Fina",
+     "ataque": 6,
+     "dano": "1d8+4+1d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 1,
+    "CON": 2,
+    "INT": 0,
+    "SAB": 2,
+    "CAR": 0
+   },
+   "fora": "reações: Deflect Blow | ações do livro: Light Crossbow",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban",
+     "forest"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "lord-soth-of-sithicus",
+   "nome": "Lord Soth of Sithicus",
+   "nome_en": "Lord Soth of Sithicus",
+   "cr": "19",
+   "ca": 18,
+   "hp": 228,
+   "golpes": [
+    {
+     "nome": "Marca do Renegado",
+     "ataque": 12,
+     "dano": "1d8+6+3d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Marca do Renegado",
+     "ataque": 12,
+     "dano": "1d8+6+3d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Marca do Renegado",
+     "ataque": 12,
+     "dano": "1d8+6+3d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 6,
+    "CON": 5,
+    "INT": 1,
+    "SAB": 9,
+    "CAR": 11
+   },
+   "habilidade": {
+    "nome": "Fogo Cataclísmico",
+    "save": "DES",
+    "cd": 19,
+    "dano": "7d6+7d6",
+    "tipo": "fogo",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance, Magic Resistance, Marshal Undead | conjuração: Commanding Magic | lendárias: Punish, Soth's Command | ações do livro: Face of Death",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 22000,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "loup-garou",
+   "nome": "Loup Garou",
+   "nome_en": "Loup Garou",
+   "cr": "13",
+   "ca": 17,
+   "hp": 187,
+   "golpes": [
+    {
+     "nome": "Espada Longa",
+     "ataque": 12,
+     "dano": "2d10+7+1d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Espada Longa",
+     "ataque": 12,
+     "dano": "2d10+7+1d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 9,
+    "CON": 10,
+    "INT": 2,
+    "SAB": 3,
+    "CAR": 3
+   },
+   "fora": "traços: Legendary Resistance | bônus: Shape-Shift | lendárias: Mauling Charge, Surprise Bite | ações do livro: Bite, Rend",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [
+     "lycanthrope"
+    ],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 10000,
+    "ambientes": [
+     "forest",
+     "swamp",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "madam-eva",
+   "nome": "Madam Eva",
+   "nome_en": "Madam Eva",
+   "cr": "10",
+   "ca": 15,
+   "hp": 117,
+   "golpes": [
+    {
+     "nome": "Adaga Amaldiçoada",
+     "ataque": 9,
+     "dano": "2d4+5+6d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Adaga Amaldiçoada",
+     "ataque": 9,
+     "dano": "2d4+5+6d6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Adaga Amaldiçoada",
+     "ataque": 9,
+     "dano": "2d4+5+6d6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 0,
+    "CON": 2,
+    "INT": 3,
+    "SAB": 9,
+    "CAR": 8
+   },
+   "habilidade": {
+    "nome": "Visões Apocalípticas",
+    "save": "SAB",
+    "cd": 17,
+    "dano": "7d6+7d6",
+    "tipo": "necrótico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting, Evil Eye | ações do livro: Radiant Flame",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 5900,
+    "ambientes": [
+     "forest"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "mi-go",
+   "nome": "Mi-Go",
+   "nome_en": "Mi-Go",
+   "cr": "9",
+   "ca": 16,
+   "hp": 120,
+   "golpes": [
+    {
+     "nome": "Pinça",
+     "ataque": 9,
+     "dano": "4d8+5+3d10",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Pinça",
+     "ataque": 9,
+     "dano": "4d8+5+3d10",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 6,
+    "CON": 3,
+    "INT": 9,
+    "SAB": 6,
+    "CAR": 1
+   },
+   "habilidade": {
+    "nome": "Raio Atordoante",
+    "save": "DES",
+    "cd": 17,
+    "dano": "4d10+3d6",
+    "tipo": "elétrico",
+    "atordoa": 1,
+    "alvos": 1,
+    "recarga": 4
+   },
+   "fora": "traços: Magic Resistance, Silver Canister | conjuração: Spellcasting | ações do livro: Extract Brain",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 5000,
+    "ambientes": [
+     "forest",
+     "hill",
+     "mountain",
+     "underdark"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "mordenheim-s-monster",
+   "nome": "Monstro de Mordenheim",
+   "nome_en": "Mordenheim's Monster",
+   "cr": "12",
+   "ca": 18,
+   "hp": 161,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 10,
+     "dano": "2d6+6+2d6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 10,
+     "dano": "2d6+6+2d6",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 10,
+    "DES": 7,
+    "CON": 4,
+    "INT": 2,
+    "SAB": 0,
+    "CAR": -3
+   },
+   "habilidade": {
+    "nome": "Esmagar",
+    "save": "FOR",
+    "cd": 18,
+    "dano": "2d6+6+2d6",
+    "tipo": "contundente",
+    "atordoa": 1,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Greater Lightning Absorption, Immutable Form, Magic Resistance | bônus: Violent Leap | ações do livro: Throw",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "mother-lorinda",
+   "nome": "Mother Lorinda",
+   "nome_en": "Mother Lorinda",
+   "cr": "8",
+   "ca": 18,
+   "hp": 105,
+   "golpes": [
+    {
+     "nome": "Marca da Mãe",
+     "ataque": 7,
+     "dano": "1d8+4+1d10",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Marca da Mãe",
+     "ataque": 7,
+     "dano": "1d8+4+1d10",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 4,
+    "CON": 6,
+    "INT": 1,
+    "SAB": 6,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Semblante da Mãe",
+    "save": "SAB",
+    "cd": 14,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 1,
+    "recarga": 6
+   },
+   "fora": "traços: Amphibious, Darklord Restoration, Legendary Resistance, Mimicry | conjuração: Spellcasting, Overwhelming Presence | lendárias: Brand",
+   "meta": {
+    "tipo": "fey",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "forest",
+     "swamp"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "necrichor",
+   "nome": "Necricor",
+   "nome_en": "Necrichor",
+   "cr": "7",
+   "ca": 14,
+   "hp": 85,
+   "golpes": [
+    {
+     "nome": "Rajada Necrótica",
+     "ataque": 6,
+     "dano": "2d8+3+2d10",
+     "tipo": "energia",
+     "efeito": {
+      "nome": "Rajada Necrótica",
+      "save": "CON",
+      "cd": 18,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Rajada Necrótica",
+     "ataque": 6,
+     "dano": "2d8+3+2d10",
+     "tipo": "energia",
+     "efeito": {
+      "nome": "Rajada Necrótica",
+      "save": "CON",
+      "cd": 18,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 3,
+    "CON": 7,
+    "INT": 6,
+    "SAB": 4,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Marionete de Sangue",
+    "save": "CON",
+    "cd": 15,
+    "atordoa": 1,
+    "alvos": 1,
+    "recarga": 6
+   },
+   "fora": "traços: Amorphous, Legendary Resistance, Reborn by Blood, Spider Climb",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "nightgaunt",
+   "nome": "Nightgaunt",
+   "nome_en": "Nightgaunt",
+   "cr": "8",
+   "ca": 16,
+   "hp": 136,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 8,
+     "dano": "2d8+5+3d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 8,
+     "dano": "2d8+5+3d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 8,
+    "CON": 3,
+    "INT": 1,
+    "SAB": 6,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Cócegas",
+    "save": "SAB",
+    "cd": 16,
+    "atordoa": 1,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Flyby | ações do livro: Barb, Ascend",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "mountain",
+     "underdark"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "gallows-speaker",
+   "nome": "Orador da Forca",
+   "nome_en": "Gallows Speaker",
+   "cr": "6",
+   "ca": 13,
+   "hp": 75,
+   "golpes": [
+    {
+     "nome": "Lâminas Giratórias",
+     "ataque": 6,
+     "dano": "3d6+3+3d4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâminas Giratórias",
+     "ataque": 6,
+     "dano": "3d6+3+3d4",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 3,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 1,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Vento Uivante",
+    "save": "CON",
+    "cd": 15,
+    "dano": "4d8",
+    "tipo": "trovejante",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Aura of Violence, Whirling Form",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "grassland",
+     "swamp",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "bodytaker-plant",
+   "nome": "Planta Toma-Corpos",
+   "nome_en": "Bodytaker Plant",
+   "cr": "7",
+   "ca": 16,
+   "hp": 138,
+   "golpes": [
+    {
+     "nome": "Vinha",
+     "ataque": 7,
+     "dano": "3d8+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Vinha",
+     "ataque": 7,
+     "dano": "3d8+4",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Vinha",
+     "ataque": 7,
+     "dano": "3d8+4",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": -1,
+    "CON": 5,
+    "INT": 2,
+    "SAB": 2,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Vagem Aprisionadora",
+    "save": "FOR",
+    "cd": 15,
+    "debuff": [
+     "perdicao"
+    ],
+    "atordoa": 1,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Podling Link, Rejuvenation | reações: Transfer Harm",
+   "meta": {
+    "tipo": "plant",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "forest",
+     "grassland",
+     "hill",
+     "swamp"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "ramya-vasavadan",
+   "nome": "Ramya Vasavadan",
+   "nome_en": "Ramya Vasavadan",
+   "cr": "15",
+   "ca": 18,
+   "hp": 190,
+   "golpes": [
+    {
+     "nome": "Lâmina do Pavor",
+     "ataque": 10,
+     "dano": "2d6+5+2d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina do Pavor",
+     "ataque": 10,
+     "dano": "2d6+5+2d8",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina do Pavor",
+     "ataque": 10,
+     "dano": "2d6+5+2d8",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 7,
+    "DES": 5,
+    "CON": 5,
+    "INT": 1,
+    "SAB": 8,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Fogo Vingativo",
+    "save": "DES",
+    "cd": 17,
+    "dano": "8d6+8d6",
+    "tipo": "fogo",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance, Magic Resistance, Marshal Undead | conjuração: Spellcasting, Illusory Disguise, Dread Authority | reações: Parry | lendárias: Lunge, Words of Silence",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 13000,
+    "ambientes": [
+     "forest",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "relentless-slasher",
+   "nome": "Retalhador Implacável",
+   "nome_en": "Relentless Slasher",
+   "cr": "8",
+   "ca": 15,
+   "hp": 91,
+   "golpes": [
+    {
+     "nome": "Faca do Retalhador",
+     "ataque": 7,
+     "dano": "2d4+4+6d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Faca do Retalhador",
+     "ataque": 7,
+     "dano": "2d4+4+6d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 7,
+    "CON": 5,
+    "INT": 2,
+    "SAB": 5,
+    "CAR": 3
+   },
+   "fora": "traços: Legendary Resistance | lendárias: Homing Knife, Vanishing Strike",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "rudolph-van-richten",
+   "nome": "Rudolph van Richten",
+   "nome_en": "Rudolph van Richten",
+   "cr": "5",
+   "ca": 13,
+   "hp": 105,
+   "golpes": [
+    {
+     "nome": "Bengala-Espada de Prata",
+     "ataque": 5,
+     "dano": "1d6+2+2d4",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Bengala-Espada de Prata",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Bengala-Espada de Prata",
+     "ataque": 5,
+     "dano": "1d6+2+2d4",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Bengala-Espada de Prata",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    },
+    {
+     "nome": "Bengala-Espada de Prata",
+     "ataque": 5,
+     "dano": "1d6+2+2d4",
+     "tipo": "cortante",
+     "efeito": {
+      "nome": "Bengala-Espada de Prata",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "envenenado"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 2,
+    "CON": 6,
+    "INT": 3,
+    "SAB": 7,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Repelir o Mal",
+    "save": "CAR",
+    "cd": 15,
+    "dano": "4d8",
+    "tipo": "psíquico",
+    "metade": true,
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Shield of Erasmus | bônus: Occult Aid | ações do livro: Hand Crossbow",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "priest-of-osybus",
+   "nome": "Sacerdote de Osybus",
+   "nome_en": "Priest of Osybus",
+   "cr": "6",
+   "ca": 12,
+   "hp": 60,
+   "golpes": [
+    {
+     "nome": "Lâmina da Alma",
+     "ataque": 7,
+     "dano": "2d4+4",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Lâmina da Alma",
+      "save": "CON",
+      "cd": 19,
+      "atordoa": 1
+     }
+    },
+    {
+     "nome": "Lâmina da Alma",
+     "ataque": 7,
+     "dano": "2d4+4",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Lâmina da Alma",
+      "save": "CON",
+      "cd": 19,
+      "atordoa": 1
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 2,
+    "CON": 3,
+    "INT": 7,
+    "SAB": 6,
+    "CAR": 3
+   },
+   "fora": "traços: Tattoo of Osybus, 1: Dread Boon, 2: Ectoplasmic Boon, 3: Vampiric Boon, 4: Blazing Boon, 5: Spectral Boon, 6: Deathly Boon | bônus: Soul Tattoo | ações do livro: Necrotic Bolt",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "saidra-d-honaire",
+   "nome": "Saidra d'Honaire",
+   "nome_en": "Saidra d'Honaire",
+   "cr": "9",
+   "ca": 13,
+   "hp": 90,
+   "golpes": [
+    {
+     "nome": "Rajada Necrótica",
+     "ataque": 7,
+     "dano": "2d10+3",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada Necrótica",
+     "ataque": 7,
+     "dano": "2d10+3",
+     "tipo": "necrótico"
+    },
+    {
+     "nome": "Rajada Necrótica",
+     "ataque": 7,
+     "dano": "2d10+3",
+     "tipo": "necrótico"
+    }
+   ],
+   "saves": {
+    "FOR": -2,
+    "DES": 7,
+    "CON": 3,
+    "INT": 1,
+    "SAB": 6,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Drenar Vida",
+    "save": "CON",
+    "cd": 15,
+    "dano": "8d6",
+    "tipo": "necrótico",
+    "metade": true,
+    "debuff": [
+     "deterioracao"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Darklord Restoration, Incorporeal Movement, Lie Detector, Legendary Resistance, Sunlight Sensitivity | conjuração: Spellcasting, Truth or Die | bônus: Shape-Shift | lendárias: Lash Out, Shadow Veil | ações do livro: At Will:",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 5000,
+    "ambientes": [
+     "urban",
+     "coastal"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "shoggoth",
+   "nome": "Shoggoth",
+   "nome_en": "Shoggoth",
+   "cr": "11",
+   "ca": 15,
+   "hp": 172,
+   "golpes": [
+    {
+     "nome": "Pseudópode",
+     "ataque": 10,
+     "dano": "2d8+6+2d10",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pseudópode",
+     "ataque": 10,
+     "dano": "2d8+6+2d10",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pseudópode",
+     "ataque": 10,
+     "dano": "2d8+6+2d10",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 7,
+    "CON": 9,
+    "INT": 5,
+    "SAB": 3,
+    "CAR": -1
+   },
+   "habilidade": {
+    "nome": "Rajada de Sucção",
+    "save": "FOR",
+    "cd": 18,
+    "dano": "4d10",
+    "tipo": "trovejante",
+    "metade": true,
+    "atordoa": 1,
+    "alvos": 1,
+    "recarga": 4
+   },
+   "fora": "traços: Amphibious, Mimicry, Susceptible to Charm | reações: Cold Sprint",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 4,
+    "xp": 7200,
+    "ambientes": [
+     "arctic",
+     "coastal",
+     "swamp",
+     "underdark"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "strahd-von-zarovich",
+   "nome": "Strahd von Zarovich",
+   "nome_en": "Strahd von Zarovich",
+   "cr": "15",
+   "ca": 16,
+   "hp": 204,
+   "golpes": [
+    {
+     "nome": "Golpe Mortal",
+     "ataque": 9,
+     "dano": "1d8+4+4d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Golpe Mortal",
+     "ataque": 9,
+     "dano": "1d8+4+4d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 9,
+    "CON": 4,
+    "INT": 5,
+    "SAB": 7,
+    "CAR": 9
+   },
+   "habilidade": {
+    "nome": "Mordida",
+    "save": "CON",
+    "cd": 17,
+    "dano": "1d6+4+3d6",
+    "tipo": "perfurante",
+    "debuff": [
+     "deterioracao"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance, Misty Escape, Spider Climb, Vampire Weakness | conjuração: Spellcasting, Charm, Count's Command | bônus: Shape-Shift | lendárias: Striding Strike",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "vampire"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 13000,
+    "ambientes": [
+     "forest",
+     "mountain"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "strigoi",
+   "nome": "Strigoi",
+   "nome_en": "Strigoi",
+   "cr": "4",
+   "ca": 16,
+   "hp": 52,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 5,
+     "dano": "2d6+3",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 5,
+     "dano": "2d6+3",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Probóscide",
+     "ataque": 5,
+     "dano": "1d4+3+2d6",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Probóscide",
+      "save": "CON",
+      "cd": 17,
+      "debuff": [
+       "deterioracao"
+      ]
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 4,
+    "CON": 3,
+    "INT": 0,
+    "SAB": 3,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Enxame Protetor",
+    "save": "CON",
+    "cd": 13,
+    "dano": "1d6",
+    "tipo": "necrótico",
+    "debuff": [
+     "envenenado"
+    ],
+    "alvos": 1,
+    "recarga": 6
+   },
+   "fora": "traços: Stirge Telepathy",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "desert",
+     "forest",
+     "grassland",
+     "hill",
+     "mountain",
+     "swamp",
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "vampire-nosferatu",
+   "nome": "Vampiro Nosferatu",
+   "nome_en": "Vampire Nosferatu",
+   "cr": "8",
+   "ca": 16,
+   "hp": 85,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 8,
+     "dano": "1d8+5+2d10",
+     "tipo": "perfurante",
+     "efeito": {
+      "nome": "Mordida",
+      "save": "CON",
+      "cd": 20,
+      "debuff": [
+       "deterioracao"
+      ]
+     }
+    },
+    {
+     "nome": "Garra",
+     "ataque": 8,
+     "dano": "1d8+5",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 8,
+     "dano": "1d8+5",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 7,
+    "CON": 8,
+    "INT": -2,
+    "SAB": 6,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Jorro de Sangue",
+    "save": "CON",
+    "cd": 16,
+    "dano": "6d8",
+    "tipo": "necrótico",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "regeneracao": 10,
+   "fora": "traços: Blood Frenzy, Spider Climb, Sunlight Hypersensitivity | reações: Bloodthirsty Slash",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "viktra-mordenheim",
+   "nome": "Viktra Mordenheim",
+   "nome_en": "Viktra Mordenheim",
+   "cr": "7",
+   "ca": 15,
+   "hp": 123,
+   "golpes": [
+    {
+     "nome": "Bastão Elétrico",
+     "ataque": 6,
+     "dano": "2d8+3",
+     "tipo": "elétrico"
+    },
+    {
+     "nome": "Bastão Elétrico",
+     "ataque": 6,
+     "dano": "2d8+3",
+     "tipo": "elétrico"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 3,
+    "CON": 5,
+    "INT": 5,
+    "SAB": 0,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Seringa",
+    "save": "CON",
+    "cd": 16,
+    "dano": "4d4+2d10+3d6",
+    "tipo": "ácido",
+    "debuff": [
+     "envenenado"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Bolster Inventions, Darklord Restoration, Legendary Resistance | conjuração: Activate Constructs | reações: Redirect Attack | lendárias: Shocking Prod, Static Explosion",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "vladeska-drakov",
+   "nome": "Vladeska Drakov",
+   "nome_en": "Vladeska Drakov",
+   "cr": "12",
+   "ca": 18,
+   "hp": 170,
+   "golpes": [
+    {
+     "nome": "Pique",
+     "ataque": 8,
+     "dano": "2d10+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Pique",
+     "ataque": 8,
+     "dano": "2d10+4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 2,
+    "CON": 8,
+    "INT": 2,
+    "SAB": 1,
+    "CAR": 7
+   },
+   "habilidade": {
+    "nome": "Fogo de Artilharia",
+    "save": "DES",
+    "cd": 15,
+    "dano": "3d8+3d8",
+    "tipo": "contundente",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "traços: Darklord Restoration, Legendary Resistance | reações: Redirect Attack | lendárias: Advance, Dreadful Impaling, Order Ballista | ações do livro: Impaling Spear",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [
+     "urban",
+     "grassland"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "wilfred-godefroy",
+   "nome": "Wilfred Godefroy",
+   "nome_en": "Wilfred Godefroy",
+   "cr": "6",
+   "ca": 12,
+   "hp": 72,
+   "golpes": [
+    {
+     "nome": "Pancada de Objeto",
+     "ataque": 6,
+     "dano": "2d6+3",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Pancada de Objeto",
+     "ataque": 6,
+     "dano": "2d6+3",
+     "tipo": "energia"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 2,
+    "CON": 0,
+    "INT": 1,
+    "SAB": 2,
+    "CAR": 3
+   },
+   "fora": "traços: Darklord Restoration, Incorporeal Movement, Legendary Resistance, Possessive Aura | reações: Redirect Attack | lendárias: Bone-Chilling Step, Fated Bullet, Slam | ações do livro: Hunting Rifle",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "urban",
+     "coastal"
+    ],
+    "fonte": "RHW",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "yithian",
+   "nome": "Yithiano",
+   "nome_en": "Yithian",
+   "cr": "15",
+   "ca": 14,
+   "hp": 180,
+   "golpes": [
+    {
+     "nome": "Pinça",
+     "ataque": 9,
+     "dano": "4d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Pinça",
+     "ataque": 9,
+     "dano": "4d6+4",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Pinça",
+     "ataque": 9,
+     "dano": "4d6+4",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 0,
+    "CON": 9,
+    "INT": 10,
+    "SAB": 4,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Sorver",
+    "save": "INT",
+    "cd": 18,
+    "dano": "3d6+5",
+    "tipo": "psíquico",
+    "debuff": [
+     "deterioracao"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Magic Resistance, Shielded Mind | conjuração: Eldritch Magic | bônus: Mind Swap",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 13000,
+    "ambientes": [
+     "desert",
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "zombie-plague-spreader",
+   "nome": "Zumbi Propagador da Praga",
+   "nome_en": "Zombie Plague Spreader",
+   "cr": "4",
+   "ca": 10,
+   "hp": 78,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 5,
+     "dano": "1d6+3+2d8",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 5,
+     "dano": "1d6+3+2d8",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 0,
+    "CON": 2,
+    "INT": -4,
+    "SAB": -3,
+    "CAR": -3
+   },
+   "habilidade": {
+    "nome": "Miasma Virulento",
+    "save": "CON",
+    "cd": 12,
+    "dano": "4d6",
+    "tipo": "veneno",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "traços: Undead Fortitude, Viral Aura",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "death-s-head-tree",
+   "nome": "Árvore das Cabeças da Morte",
+   "nome_en": "Death's Head Tree",
+   "cr": "4",
+   "ca": 15,
+   "hp": 95,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 6,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 6,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": -1,
+    "CON": 3,
+    "INT": -3,
+    "SAB": 0,
+    "CAR": 1
+   },
+   "habilidade": {
+    "nome": "Cabeça Explosiva",
+    "save": "DES",
+    "cd": 14,
+    "dano": "3d6",
+    "tipo": "necrótico",
+    "metade": true,
+    "debuff": [
+     "envenenado"
+    ],
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Overhanging Branches, Unholy Regrowth | bônus: Head Fruits",
+   "meta": {
+    "tipo": "plant",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [
+     "forest",
+     "swamp",
+     "urban"
+    ],
+    "fonte": "RHW",
+    "nomeada": false
+   }
+  }
+ ]
+}

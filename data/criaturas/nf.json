@@ -1,0 +1,265 @@
+{
+ "livro": "NF",
+ "criaturas": [
+  {
+   "id": "phaerimm-scout",
+   "nome": "Batedor Phaerimm",
+   "nome_en": "Phaerimm Scout",
+   "cr": "2",
+   "ca": 13,
+   "hp": 44,
+   "golpes": [
+    {
+     "nome": "Ferrão",
+     "ataque": 3,
+     "dano": "1d6+1+2d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Ferrão",
+     "ataque": 3,
+     "dano": "1d6+1+2d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 1,
+    "CON": 1,
+    "INT": 4,
+    "SAB": 3,
+    "CAR": 5
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting | reações: Uncanny Dodge | ações do livro: Mindwarp Ray",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 450,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "NF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "caldron-magen",
+   "nome": "Magen Caldeirão",
+   "nome_en": "Caldron Magen",
+   "cr": "4",
+   "ca": 20,
+   "hp": 67,
+   "golpes": [
+    {
+     "nome": "Punho Estendido",
+     "ataque": 6,
+     "dano": "1d8+4+1d10",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Punho Estendido",
+     "ataque": 6,
+     "dano": "1d8+4+1d10",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 1,
+    "CON": 3,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": 0
+   },
+   "fora": "traços: Disintegration, Magic Resistance | ações do livro: Acid Spittle",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 1100,
+    "ambientes": [],
+    "fonte": "NF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "terran-magen",
+   "nome": "Magen Terrano",
+   "nome_en": "Terran Magen",
+   "cr": "8",
+   "ca": 21,
+   "hp": 121,
+   "golpes": [
+    {
+     "nome": "Punho-Martelo",
+     "ataque": 6,
+     "dano": "3d8+3+3d8",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Punho-Martelo",
+     "ataque": 6,
+     "dano": "3d8+3+3d8",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 0,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 7,
+    "CAR": 0
+   },
+   "fora": "traços: Disintegration, Magic Resistance | conjuração: Spellcasting | ações do livro: Thunderous Boom",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 3900,
+    "ambientes": [],
+    "fonte": "NF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "virvos-magen",
+   "nome": "Magen Virvos",
+   "nome_en": "Virvos Magen",
+   "cr": "6",
+   "ca": 21,
+   "hp": 110,
+   "golpes": [
+    {
+     "nome": "Rajada Psíquica",
+     "ataque": 6,
+     "dano": "6d6",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Rajada Psíquica",
+     "ataque": 6,
+     "dano": "6d6",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 0,
+    "CON": 2,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": 3
+   },
+   "fora": "traços: Disintegration, Magic Resistance | conjuração: Spellcasting",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [],
+    "fonte": "NF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "phaerimm-elder",
+   "nome": "Phaerimm Ancião",
+   "nome_en": "Phaerimm Elder",
+   "cr": "14",
+   "ca": 17,
+   "hp": 218,
+   "golpes": [
+    {
+     "nome": "Açoite Mental",
+     "ataque": 9,
+     "dano": "6d8+4",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Açoite Mental",
+     "ataque": 9,
+     "dano": "6d8+4",
+     "tipo": "psíquico"
+    },
+    {
+     "nome": "Açoite Mental",
+     "ataque": 9,
+     "dano": "6d8+4",
+     "tipo": "psíquico"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 3,
+    "CON": 8,
+    "INT": 8,
+    "SAB": 8,
+    "CAR": 9
+   },
+   "fora": "traços: Magic Resistance | conjuração: Spellcasting, Protective Magic | bônus: Teleport | ações do livro: Vicious Stinger, Siphon Magic",
+   "meta": {
+    "tipo": "aberration",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "NF",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "eldritch-eddy",
+   "nome": "Redemoinho Místico",
+   "nome_en": "Eldritch Eddy",
+   "cr": "6",
+   "ca": 11,
+   "hp": 144,
+   "golpes": [
+    {
+     "nome": "Golpe Abrasador",
+     "ataque": 6,
+     "dano": "3d6+3",
+     "tipo": "elétrico"
+    },
+    {
+     "nome": "Golpe Abrasador",
+     "ataque": 6,
+     "dano": "3d6+3",
+     "tipo": "elétrico"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 4,
+    "CON": 3,
+    "INT": 4,
+    "SAB": -1,
+    "CAR": 6
+   },
+   "fora": "traços: Magic Resistance | reações: Eldritch Overload | ações do livro: Arcane Bolt",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "NF",
+    "nomeada": false
+   }
+  }
+ ]
+}

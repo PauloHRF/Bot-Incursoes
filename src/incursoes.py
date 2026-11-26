@@ -369,8 +369,8 @@ class Sala:
     monstros: list[Monstro] = field(default_factory=list)
     # As criaturas por tier do GRUPO. A ficha escrita vale como ela está:
     # nada é esticado por multiplicador. Se a criatura não serve ao tier, o
-    # conteúdo usa outra — é para isso que o bestiário tem 385 delas, de CR
-    # 0 a 20. Antes havia um `escalar_monstro` que multiplicava o HP e o
+    # conteúdo usa outra — é para isso que o bestiário tem centenas delas,
+    # do CR 0 para cima. Antes havia um `escalar_monstro` que multiplicava o HP e o
     # dano pelo tier, e ele batia em cima de criaturas já escritas em força
     # cheia de Monster Manual: cinco Gárgulas de 52 HP viravam 416 HP numa
     # sala de tier 2, e o grupo era dizimado sempre.

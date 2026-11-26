@@ -1,0 +1,341 @@
+{
+ "livro": "AUD",
+ "criaturas": [
+  {
+   "id": "abveku",
+   "nome": "Abveku",
+   "nome_en": "Abveku",
+   "cr": "14",
+   "ca": 17,
+   "hp": 209,
+   "golpes": [
+    {
+     "nome": "Garra Ceifadora",
+     "ataque": 11,
+     "dano": "3d8+6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra Ceifadora",
+     "ataque": 11,
+     "dano": "3d8+6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra Ceifadora",
+     "ataque": 11,
+     "dano": "3d8+6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra Ceifadora",
+     "ataque": 11,
+     "dano": "3d8+6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 8,
+    "DES": 11,
+    "CON": 5,
+    "INT": 8,
+    "SAB": 9,
+    "CAR": 2
+   },
+   "habilidade": {
+    "nome": "Dança Hipnotizante",
+    "save": "SAB",
+    "cd": 18,
+    "atordoa": 2,
+    "save_repete": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "traços: Demonic Restoration, Magic Resistance | bônus: Shadow Stealth | reações: Parry",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "demon"
+    ],
+    "num_acoes": 4,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [],
+    "fonte": "AUD",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "rendelith",
+   "nome": "Rendelith",
+   "nome_en": "Rendelith",
+   "cr": "18",
+   "ca": 20,
+   "hp": 294,
+   "golpes": [
+    {
+     "nome": "Martelo de Pedra",
+     "ataque": 13,
+     "dano": "4d6+7",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Martelo de Pedra",
+     "ataque": 13,
+     "dano": "4d6+7",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 13,
+    "DES": 7,
+    "CON": 10,
+    "INT": 5,
+    "SAB": 9,
+    "CAR": 4
+   },
+   "fora": "traços: Demonic Restoration, Magic Resistance, Siege Monster | conjuração: Spellcasting | bônus: Quick Fortifications",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "demon"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 20000,
+    "ambientes": [],
+    "fonte": "AUD",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "arisen-sarrukh",
+   "nome": "Sarrukh Reerguido",
+   "nome_en": "Arisen Sarrukh",
+   "cr": "18",
+   "ca": 18,
+   "hp": 273,
+   "golpes": [
+    {
+     "nome": "Tridente",
+     "ataque": 12,
+     "dano": "6d8+6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Tridente",
+     "ataque": 12,
+     "dano": "6d8+6",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Tridente",
+     "ataque": 12,
+     "dano": "6d8+6",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 12,
+    "DES": 9,
+    "CON": 12,
+    "INT": 4,
+    "SAB": 9,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Teleporte Venenoso",
+    "save": "CON",
+    "cd": 20,
+    "dano": "4d10",
+    "tipo": "veneno",
+    "metade": true,
+    "alvos": 1,
+    "recarga": 5
+   },
+   "fora": "traços: Legendary Resistance, Magic Resistance | reações: Shape Control | ações do livro: Necrotic Spit",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 20000,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "AUD",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "sarrukh-tyrant",
+   "nome": "Sarrukh Tirano",
+   "nome_en": "Sarrukh Tyrant",
+   "cr": "17",
+   "ca": 19,
+   "hp": 256,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 12,
+     "dano": "2d6+6+3d8",
+     "tipo": "perfurante"
+    },
+    {
+     "nome": "Mordida",
+     "ataque": 12,
+     "dano": "2d6+6+3d8",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 6,
+    "DES": 8,
+    "CON": 5,
+    "INT": 12,
+    "SAB": 10,
+    "CAR": 10
+   },
+   "fora": "traços: Legendary Resistance, Magic Resistance | conjuração: Spellcasting | reações: Shape Control | lendárias: Fearsome Glance, Slither, Twisted Transformation | ações do livro: Fearsome Fauchard",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 18000,
+    "ambientes": [
+     "underdark"
+    ],
+    "fonte": "AUD",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "szass-tam",
+   "nome": "Szass Tam",
+   "nome_en": "Szass Tam",
+   "cr": "23",
+   "ca": 20,
+   "hp": 397,
+   "golpes": [
+    {
+     "nome": "Toque Paralisante",
+     "ataque": 13,
+     "dano": "3d6+6",
+     "tipo": "gélido",
+     "efeito": {
+      "nome": "Toque Paralisante",
+      "save": "CON",
+      "cd": 25,
+      "atordoa": 1
+     }
+    },
+    {
+     "nome": "Toque Paralisante",
+     "ataque": 13,
+     "dano": "3d6+6",
+     "tipo": "gélido",
+     "efeito": {
+      "nome": "Toque Paralisante",
+      "save": "CON",
+      "cd": 25,
+      "atordoa": 1
+     }
+    },
+    {
+     "nome": "Toque Paralisante",
+     "ataque": 13,
+     "dano": "3d6+6",
+     "tipo": "gélido",
+     "efeito": {
+      "nome": "Toque Paralisante",
+      "save": "CON",
+      "cd": 25,
+      "atordoa": 1
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 9,
+    "CON": 10,
+    "INT": 13,
+    "SAB": 11,
+    "CAR": 4
+   },
+   "fora": "traços: Legendary Resistance, Spirit Jar | conjuração: Spellcasting, Protective Magic, Withering Magic | lendárias: Deathly Teleport, Disrupt Life | ações do livro: Soul-Draining Ray",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "wizard"
+    ],
+    "num_acoes": 3,
+    "tier": 5,
+    "xp": 50000,
+    "ambientes": [
+     "urban",
+     "underdark"
+    ],
+    "fonte": "AUD",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "xelnene-thrul",
+   "nome": "Xelnene Thrul",
+   "nome_en": "Xelnene Thrul",
+   "cr": "17",
+   "ca": 17,
+   "hp": 208,
+   "golpes": [
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 11,
+     "dano": "5d10+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 11,
+     "dano": "5d10+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 11,
+     "dano": "5d10+5",
+     "tipo": "energia"
+    },
+    {
+     "nome": "Rajada Arcana",
+     "ataque": 11,
+     "dano": "5d10+5",
+     "tipo": "energia"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 4,
+    "CON": 8,
+    "INT": 11,
+    "SAB": 9,
+    "CAR": 4
+   },
+   "fora": "traços: Evocation Sculptor, Magic Resistance | conjuração: Spellcasting, Protective Magic",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "wizard"
+    ],
+    "num_acoes": 4,
+    "tier": 5,
+    "xp": 18000,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "AUD",
+    "nomeada": true
+   }
+  }
+ ]
+}

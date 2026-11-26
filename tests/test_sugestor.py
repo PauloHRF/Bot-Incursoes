@@ -140,7 +140,8 @@ def caso_criatura_sem_ambiente_entra_em_qualquer_ambiente():
 
 def caso_os_tres_filtros_sao_independentes():
     todas = bestiario.candidatas()
-    assert len(todas) == 385, len(todas)
+    # Sem filtro nenhum, vem o bestiário inteiro — o Monster Manual e os livros.
+    assert len(todas) == len(bestiario.carregar()), len(todas)
     so_tier = bestiario.candidatas(tier=2)
     so_tipo = bestiario.candidatas(tipo="undead")
     juntos = bestiario.candidatas(tipo="undead", tier=2)

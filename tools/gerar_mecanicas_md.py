@@ -208,9 +208,10 @@ def tier_e_progressao() -> str:
         "o grupo de HP cheio. A mesa sentiu isso antes de a conta mostrar, e "
         "passou a evitar combate para chegar inteira ao objetivo.",
         "",
-        "O bestiário tem 385 criaturas de CR 0 a 20 (ver `CRIATURAS.md`): se "
-        "uma não serve ao tier, o conteúdo usa outra. Faixa de CR por tier, "
-        "como `bestiario.tier_do_cr` lê:",
+        f"O bestiário tem {len(bestiario.carregar())} criaturas de CR 0 a "
+        f"{num(max(bestiario.cr_de(c) for c in bestiario.carregar()))} (ver "
+        "`CRIATURAS.md`): se uma não serve ao tier, o conteúdo usa outra. "
+        "Faixa de CR por tier, como `bestiario.tier_do_cr` lê:",
         "",
     ]
     L += tabela(
@@ -1645,10 +1646,20 @@ def bestiario_md() -> str:
         "pelo nome**: a sala que diz apenas \"Lobo\" recebe os números do "
         "livro no lugar das colunas vazias.",
         "",
-        "O arquivo `data/bestiario.json` sai de "
-        "`tools/importar_bestiario.py`, que lê o Monster Manual no formato do "
-        "5etools e padroniza o que o bot entende. Cada entrada já vem no "
-        "formato que a sala lê.",
+        "São duas fontes, lidas juntas por `bestiario.carregar()`:",
+        "",
+    ]
+    L += lista([
+        f"`data/bestiario.json`, as {len(bestiario.carregar(livros=None))} do "
+        "*Monster Manual*, que saíram da tabela de fichas do grupo "
+        "(`tools/importar_fichas.py`) mais `tools/importar_ambientes.py`;",
+        "`data/criaturas/<livro>.json`, um arquivo por livro de 2024 do "
+        "5etools, que sai de `tools/importar_livro.py` — com a tabela fixa de "
+        "condição e a CD de 12 + ataque para a condição que o livro impõe "
+        "sem teste.",
+    ])
+    L += [
+        "Cada entrada já vem no formato que a sala lê.",
         "",
         "## A busca",
         "",
@@ -1675,7 +1686,9 @@ def bestiario_md() -> str:
         "está a regra; lá está o conteúdo.",
         "",
     ]
-    return "\n".join(L + rodape(["src/bestiario.py", "data/bestiario.json"]))
+    return "\n".join(
+        L + rodape(["src/bestiario.py", "data/bestiario.json", "data/criaturas/"])
+    )
 
 
 # =========================================================================== índice

@@ -1,0 +1,509 @@
+{
+ "livro": "PL",
+ "criaturas": [
+  {
+   "id": "adam",
+   "nome": "Adam",
+   "nome_en": "Adam",
+   "cr": "12",
+   "ca": 18,
+   "hp": 161,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 10,
+     "dano": "2d6+6+2d6",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 10,
+     "dano": "2d6+6+2d6",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 10,
+    "DES": 7,
+    "CON": 4,
+    "INT": 2,
+    "SAB": 0,
+    "CAR": -3
+   },
+   "habilidade": {
+    "nome": "Esmagar",
+    "save": "FOR",
+    "cd": 18,
+    "dano": "2d6+6+2d6",
+    "tipo": "contundente",
+    "atordoa": 1,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Bloodied Fury, Immutable Form, Magic Resistance | bônus: Violent Leap | ações do livro: Throw",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [
+     "urban",
+     "mountain"
+    ],
+    "fonte": "PL",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "ceo-viktra-mordenheim",
+   "nome": "CEO Viktra Mordenheim",
+   "nome_en": "CEO Viktra Mordenheim",
+   "cr": "7",
+   "ca": 15,
+   "hp": 123,
+   "golpes": [
+    {
+     "nome": "Bastão Elétrico",
+     "ataque": 6,
+     "dano": "2d8+3",
+     "tipo": "elétrico"
+    },
+    {
+     "nome": "Bastão Elétrico",
+     "ataque": 6,
+     "dano": "2d8+3",
+     "tipo": "elétrico"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 3,
+    "CON": 5,
+    "INT": 5,
+    "SAB": 0,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Seringa",
+    "save": "CON",
+    "cd": 16,
+    "dano": "4d4+2d10+3d6",
+    "tipo": "ácido",
+    "debuff": [
+     "envenenado"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Bolster Inventions, Darklord Restoration, Legendary Resistance | conjuração: Activate Constructs | reações: Redirect Attack | lendárias: Shocking Prod, Static Explosion",
+   "meta": {
+    "tipo": "humanoid",
+    "subtipo": [
+     "human"
+    ],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 2900,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "created",
+   "nome": "Criação",
+   "nome_en": "Created",
+   "cr": "5",
+   "ca": 9,
+   "hp": 127,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 7,
+     "dano": "2d8+4+1d8",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 7,
+     "dano": "2d8+4+1d8",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": -1,
+    "CON": 4,
+    "INT": -2,
+    "SAB": 0,
+    "CAR": -3
+   },
+   "habilidade": {
+    "nome": "Defeito",
+    "save": "CON",
+    "cd": 15,
+    "dano": "3d8+3d8",
+    "tipo": "veneno",
+    "metade": true,
+    "debuff": [
+     "envenenado"
+    ],
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "traços: Berserk, Immutable Form, Lightning Absorption, Magic Resistance",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "echo",
+   "nome": "Eco",
+   "nome_en": "Echo",
+   "cr": "1/2",
+   "ca": 13,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Clava",
+     "ataque": 4,
+     "dano": "1d4+2",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Clava",
+     "ataque": 4,
+     "dano": "1d4+2",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 0,
+    "CON": 1,
+    "INT": 0,
+    "SAB": 0,
+    "CAR": -3
+   },
+   "fora": "traços: Immutable Form | bônus: Automated Self-Preservation",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "shattered-echo",
+   "nome": "Eco Despedaçado",
+   "nome_en": "Shattered Echo",
+   "cr": "3",
+   "ca": 13,
+   "hp": 60,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 6,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 6,
+     "dano": "2d10+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 2,
+    "CON": 3,
+    "INT": 0,
+    "SAB": -1,
+    "CAR": -2
+   },
+   "habilidade": {
+    "nome": "Grito Sobrenatural",
+    "save": "CON",
+    "cd": 13,
+    "dano": "2d8",
+    "tipo": "trovejante",
+    "debuff": [
+     "medo"
+    ],
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "traços: Immutable Form, Mimicry | bônus: Automated Self-Preservation",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "empty-echo",
+   "nome": "Eco Vazio",
+   "nome_en": "Empty Echo",
+   "cr": "1/2",
+   "ca": 13,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 4,
+     "dano": "1d8+2",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 0,
+    "CON": 1,
+    "INT": -4,
+    "SAB": -2,
+    "CAR": -3
+   },
+   "habilidade": {
+    "nome": "Grito Estático",
+    "save": "CON",
+    "cd": 11,
+    "dano": "2d4",
+    "tipo": "trovejante",
+    "alvos": 3,
+    "recarga": 6
+   },
+   "fora": "traços: Immutable Form | bônus: Automated Self-Preservation",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 100,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "gerta-von-aubrecker",
+   "nome": "Gerta von Aubrecker",
+   "nome_en": "Gerta von Aubrecker",
+   "cr": "5",
+   "ca": 14,
+   "hp": 84,
+   "golpes": [
+    {
+     "nome": "Criopistola",
+     "ataque": 6,
+     "dano": "3d8+3",
+     "tipo": "gélido"
+    },
+    {
+     "nome": "Criopistola",
+     "ataque": 6,
+     "dano": "3d8+3",
+     "tipo": "gélido"
+    },
+    {
+     "nome": "Criopistola",
+     "ataque": 6,
+     "dano": "3d8+3",
+     "tipo": "gélido"
+    }
+   ],
+   "saves": {
+    "FOR": -1,
+    "DES": 2,
+    "CON": 2,
+    "INT": 6,
+    "SAB": 4,
+    "CAR": 0
+   },
+   "habilidade": {
+    "nome": "Criocanhão",
+    "save": "CON",
+    "cd": 14,
+    "dano": "8d8",
+    "tipo": "gélido",
+    "metade": true,
+    "alvos": 3,
+    "recarga": 5
+   },
+   "fora": "bônus: Camouflage Generator",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 3,
+    "tier": 3,
+    "xp": 1800,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "hendrik-von-aubrecker",
+   "nome": "Hendrik von Aubrecker",
+   "nome_en": "Hendrik von Aubrecker",
+   "cr": "3",
+   "ca": 15,
+   "hp": 65,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 6,
+     "dano": "1d8+4",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 6,
+     "dano": "1d8+4",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 4,
+    "CON": 4,
+    "INT": 2,
+    "SAB": 1,
+    "CAR": -1
+   },
+   "habilidade": {
+    "nome": "Agulha Entorpecente",
+    "save": "CON",
+    "cd": 14,
+    "dano": "2d6",
+    "tipo": "veneno",
+    "metade": true,
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "reações: Parry",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": true
+   }
+  },
+  {
+   "id": "k-nine",
+   "nome": "K-Nine",
+   "nome_en": "K-Nine",
+   "cr": "1",
+   "ca": 14,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Mordida",
+     "ataque": 5,
+     "dano": "1d10+3",
+     "tipo": "perfurante"
+    }
+   ],
+   "saves": {
+    "FOR": 3,
+    "DES": 2,
+    "CON": 2,
+    "INT": -4,
+    "SAB": 1,
+    "CAR": -2
+   },
+   "matilha": true,
+   "fora": "traços: Immutable Form | bônus: X-Ray Scanning",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "rudolph-von-aubrecker",
+   "nome": "Rudolph von Aubrecker",
+   "nome_en": "Rudolph von Aubrecker",
+   "cr": "6",
+   "ca": 15,
+   "hp": 112,
+   "golpes": [
+    {
+     "nome": "Taser",
+     "ataque": 6,
+     "dano": "4d6",
+     "tipo": "elétrico",
+     "efeito": {
+      "nome": "Taser",
+      "save": "CON",
+      "cd": 18,
+      "atordoa": 1
+     }
+    }
+   ],
+   "saves": {
+    "FOR": 0,
+    "DES": 3,
+    "CON": 3,
+    "INT": 7,
+    "SAB": 2,
+    "CAR": 5
+   },
+   "fora": "conjuração: Spellcasting, Forcefield Generator | bônus: X-Ray Scanning",
+   "meta": {
+    "tipo": "monstrosity",
+    "subtipo": [],
+    "num_acoes": 1,
+    "tier": 3,
+    "xp": 2300,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "PL",
+    "nomeada": true
+   }
+  }
+ ]
+}

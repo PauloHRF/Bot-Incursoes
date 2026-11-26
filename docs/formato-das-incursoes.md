@@ -204,7 +204,8 @@ nunca ganharia uma votação.
 
 **Criatura não é escalada por tier.** O que está escrito na ficha vale como
 está — nada é multiplicado. Se a criatura não serve ao tier, use outra (o
-bestiário tem 385, de CR 0 a 20) ou escreva `monstros_por_tier`. Já existiu um
+bestiário tem 385 do Monster Manual e mais as dos livros de 2024, do CR 0 para
+cima — a lista está em `CRIATURAS.md`) ou escreva `monstros_por_tier`. Já existiu um
 multiplicador aqui, e ele transformava cinco Gárgulas de 52 HP em 416 HP numa
 sala de tier 2.
 
@@ -285,7 +286,8 @@ meio da luta.
 
 Duas formas, e a primeira é a que você vai usar quase sempre.
 
-**Pelo nome, do bestiário.** São 385 criaturas com os números do livro:
+**Pelo nome, do bestiário.** São as 385 do Monster Manual mais as dos livros de
+2024 (`data/criaturas/`), com os números do livro:
 
 ```json
 { "nome": "Behir" }

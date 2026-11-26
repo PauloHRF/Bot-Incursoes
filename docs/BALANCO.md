@@ -13,16 +13,17 @@ O **dano por rodada** sai de `motor.atacar_inimigo`, 20 mil rolagens por
 célula, contra a CA da criatura típica do tier. Não é fórmula: é o que
 acontece na mesa, com 1 natural errando e crítico dobrando dados.
 
-A criatura típica sai do bestiário de 385 — a mediana da faixa de CR que
-cada tier encontra, não um número escolhido a dedo:
+A criatura típica sai do bestiário de 683 (Monster Manual
+e livros de `data/criaturas/`) — a mediana da faixa de CR que cada tier
+encontra, não um número escolhido a dedo:
 
 | Tier | CA | Ataque | Dano/rodada |
 |---|---|---|---|
-| T1 | 12 | +4 | 6 |
-| T2 | 13 | +5 | 10 |
-| T3 | 15 | +7 | 13 |
-| T4 | 17 | +10 | 17 |
-| T5 | 19 | +12 | 21 |
+| T1 | 13 | +4 | 6 |
+| T2 | 14 | +5 | 10 |
+| T3 | 15 | +7 | 14 |
+| T4 | 17 | +9 | 20 |
+| T5 | 19 | +12 | 26 |
 
 Cada classe é medida no seu **teto**: as escolhas de tier são resolvidas
 para maximizar o que está sendo medido, porque é o teto que diz se uma
@@ -36,49 +37,49 @@ nota — nunca como "fraca".
 
 | Classe | T1 | T2 | T3 | T4 | T5 |
 |---|---|---|---|---|---|
-| Guerreiro | 6.7 | 10.4 | 19.5 | 21.2 | 23.9 |
-| Bárbaro | 6.9 | 9.7 | 19.6 | 18.3 | 20.9 |
-| Bruxo | 4.1 | 6.7 | 10.3 | 12.8 | 16.7 |
-| Ladino | 7.3 | 10.6 | 12.4 | 14.2 | 16.7 |
-| Feiticeiro | 4.1 | 4.4 | 8.3 | 7.7 | 15.5 |
-| Mago | 4.1 | 4.4 | 8.3 | 14.7 | 14.8 |
-| Artífice | 4.1 | 4.4 | 11.6 | 10.9 | 14.7 |
-| Monge | 4.7 | 5.8 | 12.3 | 12.8 | 14.2 |
-| Xamã | 4.7 | 5.0 | 11.0 | 12.7 | 14.2 |
-| Clérigo | 3.4 | 3.6 | 6.8 | 9.5 | 12.7 |
-| Patrulheiro | 5.9 | 6.6 | 12.3 | 12.8 | 11.8 |
-| Druida | 3.4 | 5.1 | 8.2 | 10.9 | 10.7 |
-| Paladino | 6.6 | 9.6 | 8.9 | 8.4 | 9.0 |
-| Bardo | 2.6 | 2.8 | 5.2 | 4.9 | 7.3 |
+| Guerreiro | 6.2 | 9.8 | 19.5 | 21.2 | 23.9 |
+| Bárbaro | 6.5 | 9.1 | 19.6 | 18.3 | 20.9 |
+| Bruxo | 3.8 | 6.2 | 10.3 | 12.7 | 16.7 |
+| Ladino | 6.9 | 9.9 | 12.5 | 14.3 | 16.7 |
+| Feiticeiro | 3.8 | 4.2 | 8.3 | 7.8 | 15.5 |
+| Mago | 3.8 | 4.1 | 8.3 | 14.7 | 14.8 |
+| Artífice | 3.9 | 4.1 | 11.6 | 10.8 | 14.7 |
+| Monge | 4.4 | 5.4 | 12.3 | 12.8 | 14.2 |
+| Xamã | 4.4 | 4.7 | 10.9 | 12.7 | 14.2 |
+| Clérigo | 3.2 | 3.3 | 6.8 | 9.5 | 12.7 |
+| Patrulheiro | 5.5 | 6.2 | 12.3 | 12.8 | 11.8 |
+| Druida | 3.1 | 4.8 | 8.2 | 10.8 | 10.8 |
+| Paladino | 6.2 | 9.0 | 8.9 | 8.4 | 9.0 |
+| Bardo | 2.4 | 2.6 | 5.2 | 4.9 | 7.3 |
 
 Espalhamento por tier:
 
 | Tier | Piso | Teto | Razão |
 |---|---|---|---|
-| T1 | 2.6 (Bardo) | 7.3 (Ladino) | 2.8x |
-| T2 | 2.8 (Bardo) | 10.6 (Ladino) | 3.8x |
-| T3 | 5.2 (Bardo) | 19.6 (Bárbaro) | 3.8x |
-| T4 | 4.9 (Bardo) | 21.2 (Guerreiro) | 4.3x |
+| T1 | 2.4 (Bardo) | 6.9 (Ladino) | 2.8x |
+| T2 | 2.6 (Bardo) | 9.9 (Ladino) | 3.8x |
+| T3 | 5.2 (Bardo) | 19.6 (Bárbaro) | 3.7x |
+| T4 | 4.9 (Bardo) | 21.2 (Guerreiro) | 4.4x |
 | T5 | 7.3 (Bardo) | 23.9 (Guerreiro) | 3.3x |
 
 ## Durabilidade: rodadas de pé sob a criatura de referência
 
 | Classe | T1 | T2 | T3 | T4 | T5 |
 |---|---|---|---|---|---|
-| Guerreiro | 8.7 | 11.1 | 11.0 | 8.8 | 8.1 |
-| Paladino | 8.7 | 9.8 | 9.7 | 8.0 | 7.4 |
-| Bárbaro | 7.7 | 8.6 | 8.8 | 7.5 | 7.0 |
-| Clérigo | 6.3 | 7.8 | 7.7 | 6.3 | 5.8 |
-| Monge | 6.3 | 6.9 | 6.9 | 5.8 | 5.3 |
-| Xamã | 6.3 | 6.9 | 6.9 | 5.8 | 5.3 |
-| Artífice | 7.0 | 6.9 | 6.9 | 5.8 | 5.3 |
-| Druida | 6.3 | 6.2 | 6.3 | 5.3 | 5.0 |
-| Patrulheiro | 6.3 | 6.4 | 6.5 | 5.3 | 4.9 |
-| Ladino | 5.7 | 6.2 | 5.8 | 5.0 | 4.6 |
-| Bruxo | 5.8 | 5.6 | 5.8 | 5.0 | 4.6 |
-| Bardo | 5.8 | 5.3 | 5.3 | 4.3 | 4.0 |
-| Mago | 4.2 | 4.5 | 4.6 | 4.0 | 3.8 |
-| Feiticeiro | 4.2 | 4.5 | 4.6 | 4.0 | 3.8 |
+| Guerreiro | 8.7 | 11.1 | 10.2 | 8.3 | 6.5 |
+| Paladino | 8.7 | 9.8 | 9.0 | 7.5 | 6.0 |
+| Bárbaro | 7.7 | 8.6 | 8.2 | 6.9 | 5.7 |
+| Clérigo | 6.3 | 7.8 | 7.1 | 5.9 | 4.7 |
+| Monge | 6.3 | 6.9 | 6.4 | 5.4 | 4.3 |
+| Xamã | 6.3 | 6.9 | 6.4 | 5.4 | 4.3 |
+| Artífice | 7.0 | 6.9 | 6.4 | 5.4 | 4.3 |
+| Druida | 6.3 | 6.2 | 5.8 | 4.9 | 4.0 |
+| Patrulheiro | 6.3 | 6.4 | 6.1 | 4.8 | 4.0 |
+| Ladino | 5.7 | 6.2 | 5.4 | 4.5 | 3.7 |
+| Bruxo | 5.8 | 5.6 | 5.4 | 4.5 | 3.7 |
+| Bardo | 5.8 | 5.3 | 4.9 | 3.9 | 3.2 |
+| Mago | 4.2 | 4.5 | 4.3 | 3.6 | 3.0 |
+| Feiticeiro | 4.2 | 4.5 | 4.3 | 3.6 | 3.0 |
 
 ## Cura devolvida ao grupo, por masmorra Média (HP)
 
@@ -208,32 +209,32 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 |  | Bardo | Inspiracao — na resistencia | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |
 |  | Bardo | Inspiracao — na pericia | 0 | 0 × 4.26 | efeito que esta conta não cobre (reação, vantagem) |
 
-### Tier 3 — mediana 40 HP-eq, 25 ativas
+### Tier 3 — mediana 42 HP-eq, 25 ativas
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
-| >> | Bruxo | Hypnotic Pattern | 240 | 78 × 3.08 | 78 de dano negado (6 turno(s) de criatura) |
-| >> | Bruxo | Hunger of Hadar | 173 | 56 × 3.08 | 17 de dano; 39 de dano negado (3 turno(s) de criatura) |
+| >> | Bruxo | Hypnotic Pattern | 259 | 84 × 3.08 | 84 de dano negado (6 turno(s) de criatura) |
+| >> | Bruxo | Hunger of Hadar | 183 | 59 × 3.08 | 17 de dano; 42 de dano negado (3 turno(s) de criatura) |
 | >> | Xamã | Danca totemica | 131 | 92 × 1.42 | 22 de cura no grupo; 70 de THP |
 | >> | Druida | Call Lightning | 109 | 77 × 1.42 | 77 de dano |
 |  | Bardo | Aid | 96 | 68 × 1.42 | 22 de cura no grupo; 45 de THP |
 |  | Mago | Fireball | 92 | 65 × 1.42 | 65 de dano |
 |  | Feiticeiro | Lightning Bolt | 92 | 65 × 1.42 | 65 de dano |
-|  | Bardo | Hypnotic Pattern | 78 | 78 × 1.00 | 78 de dano negado (6 turno(s) de criatura) |
+|  | Bardo | Hypnotic Pattern | 84 | 84 × 1.00 | 84 de dano negado (6 turno(s) de criatura) |
 |  | Bruxo | Healing Light | 55 | 18 × 3.08 | 18 de cura |
 |  | Clérigo | Mass Healing Word | 48 | 34 × 1.42 | 34 de cura no grupo |
 |  | Guerreiro | Action Surge | 43 | 14 × 3.08 | 14 de golpe a mais |
+|  | Mago | Hypnotic Pattern | 42 | 42 × 1.00 | 42 de dano negado (3 turno(s) de criatura) |
+|  | Clérigo | Hypnotic Pattern | 42 | 42 × 1.00 | 42 de dano negado (3 turno(s) de criatura) |
 |  | Paladino | Golpe Divino | 42 | 14 × 3.08 | 14 de golpe a mais |
 |  | Druida | Conjure Animals | 40 | 28 × 1.42 | 28 de aliado conjurado |
-|  | Mago | Hypnotic Pattern | 39 | 39 × 1.00 | 39 de dano negado (3 turno(s) de criatura) |
-|  | Clérigo | Hypnotic Pattern | 39 | 39 × 1.00 | 39 de dano negado (3 turno(s) de criatura) |
 |  | Feiticeiro | Grilhoes Planares | 39 | 27 × 1.42 | 14 de dano; 14 sangrando |
-|  | Mago | Fly | 33 | 23 × 1.42 | 23 de mira desviada |
+|  | Mago | Fly | 36 | 25 × 1.42 | 25 de mira desviada |
 |  | Feiticeiro | Haste | 28 | 20 × 1.42 | um ataque a mais enquanto dura |
 |  | Clérigo | Spirit Guardians | 22 | 22 × 1.00 | 22 de dano |
+|  | Monge | Stunning Strike | 20 | 14 × 1.42 | 14 de dano negado (1 turno(s) de criatura) |
 |  | Druida | Aura of Vitality | 19 | 14 × 1.42 | 14 de regeneração |
-|  | Monge | Stunning Strike | 18 | 13 × 1.42 | 13 de dano negado (1 turno(s) de criatura) |
-| << | Bardo | Invisibility | 11 | 8 × 1.42 | 8 de mira desviada |
+| << | Bardo | Invisibility | 12 | 8 × 1.42 | 8 de mira desviada |
 | << | Patrulheiro | Rajada do Cacador | 7 | 5 × 1.42 | 5 de golpe a mais |
 | << | Ladino | Furtividade | 0 | 0 × 3.08 | efeito que esta conta não cobre (reação, vantagem) |
 | << | Bárbaro | Reckless Attack | 0 | 0 × 3.08 | efeito que esta conta não cobre (reação, vantagem) |
@@ -253,26 +254,26 @@ mediana do tier, e `<<` o que está abaixo de 2,5× para baixo.
 
 |  | Classe | Habilidade | Por masmorra | Conta | De onde vem |
 |---|---|---|---|---|---|
-| >> | Bruxo | Hold Monster | 194 | 63 × 3.08 | 63 de dano negado (3 turno(s) de criatura) |
+| >> | Bruxo | Hold Monster | 240 | 78 × 3.08 | 78 de dano negado (3 turno(s) de criatura) |
 | >> | Druida | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
 | >> | Clérigo | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
 | >> | Bardo | Mass Cure Wounds | 181 | 128 × 1.42 | 128 de cura no grupo |
 |  | Mago | Cone of Cold | 158 | 112 × 1.42 | 112 de dano |
 |  | Feiticeiro | Cone of Cold | 158 | 112 × 1.42 | 112 de dano |
 |  | Bruxo | Synaptic Static | 134 | 43 × 3.08 | 43 de dano |
+|  | Mago | Hold Monster | 111 | 78 × 1.42 | 78 de dano negado (3 turno(s) de criatura) |
+|  | Bardo | Otto's Irresistible Dance | 111 | 78 × 1.42 | 78 de dano negado (3 turno(s) de criatura) |
 |  | Clérigo | Flame Strike | 108 | 108 × 1.00 | 108 de dano |
 |  | Bruxo | Summon Greater Demon | 103 | 33 × 3.08 | 33 de aliado conjurado |
-|  | Mago | Hold Monster | 89 | 63 × 1.42 | 63 de dano negado (3 turno(s) de criatura) |
-|  | Bardo | Otto's Irresistible Dance | 89 | 63 × 1.42 | 63 de dano negado (3 turno(s) de criatura) |
 |  | Patrulheiro | Cacador Supremo | 77 | 54 × 1.42 | 54 de dado extra enquanto dura |
 |  | Druida | Conjure Elemental | 66 | 46 × 1.42 | 46 de aliado conjurado |
 |  | Guerreiro | Action Mastery | 57 | 19 × 3.08 | 19 de golpe a mais |
 |  | Bardo | Animate Objects | 53 | 38 × 1.42 | 38 de aliado conjurado |
 |  | Xamã | Guerreiros ancioes | 36 | 36 × 1.00 | 36 de cura no grupo |
 |  | Artífice | Arcane Jolt — restaurador | 34 | 11 × 3.08 | 11 de cura |
+|  | Feiticeiro | Dimension Door | 30 | 21 × 1.42 | 21 de mira desviada |
+|  | Druida | Antilife Shell | 30 | 21 × 1.42 | 21 de mira desviada |
 | << | Paladino | Avatar da Luz | 26 | 26 × 1.00 | 11 de regeneração; dano extra enquanto dura |
-| << | Feiticeiro | Dimension Door | 24 | 17 × 1.42 | 17 de mira desviada |
-| << | Druida | Antilife Shell | 24 | 17 × 1.42 | 17 de mira desviada |
 | << | Artífice | Arcane Jolt — destrutivo | 22 | 7 × 3.08 | 7 de golpe a mais |
 | << | Feiticeiro | Polymorph | 21 | 15 × 1.42 | 15 da forma em 3 rodadas |
 | << | Monge | Perfect Strike | 19 | 6 × 3.08 | 6 de golpe a mais |
@@ -289,7 +290,7 @@ frequência, os três escopos encostam. Isto é desenho funcionando.
 |---|---|---|---|---|
 | combate | 18 | 14 | 3.08 | 42 |
 | descanso | 47 | 16 | 1.42 | 23 |
-| incursao | 8 | 38 | 1.00 | 38 |
+| incursao | 8 | 39 | 1.00 | 39 |
 
 ### A mesma magia com disponibilidade diferente
 
@@ -331,7 +332,7 @@ Chance de um grupo de cinco superar a sala, cada um rolando uma vez:
 | Tier | Mod típico | Base 12 | Base 15 | Base 18 |
 |---|---|---|---|---|
 | T1 | +5 | CD 12 · 91% | CD 15 · 69% | CD 18 · 29% |
-| T2 | +7 | CD 14 · 90% | CD 17 · 69% | CD 20 · 29% |
+| T2 | +7 | CD 14 · 90% | CD 17 · 68% | CD 20 · 29% |
 | T3 | +8 | CD 15 · 91% | CD 18 · 69% | CD 21 · 29% |
 | T4 | +10 | CD 17 · 91% | CD 20 · 68% | CD 23 · 29% |
-| T5 | +11 | CD 18 · 91% | CD 21 · 69% | CD 24 · 29% |
+| T5 | +11 | CD 18 · 91% | CD 21 · 68% | CD 24 · 29% |

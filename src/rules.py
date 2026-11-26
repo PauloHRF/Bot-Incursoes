@@ -77,8 +77,9 @@ AJUSTE_DE_CD_POR_TIER = {1: 0, 2: 2, 3: 3, 4: 5, 5: 6}
 # mostrar, e passou a evitar combate para chegar inteira ao objetivo.
 #
 # O tier agora vive no CONTEÚDO: `Sala.monstros_por_tier` diz quem cada tier
-# encontra na sala, e cada ficha vale como está escrita. O bestiário tem 385
-# criaturas de CR 0 a 20 — se uma não serve ao tier, o conteúdo usa outra.
+# encontra na sala, e cada ficha vale como está escrita. O bestiário tem
+# centenas de criaturas, do CR 0 para cima — se uma não serve ao tier, o
+# conteúdo usa outra.
 # Só a CD continua escalando, porque a perícia do personagem cresce devagar
 # (+6 em cinco tiers) e a CD escrita é a do tier 1.
 

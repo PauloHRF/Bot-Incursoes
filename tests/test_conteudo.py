@@ -723,9 +723,19 @@ def caso_a_planilha_com_tema_separa_por_ponto_e_virgula():
 
 
 def caso_o_bestiario_tem_ambiente():
-    criaturas = bestiario.carregar()
-    assert len(criaturas) == 385, len(criaturas)
+    # Os números fixos são os do Monster Manual: a importação de ambiente
+    # casou 385 de 385, e um número que muda aqui é importação que saiu torta.
+    # Os livros de 2024 crescem a cada revisão, então eles entram só na
+    # cobrança de que ninguém fica sem o campo.
+    do_mm = bestiario.carregar(livros=None)
+    assert len(do_mm) == 385, len(do_mm)
+    com = [c for c in do_mm if bestiario.ambientes_de(c)]
+    nenhures = [c for c in do_mm if bestiario.de_lugar_nenhum(c)]
+    assert len(com) == 315, len(com)
+    assert len(nenhures) == 70, len(nenhures)
 
+    criaturas = bestiario.carregar()
+    assert len(criaturas) > len(do_mm), "os livros de data/criaturas/ não entraram"
     sem_campo = [
         c["nome"] for c in criaturas
         if "ambientes" not in (c.get("meta") or {})
@@ -733,12 +743,10 @@ def caso_o_bestiario_tem_ambiente():
     assert not sem_campo, (
         f"{len(sem_campo)} criatura(s) ficaram sem o campo: {sem_campo[:5]}"
     )
-
-    com = [c for c in criaturas if bestiario.ambientes_de(c)]
-    nenhures = [c for c in criaturas if bestiario.de_lugar_nenhum(c)]
-    assert len(com) == 315, len(com)
-    assert len(nenhures) == 70, len(nenhures)
-    print(f"  {len(com)} criaturas com ambiente, {len(nenhures)} de lugar nenhum: ok")
+    print(
+        f"  {len(com)} do Monster Manual com ambiente, {len(nenhures)} de lugar"
+        f" nenhum, e as {len(criaturas)} com o campo: ok"
+    )
 
 
 def caso_o_vocabulario_de_ambiente_e_fechado():

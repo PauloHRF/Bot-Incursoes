@@ -1,0 +1,276 @@
+{
+ "livro": "ABH",
+ "criaturas": [
+  {
+   "id": "harvester-devil",
+   "nome": "Diabo Ceifador",
+   "nome_en": "Harvester Devil",
+   "cr": "3",
+   "ca": 14,
+   "hp": 65,
+   "golpes": [
+    {
+     "nome": "Lâmina Infernal",
+     "ataque": 5,
+     "dano": "1d6+3+2d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Lâmina Infernal",
+     "ataque": 5,
+     "dano": "1d6+3+2d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 1,
+    "DES": 3,
+    "CON": 4,
+    "INT": 2,
+    "SAB": 3,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Contrato Compulsório",
+    "save": "CAR",
+    "cd": 14,
+    "atordoa": 2,
+    "save_repete": true,
+    "alvos": 1,
+    "recarga": 6
+   },
+   "fora": "traços: Diabolic Ward, Diabolical Restoration, Magic Resistance | ações do livro: Confounding Ray",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "devil"
+    ],
+    "num_acoes": 2,
+    "tier": 2,
+    "xp": 700,
+    "ambientes": [],
+    "fonte": "ABH",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "speaker-devil",
+   "nome": "Diabo Orador",
+   "nome_en": "Speaker Devil",
+   "cr": "12",
+   "ca": 17,
+   "hp": 189,
+   "golpes": [
+    {
+     "nome": "Alabarda Trovejante",
+     "ataque": 9,
+     "dano": "2d10+5+4d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Alabarda Trovejante",
+     "ataque": 9,
+     "dano": "2d10+5+4d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 4,
+    "CON": 9,
+    "INT": 10,
+    "SAB": 8,
+    "CAR": 7
+   },
+   "habilidade": {
+    "nome": "Palavra de Desfazer",
+    "save": "CON",
+    "cd": 18,
+    "dano": "4d10",
+    "tipo": "energia",
+    "metade": true,
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Diabolical Restoration, Magic Resistance | conjuração: Spellcasting | bônus: Utterance of Pain",
+   "meta": {
+    "tipo": "fiend",
+    "subtipo": [
+     "devil"
+    ],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 8400,
+    "ambientes": [],
+    "fonte": "ABH",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "vampire-warden",
+   "nome": "Vampiro Guardião",
+   "nome_en": "Vampire Warden",
+   "cr": "10",
+   "ca": 18,
+   "hp": 190,
+   "golpes": [
+    {
+     "nome": "Garra",
+     "ataque": 9,
+     "dano": "2d8+5+2d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra",
+     "ataque": 9,
+     "dano": "2d8+5+2d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 5,
+    "DES": 2,
+    "CON": 8,
+    "INT": 0,
+    "SAB": 6,
+    "CAR": 3
+   },
+   "habilidade": {
+    "nome": "Mordida",
+    "save": "CON",
+    "cd": 16,
+    "dano": "1d4+5+2d6",
+    "tipo": "perfurante",
+    "debuff": [
+     "deterioracao"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Magic Resistance, Vampire Weakness | conjuração: Guardian's Command | reações: Resilient Flesh",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 4,
+    "xp": 5900,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "ABH",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "vampire-infernalist",
+   "nome": "Vampiro Infernalista",
+   "nome_en": "Vampire Infernalist",
+   "cr": "14",
+   "ca": 16,
+   "hp": 172,
+   "golpes": [
+    {
+     "nome": "Garra de Fogo Infernal",
+     "ataque": 9,
+     "dano": "2d8+4+3d6",
+     "tipo": "cortante"
+    },
+    {
+     "nome": "Garra de Fogo Infernal",
+     "ataque": 9,
+     "dano": "2d8+4+3d6",
+     "tipo": "cortante"
+    }
+   ],
+   "saves": {
+    "FOR": 4,
+    "DES": 3,
+    "CON": 8,
+    "INT": 10,
+    "SAB": 3,
+    "CAR": 4
+   },
+   "habilidade": {
+    "nome": "Mordida",
+    "save": "CON",
+    "cd": 18,
+    "dano": "1d4+4+3d10",
+    "tipo": "perfurante",
+    "debuff": [
+     "deterioracao"
+    ],
+    "alvos": 1,
+    "cada": 2
+   },
+   "fora": "traços: Legendary Resistance, Misty Escape, Vampire Weakness | conjuração: Spellcasting | bônus: Shape-Shift | lendárias: Hellfire Strike, Infernal Majesty, Teleport",
+   "meta": {
+    "tipo": "undead",
+    "subtipo": [
+     "wizard"
+    ],
+    "num_acoes": 2,
+    "tier": 5,
+    "xp": 11500,
+    "ambientes": [
+     "underdark",
+     "urban"
+    ],
+    "fonte": "ABH",
+    "nomeada": false
+   }
+  },
+  {
+   "id": "fiendish-icon",
+   "nome": "Ícone Infernal",
+   "nome_en": "Fiendish Icon",
+   "cr": "1",
+   "ca": 13,
+   "hp": 22,
+   "golpes": [
+    {
+     "nome": "Pancada",
+     "ataque": 4,
+     "dano": "1d4+2",
+     "tipo": "contundente"
+    },
+    {
+     "nome": "Pancada",
+     "ataque": 4,
+     "dano": "1d4+2",
+     "tipo": "contundente"
+    }
+   ],
+   "saves": {
+    "FOR": 2,
+    "DES": 1,
+    "CON": 1,
+    "INT": -2,
+    "SAB": 0,
+    "CAR": -2
+   },
+   "habilidade": {
+    "nome": "Erupção Ígnea",
+    "save": "DES",
+    "cd": 11,
+    "dano": "2d6",
+    "tipo": "fogo",
+    "alvos": 3,
+    "cada": 2
+   },
+   "fora": "traços: Magic Resistance",
+   "meta": {
+    "tipo": "construct",
+    "subtipo": [],
+    "num_acoes": 2,
+    "tier": 1,
+    "xp": 200,
+    "ambientes": [
+     "urban"
+    ],
+    "fonte": "ABH",
+    "nomeada": false
+   }
+  }
+ ]
+}

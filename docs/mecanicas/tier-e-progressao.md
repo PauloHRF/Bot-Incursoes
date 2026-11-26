@@ -36,7 +36,7 @@ A CD escala porque a perícia do personagem cresce devagar. A criatura não: **a
 
 Antes havia um multiplicador por tier (1,0 · 1,6 · 2,4 · 3,1 · 3,8 de HP e dano, mais o ajuste da CD em CA e ataque). A conta vinha da curva de HP da família d8 e parecia certa, mas batia em cima de fichas já escritas em força cheia de *Monster Manual*: cinco Gárgulas de 52 HP viravam 416 HP numa sala de tier 2, e as cinco salas de combate de um banco dizimavam o grupo **sempre** — 0% de vitória com o grupo de HP cheio. A mesa sentiu isso antes de a conta mostrar, e passou a evitar combate para chegar inteira ao objetivo.
 
-O bestiário tem 385 criaturas de CR 0 a 20 (ver `CRIATURAS.md`): se uma não serve ao tier, o conteúdo usa outra. Faixa de CR por tier, como `bestiario.tier_do_cr` lê:
+O bestiário tem 683 criaturas de CR 0 a 25 (ver `CRIATURAS.md`): se uma não serve ao tier, o conteúdo usa outra. Faixa de CR por tier, como `bestiario.tier_do_cr` lê:
 
 | Tier | Faixa de CR |
 |---|---|
