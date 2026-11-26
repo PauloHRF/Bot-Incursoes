@@ -100,7 +100,7 @@ def _monstros(nome: str, quantidade: int) -> list:
 
 def medir_bando(
     monstros: list, classe: Optional[str], nivel: int, tamanho: int,
-    confrontos: int, semente: Any,
+    confrontos: int, semente: Any, aviso: Any = None,
 ) -> Optional[float]:
     """A taxa de vitória daquele bando contra um grupo daquele tamanho.
 
@@ -121,13 +121,13 @@ def medir_bando(
         monstros, tamanho=tamanho, nivel=nivel, classe=classe,
         repeticoes=confrontos, semente=semente,
         mesas=MESAS_FIXAS, minimo=grupos.MINIMO_PARA_A_MEDIA,
-        detalhes=False,
+        detalhes=False, aviso=aviso,
     )["taxa"]
 
 
 def _melhor_na_escala(
     montar, faixa: tuple[float, float], classe: str, nivel: int,
-    semente: Any, menor_valor: int, maior_valor: int,
+    semente: Any, menor_valor: int, maior_valor: int, aviso: Any = None,
 ) -> tuple[Optional[int], Optional[float], str]:
     """O ponto da escala que cai na faixa, e o veredito da busca.
 
@@ -150,7 +150,7 @@ def _melhor_na_escala(
     def taxa(n: int) -> Optional[float]:
         if n not in medidas:
             valor = medir_bando(
-                montar(n), classe, nivel, 5, CONFRONTOS_DA_BUSCA, semente,
+                montar(n), classe, nivel, 5, CONFRONTOS_DA_BUSCA, semente, aviso=aviso,
             )
             if valor is None:
                 return None

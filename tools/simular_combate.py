@@ -51,7 +51,13 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
     todas, por_composicao = [], []
     predefinido = not getattr(args, "classe", None)
     semente = rng.getrandbits(128) if predefinido else None
-    for mesa in composicoes:
+    # Quem espera (o Estúdio) sabe quantas formações já foram, e pode parar
+    # entre uma e outra: o aviso que levanta exceção interrompe a medida. Ele
+    # é chamado antes da primeira também, para o "cancelar" valer de saída.
+    aviso = getattr(args, "aviso", None)
+    if aviso:
+        aviso(0, len(composicoes))
+    for feitas, mesa in enumerate(composicoes, start=1):
         perfil = grupos.descricao(mesa) if predefinido else {}
         dados = random.Random(f"{semente}:{perfil['id']}") if predefinido else rng
         lutas = executar(monstros, list(mesa), por_mesa, dados, limite=LIMITE_RODADAS,
@@ -63,6 +69,8 @@ def simular(monstros: list[Monstro], tamanho: int, args, rng: random.Random) -> 
             "taxa": sum(l["inimigos_derrotados"] for l in lutas) / len(lutas),
             "amostras": len(lutas),
         })
+        if aviso:
+            aviso(feitas, len(composicoes))
     resumo = resumir(todas)
     # A pagina e o sugeridor usam somente estas medidas. Pular a coleta nao
     # altera a luta nem publica zeros como se fossem dano/cura medidos.

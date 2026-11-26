@@ -483,6 +483,18 @@ caminho da dungeon, em cinco etapas, uma de cada vez:
    (`tools/simulacao/regua.py`) com a marca de onde a luta caiu, o próximo
    passo (endurecer, aliviar, ajustar) e a pior formação. Mexer no bando ou no
    tier deixa o resultado esmaecido, com o aviso de simular de novo.
+
+   Enquanto a simulação roda, uma barra conta as formações ("formação 3 de
+   7") com **Cancelar**, que para na formação seguinte. Com o resultado na
+   tela, **Levar para: Fácil · Média · Difícil** procura quantas cópias da
+   criatura mais numerosa põem a luta na faixa pedida, sem trocar criatura —
+   o autor as escolheu pela ficção. É a bisseção do sugeridor
+   (`sugestor._melhor_na_escala`), confirmada com a mesma medida que a página
+   mostra; leva de meio minuto a uns dois, e quando nenhuma quantidade serve
+   diz por quê. **Usar** troca o bando e a medida de uma vez. A sugestão
+   completa, com criaturas novas, ficou de fora do resultado: ela leva de 4
+   minutos (tier 2) a 18 (tier 4), e continua no `tools/sugestor.py`. O mesmo
+   ajuste vale nas abas de tier das salas novas.
 4. **O caminho** — os temas da dungeon (fichas com quantas salas da
    Organização carregam cada um), a conta contra o que o tamanho pede e a
    lista das salas que podem cair. Desmarcar uma sala a tira (`excluir`); ela

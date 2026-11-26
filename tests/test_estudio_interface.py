@@ -51,6 +51,17 @@ MEDIDA = {
 }
 
 
+# O que o ajuste devolve: a proposta e a medida que a confirmou.
+PROPOSTA = {
+    "alvo": "dificil", "rotulo_do_alvo": "Difícil", "veredito": "serve",
+    "criatura": "Behir", "antes": 1, "quantidade": 2,
+    "bando": [{"nome": "Behir", "quantidade": 2}], "taxa_da_busca": .52,
+    "medida": {"tier": 3, "semente": 9, "repeticoes": 240, "medidas": [{
+        **MEDIDA["medidas"][0], "taxa": .52, "dificuldade": "dificil",
+        "rotulo": "Difícil", "dizima": False}]},
+}
+
+
 @unittest.skipUnless(sync_playwright, "instale playwright para testar a interface")
 class Interface(unittest.TestCase):
     @classmethod
@@ -458,6 +469,92 @@ class Interface(unittest.TestCase):
             "name": "dungeon.json", "mimeType": "application/json",
             "buffer": json.dumps(dungeon).encode()})
         expect(self.page.locator("#toast")).to_contain_text("Abra-o na parte Dungeons")
+
+
+    # ------------------------------------------- andamento e "levar para"
+
+    def test_simulacao_mostra_o_andamento_e_cancela(self):
+        presa, cancelados = [], []
+
+        def cancelar(rota):
+            cancelados.append(rota.request.post_data_json)
+            rota.fulfill(json={"ok": True})
+
+        self.page.route("**/api/simular", lambda rota: presa.append(rota))
+        self.page.route("**/api/andamento",
+                        lambda rota: rota.fulfill(json={"feitas": 2, "total": 7, "fase": ""}))
+        self.page.route("**/api/cancelar", cancelar)
+        self.nova_dungeon(tier="3")
+        self.chefe_com("Behir")
+        self.page.locator("#btSimular").click()
+        expect(self.page.locator(".andamento")).to_contain_text("formação 3 de 7")
+        expect(self.page.locator("#btSimular")).to_have_text("Simulando…")
+        self.page.locator(".andamento .cancelar").click()
+        expect(self.page.locator(".andamento .cancelar")).to_have_text("Cancelando…")
+        presa[0].fulfill(json={"cancelado": True})
+        expect(self.page.locator("#toast")).to_contain_text("Simulação cancelada")
+        expect(self.page.locator(".andamento")).to_have_count(0)
+        expect(self.page.locator("#btSimular")).to_have_text("Simular o chefe")
+        # O cancelar é da medida que estava rodando, pelo nome que a página deu.
+        self.assertEqual(cancelados[0]["pedido"], presa[0].request.post_data_json["pedido"])
+
+    def test_levar_para_ajusta_o_chefe_e_usa_a_proposta(self):
+        pedidos = []
+
+        def ajustar(rota):
+            pedidos.append(rota.request.post_data_json)
+            rota.fulfill(json=PROPOSTA)
+
+        self.page.route("**/api/simular", lambda rota: rota.fulfill(json=MEDIDA))
+        self.page.route("**/api/ajustar", ajustar)
+        self.nova_dungeon(tier="3")
+        self.chefe_com("Behir")
+        self.page.locator("#btSimular").click()
+        # A faixa em que a luta já está não se pede.
+        expect(self.page.locator('#resultado .ajustar[data-faixa="media"]')).to_be_disabled()
+        self.page.locator('#resultado .ajustar[data-faixa="dificil"]').click()
+        expect(self.page.locator("#propostaChefe .proposta")).to_contain_text("Com 2× Behir")
+        # Mexer no bando depois da proposta a apaga: ela foi medida para o de antes.
+        self.page.locator("#linhasChefe input[type=number]").first.fill("3")
+        expect(self.page.locator("#propostaChefe .proposta")).to_have_count(0)
+        self.page.locator("#linhasChefe input[type=number]").first.fill("1")
+        self.page.locator("#btSimular").click()
+        self.page.locator('#resultado .ajustar[data-faixa="dificil"]').click()
+        expect(self.page.locator("#propostaChefe .proposta")).to_contain_text("Com 2× Behir")
+        self.assertEqual(pedidos[0]["alvo"], "dificil")
+        self.assertEqual(pedidos[0]["tier"], 3)
+        self.assertEqual(pedidos[0]["bando"], [{"nome": "Behir"}])
+
+        self.page.locator("#propostaChefe .botao.principal").click()
+        self.assertEqual(self.incursao()["objetivo"]["monstros"], [{"nome": "Behir", "quantidade": 2}])
+        expect(self.page.locator("#linhasChefe input[type=number]").first).to_have_value("2")
+        # A medida que confirmou a proposta vira a medida do chefe, atual.
+        expect(self.page.locator("#resultado .veredito").first).to_have_text("Difícil")
+        expect(self.page.locator("#medidaVelha")).to_be_hidden()
+        expect(self.page.locator("#propostaChefe .proposta")).to_have_count(0)
+
+    def test_levar_para_na_sala_nova_troca_o_bando_do_tier(self):
+        self.page.route("**/api/simular", lambda rota: rota.fulfill(json=MEDIDA))
+        self.page.route("**/api/ajustar", lambda rota: rota.fulfill(json={
+            **PROPOSTA, "criatura": "Ogro", "antes": 4, "quantidade": 2,
+            "bando": [{"nome": "Ogro", "quantidade": 2}]}))
+        self.salas()
+        self.page.select_option("#sOrg", "Vórtice Oculto")
+        self.page.locator("#btNovaSala").click()
+        self.escrever("#sNome", "Cisterna")
+        self.escrever("#sDesc", "Água.")
+        self.page.select_option("#sTipo", "Combate")
+        self.page.locator(".aba-tier").nth(3).click()
+        self.page.locator("#btCriaturaSala").click()
+        self.page.locator("#linhasSala input[type=text]").last.fill("Ogro")
+        self.page.locator("#linhasSala input[type=number]").last.fill("4")
+        self.page.locator("#btSimularSala").click()
+        self.page.locator('#resultadoSala .ajustar[data-faixa="dificil"]').click()
+        expect(self.page.locator("#propostaSala .proposta")).to_contain_text("Com 2× Ogro")
+        self.page.locator("#propostaSala .botao.principal").click()
+        sala = self.page.evaluate("JSON.parse(JSON.stringify(salaAtual()))")
+        self.assertEqual(sala["monstros_por_tier"], {"4": [{"nome": "Ogro", "quantidade": 2}]})
+        expect(self.page.locator("#medidaVelhaSala")).to_be_hidden()
 
 
 # O runner lê o código de saída, e `unittest` sai com 0 mesmo pulando tudo:

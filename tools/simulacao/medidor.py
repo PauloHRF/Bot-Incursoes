@@ -29,7 +29,7 @@ import random
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Callable, Iterable, Optional, Sequence
 
 from src.incursoes import monstros_de_criatura
 
@@ -102,6 +102,7 @@ def medir(
     mesas: int = MESAS_PADRAO,
     minimo: Optional[int] = None,
     detalhes: bool = True,
+    aviso: Optional[Callable[[int, int], None]] = None,
 ) -> dict[str, Any]:
     """Aquele bando contra um grupo daquele tamanho, pelo caminho do bot.
 
@@ -129,5 +130,7 @@ def medir(
         composicoes=mesas,
         minimo_por_mesa=minimo or grupos.MINIMO_POR_COMPOSICAO,
         coletar_detalhes=detalhes,
+        # Chamado a cada formação medida: (feitas, total). Ver `sc.simular`.
+        aviso=aviso,
     )
     return sc.simular(monstros, tamanho, args, semente_de(semente, tier, tamanho))

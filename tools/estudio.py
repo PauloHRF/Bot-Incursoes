@@ -647,8 +647,34 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
 
     args = SimpleNamespace(classe=classe or None, nivel=nivel, repeticoes=repeticoes,
                            tier=tier, coletar_detalhes=False)
+    pedido = _pedido(payload)
+    try:
+        medidas = _medidas(sc, monstros, grupos, args, semente, _registrar(pedido))
+    except Cancelado:
+        return {"cancelado": True}
+    finally:
+        _encerrar(pedido)
+    return {
+        "sala": sala.id,
+        "tema": tema,
+        "tier": tier,
+        "classe": classe or "predefinido",
+        "sorteado": False,
+        "predefinido": not classe,
+        "nivel": nivel,
+        "repeticoes": repeticoes,
+        "semente": semente,
+        "criaturas": [{"nome": m.nome, "ca": m.ca, "hp": m.hp} for m in monstros],
+        "medidas": medidas,
+    }
+
+
+def _medidas(sc, monstros, grupos, args, semente, aviso=None) -> list[dict[str, Any]]:
+    """Cada tamanho de grupo contra as formações, com o veredito da régua."""
     medidas = []
     for tamanho in grupos:
+        # Com dois tamanhos, o andamento diz em qual deles está.
+        args.aviso = aviso.fase(f"{tamanho} jogadores") if aviso and len(grupos) > 1 else aviso
         # Um rng por tamanho, derivado da mesma semente: assim mudar a lista
         # de grupos nao muda o numero dos outros.
         bruto = sc.simular(monstros, tamanho, args, random.Random(f"{semente}:{tamanho}"))
@@ -674,18 +700,186 @@ def simular(payload: dict[str, Any]) -> dict[str, Any]:
             "azarada": azarada,
             **regua.veredito(bruto["taxa"], azarada),
         })
+    return medidas
+
+
+# ----------------------------------------------------- andamento e cancelar
+
+class Cancelado(Exception):
+    """O autor pediu para parar. Levantada pelo aviso, entre duas formações."""
+
+
+# O que cada pedido em andamento já fez, e se pediram para parar. Em memória:
+# só existe enquanto a medida roda, e o estúdio é de uma pessoa só.
+_ANDAMENTO: dict[str, dict[str, Any]] = {}
+_TRAVA_DO_ANDAMENTO = threading.Lock()
+
+
+def _pedido(payload: dict[str, Any]) -> str:
+    """O nome que a página deu à medida, para perguntar por ela depois."""
+    pedido = payload.get("pedido")
+    return pedido[:64] if isinstance(pedido, str) else ""
+
+
+class _Aviso:
+    """O que a simulação chama a cada formação: anota, e para se pediram.
+
+    Um objeto, e não uma função solta, para o ajuste poder dizer em que fase
+    está ("medição 2") sem mudar a assinatura de quem simula.
+    """
+
+    def __init__(self, pedido: str, rotulo: str = "") -> None:
+        self.pedido, self.rotulo = pedido, rotulo
+
+    def fase(self, rotulo: str) -> "_Aviso":
+        return _Aviso(self.pedido, rotulo)
+
+    def __call__(self, feitas: int, total: int) -> None:
+        with _TRAVA_DO_ANDAMENTO:
+            estado = _ANDAMENTO.get(self.pedido)
+            if estado is None:
+                return
+            estado.update(feitas=feitas, total=total, fase=self.rotulo)
+            parar = estado["cancelar"]
+        if parar:
+            raise Cancelado()
+
+
+def _registrar(pedido: str) -> Optional[_Aviso]:
+    if not pedido:
+        return None
+    with _TRAVA_DO_ANDAMENTO:
+        _ANDAMENTO[pedido] = {"feitas": 0, "total": 0, "fase": "", "cancelar": False}
+    return _Aviso(pedido)
+
+
+def _encerrar(pedido: str) -> None:
+    with _TRAVA_DO_ANDAMENTO:
+        _ANDAMENTO.pop(pedido, None)
+
+
+def andamento(payload: dict[str, Any]) -> dict[str, Any]:
+    """Quantas formações a medida já fez. `fim` quando ela não roda mais."""
+    with _TRAVA_DO_ANDAMENTO:
+        estado = _ANDAMENTO.get(_pedido(payload))
+        if estado is None:
+            return {"fim": True}
+        return {k: estado[k] for k in ("feitas", "total", "fase")}
+
+
+def cancelar(payload: dict[str, Any]) -> dict[str, Any]:
+    """Pede para a medida parar. Ela para na próxima formação, e não no meio
+    de uma: a formação começada termina, e o que ela mediu é descartado."""
+    with _TRAVA_DO_ANDAMENTO:
+        estado = _ANDAMENTO.get(_pedido(payload))
+        if estado is not None:
+            estado["cancelar"] = True
+    return {"ok": estado is not None}
+
+
+# ------------------------------------------------------------------ ajustar
+
+
+def ajustar(payload: dict[str, Any]) -> dict[str, Any]:
+    """Procura quantas cópias põem a luta na faixa pedida, sem trocar criatura.
+
+    O autor escolheu as criaturas pela ficção da sala; o que ele quer do
+    Estúdio é o número. Varia a linha mais numerosa do bando — a dos lacaios,
+    quase sempre —, com as outras fixas, pela mesma bisseção do sugeridor
+    (`sugestor._melhor_na_escala`), e confirma a escolhida com a MESMA medida
+    que o Estúdio mostra: o número que o autor lê no fim é comparável ao que
+    ele leu antes de pedir.
+
+    Quando nenhuma quantidade cai na faixa, diz por quê (`veredito`): "fraca"
+    se nem o bando cheio chega, "forte" se até uma cópia passa, "pula" se a
+    faixa fica entre duas quantidades vizinhas.
+    """
+    if falta := _falta_para_simular():
+        return {"erro": falta}
+    import simular_combate as sc
+    import sugestor
+
+    alvo = payload.get("alvo")
+    if alvo not in regua.FAIXAS_DE_VITORIA:
+        return {"erro": f"faixa '{alvo}' não existe. Use {', '.join(regua.FAIXAS_DE_VITORIA)}."}
+    tier = _inteiro(payload.get("tier"), 2, 1, TIER_MAXIMO)
+    linhas = [dict(m) for m in payload.get("bando") or []
+              if isinstance(m, dict) and str(m.get("nome") or "").strip()]
+    if not linhas:
+        return {"erro": "o bando não tem criatura para ajustar."}
+
+    def quantas(m: dict[str, Any]) -> int:
+        return _inteiro(m.get("quantidade"), 1, 1, I.MAX_INIMIGOS)
+
+    # A mais numerosa varia; no empate, a primeira escrita.
+    escala = max(range(len(linhas)), key=lambda i: (quantas(linhas[i]), -i))
+    fixas = sum(quantas(m) for i, m in enumerate(linhas) if i != escala)
+    maximo = I.MAX_INIMIGOS - fixas
+    if maximo < 1:
+        return {"erro": "as outras criaturas já ocupam o bando inteiro."}
+
+    def bando_com(n: int) -> list[dict[str, Any]]:
+        novo = [dict(m) for m in linhas]
+        novo[escala]["quantidade"] = n
+        return novo
+
+    def montar(n: int) -> list:
+        monstros: list = []
+        for m in bando_com(n):
+            monstros.extend(I.monstros_de_criatura(m, "ajuste"))
+        return monstros
+
+    semente = payload.get("semente")
+    if not isinstance(semente, int):
+        semente = random.randrange(1, 10**8)
+    nivel = min(10, tier * 2)
+    pedido = _pedido(payload)
+    aviso = _registrar(pedido)
+    medicoes = [0]
+
+    def montar_contando(n: int) -> list:
+        # Cada chamada é uma medição nova da bisseção: é por aqui que o
+        # andamento diz "medição 2", sem mexer no sugeridor.
+        medicoes[0] += 1
+        if aviso:
+            ajuste.aviso = aviso.fase(f"medição {medicoes[0]}")
+        return montar(n)
+
+    ajuste = SimpleNamespace(aviso=aviso)
+
+    def aviso_atual(feitas: int, total: int) -> None:
+        if ajuste.aviso:
+            ajuste.aviso(feitas, total)
+
+    try:
+        n, taxa_da_busca, veredito = sugestor._melhor_na_escala(
+            montar_contando, regua.FAIXAS_DE_VITORIA[alvo], None, nivel, semente,
+            1, maximo, aviso=aviso_atual,
+        )
+        if n is None:
+            return {"veredito": "nao_monta",
+                    "erro": "alguma criatura do bando não vira ficha. Confira os nomes."}
+        proposta = bando_com(n)
+        args = SimpleNamespace(classe=None, nivel=nivel, tier=tier, coletar_detalhes=False,
+                               repeticoes=_inteiro(payload.get("repeticoes"), REPETICOES_PADRAO,
+                                                   50, REPETICOES_MAXIMO))
+        medidas = _medidas(sc, montar(n), [TAMANHO_MINIMO], args, semente,
+                           aviso.fase("confirmando") if aviso else None)
+    except Cancelado:
+        return {"cancelado": True}
+    finally:
+        _encerrar(pedido)
     return {
-        "sala": sala.id,
-        "tema": tema,
-        "tier": tier,
-        "classe": classe or "predefinido",
-        "sorteado": False,
-        "predefinido": not classe,
-        "nivel": nivel,
-        "repeticoes": repeticoes,
-        "semente": semente,
-        "criaturas": [{"nome": m.nome, "ca": m.ca, "hp": m.hp} for m in monstros],
-        "medidas": medidas,
+        "alvo": alvo,
+        "rotulo_do_alvo": regua.ROTULOS[alvo],
+        "veredito": veredito,
+        "criatura": str(linhas[escala]["nome"]).strip(),
+        "antes": quantas(linhas[escala]),
+        "quantidade": n,
+        "bando": proposta,
+        "taxa_da_busca": taxa_da_busca,
+        "medida": {"tier": tier, "semente": semente, "repeticoes": args.repeticoes,
+                   "medidas": medidas},
     }
 
 
@@ -719,6 +913,9 @@ ROTAS = {
     "/api/pool": pool,
     "/api/simular": simular,
     "/api/sugerir": sugerir,
+    "/api/andamento": andamento,
+    "/api/cancelar": cancelar,
+    "/api/ajustar": ajustar,
 }
 
 

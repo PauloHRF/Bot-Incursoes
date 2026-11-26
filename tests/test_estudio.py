@@ -585,6 +585,129 @@ def caso_as_repeticoes_tem_teto():
     print("  as repetições têm teto e padrão: ok")
 
 
+# ------------------------------------------------- andamento e ajuste
+
+
+def caso_o_andamento_conta_formacoes_e_o_cancelar_para():
+    """A página pergunta pelo andamento enquanto a medida roda, e pode parar.
+
+    A simulação de mentira chama o aviso como a de verdade — uma vez antes e
+    uma depois de cada formação — e pede o cancelamento no meio: a medida
+    tem de parar na formação seguinte, e não terminar e jogar fora.
+    """
+    import simular_combate as sc
+    vistos, formacoes = [], []
+
+    def simular_de_mentira(monstros, tamanho, args, rng):
+        for feitas in range(0, 8):
+            args.aviso(feitas, 7)
+            vistos.append(E.andamento({"pedido": "p1"}))
+            formacoes.append(feitas)
+            if feitas == 2:
+                E.cancelar({"pedido": "p1"})
+        raise AssertionError("a medida não parou depois do cancelar")
+
+    with patch.object(sc, "simular", side_effect=simular_de_mentira):
+        r = E.simular({"sala": sala_de_combate(), "tier": 1, "grupos": [5], "pedido": "p1"})
+    assert r == {"cancelado": True}, r
+    assert formacoes == [0, 1, 2], formacoes
+    assert vistos[1] == {"feitas": 1, "total": 7, "fase": ""}, vistos
+    # Acabou, o andamento diz que acabou — e não fica um registro sobrando.
+    assert E.andamento({"pedido": "p1"}) == {"fim": True}
+    assert E.cancelar({"pedido": "p1"}) == {"ok": False}
+    print("  o andamento conta formações e o cancelar para na seguinte: ok")
+
+
+def caso_a_simulacao_de_verdade_avisa_cada_formacao():
+    """O aviso sai do laço de verdade, e não só da simulação de mentira.
+
+    O caso de cima troca a simulação inteira; este roda a do bot, com poucas
+    lutas, e confere que ela chama o aviso antes da primeira formação e depois
+    de cada uma — e que o aviso que levanta interrompe o laço ali. Sem isso a
+    barra da página ficaria parada e o cancelar não pararia nada.
+    """
+    import simular_combate as sc
+    from types import SimpleNamespace
+    import random as aleatorio
+
+    monstros = I.sala_de_dict(sala_de_combate()).monstros_do_tier(1)
+    chamadas = []
+    args = SimpleNamespace(classe=None, nivel=2, repeticoes=50, tier=1,
+                           coletar_detalhes=False, aviso=lambda f, t: chamadas.append((f, t)))
+    r = sc.simular(monstros, 5, args, aleatorio.Random(1))
+    total = len(r["composicoes"])
+    assert chamadas == [(f, total) for f in range(total + 1)], chamadas
+
+    class Parou(Exception):
+        pass
+
+    feitas = []
+
+    def parar_na_segunda(f, t):
+        feitas.append(f)
+        if f == 2:
+            raise Parou()
+
+    args.aviso = parar_na_segunda
+    try:
+        sc.simular(monstros, 5, args, aleatorio.Random(1))
+    except Parou:
+        pass
+    else:
+        raise AssertionError("o aviso levantou e a simulação seguiu")
+    assert feitas == [0, 1, 2], feitas
+    print(f"  a simulação de verdade avisa as {total} formações e para no aviso: ok")
+
+
+def caso_o_ajuste_varia_a_linha_mais_numerosa_e_confirma():
+    """O ajuste mexe na quantidade dos lacaios, e confirma com a medida da página.
+
+    As outras linhas ficam fixas, e o teto da escala é o que sobra do bando:
+    com uma âncora, os lacaios vão até `MAX_INIMIGOS - 1`. O número que volta
+    é o da MESMA medida que o Estúdio mostra, e não o da busca.
+    """
+    import simular_combate as sc
+    import sugestor
+    chamadas = {}
+
+    def escala_de_mentira(montar, faixa, classe, nivel, semente, menor, maior, aviso=None):
+        chamadas.update(faixa=faixa, menor=menor, maior=maior, nivel=nivel,
+                        tamanho_com_3=len(montar(3)))
+        return 3, 0.71, "serve"
+
+    def simular_de_mentira(monstros, tamanho, args, rng):
+        chamadas["confirmados"] = len(monstros)
+        return {"taxa": 0.7, "rodadas": 4.0, "caidos": 1.0, "amostras": 240,
+                "composicoes": [{"classes": ["mago"], "taxa": 0.6, "amostras": 120},
+                                {"classes": ["bardo"], "taxa": 0.8, "amostras": 120}]}
+
+    ancora = dict(CRIATURA, nome="Chefe")
+    bando = [ancora, dict(CRIATURA, quantidade=4)]
+    with patch.object(sugestor, "_melhor_na_escala", side_effect=escala_de_mentira), \
+            patch.object(sc, "simular", side_effect=simular_de_mentira):
+        r = E.ajustar({"bando": bando, "tier": 3, "alvo": "media", "pedido": "p2"})
+    assert chamadas["faixa"] == regua.FAIXAS_DE_VITORIA["media"], chamadas
+    assert (chamadas["menor"], chamadas["maior"]) == (1, I.MAX_INIMIGOS - 1), chamadas
+    assert chamadas["nivel"] == 6, chamadas
+    assert chamadas["tamanho_com_3"] == 4, "a âncora não ficou fixa"
+    assert r["criatura"] == "Coisa" and (r["antes"], r["quantidade"]) == (4, 3), r
+    assert r["bando"][0] == ancora and r["bando"][1]["quantidade"] == 3, r["bando"]
+    assert chamadas["confirmados"] == 4
+    [medida] = r["medida"]["medidas"]
+    assert medida["taxa"] == 0.7 and medida["rotulo"] == "Média", medida
+    assert E.andamento({"pedido": "p2"}) == {"fim": True}
+    print("  o ajuste varia os lacaios e confirma com a medida da página: ok")
+
+
+def caso_o_ajuste_recusa_pedido_torto():
+    assert "faixa" in E.ajustar({"bando": [CRIATURA], "tier": 1, "alvo": "impossivel"})["erro"]
+    assert "criatura" in E.ajustar({"bando": [], "tier": 1, "alvo": "media"})["erro"]
+    # A linha que varia é a primeira; as outras três já somam as seis vagas.
+    cheio = [dict(CRIATURA, nome=n, quantidade=2) for n in "ABCD"]
+    assert "ocupam" in E.ajustar({"bando": cheio, "tier": 1, "alvo": "media"})["erro"]
+    print("  o ajuste recusa faixa, bando vazio e bando sem espaço: ok")
+
+
 # --------------------------------------------------------------- página
 
 
@@ -683,6 +806,10 @@ for caso in (
     caso_sala_de_teste_nao_e_medida_por_simulacao,
     caso_simular_recusa_o_que_nao_dá_para_medir,
     caso_as_repeticoes_tem_teto,
+    caso_o_andamento_conta_formacoes_e_o_cancelar_para,
+    caso_a_simulacao_de_verdade_avisa_cada_formacao,
+    caso_o_ajuste_varia_a_linha_mais_numerosa_e_confirma,
+    caso_o_ajuste_recusa_pedido_torto,
     caso_a_pagina_so_chama_rota_que_existe,
     caso_a_pagina_nao_copia_as_listas_do_codigo,
     caso_o_servidor_entrega_os_arquivos_da_interface,

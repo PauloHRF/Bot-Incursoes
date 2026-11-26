@@ -40,7 +40,7 @@ let etapa = "Escolher", parte = "Dungeons", abaPrevia = "anuncio";
 let salasLocais = {};         // Organização -> salas novas do autor
 let orgSalas = "", salaAberta = null, tierSala = 1;
 const medidasSalas = {};      // "org|id" -> {tier: medida}; não vai para arquivo nenhum
-let simulando = false, relogio = null;
+let simulando = false;
 let armazenamentoFalhou = false, timerToast, timerSalas;
 let pedidoConferir = 0, pedidoCaminho = 0, pedidoSalas = 0;
 // As linhas das tabelas de criatura, enquanto estão na tela — com as linhas
@@ -185,6 +185,7 @@ function novoRascunho(incursao, base = null, idFixo = false) {
 function abrirRascunho(k, destino = "Dungeon") {
   chave = k;
   linhasCache.clear();
+  $("propostaChefe").replaceChildren();
   guardar();
   irPara(destino);
 }
@@ -645,6 +646,47 @@ function novaLinha(corpo, linhas, gravar) {
    Uma simulação por vez na página: ela roda o motor do bot na máquina do
    autor, e duas juntas só deixariam as duas mais lentas. */
 
+/* O andamento de verdade: a página dá um nome à medida e pergunta por ela
+   enquanto espera. A barra conta formações ("3 de 7"), e o ajuste diz também
+   em que medição está. Cancelar para na formação seguinte: a começada
+   termina, e o que ela mediu é jogado fora. */
+function novoPedido() { return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`; }
+function montarAndamento(junto, pedido) {
+  const caixa = no("div", "andamento");
+  const barra = document.createElement("progress");
+  barra.max = 1; barra.value = 0;
+  barra.setAttribute("aria-label", "Andamento da simulação");
+  const situacao = no("span", "legenda", "Começando…");
+  const parar = no("button", "botao discreto pequena cancelar", "Cancelar");
+  parar.type = "button";
+  parar.addEventListener("click", async () => {
+    parar.disabled = true; parar.textContent = "Cancelando…";
+    try { await api("/api/cancelar", {pedido}); } catch { /* a medida acaba sozinha */ }
+  });
+  caixa.append(barra, situacao, parar);
+  junto.after(caixa);
+  const inicio = Date.now();
+  return {
+    atualizar(a) {
+      if (!a || a.fim) return;
+      barra.max = Math.max(1, a.total); barra.value = a.feitas;
+      situacao.textContent = [
+        a.fase,
+        a.total ? `formação ${Math.min(a.feitas + 1, a.total)} de ${a.total}` : "",
+        `${Math.round((Date.now() - inicio) / 1000)} s`,
+      ].filter(Boolean).join(" · ");
+    },
+    remover() { caixa.remove(); },
+  };
+}
+async function comAndamento(url, dados, junto) {
+  const pedido = novoPedido(), andamento = montarAndamento(junto, pedido);
+  const espiar = setInterval(async () => {
+    try { andamento.atualizar(await api("/api/andamento", {pedido})); } catch { /* tenta de novo */ }
+  }, 700);
+  try { return await api(url, {...dados, pedido}); }
+  finally { clearInterval(espiar); andamento.remover(); }
+}
 async function medir(sala, tier, botao, opcoes = {}) {
   if (simulando) return null;
   // O bot exige nome e texto da sala; para medir o bando eles não importam,
@@ -655,22 +697,100 @@ async function medir(sala, tier, botao, opcoes = {}) {
   };
   if (opcoes.semente != null) pedido.semente = opcoes.semente;
   simulando = true;
-  const rotulo = botao.textContent, inicio = Date.now();
-  const marcar = () => { botao.textContent = `Simulando… ${Math.round((Date.now() - inicio) / 1000)} s`; };
-  marcar(); relogio = setInterval(marcar, 1000);
+  const rotulo = botao.textContent;
+  botao.textContent = "Simulando…";
   atualizarBotoesDeSimular();
-  try { return await api("/api/simular", pedido); }
-  finally {
-    simulando = false; clearInterval(relogio);
+  try {
+    const r = await comAndamento("/api/simular", pedido, botao);
+    if (r?.cancelado) { aviso("Simulação cancelada."); return null; }
+    return r;
+  } finally {
+    simulando = false;
     botao.textContent = rotulo;
     atualizarBotoesDeSimular();
   }
+}
+
+/* "Levar para": o autor escolhe a faixa, e o Estúdio acha a quantidade —
+   sem trocar as criaturas, que ele escolheu pela ficção da sala. Só onde o
+   bando pode mudar: o chefe e as salas novas. */
+function botoesDeAjuste(med, aoAjustar) {
+  const linha = no("div", "levar-para");
+  linha.append(no("span", "legenda", "Levar para:"));
+  Object.keys(C.dificuldades_de_combate).forEach(faixa => {
+    const aqui = med.dificuldade === faixa, nome = C.rotulos_de_combate[faixa] || faixa;
+    const b = no("button", "botao pequena ajustar", aqui ? `${nome} ✓` : nome);
+    b.type = "button";
+    b.dataset.faixa = faixa;
+    b.dataset.aqui = aqui ? "1" : "";
+    b.disabled = aqui || simulando || !!C.falta_para_simular;
+    b.title = aqui ? "A luta já está nesta faixa." : `Procura quantas criaturas põem a luta em ${nome}.`;
+    b.addEventListener("click", () => aoAjustar(faixa));
+    linha.append(b);
+  });
+  return linha;
+}
+async function ajustarBando(bando, tier, alvo, caixa, aoUsar) {
+  if (simulando || C.falta_para_simular) return;
+  simulando = true;
+  atualizarBotoesDeSimular();
+  const nome = C.rotulos_de_combate[alvo] || alvo;
+  const procurando = no("p", "legenda", `Procurando quantas criaturas põem a luta em ${nome}. Leva de meio minuto a uns dois.`);
+  caixa.replaceChildren(procurando);
+  try {
+    const r = await comAndamento("/api/ajustar", {bando, tier, alvo, repeticoes: REPETICOES}, procurando);
+    caixa.replaceChildren();
+    if (r.cancelado) { aviso("Ajuste cancelado."); return; }
+    if (r.erro) { caixa.append(no("p", "aviso-inline", r.erro)); return; }
+    desenharProposta(caixa, r, aoUsar);
+  } catch (erro) {
+    caixa.replaceChildren(no("p", "aviso-inline", `Não foi possível ajustar: ${erro.message}`));
+  } finally {
+    simulando = false;
+    atualizarBotoesDeSimular();
+  }
+}
+function desenharProposta(caixa, r, aoUsar) {
+  const med = r.medida.medidas[0] || {}, alvo = r.rotulo_do_alvo, nome = r.criatura;
+  const frases = {
+    serve: `Com ${r.quantidade}× ${nome} (em vez de ${r.antes}), a luta fica ${med.rotulo}.`,
+    pula: `Nenhuma quantidade de ${nome} cai em ${alvo}: a faixa fica entre ${r.quantidade - 1} e ${r.quantidade}. `
+      + `Com ${r.quantidade}, a luta fica ${med.rotulo}. Para acertar em cheio, troque parte do bando por uma criatura mais fraca.`,
+    fraca: `Nem com ${r.quantidade}× ${nome}, o máximo que cabe no bando, a luta chega a ${alvo}. Troque por uma criatura mais forte.`,
+    forte: `Mesmo com 1× ${nome}, a luta passa de ${alvo}. Troque por uma criatura mais fraca.`,
+  };
+  const bloco = no("div", "proposta");
+  bloco.append(no("p", "", frases[r.veredito] || `Proposta: ${r.quantidade}× ${nome}.`));
+  const topo = no("div", "medida-topo");
+  topo.append(no("b", "taxa-grande", pct(med.taxa)), no("span", "", "de vitórias com 5 jogadores"),
+    no("span", `veredito${med.dificuldade ? "" : " sem-faixa"}`, med.rotulo || ""));
+  bloco.append(topo, escala(med.taxa));
+  const acoes = no("div", "linha");
+  if (r.quantidade !== r.antes) {
+    const usar = no("button", "botao principal pequena", `Usar ${r.quantidade}× ${nome}`);
+    usar.type = "button";
+    usar.addEventListener("click", () => {
+      caixa.replaceChildren();
+      aoUsar(r.bando, r.medida);
+      aviso(`Bando trocado para ${r.quantidade}× ${nome}.`);
+    });
+    acoes.append(usar);
+  }
+  const descartar = no("button", "botao discreto pequena", "Descartar");
+  descartar.type = "button";
+  descartar.addEventListener("click", () => caixa.replaceChildren());
+  acoes.append(descartar);
+  bloco.append(acoes);
+  caixa.append(bloco);
 }
 function atualizarBotoesDeSimular() {
   if (parte === "Dungeons" && etapa === "Chefe" && rascunho()) atualizarSimulacao();
   if (parte === "Salas" && salaAberta?.origem === "nova" && salaAtual()) atualizarSimSala();
   document.querySelectorAll(".simular-caminho").forEach(b => {
     b.disabled = simulando || !!C.falta_para_simular || !inc()?.tier;
+  });
+  document.querySelectorAll(".ajustar").forEach(b => {
+    b.disabled = simulando || !!C.falta_para_simular || !!b.dataset.aqui;
   });
 }
 /* A régua: as três faixas na reta de 0 a 100%, e onde a luta caiu. A
@@ -700,7 +820,7 @@ function proximoPasso(m) {
   if (m.dizima && m.pior) dicas.push(`Atenção: uma das formações de referência vence só ${pct(m.pior.taxa)} das vezes. A média esconde isso — veja qual é em “Ver as formações”.`);
   return dicas;
 }
-function desenharMedida(caixa, r, velha) {
+function desenharMedida(caixa, r, velha, aoAjustar = null) {
   caixa.replaceChildren();
   caixa.className = "resultado" + (velha ? " velho" : "");
   r.medidas.forEach(med => {
@@ -711,6 +831,9 @@ function desenharMedida(caixa, r, velha) {
       no("span", `veredito${med.dificuldade ? "" : " sem-faixa"}`, med.rotulo || ""));
     bloco.append(topo, escala(med.taxa));
     proximoPasso(med).forEach(d => bloco.append(no("p", "dica", d)));
+    // O ajuste é do grupo de 5, que é o do jogo, e só de medida atual: ajustar
+    // a partir de um número velho seria mirar com a régua de outro bando.
+    if (aoAjustar && !velha && med.grupo === 5) bloco.append(botoesDeAjuste(med, aoAjustar));
     if (med.pior && pct(med.pior.taxa) === pct(med.melhor.taxa)) {
       bloco.append(no("p", "legenda", `Todas as formações de referência vencem ${pct(med.pior.taxa)}.`));
     } else if (med.pior) {
@@ -742,7 +865,17 @@ function medidaCurta(r, velha) {
 function linhasDoChefe() { return linhasDe(`chefe|${chave}`, chefe().monstros); }
 function gravarChefe() {
   chefe().monstros = bandoDas(linhasDoChefe());
+  $("propostaChefe").replaceChildren();
   alterado(); atualizarChefe();
+}
+function usarNoChefe(bando, medida) {
+  chefe().monstros = bandoDas(bando);
+  linhasCache.delete(`chefe|${chave}`);
+  alterado();
+  // A medida que confirmou a proposta é a medida do bando novo.
+  rascunho().medida = {assinatura: assinatura(), resposta: medida, quando: new Date().toISOString()};
+  guardar();
+  mostrarChefe();
 }
 function mostrarChefe() {
   const o = chefe();
@@ -787,8 +920,10 @@ function atualizarSimulacao() {
   $("btSimular").disabled = simulando || !!motivo;
   const m = rascunho()?.medida;
   $("medidaVelha").hidden = !m || m.assinatura === assinatura();
-  if (m) desenharMedida($("resultado"), m.resposta, m.assinatura !== assinatura());
-  else {
+  if (m) {
+    desenharMedida($("resultado"), m.resposta, m.assinatura !== assinatura(),
+      alvo => ajustarBando(chefe().monstros, Number(inc().tier), alvo, $("propostaChefe"), usarNoChefe));
+  } else {
     $("resultado").className = "resultado-vazio";
     $("resultado").textContent = "Simule para ver quantas vezes o grupo vence.";
   }
@@ -1151,6 +1286,7 @@ function listarSalas() {
 function abrirSala(origem, id) {
   salaAberta = {origem, id};
   linhasCache.clear();
+  $("propostaSala").replaceChildren();
   const s = origem === "nova" ? salaAtual() : null;
   if (s && familiaDe(s.tipo) === "combate") tierSala = tierInicial(s);
   listarSalas();
@@ -1261,6 +1397,7 @@ function desenharAbasTier(s) {
     b.title = usados.includes(t) ? "Há dungeon desta Organização neste tier." : "Nenhuma dungeon desta Organização usa este tier ainda.";
     b.addEventListener("click", () => {
       tierSala = t;
+      $("propostaSala").replaceChildren();
       desenharAbasTier(s);
       tabelaDeCriaturas($("linhasSala"), linhasDoTier(s), () => gravarTier(s));
       atualizarEditorSala(s);
@@ -1288,6 +1425,7 @@ function gravarTier(s) {
   if (!objeto(s.monstros_por_tier)) s.monstros_por_tier = {};
   if (bando.length) s.monstros_por_tier[String(tierSala)] = bando;
   else delete s.monstros_por_tier[String(tierSala)];
+  $("propostaSala").replaceChildren();
   salvarSalas();
   desenharAbasTier(s);
   atualizarEditorSala(s);
@@ -1351,8 +1489,18 @@ function atualizarSimSala() {
   const m = medidaDaSala(s, tierSala);
   const velha = !!m && m.assinatura !== assinaturaSala(s, tierSala);
   $("medidaVelhaSala").hidden = !velha;
-  if (m) desenharMedida($("resultadoSala"), m.resposta, velha);
-  else { $("resultadoSala").className = ""; $("resultadoSala").replaceChildren(); }
+  const t = tierSala, org = orgSalas;
+  if (m) {
+    desenharMedida($("resultadoSala"), m.resposta, velha, alvo => ajustarBando(
+      (s.monstros_por_tier || {})[String(t)] || [], t, alvo, $("propostaSala"), (bando, medida) => {
+        if (!objeto(s.monstros_por_tier)) s.monstros_por_tier = {};
+        s.monstros_por_tier[String(t)] = bandoDas(bando);
+        linhasCache.delete(`sala|${org}|${s.id}|${t}`);
+        (medidasSalas[`${org}|${s.id}`] ||= {})[t] = {assinatura: assinaturaSala(s, t), resposta: medida};
+        salvarSalas();
+        mostrarEditorSala(s);
+      }));
+  } else { $("resultadoSala").className = ""; $("resultadoSala").replaceChildren(); }
 }
 $("btSimularSala").addEventListener("click", async () => {
   const s = salaAtual();

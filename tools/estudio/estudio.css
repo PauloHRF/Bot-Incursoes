@@ -259,3 +259,11 @@ progress.falta::-moz-progress-bar {background:var(--bad)}
 .sim-sala .resultado {justify-self:stretch}
 #parteSalas>.entrega {margin-top:20px}
 .entrega .recados {margin-top:8px}
+
+/* ---- andamento e ajuste ---- */
+.andamento {display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-self:stretch}
+.andamento progress {flex:1 1 140px; min-width:120px; width:auto}
+.andamento .legenda {font-variant-numeric:tabular-nums}
+.levar-para {display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px}
+.proposta {display:grid; gap:8px; border:1px solid var(--accent); border-radius:8px; padding:12px 14px; background:var(--tint); margin-top:12px}
+.proposta>p {font-size:12.5px; line-height:1.5}

@@ -52,7 +52,7 @@ class SimuladorFalso:
     def __enter__(self):
         self._verdadeiro = S.medir_bando
 
-        def falso(monstros, classe, nivel, tamanho, confrontos, semente):
+        def falso(monstros, classe, nivel, tamanho, confrontos, semente, aviso=None):
             # O bando chega pelas CRIATURAS, e nao por uma chave de texto: a
             # busca deixou de passar o bando na semente (ela agora pareia as
             # mesas), e o duble le o que ela de fato mede.
@@ -201,7 +201,7 @@ def caso_a_bissecao_nao_e_varredura():
     chamadas = []
     verdadeiro = S.medir_bando
 
-    def falso(monstros, classe, nivel, tamanho, confrontos, semente):
+    def falso(monstros, classe, nivel, tamanho, confrontos, semente, aviso=None):
         n = len(monstros)
         chamadas.append(n)
         return max(0.0, 1.0 - n * 0.05)
